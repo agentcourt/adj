@@ -1,0 +1,1 @@
+Defend the sufficiency of the complaint as pleaded.  Explain why the complaint states the claim and why any cited problem is factual rather than pleading-based.  Point out curable pleading issues only if that helps preserve the claim.

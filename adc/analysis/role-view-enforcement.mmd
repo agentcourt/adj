@@ -1,0 +1,29 @@
+sequenceDiagram
+    participant R as Go runner
+    participant L as Lean engine
+    participant A as Local or external agent
+    participant H as Support tools
+
+    Note over A: External roles receive case access<br/>through the Role API.
+
+    R->>L: role_view(state, role)
+    L-->>R: visible case view
+    R->>A: prompt with role preamble,<br/>role view, tool cards, current opportunity
+
+    loop same opportunity
+        A->>H: get_case, get_juror_context,<br/>list_case_files, read_case_text_file,<br/>request_case_file
+        H->>L: role_view-backed visibility checks
+        L-->>H: visible data only
+        H-->>A: helper result
+
+        A->>R: submit_decision(pass or legal tool)
+        R->>L: apply_decision(state, opportunity, decision)
+        alt invalid
+            L-->>R: StepErr with actor_message
+            R-->>A: correction message
+        else valid
+            L-->>R: accepted action or pass
+            R->>L: step(state, action) when action was accepted
+            L-->>R: updated state
+        end
+    end

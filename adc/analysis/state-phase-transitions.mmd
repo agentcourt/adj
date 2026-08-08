@@ -1,0 +1,58 @@
+graph TD
+  subgraph CaseStatus["Case status: canTransitionStatusV1"]
+    filed["filed"]
+    pretrial["pretrial"]
+    trial["trial"]
+    judgment_entered["judgment_entered"]
+    closed["closed"]
+
+    filed --> pretrial
+    filed --> closed
+    pretrial --> trial
+    pretrial --> closed
+    trial --> judgment_entered
+    trial --> closed
+    judgment_entered --> closed
+  end
+
+  subgraph TrialPhase["Trial phase: canAdvancePhaseV1 + validateAdvanceTrialPhase"]
+    p_none["none"]
+    p_voir["voir_dire"]
+    p_open["openings"]
+    p_pc["plaintiff_case"]
+    p_pe["plaintiff_evidence"]
+    p_dc["defense_case"]
+    p_de["defense_evidence"]
+    p_pr["plaintiff_rebuttal"]
+    p_pre["plaintiff_rebuttal_evidence"]
+    p_ds["defense_surrebuttal"]
+    p_dse["defense_surrebuttal_evidence"]
+    p_cc["charge_conference"]
+    p_close["closings"]
+    p_jc["jury_charge"]
+    p_delib["deliberation"]
+    p_verdict["verdict_return"]
+    p_post["post_verdict"]
+
+    p_none --> p_voir --> p_open --> p_pc --> p_pe --> p_dc --> p_de --> p_pr --> p_pre --> p_ds --> p_dse --> p_cc --> p_close --> p_jc --> p_delib --> p_verdict --> p_post
+  end
+
+  note_phase["Phase rule:<br/>canAdvancePhaseV1 allows staying in the same phase or moving to any later-ranked phase.<br/>Backward moves are rejected."]
+  note_panel["Jury panel guard:<br/>advance to voir_dire is rejected unless the candidate panel is full."]
+  note_empanel["Jury empanelment guard:<br/>advance to openings is rejected unless the jury is empaneled."]
+  note_charge["Jury charge guard:<br/>advance to deliberation is rejected unless the judge has delivered jury instructions."]
+  note_bench["Bench-only guard:<br/>advance to post_verdict is rejected unless docket contains 'Bench Opinion'."]
+  note_jury["Jury verdict guard:<br/>advance to post_verdict is rejected unless the record contains a verdict or hung-jury notice."]
+  note_status["Status rule:<br/>only listed status edges are valid; all others are rejected."]
+  note_rule56["Rule 56 window:<br/>not a status or phase transition.<br/>Passing closes that party's current pretrial window.<br/>An amended complaint reopens it."]
+  note_delib["Deliberation note:<br/>jury trials use rounds of individual sworn-juror votes.<br/>A verdict or hung jury is derived before post_verdict."]
+
+  p_post -.-> note_phase
+  p_voir -.-> note_panel
+  p_open -.-> note_empanel
+  p_delib -.-> note_charge
+  p_post -.-> note_bench
+  p_post -.-> note_jury
+  closed -.-> note_status
+  pretrial -.-> note_rule56
+  p_delib -.-> note_delib

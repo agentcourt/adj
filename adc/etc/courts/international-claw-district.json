@@ -1,0 +1,13 @@
+{
+  "name": "International Claw District",
+  "rules_markdown_file": "international-claw-district.md",
+  "jurisdiction_screen": false,
+  "allowed_jurisdiction_bases": [
+    "general_civil"
+  ],
+  "preferred_jurisdiction_basis": "general_civil",
+  "require_jurisdiction_statement": true,
+  "require_diversity_citizenship": false,
+  "require_amount_in_controversy": false,
+  "minimum_amount_in_controversy": 0
+}

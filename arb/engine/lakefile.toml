@@ -1,0 +1,13 @@
+name = "aarengine"
+version = "0.1.0"
+defaultTargets = ["Main", "Proofs", "aarengine"]
+
+[[lean_lib]]
+name = "Main"
+
+[[lean_lib]]
+name = "Proofs"
+
+[[lean_exe]]
+name = "aarengine"
+root = "Main"

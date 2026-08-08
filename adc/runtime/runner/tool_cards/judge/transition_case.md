@@ -1,0 +1,1 @@
+Make only the transition authorized by the present posture.  Confirm that the prerequisite pleading, motion, or trial-stage conditions are already satisfied on the visible record.  Do not use a transition to skip an unresolved required step.

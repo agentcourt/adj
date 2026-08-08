@@ -1,0 +1,706 @@
+package proceeding
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/jsmorph/adj/arbd/runtime/lean"
+)
+
+func TestLawyerDoRequiresActiveOpportunityID(t *testing.T) {
+	api, turn := testLawyerAPIWithTurn()
+
+	for _, tc := range []struct {
+		name          string
+		opportunityID string
+		wantCode      string
+	}{
+		{name: "missing", wantCode: "missing_opportunity_id"},
+		{name: "stale", opportunityID: "openings:defendant", wantCode: "stale_opportunity"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body := map[string]any{
+				"case_id":   "arbd-1",
+				"role_id":   "plaintiff",
+				"tool":      "get_case",
+				"arguments": map[string]any{},
+			}
+			if tc.opportunityID != "" {
+				body["opportunity_id"] = tc.opportunityID
+			}
+			status, got := callLawyerAPIDo(t, api, body)
+			if status != http.StatusOK {
+				t.Fatalf("status = %d, want %d", status, http.StatusOK)
+			}
+			if got["ok"] != false {
+				t.Fatalf("ok = %#v, want false", got["ok"])
+			}
+			if code := lawyerAPIErrorCode(t, got); code != tc.wantCode {
+				t.Fatalf("error code = %q, want %q", code, tc.wantCode)
+			}
+			if turn.attemptsRemaining != turn.attemptsMax {
+				t.Fatalf("attemptsRemaining = %d, want %d", turn.attemptsRemaining, turn.attemptsMax)
+			}
+		})
+	}
+
+	status, got := callLawyerAPIDo(t, api, map[string]any{
+		"case_id":        "arbd-1",
+		"role_id":        "plaintiff",
+		"opportunity_id": "openings:plaintiff",
+		"tool":           "get_case",
+		"arguments":      map[string]any{},
+	})
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	if got["ok"] != true {
+		t.Fatalf("ok = %#v, want true", got["ok"])
+	}
+	if turn.attemptsRemaining != turn.attemptsMax {
+		t.Fatalf("attemptsRemaining = %d, want %d", turn.attemptsRemaining, turn.attemptsMax)
+	}
+}
+
+func TestLawyerAPIRejectsMismatchedCaseID(t *testing.T) {
+	api, turn := testLawyerAPIWithTurn()
+	api.rc.cfg.CaseID = "case-123"
+
+	status, got := callLawyerAPIGet(t, api, "case_id=case-456&role_id=plaintiff")
+	if status != http.StatusNotFound {
+		t.Fatalf("get status = %d, want %d", status, http.StatusNotFound)
+	}
+	if code := lawyerAPIErrorCode(t, got); code != "unknown_case" {
+		t.Fatalf("get error code = %q, want unknown_case", code)
+	}
+
+	status, got = callLawyerAPIDo(t, api, map[string]any{
+		"case_id":        "case-456",
+		"role_id":        "plaintiff",
+		"opportunity_id": "openings:plaintiff",
+		"tool":           "get_case",
+		"arguments":      map[string]any{},
+	})
+	if status != http.StatusNotFound {
+		t.Fatalf("do status = %d, want %d", status, http.StatusNotFound)
+	}
+	if code := lawyerAPIErrorCode(t, got); code != "unknown_case" {
+		t.Fatalf("do error code = %q, want unknown_case", code)
+	}
+	if turn.attemptsRemaining != turn.attemptsMax {
+		t.Fatalf("attemptsRemaining = %d, want %d", turn.attemptsRemaining, turn.attemptsMax)
+	}
+}
+
+func TestObserverDoDoesNotRequireOpportunityID(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+
+	status, got := callLawyerAPIDo(t, api, map[string]any{
+		"case_id":   "arbd-1",
+		"role_id":   "observer",
+		"tool":      "get_turn",
+		"arguments": map[string]any{},
+	})
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	if got["ok"] != true {
+		t.Fatalf("ok = %#v, want true", got["ok"])
+	}
+	result, ok := got["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("result = %#v, want object", got["result"])
+	}
+	turn, ok := result["turn"].(map[string]any)
+	if !ok {
+		t.Fatalf("result.turn = %#v, want object", result["turn"])
+	}
+	if turn["opportunity_id"] != "openings:plaintiff" {
+		t.Fatalf("opportunity_id = %#v, want openings:plaintiff", turn["opportunity_id"])
+	}
+}
+
+func TestLawyerSubmitEvidenceWritesLiveManifest(t *testing.T) {
+	api, turn := testLawyerAPIWithTurn()
+	dir := t.TempDir()
+	enginePath := filepath.Join(dir, "engine.sh")
+	engineScript := "#!/bin/sh\ncat >/dev/null\nprintf '%s\\n' '{\"ok\":true,\"state\":{\"case\":{\"status\":\"open\",\"phase\":\"arguments\",\"submitted_evidence\":[]}}}'\n"
+	if err := os.WriteFile(enginePath, []byte(engineScript), 0o755); err != nil {
+		t.Fatalf("write fake engine: %v", err)
+	}
+	api.rc.cfg.OutputDir = dir
+	api.rc.cfg.Engine = lean.Engine{Command: []string{enginePath}}
+	api.rc.evidenceStoreDir = filepath.Join(dir, "evidence-store")
+	turn.opportunity = Opportunity{
+		ID:           "arguments:plaintiff",
+		Role:         "plaintiff",
+		Phase:        "arguments",
+		AllowedTools: []string{"submit_evidence", "submit_argument"},
+	}
+
+	status, got := callLawyerAPIDo(t, api, map[string]any{
+		"case_id":        "arbd-1",
+		"role_id":        "plaintiff",
+		"opportunity_id": "arguments:plaintiff",
+		"tool":           "submit_evidence",
+		"arguments": map[string]any{
+			"title":                  "Source",
+			"mime_type":              "text/plain",
+			"source_url":             "https://example.test/source",
+			"relevance":              "Shows the disputed fact.",
+			"content":                "source evidence\n",
+			"retrieval_timestamp":    "2026-07-09T12:00:00Z",
+			"preferred_filename_ext": "txt",
+		},
+	})
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	if got["ok"] != true {
+		t.Fatalf("ok = %#v, body = %#v", got["ok"], got)
+	}
+	result := got["result"].(map[string]any)
+	evidenceID := mapString(result["evidence_id"])
+	if evidenceID == "" {
+		t.Fatalf("missing evidence_id in %#v", result)
+	}
+	rawManifest, err := os.ReadFile(filepath.Join(dir, "evidence-manifest.json"))
+	if err != nil {
+		t.Fatalf("read evidence manifest: %v", err)
+	}
+	var manifest struct {
+		EvidenceCount int            `json:"evidence_count"`
+		Evidence      []EvidenceMeta `json:"evidence"`
+	}
+	if err := json.Unmarshal(rawManifest, &manifest); err != nil {
+		t.Fatalf("decode evidence manifest: %v", err)
+	}
+	if manifest.EvidenceCount != 1 || len(manifest.Evidence) != 1 || manifest.Evidence[0].EvidenceID != evidenceID {
+		t.Fatalf("manifest evidence = %#v, want %q", manifest, evidenceID)
+	}
+}
+
+func TestLawyerSendWorkNotesWritesOffRecordLog(t *testing.T) {
+	api, turn := testLawyerAPIWithTurn()
+	api.rc.cfg.OutputDir = t.TempDir()
+	notes := strings.Repeat("plan source-chain OCR adverse checks\n", 128)
+
+	status, got := callLawyerAPIDo(t, api, map[string]any{
+		"case_id":        "arbd-1",
+		"role_id":        "plaintiff",
+		"opportunity_id": "openings:plaintiff",
+		"tool":           "send_work_notes",
+		"call_id":        "notes-1",
+		"arguments": map[string]any{
+			"notes": notes,
+		},
+	})
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	if got["ok"] != true {
+		t.Fatalf("ok = %#v, want true", got["ok"])
+	}
+	if turn.completed {
+		t.Fatalf("send_work_notes completed the turn")
+	}
+	if turn.attemptsRemaining != turn.attemptsMax {
+		t.Fatalf("attemptsRemaining = %d, want %d", turn.attemptsRemaining, turn.attemptsMax)
+	}
+	if len(api.rc.events) != 0 {
+		t.Fatalf("send_work_notes recorded case events: %#v", api.rc.events)
+	}
+	raw, err := os.ReadFile(api.rc.cfg.OutputDir + "/work-notes.ndjson")
+	if err != nil {
+		t.Fatalf("read work-notes.ndjson: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
+	if len(lines) != 1 {
+		t.Fatalf("work note lines = %d, want 1: %s", len(lines), raw)
+	}
+	var note WorkNote
+	if err := json.Unmarshal([]byte(lines[0]), &note); err != nil {
+		t.Fatalf("decode work note: %v", err)
+	}
+	if note.Notes != notes {
+		t.Fatalf("notes were not preserved exactly")
+	}
+	if note.Role != "plaintiff" || note.Phase != "openings" || note.OpportunityID != "openings:plaintiff" || note.CallID != "notes-1" {
+		t.Fatalf("unexpected note metadata: %#v", note)
+	}
+}
+
+func TestLawyerToolSpecsIncludeStatusAndWorkNotesEveryPhase(t *testing.T) {
+	for _, phase := range []string{"openings", "arguments", "rebuttals", "surrebuttals", "closings"} {
+		tools := lawyerToolSpecs(Opportunity{Phase: phase})
+		if !hasLawyerTool(tools, "case_status") {
+			t.Fatalf("%s tools missing case_status: %#v", phase, tools)
+		}
+		if !hasLawyerTool(tools, "send_work_notes") {
+			t.Fatalf("%s tools missing send_work_notes: %#v", phase, tools)
+		}
+	}
+}
+
+func TestLawyerStatusReportsWaitingRoleAndActiveTurn(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+	caseObj := mapAny(api.rc.state["case"])
+	caseObj["status"] = "open"
+	caseObj["phase"] = "openings"
+	caseObj["deliberation_round"] = 1
+	caseObj["arguments"] = []map[string]any{{"role": "plaintiff"}}
+	api.rc.events = []Event{{Type: "run_initialized"}}
+
+	status, got := callLawyerAPIStatus(t, api, "case_id=arbd-1&role_id=defendant")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	if got["status"] != "waiting" {
+		t.Fatalf("status field = %#v, want waiting", got["status"])
+	}
+	if got["phase"] != "openings" || got["case_status"] != "open" {
+		t.Fatalf("case fields = phase %#v status %#v", got["phase"], got["case_status"])
+	}
+	turn, ok := got["turn"].(map[string]any)
+	if !ok {
+		t.Fatalf("turn = %#v, want object", got["turn"])
+	}
+	if turn["role_id"] != "plaintiff" || turn["opportunity_id"] != "openings:plaintiff" {
+		t.Fatalf("turn = %#v", turn)
+	}
+	current, ok := got["current_opportunity"].(map[string]any)
+	if !ok {
+		t.Fatalf("current_opportunity = %#v, want object", got["current_opportunity"])
+	}
+	if current["role_id"] != "plaintiff" {
+		t.Fatalf("current_opportunity = %#v", current)
+	}
+	if _, ok := current["allowed_operations"]; ok {
+		t.Fatalf("current_opportunity used obsolete allowed_operations field: %#v", current)
+	}
+	actions := stringList(current["final_filing_actions"])
+	if len(actions) != 1 || actions[0] != "record_opening_statement" {
+		t.Fatalf("current_opportunity final_filing_actions = %#v", current["final_filing_actions"])
+	}
+	access, ok := current["evidence_access"].(map[string]any)
+	if !ok || access["read"] != true || access["submit"] != false {
+		t.Fatalf("current_opportunity evidence_access = %#v", current["evidence_access"])
+	}
+	counts, ok := got["counts"].(map[string]any)
+	if !ok {
+		t.Fatalf("counts = %#v, want object", got["counts"])
+	}
+	if intNumber(counts["events"]) != 1 || intNumber(counts["arguments"]) != 1 {
+		t.Fatalf("counts = %#v", counts)
+	}
+
+	_, toolGot := callLawyerAPIDo(t, api, map[string]any{
+		"case_id":   "arbd-1",
+		"role_id":   "defendant",
+		"tool":      "case_status",
+		"arguments": map[string]any{},
+	})
+	if toolGot["ok"] != true {
+		t.Fatalf("case_status tool ok = %#v in %#v", toolGot["ok"], toolGot)
+	}
+	result, ok := toolGot["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("tool result = %#v, want object", toolGot["result"])
+	}
+	if result["status"] != "waiting" {
+		t.Fatalf("tool result status = %#v, want waiting", result["status"])
+	}
+}
+
+func TestLawyerGetWaitingAdvertisesCaseStatus(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+
+	status, got := callLawyerAPIGet(t, api, "case_id=arbd-1&role_id=defendant")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	if got["status"] != "waiting" {
+		t.Fatalf("status field = %#v, want waiting", got["status"])
+	}
+	tools := mapList(got["tools"])
+	if !hasLawyerTool(tools, "case_status") {
+		t.Fatalf("waiting tools missing case_status: %#v", tools)
+	}
+	if hasLawyerTool(tools, "submit_decision") {
+		t.Fatalf("waiting tools should not include submit_decision: %#v", tools)
+	}
+}
+
+func TestLawyerWaitReturnsReadyOpportunity(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+
+	status, got := callLawyerAPIWait(t, api, "case_id=arbd-1&role_id=plaintiff&timeout_ms=100")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	if got["status"] != "ready" {
+		t.Fatalf("status field = %#v, want ready", got["status"])
+	}
+	wait, ok := got["wait"].(map[string]any)
+	if !ok {
+		t.Fatalf("wait = %#v, want object", got["wait"])
+	}
+	if wait["reason"] != "ready" {
+		t.Fatalf("wait.reason = %#v, want ready", wait["reason"])
+	}
+	turn, ok := got["turn"].(map[string]any)
+	if !ok {
+		t.Fatalf("turn = %#v, want object", got["turn"])
+	}
+	if turn["opportunity_id"] != "openings:plaintiff" {
+		t.Fatalf("opportunity_id = %#v, want openings:plaintiff", turn["opportunity_id"])
+	}
+}
+
+func TestLawyerWaitBlocksUntilLaterOpportunity(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+	done := make(chan map[string]any, 1)
+	go func() {
+		_, got := callLawyerAPIWait(t, api, "case_id=arbd-1&role_id=plaintiff&after=openings:plaintiff&timeout_ms=1000")
+		done <- got
+	}()
+	select {
+	case got := <-done:
+		t.Fatalf("wait returned before a later opportunity: %#v", got)
+	case <-time.After(20 * time.Millisecond):
+	}
+	api.mu.Lock()
+	api.active = testLawyerTurn("arguments:plaintiff", "plaintiff", "arguments")
+	api.signalChangedLocked()
+	api.mu.Unlock()
+	select {
+	case got := <-done:
+		if got["status"] != "ready" {
+			t.Fatalf("status field = %#v, want ready", got["status"])
+		}
+		wait, ok := got["wait"].(map[string]any)
+		if !ok {
+			t.Fatalf("wait = %#v, want object", got["wait"])
+		}
+		if wait["reason"] != "ready" {
+			t.Fatalf("wait.reason = %#v, want ready", wait["reason"])
+		}
+		turn, ok := got["turn"].(map[string]any)
+		if !ok {
+			t.Fatalf("turn = %#v, want object", got["turn"])
+		}
+		if turn["opportunity_id"] != "arguments:plaintiff" {
+			t.Fatalf("opportunity_id = %#v, want arguments:plaintiff", turn["opportunity_id"])
+		}
+	case <-time.After(time.Second):
+		t.Fatal("wait did not return after later opportunity")
+	}
+}
+
+func TestLawyerWaitReturnsOnCaseChange(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+	done := make(chan map[string]any, 1)
+	go func() {
+		_, got := callLawyerAPIWait(t, api, "case_id=arbd-1&role_id=plaintiff&after=openings:plaintiff&timeout_ms=1000")
+		done <- got
+	}()
+	select {
+	case got := <-done:
+		t.Fatalf("wait returned before case change: %#v", got)
+	case <-time.After(20 * time.Millisecond):
+	}
+	api.signalChanged()
+	select {
+	case got := <-done:
+		if got["status"] != "ready" {
+			t.Fatalf("status field = %#v, want ready", got["status"])
+		}
+		wait, ok := got["wait"].(map[string]any)
+		if !ok {
+			t.Fatalf("wait = %#v, want object", got["wait"])
+		}
+		if wait["reason"] != "changed" {
+			t.Fatalf("wait.reason = %#v, want changed", wait["reason"])
+		}
+	case <-time.After(time.Second):
+		t.Fatal("wait did not return after case change")
+	}
+}
+
+func TestLawyerWaitReturnsForOlderVersion(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+
+	status, got := callLawyerAPIWait(t, api, "case_id=arbd-1&role_id=plaintiff&after=openings:plaintiff&after_version=0&timeout_ms=1000")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	wait, ok := got["wait"].(map[string]any)
+	if !ok {
+		t.Fatalf("wait = %#v, want object", got["wait"])
+	}
+	if wait["reason"] != "changed" {
+		t.Fatalf("wait.reason = %#v, want changed", wait["reason"])
+	}
+}
+
+func TestLawyerWaitReturnsDoneOnTerminalCase(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+	api.setTerminal("72")
+
+	status, got := callLawyerAPIWait(t, api, "case_id=arbd-1&role_id=plaintiff&after=openings:plaintiff&timeout_ms=1000")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	if got["status"] != "done" {
+		t.Fatalf("status field = %#v, want done", got["status"])
+	}
+	if got["final_reason"] != "72" {
+		t.Fatalf("final_reason = %#v, want 72", got["final_reason"])
+	}
+	wait, ok := got["wait"].(map[string]any)
+	if !ok {
+		t.Fatalf("wait = %#v, want object", got["wait"])
+	}
+	if wait["reason"] != "done" {
+		t.Fatalf("wait.reason = %#v, want done", wait["reason"])
+	}
+}
+
+func TestLawyerAPIsReportFailedCase(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+	caseObj := mapAny(api.rc.state["case"])
+	caseObj["status"] = "failed"
+	caseObj["phase"] = "arguments"
+	caseObj["failure"] = map[string]any{
+		"failure_type":   "opportunity_failed",
+		"role":           "plaintiff",
+		"phase":          "arguments",
+		"opportunity_id": "arguments:plaintiff",
+		"reason":         opportunityFailureDeadline,
+		"message":        "Plaintiff lawyer opportunity arguments:plaintiff failed because the deadline expired.",
+	}
+
+	status, got := callLawyerAPIWait(t, api, "case_id=arbd-1&role_id=plaintiff&timeout_ms=100")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	if got["status"] != "failed" {
+		t.Fatalf("status field = %#v, want failed", got["status"])
+	}
+	wait, ok := got["wait"].(map[string]any)
+	if !ok || wait["reason"] != "failed" {
+		t.Fatalf("wait = %#v, want reason failed", got["wait"])
+	}
+	failure, ok := got["failure"].(map[string]any)
+	if !ok || failure["type"] != "opportunity_failed" || failure["reason"] != opportunityFailureDeadline {
+		t.Fatalf("failure = %#v", got["failure"])
+	}
+
+	_, got = callLawyerAPIResult(t, api, "case_id=arbd-1&role_id=observer")
+	if got["status"] != "failed" {
+		t.Fatalf("result status = %#v, want failed", got["status"])
+	}
+	if got["result"] != nil {
+		t.Fatalf("result = %#v, want nil for failed case", got["result"])
+	}
+}
+
+func TestLawyerResultReportsPendingCase(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+
+	status, got := callLawyerAPIResult(t, api, "case_id=arbd-1&role_id=observer")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	if got["status"] != "pending" {
+		t.Fatalf("status field = %#v, want pending", got["status"])
+	}
+	if got["result"] != nil {
+		t.Fatalf("result = %#v, want nil for pending case", got["result"])
+	}
+	if got["message"] != "The case is still pending." {
+		t.Fatalf("message = %#v", got["message"])
+	}
+}
+
+func TestLawyerResultReportsFinalCouncilAnswers(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+	caseObj := mapAny(api.rc.state["case"])
+	caseObj["status"] = "closed"
+	caseObj["phase"] = "closed"
+	caseObj["deliberation_round"] = 1
+	caseObj["council_answers"] = []map[string]any{
+		{"round": 1, "member_id": "C1", "answer": 72, "rationale": "official record proves control"},
+		{"round": 1, "member_id": "C2", "answer": 28, "rationale": "intent not proven"},
+	}
+	api.setTerminal("threshold_met")
+
+	status, got := callLawyerAPIResult(t, api, "case_id=arbd-1&role_id=plaintiff")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	if got["status"] != "done" {
+		t.Fatalf("status field = %#v, want done", got["status"])
+	}
+	result, ok := got["result"].(map[string]any)
+	if !ok {
+		t.Fatalf("result = %#v, want object", got["result"])
+	}
+	answers := mapAny(result["answers"])
+	if intNumber(answers["C1"]) != 72 || intNumber(answers["C2"]) != 28 {
+		t.Fatalf("answers = %#v", result["answers"])
+	}
+	rows := mapList(result["council_answers"])
+	if len(rows) != 2 {
+		t.Fatalf("answers = %#v, want 2", result["council_answers"])
+	}
+	if rows[0]["member_id"] != "C1" || rows[0]["rationale"] != "official record proves control" {
+		t.Fatalf("first answer = %#v", rows[0])
+	}
+	summary, ok := result["answer_summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("answer_summary = %#v, want object", result["answer_summary"])
+	}
+	final := mapAny(summary["final"])
+	if intNumber(final["count"]) != 2 || intNumber(final["min"]) != 28 || intNumber(final["max"]) != 72 {
+		t.Fatalf("answer_summary = %#v", summary)
+	}
+}
+
+func TestLawyerWaitTimeout(t *testing.T) {
+	api, _ := testLawyerAPIWithTurn()
+
+	status, got := callLawyerAPIWait(t, api, "case_id=arbd-1&role_id=plaintiff&after=openings:plaintiff&timeout_ms=10")
+	if status != http.StatusOK {
+		t.Fatalf("status = %d, want %d", status, http.StatusOK)
+	}
+	wait, ok := got["wait"].(map[string]any)
+	if !ok {
+		t.Fatalf("wait = %#v, want object", got["wait"])
+	}
+	if wait["reason"] != "timeout" {
+		t.Fatalf("wait.reason = %#v, want timeout", wait["reason"])
+	}
+}
+
+func testLawyerAPIWithTurn() (*lawyerAPIServer, *lawyerTurn) {
+	policy := DefaultPolicy()
+	turn := testLawyerTurn("openings:plaintiff", "plaintiff", "openings")
+	rc := &runContext{
+		cfg: Config{
+			Policy:  policy,
+			Runtime: DefaultRuntimeLimits(),
+		},
+		state:          initialState(policy, ""),
+		fileByID:       map[string]CaseFile{},
+		uploadSessions: map[string]*EvidenceUploadSession{},
+	}
+	return &lawyerAPIServer{rc: rc, active: turn, version: 1}, turn
+}
+
+func testLawyerTurn(id string, role string, phase string) *lawyerTurn {
+	return &lawyerTurn{
+		opportunity: Opportunity{
+			ID:           id,
+			Role:         role,
+			Phase:        phase,
+			AllowedTools: []string{"record_opening_statement"},
+		},
+		turnNumber:        1,
+		deadline:          time.Now().Add(time.Minute),
+		attemptsMax:       3,
+		attemptsRemaining: 3,
+		evidenceBudget:    &evidenceReadBudget{},
+		done:              make(chan error, 1),
+	}
+}
+
+func callLawyerAPIDo(t *testing.T, api *lawyerAPIServer, body map[string]any) (int, map[string]any) {
+	t.Helper()
+	raw, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, lawyerAPIBasePath+"/do", bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	api.handleDo(rec, req)
+	var got map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	return rec.Code, got
+}
+
+func callLawyerAPIWait(t *testing.T, api *lawyerAPIServer, query string) (int, map[string]any) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, lawyerAPIBasePath+"/wait?"+query, nil)
+	rec := httptest.NewRecorder()
+	api.handleWait(rec, req)
+	var got map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	return rec.Code, got
+}
+
+func callLawyerAPIGet(t *testing.T, api *lawyerAPIServer, query string) (int, map[string]any) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, lawyerAPIBasePath+"/get?"+query, nil)
+	rec := httptest.NewRecorder()
+	api.handleGet(rec, req)
+	var got map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	return rec.Code, got
+}
+
+func callLawyerAPIStatus(t *testing.T, api *lawyerAPIServer, query string) (int, map[string]any) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, lawyerAPIBasePath+"/status?"+query, nil)
+	rec := httptest.NewRecorder()
+	api.handleStatus(rec, req)
+	var got map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	return rec.Code, got
+}
+
+func callLawyerAPIResult(t *testing.T, api *lawyerAPIServer, query string) (int, map[string]any) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, lawyerAPIBasePath+"/result?"+query, nil)
+	rec := httptest.NewRecorder()
+	api.handleResult(rec, req)
+	var got map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	return rec.Code, got
+}
+
+func hasLawyerTool(tools []map[string]any, name string) bool {
+	for _, tool := range tools {
+		if mapString(tool["name"]) == name {
+			return true
+		}
+	}
+	return false
+}
+
+func lawyerAPIErrorCode(t *testing.T, got map[string]any) string {
+	t.Helper()
+	errObj, ok := got["error"].(map[string]any)
+	if !ok {
+		t.Fatalf("error = %#v, want object", got["error"])
+	}
+	return mapString(errObj["code"])
+}

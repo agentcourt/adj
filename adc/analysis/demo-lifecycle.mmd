@@ -1,0 +1,25 @@
+flowchart TD
+    A[example run\nsituation.md plus linked files] --> B[sign.sh\nregenerate keypair,\npublic key, signature]
+    B --> C[adc complain\ndraft complaint.md]
+    C --> D[adc case]
+
+    D --> E[stage complaint files\nand generate case packet]
+    E --> F[generate plaintiff strategy\nand defense strategy]
+    F --> G[build scenario with case_init\nand no case-specific turns]
+    G --> H[Lean initialize_case\nseed complaint and attachments]
+    H --> I[next_opportunity loop]
+    I --> J[log agent call\nrole, phase, reason,\nallowed tools]
+    J --> K{external role?}
+    K -- no --> L[local model call]
+    K -- yes --> M[Role API opportunity\nexternal client decision]
+    L --> N[decision or pass]
+    M --> N
+    N --> O[Lean apply_decision\nvalidate opportunity]
+    O --> P{accepted?}
+    P -- no --> Q[plain-language correction\nsame opportunity]
+    Q --> N
+    P -- yes --> R[execute accepted act\nLean step or runner action]
+    R --> S[update state,\nsqlite run db,\nand events]
+    S --> T{terminal?}
+    T -- no --> I
+    T -- yes --> U[write run.json,\ntranscript.md,\ndigest.md]

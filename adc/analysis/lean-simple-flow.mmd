@@ -1,0 +1,21 @@
+graph TD
+  A[runner holds current CourtState] --> B{Lean request}
+  B -->|initialize_case| C[seed complaint, attachments,\nand court profile]
+  B -->|role_view| D[return role-scoped case view]
+  B -->|next_opportunity| E[derive one current opportunity]
+  B -->|apply_decision| F[validate pass or legal act]
+  B -->|step| G[apply resulting action state]
+
+  E --> H[agent sees current role view<br/>and one constrained opportunity]
+  H --> I[agent submits pass or decision]
+  I --> F
+  F --> J{valid?}
+  J -->|no| K[error with actor_message\nno state change]
+  J -->|yes| L[accepted action or recorded pass]
+  L --> N[runner executes accepted act\nor records pass]
+  N --> G
+  G --> M[updated authoritative state]
+  C --> M
+  D --> H
+  K --> H
+  M --> E

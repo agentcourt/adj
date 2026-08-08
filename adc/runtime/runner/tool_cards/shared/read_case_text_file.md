@@ -1,0 +1,1 @@
+Use this tool only with a `file_id` from `list_case_files`.  It reads the full text of visible `.md`, `.txt`, `.pem`, and `.b64` case files.  If the file is another format, use `request_case_file` or proceed without it.

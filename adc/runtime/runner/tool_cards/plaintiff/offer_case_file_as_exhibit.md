@@ -1,0 +1,1 @@
+Offer the strongest case file that advances the plaintiff's proof on the current issue.  Use the case file identifier, not a filename.  Keep the exhibit description tied to what the file shows and how it supports the claim.

@@ -1,0 +1,1 @@
+State the findings and conclusions that decide the bench trial.  Separate what you find from what legal rule you apply.  Tie each dispositive conclusion to the record and explain the judgment that follows.

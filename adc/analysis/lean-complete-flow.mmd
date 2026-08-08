@@ -1,0 +1,102 @@
+graph TD
+  Req["Lean request"] --> Route{"request_type"}
+  Route -->|initialize_case| Init["initializeCase"]
+  Route -->|role_view| View["viewForRole"]
+  Route -->|next_opportunity| Next["nextOpportunity"]
+  Route -->|agenda| Agenda["openOpportunities"]
+  Route -->|apply_decision| Apply["applyDecision"]
+  Route -->|step| StepIn["step(state, action)"]
+
+  Init --> InitCheck{"complaint summary,\nattachments, and\njurisdiction allegations valid?"}
+  InitCheck -->|no| InitErr["error"]
+  InitCheck -->|yes| InitOut["seed complaint attachments,\ndocket, and traces"]
+
+  View --> ViewRole{"role"}
+  ViewRole -->|judge or clerk| ViewFull["full case view"]
+  ViewRole -->|plaintiff or defendant| ViewParty["public case plus visible files,\njurisdiction allegations, and docket"]
+  ViewRole -->|juror or other nonparty role| ViewJury["public case plus jury-safe redactions"]
+
+  Next --> Facts["collectTurnFacts\nfrom authoritative case state"]
+  Facts --> Families{"status"}
+  Families -->|filed| Filed["filed candidates"]
+  Families -->|pretrial| Pretrial["pretrial candidates"]
+  Families -->|trial| Trial["trial candidates"]
+  Families -->|judgment_entered| Post["post-judgment candidates"]
+  Filed --> Juris["plus jurisdiction-dismissal candidates\nwhen the court profile enables screening"]
+  Pretrial --> Juris
+  Trial --> Juris
+  Post --> Juris
+  Juris --> Finalize["assign ids and filter passed opportunities"]
+  Finalize --> NextOut["lowest-priority open opportunity\nor terminal"]
+  Agenda --> Finalize
+
+  Apply --> ApplyCheck{"state_version\nopportunity_id\nrole\nallowed tool\npayload constraints"}
+  ApplyCheck -->|no| ApplyErr["retryable StepErr\nwith actor_message"]
+  ApplyCheck -->|yes| ApplyKind{"pass or tool"}
+  ApplyKind -->|pass| Pass["record pass\nclose Rule 56 window when applicable"]
+  ApplyKind -->|tool| Exec["emit accepted action\nfor runner execution"]
+
+  StepIn --> SchemaCheck{"schema_version == v1"}
+  SchemaCheck -->|no| StepErr["error"]
+  SchemaCheck -->|yes| Dispatch{"action family"}
+
+  Dispatch --> F0["Initialization and filing"]
+  Dispatch --> F1["Pretrial and discovery"]
+  Dispatch --> F2["Trial"]
+  Dispatch --> F3["Post-judgment and limits"]
+
+  subgraph Filing["Initialization and filing actions"]
+    direction TB
+    F0 --> I0["initialize_case"]
+    I0 --> I1["file_complaint"]
+    I1 --> I2["file_answer or amended complaint"]
+    I2 --> I3["resolve_trial_mode and transition_case"]
+  end
+
+  subgraph PretrialFamily["Pretrial and discovery actions"]
+    direction TB
+    F1 --> P11a["Rule 11 safe harbor and motion"]
+    P11a --> P12a["Rule 12 by ground:\nSMJ standing ripeness mootness 12(b)(6)"]
+    P12a --> P12b["judge Rule 12 ruling\nor SMJ dismissal under Rule 12(h)(3)"]
+    P12b --> D1["disclosures and written discovery"]
+    D1 --> P37["Rule 37 motion and order"]
+    P37 --> P56["Rule 56 motion window\nmotion opposition reply order"]
+    P56 --> P16["pretrial order"]
+  end
+
+  subgraph TrialFamily["Trial actions"]
+    direction TB
+    F2 --> T0["jury configuration and panel setup"]
+    T0 --> T1{"voir dire mode"}
+    T1 -->|full| T2["questionnaires\njudge-screened lawyer questions\nfor-cause challenges\nperemptories"]
+    T1 -->|skip_voir_dire| T3["random empanelment\nby judge order"]
+    T2 --> T4["empanelment"]
+    T3 --> T4
+    T4 --> T5["openings"]
+    T5 --> T6["plaintiff case presentation"]
+    T6 --> T7["plaintiff evidence phase\noffer exhibits or rest"]
+    T7 --> T8["defense case presentation"]
+    T8 --> T9["defense evidence phase\noffer exhibits or rest"]
+    T9 --> T10["plaintiff rebuttal presentation"]
+    T10 --> T11["plaintiff rebuttal evidence\noffer exhibits or rest"]
+    T11 --> T12["defense surrebuttal presentation"]
+    T12 --> T13["defense surrebuttal evidence\noffer exhibits or rest"]
+    T13 --> T14["closings"]
+    T14 --> T15{"jury or bench"}
+    T15 -->|jury| T16["charge conference\njury instructions\ndeliberation rounds"]
+    T15 -->|bench| T17["verdict return\nbench opinion"]
+    T16 --> T18["individual juror votes\nverdict or hung jury\npoll and judgment"]
+    T17 --> T19["judgment"]
+  end
+
+  subgraph PostFamily["Post-judgment and limit actions"]
+    direction TB
+    F3 --> J1["Rule 59 and Rule 60"]
+    J1 --> J2["court-profile and\nlimit enforcement actions"]
+  end
+
+  P56 --> W56["Rule 56 window note:\none opportunity per party\npass closes window\namended complaint reopens"]
+  P12b --> JNote["Jurisdiction note:\nSMJ dismissal only appears when\nthe court profile enables screening"]
+  T18 --> GNote["Trial note:\nfor jury trials the result comes from\nindividual sworn-juror votes,\nnot a separate foreperson actor"]
+
+  Dispatch --> StepOut["updated CourtState"]

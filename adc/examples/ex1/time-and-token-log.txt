@@ -1,0 +1,9 @@
+Internal time and token log for cleanup after Samantha's admission
+
+Entries:
+- 2026-03-12: Peter review and remediation planning, 6.0 hours at $400/hour = $2,400
+- 2026-03-13: client communications and revised briefing outline, 5.0 hours at $400/hour = $2,000
+- 2026-03-13: model usage and transcript review for rework support = $1,600
+- 2026-03-14: additional prompt runs, comparison review, and packaging corrections = $2,000
+
+Total: $8,000

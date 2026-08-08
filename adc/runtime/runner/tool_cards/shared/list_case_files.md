@@ -1,0 +1,1 @@
+Use this tool to see the current visible case-file inventory.  Prefer it before citing a `file_id`.  Use `extension` and `mime_type` to choose how to inspect the file.  Read `uses` as file history and role in the case, not as a single fixed category.

@@ -1,0 +1,1 @@
+Enter the judgment that follows from the verdict, poll, or bench findings already in the record.  Do not revise liability or damages at this step except as the governing result already requires.  State the basis of judgment clearly and keep it consistent with the case outcome.

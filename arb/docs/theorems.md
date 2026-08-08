@@ -1,0 +1,264 @@
+# Theorems
+
+| Theorem | File | Importance | Comment |
+|---|---|---|---|
+| `ClosedCertificateFacts.demonstrated_sound` | `Proofs/CertificateFacts.lean` | medium | Extracts demonstrated-outcome soundness from the closed certificate fact package. |
+| `ClosedCertificateFacts.no_majority_sound` | `Proofs/CertificateFacts.lean` | medium | Extracts no-majority soundness from the closed certificate fact package. |
+| `ClosedCertificateFacts.not_demonstrated_sound` | `Proofs/CertificateFacts.lean` | medium | Extracts not-demonstrated outcome soundness from the closed certificate fact package. |
+| `addArgument_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
+| `addArgument_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
+| `addClosing_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
+| `addClosing_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
+| `addFiling_preserves_councilMemberIds` | `Proofs/CaseFrame.lean` |  |  |
+| `addFiling_preserves_offered_evidence` | `Proofs/AggregateLimits.lean` |  |  |
+| `addFiling_preserves_proposition` | `Proofs/CaseFrame.lean` |  |  |
+| `addFiling_preserves_technical_reports` | `Proofs/AggregateLimits.lean` |  |  |
+| `addOpening_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
+| `addOpening_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
+| `addRebuttal_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
+| `addRebuttal_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
+| `addSurrebuttal_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
+| `addSurrebuttal_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
+| `advanceAfterMerits_preserves_councilMemberIds` | `Proofs/CaseFrame.lean` |  |  |
+| `advanceAfterMerits_preserves_offered_evidence` | `Proofs/AggregateLimits.lean` |  |  |
+| `advanceAfterMerits_preserves_proposition` | `Proofs/CaseFrame.lean` |  |  |
+| `advanceAfterMerits_preserves_technical_reports` | `Proofs/AggregateLimits.lean` |  |  |
+| `appendSupplementalMaterials_extends_materials` | `Proofs/RecordProvenance.lean` |  |  |
+| `appendSupplementalMaterials_preserves_councilMemberIds` | `Proofs/CaseFrame.lean` |  |  |
+| `appendSupplementalMaterials_preserves_material_limits` | `Proofs/AggregateLimits.lean` |  |  |
+| `appendSupplementalMaterials_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
+| `appendSupplementalMaterials_preserves_proposition` | `Proofs/CaseFrame.lean` |  |  |
+| `appendSupplementalMaterials_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` |  |  |
+| `append_preserves_membership_property` | `Proofs/RecordProvenance.lean` |  |  |
+| `bilateralComplete_implies_bilateral_parity` | `Proofs/ProcedureShape.lean` |  |  |
+| `bilateralStarted_implies_bilateral_parity` | `Proofs/ProcedureShape.lean` |  |  |
+| `checkReplayCertificate_closed_demonstrated_sound` | `Proofs/CertificateSoundness.lean` | high | Shows that an accepted replay certificate for a closed demonstrated state satisfies the demonstrated vote threshold. |
+| `checkReplayCertificate_closed_no_majority_sound` | `Proofs/CertificateSoundness.lean` | high | Shows that an accepted replay certificate for a closed no-majority state satisfies the executable no-majority conditions. |
+| `checkReplayCertificate_closed_not_demonstrated_sound` | `Proofs/CertificateSoundness.lean` | high | Shows that an accepted replay certificate for a closed not-demonstrated state satisfies the not-demonstrated vote threshold. |
+| `checkReplayCertificate_ok_iff` | `Proofs/Replay.lean` | high | Shows that certificate acceptance is exact initialized replay to the claimed state. |
+| `checkReplayCertificate_ok_length_le_initializedBudget` | `Proofs/Replay.lean` | medium | Bounds the accepted certificate action list by the initialized procedural budget. |
+| `checkReplayCertificate_ok_reachable` | `Proofs/Replay.lean` | high | Shows that an accepted replay certificate claims a reachable state. |
+| `checkReplayCertificate_ok_terminal_status_accounted` | `Proofs/Replay.lean` | high | Accounts for accepted replay certificates whose claimed state is closed or failed. |
+| `checkReplayCertificate_status_closed_facts` | `Proofs/CertificateFacts.lean` | high | Packages exact replay, reachability, terminal accounting, merits completion, filing counts, outcome soundness, and decision-summary replay for accepted closed certificates. |
+| `checkReplayCertificate_status_failed_facts` | `Proofs/CertificateFacts.lean` | high | Packages exact replay, reachability, length bound, failure record, and decision-summary replay for accepted failed certificates. |
+| `checkReplayCertificate_terminal_facts` | `Proofs/CertificateFacts.lean` | high | Packages accepted terminal certificates as either closed facts or failed facts. |
+| `closeDeliberation_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
+| `concat_length_ge_two_of_isEmpty_false` | `Proofs/BoundedTermination.lean` |  |  |
+| `continueDeliberation_closed_demonstrated_sound` | `Proofs/OutcomeSoundness.lean` | high | Shows that a closed `demonstrated` result from deliberation meets the configured vote threshold. |
+| `continueDeliberation_closed_no_majority_sound` | `Proofs/OutcomeSoundness.lean` | high | Shows that a closed `no_majority` result occurs only after threshold failure plus one of the two executable closure conditions. |
+| `continueDeliberation_closed_not_demonstrated_sound` | `Proofs/OutcomeSoundness.lean` | high | Shows that a closed `not_demonstrated` result from deliberation meets the configured vote threshold. |
+| `continueDeliberation_does_not_increase_remainingStepBudget` | `Proofs/BoundedTermination.lean` |  |  |
+| `continueDeliberation_extends_materials_for` | `Proofs/RecordProvenance.lean` |  |  |
+| `continueDeliberation_live_has_nextCouncilMember` | `Proofs/NoStuck.lean` | high | Shows that a live deliberation transition still leaves a next seated council voter. |
+| `continueDeliberation_preserves_caseFrame_for` | `Proofs/CaseFrame.lean` | medium | Shows that deliberation can change votes, status, phase, and resolution without changing the case frame. |
+| `continueDeliberation_preserves_council_members` | `Proofs/CouncilStatus.lean` |  |  |
+| `continueDeliberation_preserves_council_votes` | `Proofs/CouncilStatus.lean` |  |  |
+| `continueDeliberation_preserves_material_limits` | `Proofs/GlobalInvariants.lean` |  |  |
+| `continueDeliberation_preserves_material_limits_for` | `Proofs/StepPreservation.lean` |  |  |
+| `continueDeliberation_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
+| `continueDeliberation_preserves_phaseShape_for` | `Proofs/StepPreservation.lean` |  |  |
+| `continueDeliberation_preserves_recordProvenance_for` | `Proofs/RecordProvenance.lean` |  |  |
+| `currentResolution_demonstrated_implies_sound` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `currentResolution_none_implies_below_threshold` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `currentResolution_not_demonstrated_implies_sound` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `currentRoundVoteIds_subset_seatedCouncilMemberIds` | `Proofs/BoundedTermination.lean` |  |  |
+| `currentRoundVotes_length_lt_seatedCouncilMemberCount_of_fresh_seated` | `Proofs/BoundedTermination.lean` |  |  |
+| `defendantOptionalSequence_implies_optional_parity` | `Proofs/ProcedureShape.lean` |  |  |
+| `eq_nil_of_not_one_le_length` | `Proofs/BoundedTermination.lean` |  |  |
+| `filed_rebuttal_and_surrebuttal_advance_the_case` | `Proofs/MeritsFlow.lean` |  |  |
+| `filingCountForRole_eq_filingCount` | `Proofs/Reachability.lean` |  |  |
+| `filingCountForRole_foldl` | `Proofs/Reachability.lean` |  |  |
+| `filingCount_append` | `Proofs/Reachability.lean` |  |  |
+| `filingCount_nil` | `Proofs/Reachability.lean` |  |  |
+| `filingCount_single` | `Proofs/Reachability.lean` |  |  |
+| `filter_length_eq_length_of_all_seated` | `Proofs/BoundedTermination.lean` |  |  |
+| `full_split_round_advances_deliberation` | `Proofs/Deliberation.lean` |  |  |
+| `initializeCase_establishes_caseFrame` | `Proofs/CaseFrame.lean` | high | Successful initialization fixes the proposition, policy, and council member identities. |
+| `initializeCase_establishes_councilMemberCount_eq_policySize` | `Proofs/BoundedTermination.lean` |  |  |
+| `initializeCase_establishes_materialLimits` | `Proofs/GlobalInvariants.lean` | medium | Shows that initialization starts with no admitted supplemental materials. |
+| `initializeCase_establishes_max_deliberation_rounds_positive` | `Proofs/BoundedTermination.lean` |  |  |
+| `initializeCase_establishes_phaseShape` | `Proofs/GlobalInvariants.lean` | medium | Shows that initialization starts in the intended opening-state structure. |
+| `initializeCase_establishes_pristineCouncilState` | `Proofs/NoStuck.lean` | medium | Shows that deliberation starts from a clean council record: no votes, round one, and every member seated. |
+| `initializeCase_establishes_recordProvenance` | `Proofs/RecordProvenance.lean` | medium | Successful initialization starts with an empty admitted-material record, so provenance holds immediately. |
+| `initializeCase_phase_openings` | `Proofs/OutcomeSoundness.lean` | medium | Shows that successful initialization cannot already produce a closed case. |
+| `initializeCase_rejects_duplicate_member_ids` | `Proofs/InitializeCase.lean` | medium | Shows that initialization rejects duplicate council member identifiers. |
+| `initializeCase_remainingStepBudget` | `Proofs/BoundedTermination.lean` | medium | Computes the explicit initial budget of a successfully initialized case. |
+| `initializeCase_requires_matching_council_size` | `Proofs/InitializeCase.lean` |  |  |
+| `initializeCase_reseats_every_council_member` | `Proofs/InitializeCase.lean` |  |  |
+| `initializeCase_sets_core_case_fields` | `Proofs/InitializeCase.lean` |  |  |
+| `initialized_run_preserves_caseFrame` | `Proofs/CaseFrame.lean` | high | Lifts the case-frame invariant from individual steps to whole runs that begin at successful initialization. |
+| `list_length_le_of_nodup_subset` | `Proofs/BoundedTermination.lean` |  |  |
+| `list_length_lt_of_nodup_subset_and_fresh` | `Proofs/BoundedTermination.lean` |  |  |
+| `materialOriginAllowed_of_arguments` | `Proofs/RecordProvenance.lean` |  |  |
+| `materialOriginAllowed_of_rebuttals` | `Proofs/RecordProvenance.lean` |  |  |
+| `materialsExtend_refl` | `Proofs/RecordProvenance.lean` |  |  |
+| `materialsExtend_trans` | `Proofs/RecordProvenance.lean` | medium | Append-only record growth composes across successful runs. |
+| `mem_concat_last_of_not_mem_prefix` | `Proofs/CouncilStatus.lean` |  |  |
+| `ne_nil_of_one_le_length` | `Proofs/BoundedTermination.lean` |  |  |
+| `newCouncilVotesComeFromSeated_of_same_votes` | `Proofs/CouncilStatus.lean` |  |  |
+| `nextOpportunityForPhase_closes_rebuttals_after_one_turn` | `Proofs/ProcedureShape.lean` |  |  |
+| `nextOpportunityForPhase_closes_surrebuttals_after_one_turn` | `Proofs/ProcedureShape.lean` |  |  |
+| `nextOpportunityForPhase_offers_rebuttal_only_to_plaintiff` | `Proofs/ProcedureShape.lean` |  |  |
+| `nextOpportunityForPhase_offers_surrebuttal_only_to_defendant` | `Proofs/ProcedureShape.lean` |  |  |
+| `nextOpportunity_skips_voted_and_nonseated_members` | `Proofs/Deliberation.lean` |  |  |
+| `nextOpportunity_starts_with_plaintiff_opening` | `Proofs/MeritsFlow.lean` |  |  |
+| `offeredCount_append` | `Proofs/Reachability.lean` |  |  |
+| `offeredCount_eq_length_of_all_role` | `Proofs/AggregateLimits.lean` |  |  |
+| `offeredCount_nil` | `Proofs/Reachability.lean` |  |  |
+| `offeredCount_zero_of_all_other_role` | `Proofs/AggregateLimits.lean` |  |  |
+| `offeredEvidenceCountForRole_eq_offeredCount` | `Proofs/Reachability.lean` |  |  |
+| `offeredEvidenceCountForRole_foldl` | `Proofs/Reachability.lean` |  |  |
+| `parseOfferedEvidenceEntries_all_phase` | `Proofs/RecordProvenance.lean` |  |  |
+| `parseOfferedEvidenceEntries_all_role` | `Proofs/StepPreservation.lean` |  |  |
+| `parseOfferedEvidenceEntry_phase` | `Proofs/RecordProvenance.lean` |  |  |
+| `parseOfferedEvidenceEntry_role` | `Proofs/StepPreservation.lean` |  |  |
+| `parseOfferedEvidence_all_phase` | `Proofs/RecordProvenance.lean` |  |  |
+| `parseOfferedEvidence_all_role` | `Proofs/StepPreservation.lean` |  |  |
+| `parseTechnicalReportEntries_all_phase` | `Proofs/RecordProvenance.lean` |  |  |
+| `parseTechnicalReportEntries_all_role` | `Proofs/StepPreservation.lean` |  |  |
+| `parseTechnicalReportEntry_phase` | `Proofs/RecordProvenance.lean` |  |  |
+| `parseTechnicalReportEntry_role` | `Proofs/StepPreservation.lean` |  |  |
+| `parseTechnicalReports_all_phase` | `Proofs/RecordProvenance.lean` |  |  |
+| `parseTechnicalReports_all_role` | `Proofs/StepPreservation.lean` |  |  |
+| `passRebuttal_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
+| `passRebuttal_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
+| `passSurrebuttal_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
+| `passSurrebuttal_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
+| `pass_actions_advance_optional_merits_phases` | `Proofs/MeritsFlow.lean` |  |  |
+| `phaseShape_implies_proceduralParity` | `Proofs/ProcedureShape.lean` | high | Turns the structural phase invariant into a simpler fairness summary. |
+| `plaintiffOptionalSequence_implies_optional_parity` | `Proofs/ProcedureShape.lean` |  |  |
+| `reachable_closed_demonstrated_sound` | `Proofs/OutcomeSoundness.lean` | high | Lifts demonstrated-outcome soundness to every reachable closed state. |
+| `reachable_closed_no_majority_sound` | `Proofs/OutcomeSoundness.lean` | high | Lifts no-majority soundness to every reachable closed state. |
+| `reachable_closed_not_demonstrated_sound` | `Proofs/OutcomeSoundness.lean` | high | Lifts not-demonstrated outcome soundness to every reachable closed state. |
+| `reachable_councilIdsUnique` | `Proofs/CouncilIntegrity.lean` | high | Shows that every reachable state preserves unique council member identifiers. |
+| `reachable_councilMemberCount_eq_policySize` | `Proofs/BoundedTermination.lean` | medium | Shows that every reachable state preserves the initialized council size. |
+| `reachable_councilVoteIntegrity` | `Proofs/CouncilIntegrity.lean` | high | Shows that every reachable state preserves distinct current-round votes from seated members and keeps vote rounds bounded. |
+| `reachable_currentResolution_is_neutral_under_vote_flip` | `Proofs/Neutrality.lean` | high | Shows that flipping every current-round substantive vote flips the resolution the same way in every reachable state. |
+| `reachable_deliberation_has_nextCouncilMember` | `Proofs/NoStuck.lean` | high | Shows that every reachable live deliberation state still has a next council voter. |
+| `reachable_materialLimitsRespected` | `Proofs/ReachableMaterialLimits.lean` | high | Shows that cumulative exhibit and report caps hold in every reachable state. |
+| `reachable_nonclosed_has_nextOpportunity` | `Proofs/NoStuck.lean` | high | Shows that the Lean engine never strands a reachable live case without a next opportunity. |
+| `reachable_nonempty_council` | `Proofs/CouncilIntegrity.lean` | medium | Shows that successful initialization and later steps preserve a nonempty council roster. |
+| `reachable_phaseShape` | `Proofs/ReachableInvariants.lean` | high | Shows that every successful public execution preserves the merits sequence. |
+| `reachable_phase_closed_implies_status_closed` | `Proofs/NoStuck.lean` | medium | Shows that the phase and status views of closure stay aligned in every reachable state. |
+| `reachable_proceduralParity` | `Proofs/ReachableInvariants.lean` | high | Derives side-to-side filing parity for every reachable state. |
+| `reachable_recordProvenance` | `Proofs/RecordProvenance.lean` | high | Every reachable state preserves the allowed phase-role origins of admitted materials. |
+| `reachable_seatedCouncilMemberCount_le_councilSize` | `Proofs/BoundedTermination.lean` | medium | Shows that seated council membership never exceeds the initialized council size. |
+| `recordMeritsSubmission_with_materials_details` | `Proofs/StepPreservation.lean` |  |  |
+| `recordMeritsSubmission_with_materials_result` | `Proofs/StepPreservation.lean` |  |  |
+| `recordMeritsSubmission_without_materials_result` | `Proofs/StepPreservation.lean` |  |  |
+| `remainingDeliberationSteps_addFiling` | `Proofs/BoundedTermination.lean` |  |  |
+| `remainingDeliberationSteps_appendCurrentRoundVote` | `Proofs/BoundedTermination.lean` |  |  |
+| `remainingDeliberationSteps_appendSupplementalMaterials` | `Proofs/BoundedTermination.lean` |  |  |
+| `remainingDeliberationSteps_phase_update` | `Proofs/BoundedTermination.lean` |  |  |
+| `remainingDeliberationSteps_removeUnvotedCouncilMember` | `Proofs/BoundedTermination.lean` |  |  |
+| `remainingStepBudget_of_phase_ne_closed` | `Proofs/BoundedTermination.lean` |  |  |
+| `removal_of_current_round_voter_is_rejected` | `Proofs/Deliberation.lean` | medium | Shows that deliberation rejects removal of a member who already voted in the current round. |
+| `removal_that_breaks_the_threshold_closes_no_majority` | `Proofs/Deliberation.lean` |  |  |
+| `reportCount_append` | `Proofs/Reachability.lean` |  |  |
+| `reportCount_eq_length_of_all_role` | `Proofs/AggregateLimits.lean` |  |  |
+| `reportCount_nil` | `Proofs/Reachability.lean` |  |  |
+| `reportCount_zero_of_all_other_role` | `Proofs/AggregateLimits.lean` |  |  |
+| `requireCountWithinLimit_ok_implies_le` | `Proofs/StepPreservation.lean` |  |  |
+| `sameRoundDeliberationProgress_blocks_substantive_currentResolution` | `Proofs/ProgressViability.lean` | medium | Shows that same-round deliberation progress cannot create a current substantive resolution after both substantive outcomes are impossible. |
+| `seatedCouncilMemberCount_eq_length_of_all_seated` | `Proofs/BoundedTermination.lean` |  |  |
+| `seatedCouncilMemberCount_le_memberCount` | `Proofs/BoundedTermination.lean` |  |  |
+| `seatedCouncilMemberCount_removeUnvotedCouncilMember` | `Proofs/BoundedTermination.lean` |  |  |
+| `seatedCouncilMemberIdsShrink_of_same_members` | `Proofs/CouncilStatus.lean` |  |  |
+| `seatedCouncilMemberIdsShrink_refl` | `Proofs/CouncilStatus.lean` |  |  |
+| `seatedCouncilMemberIdsShrink_trans` | `Proofs/CouncilStatus.lean` |  |  |
+| `seatedCount_status_update_absent` | `Proofs/BoundedTermination.lean` |  |  |
+| `seatedFilterLength_removeOne` | `Proofs/BoundedTermination.lean` |  |  |
+| `second_argument_advances_to_rebuttals` | `Proofs/MeritsFlow.lean` |  |  |
+| `second_closing_opens_deliberation` | `Proofs/MeritsFlow.lean` |  |  |
+| `second_demonstrated_vote_closes_the_case` | `Proofs/Deliberation.lean` |  |  |
+| `second_opening_advances_to_arguments` | `Proofs/MeritsFlow.lean` |  |  |
+| `setCouncilMembers_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `setCouncilVotes_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `setMemberStatus_shrinks_seatedCouncilMemberIds` | `Proofs/CouncilStatus.lean` |  |  |
+| `stateWithCase_extends_materials` | `Proofs/RecordProvenance.lean` |  |  |
+| `stateWithCase_preserves_caseFrame` | `Proofs/CaseFrame.lean` |  |  |
+| `stateWithCase_preserves_material_limits` | `Proofs/AggregateLimits.lean` |  |  |
+| `stateWithCase_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
+| `stateWithCase_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` |  |  |
+| `stepPath_length_le_initializedBudget` | `Proofs/BoundedTermination.lean` | high | Bounds the length of any successful public run from initialization by the initialized step budget. |
+| `stepPath_length_plus_budget_le` | `Proofs/BoundedTermination.lean` | medium | Relates any successful public step path to the remaining-step budget of its start state. |
+| `stepPath_reachable` | `Proofs/BoundedTermination.lean` |  |  |
+| `stepReachableFrom_materialsExtend` | `Proofs/RecordProvenance.lean` | high | Any successful public run changes admitted materials only by appending suffixes. |
+| `stepReachableFrom_nonseated_stays_nonseated` | `Proofs/CouncilStatus.lean` | high | Once a member is non-seated, later successful public steps do not restore that member to seated. |
+| `stepReachableFrom_shrinks_seatedCouncilMemberIds` | `Proofs/CouncilStatus.lean` | high | Along any successful public run, the seated council roster can only shrink. |
+| `step_closed_demonstrated_sound` | `Proofs/OutcomeSoundness.lean` | medium | Reduces any closed demonstrated result at the public step boundary to the deliberation closure proof. |
+| `step_closed_no_majority_sound` | `Proofs/OutcomeSoundness.lean` | medium | Reduces any closed no-majority result at the public step boundary to the deliberation closure proof. |
+| `step_closed_not_demonstrated_sound` | `Proofs/OutcomeSoundness.lean` | medium | Reduces any closed not-demonstrated result at the public step boundary to the deliberation closure proof. |
+| `step_decreases_remainingStepBudget` | `Proofs/BoundedTermination.lean` | high | Shows that every successful public step decreases the remaining-step budget. |
+| `step_deliver_closing_statement_decreases_remainingStepBudget` | `Proofs/BoundedTermination.lean` |  |  |
+| `step_deliver_closing_statement_extends_materials` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_deliver_closing_statement_phase_ne_closed` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_deliver_closing_statement_preserves_material_limits` | `Proofs/StepPreservation.lean` |  |  |
+| `step_deliver_closing_statement_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `step_deliver_closing_statement_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_deliver_closing_statement_result` | `Proofs/StepPreservation.lean` |  |  |
+| `step_extends_materials` | `Proofs/RecordProvenance.lean` | medium | Every successful public step leaves prior admitted materials intact and may append new ones. |
+| `step_fail_opportunity_preserves_council_votes` | `Proofs/ProgressViability.lean` | medium | Shows that a successful fail-opportunity step preserves the stored council vote list. |
+| `step_fail_opportunity_same_round_resilience` | `Proofs/ProgressViability.lean` | high | Packages same-round failure progress, council-vote preservation, no-substantive-outcome preservation, and the blocked substantive current resolution. |
+| `step_introduces_newCouncilVotes_only_from_seated` | `Proofs/CouncilStatus.lean` | high | Any newly introduced council vote comes from a member seated in the source state. |
+| `step_pass_phase_opportunity_decreases_remainingStepBudget` | `Proofs/BoundedTermination.lean` |  |  |
+| `step_pass_phase_opportunity_extends_materials` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_pass_phase_opportunity_phase_ne_closed` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_pass_phase_opportunity_preserves_caseFrame` | `Proofs/CaseFrame.lean` |  |  |
+| `step_pass_phase_opportunity_preserves_material_limits` | `Proofs/StepPreservation.lean` |  |  |
+| `step_pass_phase_opportunity_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `step_pass_phase_opportunity_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_preserves_caseFrame` | `Proofs/CaseFrame.lean` | high | Every successful public step preserves the initialized case frame. |
+| `step_preserves_councilMemberCount_eq_policySize` | `Proofs/BoundedTermination.lean` |  |  |
+| `step_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` | medium | Every successful public step preserves the allowed origins of admitted materials. |
+| `step_record_opening_statement_decreases_remainingStepBudget` | `Proofs/BoundedTermination.lean` |  |  |
+| `step_record_opening_statement_extends_materials` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_record_opening_statement_phase_ne_closed` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_record_opening_statement_preserves_material_limits` | `Proofs/StepPreservation.lean` |  |  |
+| `step_record_opening_statement_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `step_record_opening_statement_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_record_opening_statement_result` | `Proofs/StepPreservation.lean` |  |  |
+| `step_remove_council_member_closed_demonstrated_sound` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_remove_council_member_closed_no_majority_sound` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_remove_council_member_closed_not_demonstrated_sound` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_remove_council_member_decreases_remainingStepBudget` | `Proofs/BoundedTermination.lean` |  |  |
+| `step_remove_council_member_extends_materials` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_remove_council_member_preserves_material_limits` | `Proofs/StepPreservation.lean` |  |  |
+| `step_remove_council_member_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `step_remove_council_member_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_remove_council_member_result` | `Proofs/StepPreservation.lean` | medium | Exposes the timed-out-member removal transition at the public step boundary. |
+| `step_shrinks_seatedCouncilMemberIds` | `Proofs/CouncilStatus.lean` | medium | Every successful public step leaves the seated roster unchanged or removes seated members. |
+| `step_strictly_decreases_remainingStepBudget` | `Proofs/BoundedTermination.lean` | high | Strengthens the budget theorem to a strict decrease at every successful public step. |
+| `step_submit_argument_decreases_remainingStepBudget` | `Proofs/BoundedTermination.lean` |  |  |
+| `step_submit_argument_extends_materials` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_submit_argument_phase_ne_closed` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_submit_argument_preserves_material_limits` | `Proofs/StepPreservation.lean` |  |  |
+| `step_submit_argument_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `step_submit_argument_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_submit_council_vote_closed_demonstrated_sound` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_submit_council_vote_closed_no_majority_sound` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_submit_council_vote_closed_not_demonstrated_sound` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_submit_council_vote_decreases_remainingStepBudget` | `Proofs/BoundedTermination.lean` |  |  |
+| `step_submit_council_vote_extends_materials` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_submit_council_vote_introduces_only_seated_currentRoundVote` | `Proofs/CouncilStatus.lean` | medium | Reduces the general new-vote theorem to the single council-vote action. |
+| `step_submit_council_vote_preserves_material_limits` | `Proofs/StepPreservation.lean` |  |  |
+| `step_submit_council_vote_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `step_submit_council_vote_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_submit_council_vote_result` | `Proofs/StepPreservation.lean` | medium | Exposes the council-vote transition at the public step boundary. |
+| `step_submit_rebuttal_decreases_remainingStepBudget` | `Proofs/BoundedTermination.lean` |  |  |
+| `step_submit_rebuttal_extends_materials` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_submit_rebuttal_phase_ne_closed` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_submit_rebuttal_preserves_material_limits` | `Proofs/StepPreservation.lean` |  |  |
+| `step_submit_rebuttal_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `step_submit_rebuttal_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_submit_surrebuttal_decreases_remainingStepBudget` | `Proofs/BoundedTermination.lean` |  |  |
+| `step_submit_surrebuttal_extends_materials` | `Proofs/RecordProvenance.lean` |  |  |
+| `step_submit_surrebuttal_phase_ne_closed` | `Proofs/OutcomeSoundness.lean` |  |  |
+| `step_submit_surrebuttal_preserves_material_limits` | `Proofs/StepPreservation.lean` |  |  |
+| `step_submit_surrebuttal_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `step_submit_surrebuttal_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` |  |  |
+| `technicalReportCountForRole_eq_reportCount` | `Proofs/Reachability.lean` |  |  |
+| `technicalReportCountForRole_foldl` | `Proofs/Reachability.lean` |  |  |
+| `validatePolicy_ok_implies_max_deliberation_rounds_positive` | `Proofs/BoundedTermination.lean` |  |  |
+| `validatePolicy_rejects_non_strict_majority_threshold` | `Proofs/InitializeCase.lean` | medium | Shows that policy validation rejects thresholds that are not strict majorities. |
+| `validatePolicy_rejects_threshold_above_council_size` | `Proofs/InitializeCase.lean` |  |  |

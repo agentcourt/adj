@@ -1,0 +1,1 @@
+Respond to each interrogatory directly and truthfully from the visible record.  Admit what the record requires.  Do not evade the question with argument unless the answer truly depends on a stated qualification.

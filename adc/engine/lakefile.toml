@@ -1,0 +1,13 @@
+name = "adcengine"
+version = "0.1.0"
+defaultTargets = ["Main", "Proofs", "adcengine"]
+
+[[lean_lib]]
+name = "Main"
+
+[[lean_lib]]
+name = "Proofs"
+
+[[lean_exe]]
+name = "adcengine"
+root = "Main"

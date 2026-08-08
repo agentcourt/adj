@@ -1,0 +1,14 @@
+.cache/
+.bin/
+.state/
+.tmp/
+.lake/
+/build/
+/out/
+*~
+.DS_Store
+reviews.md
+tools/__pycache__/
+llm.png
+clusters.png
+*.log

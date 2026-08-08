@@ -1,0 +1,32 @@
+flowchart TD
+    A[input] --> B{entry path}
+    B -->|situation.md| C[adc complain\nload linked files\ndraft complaint.md]
+    B -->|complaint.md| D[adc case\nload complaint and linked files]
+    B -->|scenario.json| E[load formal scenario]
+
+    C --> D
+    D --> F[case generation\npacket, strategies,\ncase_init]
+    F --> G[build formal scenario]
+    E --> G
+
+    G --> H{case_init present?}
+    H -- yes --> I[Lean initialize_case]
+    H -- no --> J[authoritative CourtState]
+    I --> J
+
+    J --> K[Lean next_opportunity]
+    K --> L{terminal?}
+    L -- yes --> W[write evidence\nrun db, events,\ntranscript, digest]
+    L -- no --> M[Lean role_view]
+    M --> N[runner prompt assembly\nrole preamble,\nvisible case,\ntool cards]
+    N --> O{local role or external role}
+    O -->|local| P[local model call]
+    O -->|external| Q[Role API opportunity]
+    P --> R[proposed decision or pass]
+    Q --> R
+    R --> S[Lean apply_decision]
+    S --> T{valid?}
+    T -- no --> U[correction message\nsame opportunity]
+    U --> O
+    T -- yes --> V[execute accepted act\nLean step or\nrunner action]
+    V --> J

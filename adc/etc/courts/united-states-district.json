@@ -1,0 +1,14 @@
+{
+  "name": "United States District",
+  "rules_markdown_file": "united-states-district.md",
+  "jurisdiction_screen": true,
+  "allowed_jurisdiction_bases": [
+    "federal_question",
+    "diversity",
+    "unspecified"
+  ],
+  "require_jurisdiction_statement": true,
+  "require_diversity_citizenship": true,
+  "require_amount_in_controversy": true,
+  "minimum_amount_in_controversy": 75000
+}
