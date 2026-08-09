@@ -490,7 +490,7 @@ behavior on the request-spec path.  Verified live with
 - Certificate verifier command: [`runtime/cli/verify_certificate.go`](runtime/cli/verify_certificate.go)
 - Exhibit action boundary: [`engine/Main.lean`](engine/Main.lean)
 - Service artifact route: `runtime/service/service.go`
-- ADC manual output section: [`manual.md`](manual.md#output-artifacts)
+- ADC manual output section: [`manual.md`](manual.md#output-record)
 - Certificate and proof status: [Proof Work Status](../docs/proof-notes.md)
 
 ### Decisions
@@ -549,7 +549,7 @@ Artifact reads now distinguish names outside the allowlist from listed artifacts
 
 - Service evidence route: `runtime/service/service.go`
 - Runner evidence output: [`runtime/runner/io.go`](runtime/runner/io.go)
-- ADC manual service section: [`manual.md`](manual.md#service-api)
+- ADC service artifact documentation: `adjservices/service/adc/README.md#records-and-artifacts`
 
 ### Decisions
 

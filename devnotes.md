@@ -1,5 +1,15 @@
 # Development Notes
 
+## 2026-08-09: Documentation repair
+
+The ADC command examples now generate the signature and public-key inputs linked from the retained `ex1` situation before invoking `adc complain`.  The core process document identifies itself as the normative interface supplied by an `adj` commit and records the current service compatibility packages.  Historical development-note references now select current manual sections or identify the corresponding `adjservices` document.
+
+### Verification
+
+- [x] Run the retained ADC signing script and load its situation through `adc complain` input handling.
+- [x] Check every local Markdown file target and section anchor.
+- [x] Run the affected Go package tests and check the repository diff.
+
 ## 2026-08-09: Persona corpus restoration
 
 The core runtime retained the shared persona loader, default request-spec pool, and generic persona during repository extraction.  This change restores the 17 attorney prompts, 21 philosopher prompts, and 14 synthetic-person prompts formerly stored under `common/etc/personas`.  The restored paths let custom ADC juror and ARB or AARD council pools select the prompts through the existing loader.

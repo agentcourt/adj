@@ -523,7 +523,7 @@ The substance pass aligned the practice manual with runtime role names, distingu
 
 ### Pi message-update log filtering
 
-Reference: [AAR run options](manual.md#aar-run)
+Reference: `adjservices/service/arb/README.md#programs`
 
 The C5 Clerk run produced more than 140 MB of Pi stdout while the agent repeated accumulated `message_update` content without calling the council tools.  The stdout log filter now compacts only Pi council `message_update` lines whose active `thinking` or `text` content is a prefix extension of the previous event for the same response and content index.  The stored log line keeps the event metadata, replaces repeated accumulated content with the tail, and adds `aar_log_filter.message: "earlier repeated message_update events dropped"`.
 
@@ -531,7 +531,7 @@ Invalid JSON, unrelated event types, missing content fields, and non-prefix chan
 
 ### Case-file scanner cleanup
 
-Reference: [Manual case-file scanning](manual.md#case-files-and-evidence)
+Reference: [Manual case-file scanning](manual.md#initial-evidence)
 
 The first Clerk `ex04` run exposed a stale backup-file problem in automatic case-file scanning.  The example directory contained `README.md~`, and the scanner admitted it as initial evidence because it skipped `README.md` but not editor backup files ending in `~`.  The scanner now skips those backup files, the proceeding test covers that rule, and `examples/ex04/market-rules.md` carries the market rule text as an intentional case-packet file.
 

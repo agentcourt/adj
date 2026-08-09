@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines the interface by which operational services execute and inspect the core ADC, ARB, and AARD procedures.  Core owns each case's procedural state, participant opportunities, evidence custody, durable record, and terminal result.  Service owns multi-case admission, process supervision, public routing, deployment, and record presentation.
+This document is the normative process interface supplied by an `adj` commit for the core ADC, ARB, and AARD procedures.  Core owns each case's procedural state, participant opportunities, evidence custody, durable record, and terminal result.  The paired `adjservices` commit owns multi-case admission, process supervision, public routing, deployment, and record presentation.
 
 The independent repositories derive from core source commit `9cc03c1cd62132bed964acfb1d046c234d90b253` and service source commit `26a7911599f8f1d947dbee7ecce722155f05024c`.  Compatibility records identify a tested `adj` commit and a tested `adjservices` commit.  An interface change requires paired tests and an update to this document before either repository depends on the new behavior.
 
@@ -58,7 +58,7 @@ A service must treat an unreadable or missing `run.json` after process exit as a
 
 Service unit tests use fake core executables to verify argument construction, startup, failure, process cleanup, record reconciliation, proxying, and artifact access.  Paired tests use built core executables from a specified `adj` commit to verify command help, required flags, private API startup, one direct case per procedure, and terminal record consumption.  Release notes record the two full commit IDs and the compatibility test result.
 
-The `adjservices` compatibility packages start the standalone Clerk and MCP executables against selected core binaries.  They retain the service cases formerly mixed into the core command tests, including participant failures, deadlines, complete MCP cases, terminal records, and service reconciliation.  Test flags select the service binaries, core binaries, and core checkout without importing a core implementation package.
+The `service/compat/adc`, `service/compat/arb`, and `service/compat/arbd` packages in `adjservices` start the standalone Clerk and MCP executables against selected core binaries.  The ADC package completes a bench case with external parties, an internal judge, digest generation, terminal record reconciliation, and certificate replay.  The ARB and AARD packages cover participant failures, deadlines, complete MCP cases, terminal records, and service reconciliation.  All three packages accept explicit service binary, core binary, and core checkout paths through test flags.
 
 Before repository extraction, the tested pair `service@26a7911599f8f1d947dbee7ecce722155f05024c` and `carve@9cc03c1cd62132bed964acfb1d046c234d90b253` passed the complete compatibility suite.  These commits supply the source snapshots for `adjservices` and `adj`.  Independent repository releases will record their own tested commit pairs.
 

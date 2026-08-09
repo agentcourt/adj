@@ -26,10 +26,11 @@ The shared `common/` tree contains the model-request, provider, and persona pack
 
 ## Command-Line Cases
 
-Each command provides `help` for its retained subcommands.  ADC can start from a complaint or a prepared scenario, while ARB and AARD start from complaints.  Model-provider credentials depend on the internal roles and council request specifications selected for a case.
+Each command provides `help` for its retained subcommands.  ADC can start from a complaint or a prepared scenario, while ARB and AARD start from complaints.  Model-provider credentials depend on the internal roles and council request specifications selected for a case.  The ADC example signing script requires OpenSSL and creates the two linked signature inputs before complaint drafting.
 
 ```bash
 cd adc
+examples/ex1/sign.sh
 .bin/adc complain \
   --situation examples/ex1/situation.md \
   --out examples/ex1/complaint.md

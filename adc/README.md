@@ -18,7 +18,7 @@ The manual documents the command-line interface, Role API, records, and replay v
 
 ## Requirements
 
-ADC builds with Go 1.25 and Lean 4.32.0.  The Lean build uses `lake`.  The Makefile supplies the standard build, test, proof, and example targets.
+ADC builds with Go 1.25 and Lean 4.32.0.  The Lean build uses `lake`.  The Makefile supplies the standard build, test, proof, and example targets.  The `ex1` acceptance fixture also requires OpenSSL to generate its linked signature inputs.
 
 ## Build
 
@@ -35,6 +35,7 @@ make prove
 The complaint path uses model calls for complaint drafting, intake, strategy preparation, and procedural roles.  It therefore requires the OpenAI-compatible credentials accepted by the shared model client.  Use `adc help` or `adc help COMMAND` for the complete current flag set.
 
 ```bash
+examples/ex1/sign.sh
 .bin/adc complain \
   --situation examples/ex1/situation.md \
   --out examples/ex1/complaint.md
