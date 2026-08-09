@@ -22,7 +22,7 @@ make -C arb build test prove
 make -C arbd build test prove
 ```
 
-The shared `common/` tree contains the model-request, provider, and persona packages required by the three runtimes.  It also contains the default juror and council request-spec pool and the persona named by that pool.  The Go module remains at the repository root because all three procedure commands use these packages.
+The shared `common/` tree contains the model-request, provider, and persona packages required by the three runtimes.  It also contains the default juror and council request-spec pool, the persona named by that pool, and a [persona corpus](common/etc/personas/README.md) for custom pools.  The Go module remains at the repository root because all three procedure commands use these packages.
 
 ## Command-Line Cases
 
