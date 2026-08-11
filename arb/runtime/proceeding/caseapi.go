@@ -22,6 +22,7 @@ type caseAPIServer struct {
 	baseURL    string
 	lawyerAPI  *lawyerAPIServer
 	councilAPI *councilAPIServer
+	serveDone  chan error
 }
 
 func startCaseAPIServer(rc *runContext, includeCouncil bool) (*caseAPIServer, error) {
@@ -38,6 +39,7 @@ func startCaseAPIServer(rc *runContext, includeCouncil bool) (*caseAPIServer, er
 		ln:        ln,
 		baseURL:   "http://" + listenerHostPort(ln.Addr()),
 		lawyerAPI: newLawyerAPIServer(rc),
+		serveDone: make(chan error, 1),
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc(caseAPIHealthPath, api.handleHealth)
@@ -49,8 +51,10 @@ func startCaseAPIServer(rc *runContext, includeCouncil bool) (*caseAPIServer, er
 	api.server = &http.Server{Handler: mux}
 	go func() {
 		if err := api.server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			_ = rc.recordEvent("caseapi_error", "system", currentPhase(rc.state), map[string]any{"error": err.Error()})
+			api.serveDone <- fmt.Errorf("case API server failed: %w", err)
+			return
 		}
+		api.serveDone <- nil
 	}()
 	return api, nil
 }
@@ -83,5 +87,6 @@ func (api *caseAPIServer) Close(ctx context.Context) error {
 	}
 	shutdownCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
-	return api.server.Shutdown(shutdownCtx)
+	shutdownErr := api.server.Shutdown(shutdownCtx)
+	return errors.Join(shutdownErr, <-api.serveDone)
 }
