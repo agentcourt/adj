@@ -1,24 +1,25 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 )
 
-func Run(args []string, stdout io.Writer, stderr io.Writer) error {
+func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
 	if len(args) == 0 {
 		printRootUsage(stderr)
 		return fmt.Errorf("subcommand is required")
 	}
 	switch args[0] {
 	case "case":
-		return RunCase(args[1:], stdout, stderr)
+		return RunCase(ctx, args[1:], stdout, stderr)
 	case "case-packet":
 		return RunCasePacket(args[1:], stdout, stderr)
 	case "complain":
 		return RunComplain(args[1:], stdout, stderr)
 	case "scenario":
-		return RunScenarioCase(args[1:], stdout, stderr)
+		return RunScenarioCase(ctx, args[1:], stdout, stderr)
 	case "pacer":
 		return RunPacer(args[1:], stdout, stderr)
 	case "validate":
@@ -32,13 +33,13 @@ func Run(args []string, stdout io.Writer, stderr io.Writer) error {
 		}
 		switch args[1] {
 		case "case":
-			return RunCase([]string{"-h"}, stdout, stderr)
+			return RunCase(ctx, []string{"-h"}, stdout, stderr)
 		case "case-packet":
 			return RunCasePacket([]string{"-h"}, stdout, stderr)
 		case "complain":
 			return RunComplain([]string{"-h"}, stdout, stderr)
 		case "scenario":
-			return RunScenarioCase([]string{"-h"}, stdout, stderr)
+			return RunScenarioCase(ctx, []string{"-h"}, stdout, stderr)
 		case "pacer":
 			return RunPacer([]string{"-h"}, stdout, stderr)
 		case "validate":

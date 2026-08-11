@@ -24,3 +24,12 @@ func TestHelpTopicsSucceed(t *testing.T) {
 		})
 	}
 }
+
+func TestCaseRejectsRemovedAgentcourtRootFlag(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := runCase(context.Background(), []string{"--agentcourt-root", "old"}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "flag provided but not defined: -agentcourt-root") {
+		t.Fatalf("runCase error = %v", err)
+	}
+}

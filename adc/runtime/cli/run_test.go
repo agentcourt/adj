@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 )
@@ -9,7 +10,7 @@ import (
 func TestRunScenarioAcceptsServiceLauncherFlags(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := RunScenarioCase([]string{
+	err := RunScenarioCase(context.Background(), []string{
 		"--report-model", "report-model",
 		"--allow-assertion-failures",
 	}, &stdout, &stderr)

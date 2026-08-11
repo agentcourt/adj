@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 	"time"
 
@@ -18,7 +17,7 @@ import (
 	"github.com/jsmorph/adj/common/openai"
 )
 
-func RunScenarioCase(args []string, stdout io.Writer, stderr io.Writer) error {
+func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
 	var fs *flag.FlagSet
 	fs = newFlagSet("scenario", stderr, func() {
 		fmt.Fprintf(stderr, "Usage: adc scenario --scenario <json> [options]\n\n")
@@ -149,9 +148,11 @@ func RunScenarioCase(args []string, stdout io.Writer, stderr io.Writer) error {
 		return closeStore(err)
 	}
 	if *offline && r.RequiresLLMTurns() {
-		log.Printf("warning: --offline is set, but scenario includes non-deterministic turns that require an LLM")
+		if _, err := fmt.Fprintln(stderr, "warning: --offline is set, but scenario includes non-deterministic turns that require an LLM"); err != nil {
+			return closeStore(fmt.Errorf("write offline warning: %w", err))
+		}
 	}
-	result, err := r.Run(context.Background())
+	result, err := r.Run(ctx)
 	if closeErr := closeStore(err); closeErr != nil {
 		return closeErr
 	}

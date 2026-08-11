@@ -38,7 +38,6 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	attorneyArgumentPrompt := fs.String("attorney-arguments-prompt", "", "Attorney arguments prompt file override")
 	attorneyRebuttalPrompt := fs.String("attorney-rebuttals-prompt", "", "Attorney rebuttals prompt file override")
 	commonRoot := fs.String("common-root", proceeding.DefaultCommonRoot(), "Path to the sibling shared common directory")
-	legacyCommonRoot := fs.String("agentcourt-root", "", "Deprecated alias for --common-root")
 	councilPool := fs.String("council-pool", "", "Council JSONL request-spec pool file. Default: ./pool.jsonl when present, else <common-root>/data/personas/pool.jsonl")
 	caseAPIAddr := fs.String("caseapi-addr", proceeding.DefaultCaseAPIAddr, "Private case API listen address")
 	councilBackend := fs.String("council-backend", proceeding.DefaultCouncilBackend, "Council backend: direct or councilapi")
@@ -63,9 +62,6 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 		return reportCaseError(stdout, fmt.Errorf("--complaint and --out-dir are required"))
 	}
 	commonRootValue := strings.TrimSpace(*commonRoot)
-	if strings.TrimSpace(*legacyCommonRoot) != "" {
-		commonRootValue = strings.TrimSpace(*legacyCommonRoot)
-	}
 	opts := proceeding.Options{
 		ComplaintPath:              *complaintPath,
 		CaseFiles:                  caseFiles.values,

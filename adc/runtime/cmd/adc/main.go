@@ -1,15 +1,22 @@
 package main
 
 import (
-	"log"
+	"context"
+	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/jsmorph/adj/adc/runtime/cli"
 )
 
 func main() {
-	if err := cli.Run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
-		log.Printf("error: %v", err)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if err := cli.Run(ctx, os.Args[1:], os.Stdout, os.Stderr); err != nil {
+		if _, writeErr := fmt.Fprintf(os.Stderr, "error: %v\n", err); writeErr != nil {
+			os.Exit(2)
+		}
 		os.Exit(1)
 	}
 }

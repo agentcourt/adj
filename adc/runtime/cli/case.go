@@ -20,7 +20,7 @@ import (
 	"github.com/jsmorph/adj/common/openai"
 )
 
-func RunCase(args []string, stdout io.Writer, stderr io.Writer) error {
+func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
 	var fs *flag.FlagSet
 	fs = newFlagSet("case", stderr, func() {
 		fmt.Fprintf(stderr, "Usage: adc case --complaint <markdown> [options]\n\n")
@@ -106,7 +106,6 @@ func RunCase(args []string, stdout io.Writer, stderr io.Writer) error {
 		return err
 	}
 
-	ctx := context.Background()
 	setup, err := prepareComplaintScenario(ctx, client, complaintSetupOptions{
 		ComplaintPath:       *complaintPath,
 		CourtRef:            *courtRef,
