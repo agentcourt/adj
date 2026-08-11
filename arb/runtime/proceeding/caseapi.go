@@ -50,13 +50,16 @@ func startCaseAPIServer(rc *runContext, includeCouncil bool) (*caseAPIServer, er
 	}
 	api.server = &http.Server{Handler: mux}
 	go func() {
-		if err := api.server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			api.serveDone <- fmt.Errorf("case API server failed: %w", err)
-			return
-		}
-		api.serveDone <- nil
+		api.serveDone <- serveCaseAPI(api.server, ln)
 	}()
 	return api, nil
+}
+
+func serveCaseAPI(server *http.Server, ln net.Listener) error {
+	if err := server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("case API server failed: %w", err)
+	}
+	return nil
 }
 
 func listenerHostPort(addr net.Addr) string {

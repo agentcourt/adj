@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -261,7 +262,7 @@ func caseFileMetas(files []CaseFile) []CaseFileMeta {
 	return out
 }
 
-func appendJSONLine(path string, value any) error {
+func appendJSONLine(path string, value any) (err error) {
 	wire, err := json.Marshal(value)
 	if err != nil {
 		return fmt.Errorf("marshal event: %w", err)
@@ -270,7 +271,11 @@ func appendJSONLine(path string, value any) error {
 	if err != nil {
 		return fmt.Errorf("open %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close %s: %w", path, closeErr))
+		}
+	}()
 	if _, err := f.Write(append(wire, '\n')); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
@@ -316,7 +321,7 @@ func readJSON(path string, target any) error {
 	return nil
 }
 
-func writeJSONFileAtomic(path string, value any) error {
+func writeJSONFileAtomic(path string, value any) (err error) {
 	wire, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal %s: %w", path, err)
@@ -329,19 +334,28 @@ func writeJSONFileAtomic(path string, value any) error {
 		return fmt.Errorf("create temp json file for %s: %w", path, err)
 	}
 	tmpName := tmp.Name()
+	closed := false
 	renamed := false
 	defer func() {
+		if !closed {
+			if closeErr := tmp.Close(); closeErr != nil {
+				err = errors.Join(err, fmt.Errorf("close %s: %w", tmpName, closeErr))
+			}
+		}
 		if !renamed {
-			_ = os.Remove(tmpName)
+			if removeErr := os.Remove(tmpName); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+				err = errors.Join(err, fmt.Errorf("remove %s: %w", tmpName, removeErr))
+			}
 		}
 	}()
 	if _, err := tmp.Write(wire); err != nil {
-		_ = tmp.Close()
 		return fmt.Errorf("write %s: %w", tmpName, err)
 	}
 	if err := tmp.Close(); err != nil {
+		closed = true
 		return fmt.Errorf("close %s: %w", tmpName, err)
 	}
+	closed = true
 	if err := os.Rename(tmpName, path); err != nil {
 		return fmt.Errorf("replace %s: %w", path, err)
 	}

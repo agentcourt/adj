@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -26,12 +27,16 @@ func utcTimestamp() string {
 	return time.Now().UTC().Format(time.RFC3339)
 }
 
-func sha256File(path string) (string, error) {
+func sha256File(path string) (digest string, err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", fmt.Errorf("open %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close %s after hashing: %w", path, closeErr))
+		}
+	}()
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
 		return "", fmt.Errorf("hash %s: %w", path, err)
@@ -71,8 +76,8 @@ func canonicalEvidenceID(sha string, candidate string) string {
 	return evidenceIDForFile(sha, candidate)
 }
 
-func copyToEvidenceStore(path string, storeDir string, sha string) (string, error) {
-	storageName := filepath.ToSlash(filepath.Join(sha[:2], sha))
+func copyToEvidenceStore(path string, storeDir string, sha string) (storageName string, err error) {
+	storageName = filepath.ToSlash(filepath.Join(sha[:2], sha))
 	dst := filepath.Join(storeDir, filepath.FromSlash(storageName))
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return "", fmt.Errorf("create evidence store dir: %w", err)
@@ -93,18 +98,28 @@ func copyToEvidenceStore(path string, storeDir string, sha string) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("open evidence source %s: %w", path, err)
 	}
-	defer src.Close()
+	defer func() {
+		if closeErr := src.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close evidence source %s: %w", path, closeErr))
+		}
+	}()
 	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
 		return "", fmt.Errorf("create evidence store file %s: %w", dst, err)
 	}
 	_, copyErr := io.Copy(dstFile, src)
 	closeErr := dstFile.Close()
-	if copyErr != nil {
-		return "", fmt.Errorf("copy evidence bytes to %s: %w", dst, copyErr)
-	}
-	if closeErr != nil {
-		return "", fmt.Errorf("close evidence store file %s: %w", dst, closeErr)
+	if copyErr != nil || closeErr != nil {
+		if copyErr != nil {
+			err = errors.Join(err, fmt.Errorf("copy evidence bytes to %s: %w", dst, copyErr))
+		}
+		if closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close evidence store file %s: %w", dst, closeErr))
+		}
+		if removeErr := os.Remove(dst); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			err = errors.Join(err, fmt.Errorf("remove incomplete evidence store file %s: %w", dst, removeErr))
+		}
+		return "", err
 	}
 	return storageName, nil
 }
@@ -305,7 +320,7 @@ func (rc *runContext) statEvidence(evidenceID string) (EvidenceMeta, error) {
 	return meta, nil
 }
 
-func (rc *runContext) readEvidenceRange(evidenceID string, offset int64, length int, budget *evidenceReadBudget) (map[string]any, error) {
+func (rc *runContext) readEvidenceRange(evidenceID string, offset int64, length int, budget *evidenceReadBudget) (result map[string]any, err error) {
 	if offset < 0 {
 		return nil, fmt.Errorf("offset must be non-negative")
 	}
@@ -335,7 +350,11 @@ func (rc *runContext) readEvidenceRange(evidenceID string, offset int64, length 
 	if err != nil {
 		return nil, fmt.Errorf("open evidence %s: %w", evidenceID, err)
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close evidence %s: %w", evidenceID, closeErr))
+		}
+	}()
 	if offset > int64(meta.SizeBytes) {
 		return nil, fmt.Errorf("invalid_evidence_range: offset %d exceeds size %d", offset, meta.SizeBytes)
 	}
@@ -610,23 +629,33 @@ func (rc *runContext) moveUploadedSubmittedEvidenceFile(meta SubmittedEvidenceMe
 	return file, nil
 }
 
-func copyFile(dst string, src string) error {
+func copyFile(dst string, src string) (err error) {
 	in, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("open %s: %w", src, err)
 	}
-	defer in.Close()
+	defer func() {
+		if closeErr := in.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close %s: %w", src, closeErr))
+		}
+	}()
 	out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 	if err != nil {
 		return fmt.Errorf("create %s: %w", dst, err)
 	}
 	_, copyErr := io.Copy(out, in)
 	closeErr := out.Close()
-	if copyErr != nil {
-		return fmt.Errorf("copy %s to %s: %w", src, dst, copyErr)
-	}
-	if closeErr != nil {
-		return fmt.Errorf("close %s: %w", dst, closeErr)
+	if copyErr != nil || closeErr != nil {
+		if copyErr != nil {
+			err = errors.Join(err, fmt.Errorf("copy %s to %s: %w", src, dst, copyErr))
+		}
+		if closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close %s: %w", dst, closeErr))
+		}
+		if removeErr := os.Remove(dst); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			err = errors.Join(err, fmt.Errorf("remove incomplete copy %s: %w", dst, removeErr))
+		}
+		return err
 	}
 	return nil
 }
