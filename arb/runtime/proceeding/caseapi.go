@@ -2,6 +2,7 @@ package proceeding
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -48,7 +49,9 @@ func startCaseAPIServer(rc *runContext, includeCouncil bool) (*caseAPIServer, er
 		api.councilAPI = newCouncilAPIServer(rc)
 		api.councilAPI.register(mux)
 	}
-	api.server = &http.Server{Handler: mux}
+	api.server = &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mux.ServeHTTP(&responseErrorWriter{ResponseWriter: w, rc: rc}, r)
+	})}
 	go func() {
 		api.serveDone <- serveCaseAPI(api.server, ln)
 	}()
@@ -76,9 +79,10 @@ func listenerHostPort(addr net.Addr) string {
 
 func (api *caseAPIServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		_, _ = w.Write([]byte(`{"ok":false,"error":{"code":"method_not_allowed","message":"use GET"}}` + "\n"))
+		writeCaseAPIJSON(w, http.StatusMethodNotAllowed, map[string]any{
+			"ok":    false,
+			"error": apiError("method_not_allowed", "use GET"),
+		})
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -91,5 +95,43 @@ func (api *caseAPIServer) Close(ctx context.Context) error {
 	shutdownCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	shutdownErr := api.server.Shutdown(shutdownCtx)
-	return errors.Join(shutdownErr, <-api.serveDone)
+	return errors.Join(shutdownErr, <-api.serveDone, api.rc.takeResponseError())
+}
+
+type responseErrorWriter struct {
+	http.ResponseWriter
+	rc *runContext
+}
+
+func (w *responseErrorWriter) recordResponseError(err error) {
+	w.rc.recordResponseError(err)
+}
+
+func (rc *runContext) recordResponseError(err error) {
+	if err == nil {
+		return
+	}
+	rc.responseErrMu.Lock()
+	defer rc.responseErrMu.Unlock()
+	rc.responseErr = errors.Join(rc.responseErr, fmt.Errorf("write case API response: %w", err))
+}
+
+func (rc *runContext) takeResponseError() error {
+	rc.responseErrMu.Lock()
+	defer rc.responseErrMu.Unlock()
+	err := rc.responseErr
+	rc.responseErr = nil
+	return err
+}
+
+func writeCaseAPIJSON(w http.ResponseWriter, status int, value map[string]any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(value); err != nil {
+		recorder, ok := w.(interface{ recordResponseError(error) })
+		if !ok {
+			panic(fmt.Errorf("write case API response: %w", err))
+		}
+		recorder.recordResponseError(err)
+	}
 }

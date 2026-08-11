@@ -1,6 +1,8 @@
 package proceeding
 
 import (
+	"sync"
+
 	"github.com/jsmorph/adj/arbd/runtime/lean"
 	"github.com/jsmorph/adj/arbd/runtime/spec"
 	"github.com/jsmorph/adj/common/modelrequest"
@@ -252,4 +254,6 @@ type runContext struct {
 	turn               int
 	certificateInit    ReplayInitializeRequest
 	certificateActions []ReplayAction
+	responseErrMu      sync.Mutex
+	responseErr        error
 }

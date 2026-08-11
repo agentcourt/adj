@@ -1,6 +1,8 @@
 package proceeding
 
 import (
+	"sync"
+
 	"github.com/jsmorph/adj/arb/runtime/lean"
 	"github.com/jsmorph/adj/arb/runtime/spec"
 	"github.com/jsmorph/adj/common/modelrequest"
@@ -243,4 +245,6 @@ type runContext struct {
 	workProductDirs    map[string]string
 	events             []Event
 	turn               int
+	responseErrMu      sync.Mutex
+	responseErr        error
 }

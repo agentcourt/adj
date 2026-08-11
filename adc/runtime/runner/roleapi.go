@@ -30,8 +30,11 @@ const (
 )
 
 type caseAPIServer struct {
-	server *http.Server
-	ln     net.Listener
+	server        *http.Server
+	ln            net.Listener
+	serveDone     chan error
+	responseErrMu sync.Mutex
+	responseErr   error
 }
 
 type roleAPIServer struct {
@@ -107,21 +110,36 @@ func startCaseAPIServer(r *Runner) (*caseAPIServer, error) {
 	}
 	roleAPI := newRoleAPIServer(r)
 	r.roleAPI = roleAPI
+	api := &caseAPIServer{ln: ln, serveDone: make(chan error, 1)}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handleCaseAPIHealth)
 	roleAPI.register(mux)
-	server := &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	server := &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			mux.ServeHTTP(&adcResponseErrorWriter{ResponseWriter: w, api: api}, req)
+		}),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	api.server = server
 	go func() {
-		if err := server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			failure := fmt.Errorf("case API server failed: %w", err)
-			if persistErr := r.persistAgentEvent(0, 0, "system", "caseapi_error", map[string]any{"error": err.Error()}); persistErr != nil {
+		failure := serveCaseAPI(server, ln)
+		if failure != nil {
+			if persistErr := r.persistAgentEvent(0, 0, "system", "caseapi_error", map[string]any{"error": failure.Error()}); persistErr != nil {
 				failure = errors.Join(failure, fmt.Errorf("persist case API error event: %w", persistErr))
 			}
 			roleAPI.setTerminal(Result{}, failure)
 		}
+		api.serveDone <- failure
 	}()
 	fmt.Fprintf(os.Stderr, "adc case api listening on http://%s\n", listenerHostPort(ln.Addr()))
-	return &caseAPIServer{server: server, ln: ln}, nil
+	return api, nil
+}
+
+func serveCaseAPI(server *http.Server, ln net.Listener) error {
+	if err := server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("case API server failed: %w", err)
+	}
+	return nil
 }
 
 func handleCaseAPIHealth(w http.ResponseWriter, r *http.Request) {
@@ -151,7 +169,34 @@ func (s *caseAPIServer) Close(ctx context.Context) error {
 	if s == nil || s.server == nil {
 		return nil
 	}
-	return s.server.Shutdown(ctx)
+	shutdownErr := s.server.Shutdown(ctx)
+	return errors.Join(shutdownErr, <-s.serveDone, s.takeResponseError())
+}
+
+type adcResponseErrorWriter struct {
+	http.ResponseWriter
+	api *caseAPIServer
+}
+
+func (w *adcResponseErrorWriter) recordResponseError(err error) {
+	w.api.recordResponseError(err)
+}
+
+func (s *caseAPIServer) recordResponseError(err error) {
+	if err == nil {
+		return
+	}
+	s.responseErrMu.Lock()
+	defer s.responseErrMu.Unlock()
+	s.responseErr = errors.Join(s.responseErr, fmt.Errorf("write case API response: %w", err))
+}
+
+func (s *caseAPIServer) takeResponseError() error {
+	s.responseErrMu.Lock()
+	defer s.responseErrMu.Unlock()
+	err := s.responseErr
+	s.responseErr = nil
+	return err
 }
 
 func newRoleAPIServer(r *Runner) *roleAPIServer {
@@ -1183,7 +1228,13 @@ func writeRoleAPIJSON(w http.ResponseWriter, status int, payload map[string]any)
 	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	_ = enc.Encode(payload)
+	if err := enc.Encode(payload); err != nil {
+		recorder, ok := w.(interface{ recordResponseError(error) })
+		if !ok {
+			panic(fmt.Errorf("write case API response: %w", err))
+		}
+		recorder.recordResponseError(err)
+	}
 }
 
 func errorString(err error) string {

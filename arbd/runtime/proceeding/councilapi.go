@@ -872,9 +872,7 @@ func parseCouncilAPIWaitTimeout(value string) (time.Duration, error) {
 }
 
 func writeCouncilJSON(w http.ResponseWriter, status int, value map[string]any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(value)
+	writeCaseAPIJSON(w, status, value)
 }
 
 func (rc *runContext) buildCouncilAPIPrompt(seat CouncilSeat, opportunity Opportunity) (string, error) {

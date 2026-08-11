@@ -1,6 +1,8 @@
 package runner
 
 import (
+	"errors"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -52,6 +54,51 @@ func TestObserverCannotActOnActiveTurn(t *testing.T) {
 		t.Fatalf("observer submit completed the active turn")
 	}
 }
+
+func TestCaseAPIServerReportsServeFailure(t *testing.T) {
+	err := serveCaseAPI(&http.Server{}, adcFailedListener{err: errors.New("accept failed")})
+	if err == nil || !strings.Contains(err.Error(), "case API server failed") {
+		t.Fatalf("serveCaseAPI error = %v", err)
+	}
+}
+
+func TestCaseAPIServerRecordsResponseFailure(t *testing.T) {
+	api := &caseAPIServer{}
+	w := &adcResponseErrorWriter{
+		ResponseWriter: &adcFailedResponseWriter{header: make(http.Header), err: errors.New("write failed")},
+		api:            api,
+	}
+	writeRoleAPIJSON(w, http.StatusOK, map[string]any{"ok": true})
+	err := api.takeResponseError()
+	if err == nil || !strings.Contains(err.Error(), "write case API response") {
+		t.Fatalf("response error = %v", err)
+	}
+	if err := api.takeResponseError(); err != nil {
+		t.Fatalf("response error was not cleared: %v", err)
+	}
+}
+
+type adcFailedListener struct {
+	err error
+}
+
+func (ln adcFailedListener) Accept() (net.Conn, error) { return nil, ln.err }
+func (adcFailedListener) Close() error                 { return nil }
+func (adcFailedListener) Addr() net.Addr               { return adcFailedAddr("failed") }
+
+type adcFailedAddr string
+
+func (addr adcFailedAddr) Network() string { return string(addr) }
+func (addr adcFailedAddr) String() string  { return string(addr) }
+
+type adcFailedResponseWriter struct {
+	header http.Header
+	err    error
+}
+
+func (w *adcFailedResponseWriter) Header() http.Header       { return w.header }
+func (*adcFailedResponseWriter) WriteHeader(int)             {}
+func (w *adcFailedResponseWriter) Write([]byte) (int, error) { return 0, w.err }
 
 func TestObserverCannotReportFailureForActiveTurn(t *testing.T) {
 	api, turn := testRoleAPIWithActiveTurn(t)
