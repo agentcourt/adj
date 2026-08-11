@@ -1,41 +1,28 @@
 # Development Notes
 
-## 2026-08-09: Documentation repair
+## Repository Scope
 
-The ADC command examples now generate the signature and public-key inputs linked from the retained `ex1` situation before invoking `adc complain`.  The core process document identifies itself as the normative interface supplied by an `adj` commit and records the current service compatibility packages.  Historical development-note references now select current manual sections or identify the corresponding `adjservices` document.
+This repository owns the ADC, ARB, and AARD procedures.  Each procedure includes its rules, Lean engine and proofs, one-case Go runtime, command-line program, private participant API, durable record, examples, and tests.  Operational consumers use the documented process interface without importing procedure implementation packages.
 
-### Verification
+The shared `common/` tree contains code required by more than one procedure.  New shared packages must have at least two current consumers and a narrower API than the code they replace.  Procedure-specific behavior belongs in its procedure tree.
 
-- [x] Run the retained ADC signing script and load its situation through `adc complain` input handling.
-- [x] Check every local Markdown file target and section anchor.
-- [x] Run the affected Go package tests and check the repository diff.
+## Error and Command Policy
 
-## 2026-08-09: Persona corpus restoration
+Commands return every input, output, formatting, storage, HTTP, and shutdown error to their caller.  A command writes diagnostics to standard error, writes machine-readable results to standard output where its manual specifies them, and exits nonzero when command execution fails.  Every command rejects unexpected positional arguments and reports help-output failures.
 
-The core runtime retained the shared persona loader, default request-spec pool, and generic persona during repository extraction.  This change restores the 17 attorney prompts, 21 philosopher prompts, and 14 synthetic-person prompts formerly stored under `common/etc/personas`.  The restored paths let custom ADC juror and ARB or AARD council pools select the prompts through the existing loader.
+Long-running case commands derive their execution context from interrupt signals.  Startup output failures cancel the case before the command returns.  Case APIs and runtime helpers preserve the original operation error together with any cleanup error.
 
-The former `common/etc/personas.csv` combined the 14 synthetic people with 182 historical model identifiers per person, while `evals/model-pool/personas/experiments` duplicated the canonical prompt files.  This restoration preserves the canonical texts and documents their request-spec paths without restoring generated model inventories or evaluation output.  The distributed default pool remains unchanged.
+## Interface Maintenance
 
-### Verification
+The [core process interface](docs/service-interface.md) defines the executable, private HTTP, and durable-record behavior consumed by `adjservices`.  An interface edit requires corresponding test and documentation edits in both repositories.  The paired interface tests use explicit core binaries and an explicit core checkout.
 
-- [x] Compare all 52 restored files with combined-repository commit `1f62a56f66da3a476a7f4064a86a580a2970fadc`.
-- [x] Load one restored attorney, philosopher, and synthetic-person prompt through the shared persona package.
-- [x] Run the shared persona package tests.
-- [x] Check the repository diff and the new Markdown link.
+## Verification
 
-## 2026-08-08: Independent repository
+Go verification consists of `go test ./...`, `go vet ./...`, and builds of the three command packages.  Lean verification uses Lean 4.32.0 and builds each procedure's engine and proof targets through the configured resource-limited runner.  Documentation verification checks every relative Markdown link against the repository tree.
 
-The `adj` repository derives from `adjudication` commit `9cc03c1cd62132bed964acfb1d046c234d90b253` on its `carve` branch.  The initial snapshot preserves the ADC, ARB, and AARD procedure implementations, Lean proofs, one-case command-line programs, shared core packages, tests, examples, and documentation.  The completed branch-extraction plan and retention ledger remain in the source repository, where their branch-specific history can be read in context.
-
-The Go module path changed from `adjudication` to `github.com/jsmorph/adj`, with every internal import changed accordingly.  The companion operational code derives from `adjudication` commit `26a7911599f8f1d947dbee7ecce722155f05024c` and now lives in `adjservices`.  Cross-repository verification builds fresh commands from both repositories and runs the service compatibility packages against the corresponding core executables and Lean engines.
-
-The first race-enabled Go suite encountered a signal-7 crash in Lean 4.32.0's bundled `clang` while a runner test caused an on-demand `adcengine` build.  The Lean runner then built `adcengine` successfully under its verified local limits, and the exact failed Go test passed.  The complete race-enabled Go suite passed after the engine build, while all three proof libraries and executable targets built successfully through the same runner.
-
-### Verification
-
-- [x] Run `gofmt` over every Go source file.
-- [x] Run `go test -race -buildvcs=false -count=1 ./...`.
-- [x] Run `go vet ./...`.
-- [x] Build the ADC, ARB, and AARD Lean proof trees with Lean 4.32.0.
-- [x] Build `adcengine`, `aarengine`, and `aardengine` with Lean 4.32.0.
-- [x] Run the `adjservices` compatibility packages against fresh `adj` and `adjservices` binaries.
+- [ ] Run the complete Go test suite.
+- [ ] Run the complete Go vet suite.
+- [ ] Build the ADC, ARB, and AARD commands.
+- [ ] Build the three Lean engines and proof trees.
+- [ ] Run the paired `adjservices` interface tests.
+- [ ] Verify relative Markdown links.

@@ -24,4 +24,4 @@ These documents cover AARD rules, practice guidance, process references, evidenc
 | --- | --- |
 | [Goals](goals.md) | Design and proof goals. |
 
-Current command instructions live in the [Agent Arbitration Degree Manual](../manual.md).  Current practice guidance lives in the [Practice Guide](practice.md).  Historical implementation decisions remain in `../devnotes.md`.
+Current command instructions live in the [Agent Arbitration Degree Manual](../manual.md).  Current practice guidance lives in the [Practice Guide](practice.md).  The root [development notes](../../devnotes.md) record repository-wide implementation policies and verification work.

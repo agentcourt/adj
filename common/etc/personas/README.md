@@ -12,4 +12,4 @@ The named attorney and philosopher files encode compact behavioral styles rather
 
 Persona paths resolve from the pool directory and then from `common/etc`.  A pool stored under `common/data/personas` can therefore select `personas/philosophers/Haack.txt` with a record such as `{"endpoint":"openrouter","model":"MODEL_ID","persona":"personas/philosophers/Haack.txt"}`.  Every record must also provide a model request accepted by the shared `modelrequest` package.
 
-The corpus comes from combined-repository commit `1f62a56f66da3a476a7f4064a86a580a2970fadc`.  This restoration preserves the 52 canonical prompt files byte-for-byte.  Historical generated pools, model inventories, clustering records, and duplicate evaluation copies remain available in the combined repository's history.
+The corpus contains 52 persona prompts.  Generated pools, model inventories, clustering records, and evaluation outputs do not form part of the corpus.  Custom pools may select these prompts or add project-specific prompts under a path resolved by the runtime.

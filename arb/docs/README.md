@@ -29,4 +29,4 @@ These documents cover AAR rules, practice guidance, process specifications, evid
 | [Proof Statistics](proofstats.md) | Proof count and coverage notes. |
 | [Theorems](theorems.md) | Theorem catalog. |
 
-Current command instructions live in the [Agent Arbitration Manual](../manual.md).  Current advocacy guidance lives in the [Practice Manual](practice.md).  Historical implementation decisions remain in `../devnotes.md`.
+Current command instructions live in the [Agent Arbitration Manual](../manual.md).  Current advocacy guidance lives in the [Practice Manual](practice.md).  The root [development notes](../../devnotes.md) record repository-wide implementation policies and verification work.

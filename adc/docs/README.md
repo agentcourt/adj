@@ -34,4 +34,4 @@ These documents cover ADC rules, practice, runtime records, and proofs.  The [Ag
 | [Proof Statistics](proofstats.md) | Proof count and coverage. |
 | [Theorems](theorems.md) | Theorem catalog. |
 
-The diagrams and their update procedure live under `../analysis/`.  The procedure development record lives in `../devnotes.md`.  The root [core process interface](../../docs/service-interface.md) records the boundary with operational services.
+The diagrams and their update procedure live under `../analysis/`.  The root [development notes](../../devnotes.md) record repository-wide implementation policies and verification work.  The [core process interface](../../docs/service-interface.md) defines the boundary with operational services.

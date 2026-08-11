@@ -2,9 +2,9 @@
 
 ## Scope
 
-This document is the normative process interface supplied by an `adj` commit for the core ADC, ARB, and AARD procedures.  Core owns each case's procedural state, participant opportunities, evidence custody, durable record, and terminal result.  The paired `adjservices` commit owns multi-case admission, process supervision, public routing, deployment, and record presentation.
+This document defines the process interface supplied by the core ADC, ARB, and AARD procedures.  Core owns each case's procedural state, participant opportunities, evidence custody, durable record, and terminal result.  `adjservices` owns multi-case admission, process supervision, public routing, deployment, and record presentation.
 
-The independent repositories derive from core source commit `9cc03c1cd62132bed964acfb1d046c234d90b253` and service source commit `26a7911599f8f1d947dbee7ecce722155f05024c`.  Compatibility records identify a tested `adj` commit and a tested `adjservices` commit.  An interface change requires paired tests and an update to this document before either repository depends on the new behavior.
+An interface edit requires paired tests and corresponding documentation edits in both repositories.  Service and core changes may proceed together during first-release development.  The paired tests identify the exact core binaries and source tree under test.
 
 ## Executables and Process Behavior
 
@@ -54,12 +54,10 @@ Core writes the durable adjudication record beneath the selected output director
 
 A service must treat an unreadable or missing `run.json` after process exit as a failed or incomplete execution.  It may reconcile a detached service record from a readable terminal `run.json`.  Artifact access must confine paths to the recorded output directory and expose only the service's explicit allowlist.
 
-## Compatibility Verification
+## Interface Tests
 
-Service unit tests use fake core executables to verify argument construction, startup, failure, process cleanup, record reconciliation, proxying, and artifact access.  Paired tests use built core executables from a specified `adj` commit to verify command help, required flags, private API startup, one direct case per procedure, and terminal record consumption.  Release notes record the two full commit IDs and the compatibility test result.
+Service unit tests use fake core executables to verify argument construction, startup, failure, process cleanup, record reconciliation, proxying, and artifact access.  Paired tests use built core executables and a specified `adj` source tree to verify command help, required flags, private API startup, one direct case per procedure, and terminal record consumption.  These tests run against the core and service versions intended for the same release.
 
 The `service/compat/adc`, `service/compat/arb`, and `service/compat/arbd` packages in `adjservices` start the standalone Clerk and MCP executables against selected core binaries.  The ADC package completes a bench case with external parties, an internal judge, digest generation, terminal record reconciliation, and certificate replay.  The ARB and AARD packages cover participant failures, deadlines, complete MCP cases, terminal records, and service reconciliation.  All three packages accept explicit service binary, core binary, and core checkout paths through test flags.
 
-Before repository extraction, the tested pair `service@26a7911599f8f1d947dbee7ecce722155f05024c` and `carve@9cc03c1cd62132bed964acfb1d046c234d90b253` passed the complete compatibility suite.  These commits supply the source snapshots for `adjservices` and `adj`.  Independent repository releases will record their own tested commit pairs.
-
-Changes to command names, required flags, private routes, request or response fields used by service, exit behavior, or record names require coordinated edits.  Additive fields remain acceptable when existing meanings and required fields remain unchanged.  Removing or changing an interface element requires a new compatibility decision and a paired update.
+Changes to command names, required flags, private routes, consumed request or response fields, exit behavior, or record names require coordinated edits.  The core and service documentation must describe the same interface.  The paired tests must pass before either repository is prepared for release.

@@ -7,4 +7,4 @@ This directory contains notes spanning more than one core procedure.  Procedure-
 | Document | Use |
 | --- | --- |
 | [Proof Work Status](proof-notes.md) | Current proof surface, certificate status, remaining proof direction, and proof limits. |
-| [Core Process Interface](service-interface.md) | Core commands, private case APIs, durable records, and compatibility requirements used by services. |
+| [Core Process Interface](service-interface.md) | Core commands, private case APIs, durable records, and interface tests used by services. |
