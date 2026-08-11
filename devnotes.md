@@ -18,11 +18,12 @@ The [core process interface](docs/service-interface.md) defines the executable, 
 
 ## Verification
 
-Go verification consists of `go test ./...`, `go vet ./...`, and builds of the three command packages.  Lean verification uses Lean 4.32.0 and builds each procedure's engine and proof targets through the configured resource-limited runner.  Documentation verification checks every relative Markdown link against the repository tree.
+Verification begins by building each procedure's engine and proof targets with Lean 4.32.0 through the configured resource-limited runner.  The complete Go suite runs after the engine builds because an ADC integration test executes the engine.  Go verification also includes `go vet ./...` and builds of the three command packages, while documentation verification checks every relative Markdown link against the repository tree.
 
-- [ ] Run the complete Go test suite.
-- [ ] Run the complete Go vet suite.
-- [ ] Build the ADC, ARB, and AARD commands.
-- [ ] Build the three Lean engines and proof trees.
-- [ ] Run the paired `adjservices` interface tests.
-- [ ] Verify relative Markdown links.
+- [x] Run the complete Go test suite.
+- [x] Run the complete Go vet suite.
+- [x] Build the ADC, ARB, and AARD commands.
+- [x] Build the three Lean engines and proof trees.
+- [x] Run the paired `adjservices` interface tests.
+- [x] Verify relative Markdown links.
+- [x] Repeat the builds and paired tests from clean Git archives.
