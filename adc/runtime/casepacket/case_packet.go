@@ -443,9 +443,8 @@ func sha384File(path string) (sum string, err error) {
 }
 
 func sha384Bytes(data []byte) string {
-	h := sha512.New384()
-	_, _ = h.Write(data)
-	return hex.EncodeToString(h.Sum(nil))
+	sum := sha512.Sum384(data)
+	return hex.EncodeToString(sum[:])
 }
 
 func combineError(primary error, secondary error, label string) error {

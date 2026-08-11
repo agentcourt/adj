@@ -131,7 +131,11 @@ func startCaseAPIServer(r *Runner) (*caseAPIServer, error) {
 		}
 		api.serveDone <- failure
 	}()
-	fmt.Fprintf(os.Stderr, "adc case api listening on http://%s\n", listenerHostPort(ln.Addr()))
+	if _, err := fmt.Fprintf(os.Stderr, "adc case api listening on http://%s\n", listenerHostPort(ln.Addr())); err != nil {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		return nil, errors.Join(fmt.Errorf("write case API address: %w", err), api.Close(shutdownCtx))
+	}
 	return api, nil
 }
 

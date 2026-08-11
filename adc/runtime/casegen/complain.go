@@ -27,15 +27,19 @@ var requiredComplaintHeadings = []string{
 	"## Relief Requested",
 }
 
-func buildComplaintDraftPrompt(source ComplaintInput, court courts.Profile) string {
+func buildComplaintDraftPrompt(source ComplaintInput, court courts.Profile) (string, error) {
+	courtContext, err := renderCourtContext(court)
+	if err != nil {
+		return "", err
+	}
 	var b strings.Builder
-	b.WriteString(renderCourtContext(court))
+	b.WriteString(courtContext)
 	b.WriteString("\n\n")
 	b.WriteString("Situation markdown follows.\n\n")
 	b.WriteString(source.Markdown)
 	b.WriteString("\n\nLinked local references:\n")
 	b.WriteString(renderLinkedFileContext(source.LinkedFiles))
-	return b.String()
+	return b.String(), nil
 }
 
 func DraftComplaint(
@@ -53,9 +57,13 @@ func DraftComplaint(
 	if model == "" {
 		return "", fmt.Errorf("complaint model is required")
 	}
+	prompt, err := buildComplaintDraftPrompt(source, court)
+	if err != nil {
+		return "", err
+	}
 	baseMessages := []map[string]any{
 		{"role": "system", "content": strings.TrimSpace(complaintDraftSystemPrompt)},
-		{"role": "user", "content": buildComplaintDraftPrompt(source, court)},
+		{"role": "user", "content": prompt},
 	}
 	messages := append([]map[string]any(nil), baseMessages...)
 	for attempt := 1; attempt <= maxComplaintDraftAttempts; attempt++ {

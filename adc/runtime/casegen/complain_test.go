@@ -47,7 +47,10 @@ func TestBuildComplaintDraftPromptIncludesSituationAndLinks(t *testing.T) {
 		},
 	}
 
-	prompt := buildComplaintDraftPrompt(source, testUSDistrictProfile())
+	prompt, err := buildComplaintDraftPrompt(source, testUSDistrictProfile())
+	if err != nil {
+		t.Fatalf("buildComplaintDraftPrompt: %v", err)
+	}
 	want := []string{
 		"Situation markdown follows.",
 		"# Situation",

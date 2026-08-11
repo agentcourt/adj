@@ -15,7 +15,9 @@ func main() {
 	defer stop()
 	if err := dispatch(ctx, os.Args[1:], os.Stdout, os.Stderr); err != nil {
 		if !isReportedError(err) {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			if _, writeErr := fmt.Fprintf(os.Stderr, "error: %v\n", err); writeErr != nil {
+				os.Exit(2)
+			}
 		}
 		os.Exit(1)
 	}

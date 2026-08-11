@@ -224,8 +224,7 @@ func initializeSeededCase(le lean.Engine, state map[string]any, init ReplayIniti
 		return nil, fmt.Errorf("lean initialize_case failed: %w", err)
 	}
 	if ok, _ := resp["ok"].(bool); !ok {
-		raw, _ := json.Marshal(resp)
-		return nil, fmt.Errorf("lean initialize_case error: %s", string(raw))
+		return nil, fmt.Errorf("lean initialize_case error: %s", marshalString(resp))
 	}
 	nextState, _ := resp["state"].(map[string]any)
 	if nextState == nil {

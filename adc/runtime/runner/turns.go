@@ -161,7 +161,7 @@ func (r *Runner) executeTurn(
 			}
 			invalidAttemptReasons = append(invalidAttemptReasons, strings.Join(issueTexts, "; "))
 			invalidAttempts++
-			fmt.Fprintf(
+			if _, err := fmt.Fprintf(
 				os.Stderr,
 				"agent correction turn=%d role=%s invalid_attempt=%d/%d reason=%s\n",
 				turnIndex,
@@ -169,7 +169,9 @@ func (r *Runner) executeTurn(
 				invalidAttempts,
 				maxInvalidAttemptsPerTurn,
 				strings.Join(issueTexts, "; "),
-			)
+			); err != nil {
+				return TurnLog{}, fmt.Errorf("write agent correction: %w", err)
+			}
 			if invalidAttempts >= maxInvalidAttemptsPerTurn {
 				return TurnLog{}, formatInvalidAttemptLimitError(fmt.Sprintf("agent turn=%d role=%s", turnIndex, role.Name), invalidAttemptReasons)
 			}
@@ -250,6 +252,17 @@ func (r *Runner) executeOpportunityTurn(
 	agentEventSeq := 0
 	maxInvalidAttemptsPerTurn := r.cfg.Runtime.Normalized().InvalidAttemptLimit
 	recordInvalidAttempt := func(issue correctionIssue) error {
+		if _, err := fmt.Fprintf(
+			os.Stderr,
+			"agent correction turn=%d role=%s invalid_attempt=%d/%d reason=%s\n",
+			turnIndex,
+			role.Name,
+			invalidAttempts+1,
+			maxInvalidAttemptsPerTurn,
+			formatIssue(issue),
+		); err != nil {
+			return fmt.Errorf("write agent correction: %w", err)
+		}
 		invalidAttemptReasons = append(invalidAttemptReasons, formatIssue(issue))
 		invalidAttempts++
 		if invalidAttempts >= maxInvalidAttemptsPerTurn {
@@ -300,9 +313,9 @@ func (r *Runner) executeOpportunityTurn(
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, issue, opportunity, referenceTools)
+				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
-				inputItems = appendOpportunityCorrection(turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, nil, issue, opportunity, referenceTools)
+				inputItems = appendOpportunityCorrection(role.Name, nil, issue, opportunity, referenceTools)
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -335,10 +348,10 @@ func (r *Runner) executeOpportunityTurn(
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, issue, opportunity, referenceTools)
+				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
 				inputItems = nextInputItems(callOutputs)
-				inputItems = appendOpportunityCorrection(turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, inputItems, issue, opportunity, referenceTools)
+				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -354,7 +367,7 @@ func (r *Runner) executeOpportunityTurn(
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, issue, opportunity, referenceTools)
+				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
 				callOutput := map[string]any{
 					"type":    "function_call_output",
@@ -362,7 +375,7 @@ func (r *Runner) executeOpportunityTurn(
 					"output":  marshalString(malformedToolCallOutput(issue)),
 				}
 				inputItems = nextInputItems([]map[string]any{callOutput})
-				inputItems = appendOpportunityCorrection(turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, inputItems, issue, opportunity, referenceTools)
+				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -382,7 +395,7 @@ func (r *Runner) executeOpportunityTurn(
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, issue, opportunity, referenceTools)
+				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
 				callOutput := map[string]any{
 					"type":    "function_call_output",
@@ -390,7 +403,7 @@ func (r *Runner) executeOpportunityTurn(
 					"output":  marshalString(out),
 				}
 				inputItems = nextInputItems([]map[string]any{callOutput})
-				inputItems = appendOpportunityCorrection(turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, inputItems, issue, opportunity, referenceTools)
+				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -417,7 +430,7 @@ func (r *Runner) executeOpportunityTurn(
 					}),
 				}
 				inputItems = nextInputItems([]map[string]any{callOutput})
-				inputItems = appendOpportunityCorrection(turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, inputItems, issue, opportunity, referenceTools)
+				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
 				if err := recordInvalidAttempt(issue); err != nil {
 					return TurnLog{}, err
 				}
@@ -446,7 +459,7 @@ func (r *Runner) executeOpportunityTurn(
 			if err := recordCompletionResult(resp, "rejected", &issue, invalidAttempts+1); err != nil {
 				return TurnLog{}, err
 			}
-			inputItems = appendOpportunityCorrection(turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, inputItems, issue, opportunity, referenceTools)
+			inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
 			}
@@ -467,7 +480,7 @@ func (r *Runner) executeOpportunityTurn(
 				}
 				if supportSteps == 0 {
 					prevID = ""
-					inputItems = restartOpportunityCorrection(conversation, turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, *issue, opportunity, referenceTools)
+					inputItems = restartOpportunityCorrection(conversation, role.Name, *issue, opportunity, referenceTools)
 				} else {
 					callOutput := map[string]any{
 						"type":    "function_call_output",
@@ -475,7 +488,7 @@ func (r *Runner) executeOpportunityTurn(
 						"output":  marshalString(map[string]any{"ok": false, "error": issue.Error, "actor_message": issue.ActorMessage}),
 					}
 					inputItems = nextInputItems([]map[string]any{callOutput})
-					inputItems = appendOpportunityCorrection(turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, inputItems, *issue, opportunity, referenceTools)
+					inputItems = appendOpportunityCorrection(role.Name, inputItems, *issue, opportunity, referenceTools)
 				}
 				if err := recordInvalidAttempt(*issue); err != nil {
 					return TurnLog{}, err
@@ -500,7 +513,7 @@ func (r *Runner) executeOpportunityTurn(
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, issue, opportunity, referenceTools)
+				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
 				callOutput := map[string]any{
 					"type":    "function_call_output",
@@ -508,7 +521,7 @@ func (r *Runner) executeOpportunityTurn(
 					"output":  marshalString(acceptResp),
 				}
 				inputItems = nextInputItems([]map[string]any{callOutput})
-				inputItems = appendOpportunityCorrection(turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, inputItems, issue, opportunity, referenceTools)
+				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -560,7 +573,7 @@ func (r *Runner) executeOpportunityTurn(
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, issue, opportunity, referenceTools)
+				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
 				callOutput := map[string]any{
 					"type":    "function_call_output",
@@ -568,7 +581,7 @@ func (r *Runner) executeOpportunityTurn(
 					"output":  marshalString(res),
 				}
 				inputItems = nextInputItems([]map[string]any{callOutput})
-				inputItems = appendOpportunityCorrection(turnIndex, role.Name, invalidAttempts, maxInvalidAttemptsPerTurn, inputItems, issue, opportunity, referenceTools)
+				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -584,24 +597,12 @@ func (r *Runner) executeOpportunityTurn(
 }
 
 func appendOpportunityCorrection(
-	turnIndex int,
 	roleName string,
-	invalidAttempts int,
-	maxInvalidAttemptsPerTurn int,
 	inputItems []map[string]any,
 	issue correctionIssue,
 	opportunity leanOpportunity,
 	referenceTools []string,
 ) []map[string]any {
-	fmt.Fprintf(
-		os.Stderr,
-		"agent correction turn=%d role=%s invalid_attempt=%d/%d reason=%s\n",
-		turnIndex,
-		roleName,
-		invalidAttempts+1,
-		maxInvalidAttemptsPerTurn,
-		formatIssue(issue),
-	)
 	return append(
 		inputItems,
 		map[string]any{
@@ -624,19 +625,13 @@ func nextInputItems(items ...[]map[string]any) []map[string]any {
 
 func restartOpportunityCorrection(
 	conversation []map[string]any,
-	turnIndex int,
 	roleName string,
-	invalidAttempts int,
-	maxInvalidAttemptsPerTurn int,
 	issue correctionIssue,
 	opportunity leanOpportunity,
 	referenceTools []string,
 ) []map[string]any {
 	return appendOpportunityCorrection(
-		turnIndex,
 		roleName,
-		invalidAttempts,
-		maxInvalidAttemptsPerTurn,
 		append([]map[string]any{}, conversation...),
 		issue,
 		opportunity,

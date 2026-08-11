@@ -11,8 +11,7 @@ import (
 	"github.com/jsmorph/adj/arb/runtime/proceeding"
 )
 
-func runCasePacket(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
-	_ = ctx
+func runCasePacket(_ context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
 	fs := flag.NewFlagSet("case-packet", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	var caseFiles explicitFileList

@@ -103,7 +103,6 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 	}
 	rc.lawyerAPI = caseAPI.lawyerAPI
 	rc.councilAPI = caseAPI.councilAPI
-	fmt.Fprintf(os.Stderr, "caseapi listening on %s\n", caseAPI.baseURL)
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
@@ -111,6 +110,9 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 			err = errors.Join(err, closeErr)
 		}
 	}()
+	if _, err := fmt.Fprintf(os.Stderr, "caseapi listening on %s\n", caseAPI.baseURL); err != nil {
+		return Result{}, fmt.Errorf("write case API address: %w", err)
+	}
 	for _, replacement := range councilReplacements {
 		if err := rc.recordEvent("council_member_replaced", "system", currentPhase(rc.state), map[string]any{
 			"member_id":                    replacement.MemberID,

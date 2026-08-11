@@ -216,6 +216,10 @@ func CreatePlan(ctx context.Context, client *openai.Client, plannerModel string,
 	if err != nil {
 		return Plan{}, err
 	}
+	plaintiffPrompt, err := buildStrategyPrompt("plaintiff", packet, complaint, court)
+	if err != nil {
+		return Plan{}, err
+	}
 
 	plaintiffStrategy, err := planStrategyMemo(
 		ctx,
@@ -223,9 +227,13 @@ func CreatePlan(ctx context.Context, client *openai.Client, plannerModel string,
 		model,
 		"plaintiff",
 		strings.TrimSpace(plaintiffStrategySystemPrompt),
-		buildStrategyPrompt("plaintiff", packet, complaint, court),
+		plaintiffPrompt,
 		&temp,
 	)
+	if err != nil {
+		return Plan{}, err
+	}
+	defensePrompt, err := buildStrategyPrompt("defendant", packet, complaint, court)
 	if err != nil {
 		return Plan{}, err
 	}
@@ -235,7 +243,7 @@ func CreatePlan(ctx context.Context, client *openai.Client, plannerModel string,
 		model,
 		"defendant",
 		strings.TrimSpace(defenseStrategySystemPrompt),
-		buildStrategyPrompt("defendant", packet, complaint, court),
+		defensePrompt,
 		&temp,
 	)
 	if err != nil {
@@ -601,21 +609,32 @@ func buildAnswerSummary(packet CasePacket) string {
 	return strings.Join(parts, " ")
 }
 
-func buildCasePacketPrompt(complaint ComplaintInput, court courts.Profile) string {
+func buildCasePacketPrompt(complaint ComplaintInput, court courts.Profile) (string, error) {
+	courtContext, err := renderCourtContext(court)
+	if err != nil {
+		return "", err
+	}
 	var b strings.Builder
-	b.WriteString(renderCourtContext(court))
+	b.WriteString(courtContext)
 	b.WriteString("\n")
 	b.WriteString("Complaint markdown follows.\n\n")
 	b.WriteString(complaint.Markdown)
 	b.WriteString("\n\nLinked local attachments:\n")
 	b.WriteString(renderLinkedFileContext(complaint.LinkedFiles))
-	return b.String()
+	return b.String(), nil
 }
 
-func buildStrategyPrompt(side string, packet CasePacket, complaint ComplaintInput, court courts.Profile) string {
+func buildStrategyPrompt(side string, packet CasePacket, complaint ComplaintInput, court courts.Profile) (string, error) {
 	var b strings.Builder
-	packetJSON, _ := json.MarshalIndent(packet, "", "  ")
-	b.WriteString(renderCourtContext(court))
+	packetJSON, err := json.MarshalIndent(packet, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("encode case packet: %w", err)
+	}
+	courtContext, err := renderCourtContext(court)
+	if err != nil {
+		return "", err
+	}
+	b.WriteString(courtContext)
 	b.WriteString("\n")
 	b.WriteString("Given this complaint, the normalized case packet, the listed attachments, and the available tool surface for ")
 	b.WriteString(side)
@@ -669,7 +688,7 @@ func buildStrategyPrompt(side string, packet CasePacket, complaint ComplaintInpu
 		b.WriteString("- Do not recommend a dispositive motion unless the standard and these facts justify it.\n")
 		b.WriteString("- Focus on burden failures, disputed inferences, causation limits, damages limits, and any supported defense.\n")
 	}
-	return b.String()
+	return b.String(), nil
 }
 
 func planCasePacket(
@@ -680,9 +699,13 @@ func planCasePacket(
 	court courts.Profile,
 	temperature *float64,
 ) (CasePacket, error) {
+	prompt, err := buildCasePacketPrompt(complaint, court)
+	if err != nil {
+		return CasePacket{}, err
+	}
 	baseMessages := []map[string]any{
 		{"role": "system", "content": strings.TrimSpace(casePacketSystemPrompt)},
-		{"role": "user", "content": buildCasePacketPrompt(complaint, court)},
+		{"role": "user", "content": prompt},
 	}
 	messages := append([]map[string]any(nil), baseMessages...)
 	for attempt := 1; attempt <= maxPlannerAttempts; attempt++ {
@@ -752,12 +775,15 @@ func buildCasePacketCorrectionPrompt(err error) string {
 	return b.String()
 }
 
-func renderCourtContext(court courts.Profile) string {
-	profileJSON, _ := json.MarshalIndent(court, "", "  ")
+func renderCourtContext(court courts.Profile) (string, error) {
+	profileJSON, err := json.MarshalIndent(court, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("encode court profile: %w", err)
+	}
 	var b strings.Builder
 	b.WriteString("Selected court profile:\n")
 	b.WriteString(string(profileJSON))
-	return b.String()
+	return b.String(), nil
 }
 
 var amountTokenPattern = regexp.MustCompile(`([0-9][0-9,]*(?:\.[0-9]{1,2})?)`)

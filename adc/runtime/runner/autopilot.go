@@ -36,7 +36,9 @@ func (r *Runner) runAutopilot(ctx context.Context, startTurnIndex int) ([]TurnLo
 	for autoIndex := 0; autoIndex < loop.MaxTurns; autoIndex++ {
 		turnIndex := startTurnIndex + autoIndex
 		if r.shouldStopOnCaseStatus(loop.StopOnCaseStatus) {
-			fmt.Fprintf(os.Stderr, "autopilot stop turn=%d reason=case_status status=%s\n", turnIndex, strings.TrimSpace(loop.StopOnCaseStatus))
+			if _, err := fmt.Fprintf(os.Stderr, "autopilot stop turn=%d reason=case_status status=%s\n", turnIndex, strings.TrimSpace(loop.StopOnCaseStatus)); err != nil {
+				return nil, fmt.Errorf("write autopilot status: %w", err)
+			}
 			return logs, nil
 		}
 		resp, err := r.lean.NextOpportunity(r.state, rolesPayload, loop.MaxStepsPerTurn)
@@ -47,7 +49,9 @@ func (r *Runner) runAutopilot(ctx context.Context, startTurnIndex int) ([]TurnLo
 			return nil, fmt.Errorf("lean next_opportunity error: %s", stringOrDefault(resp["error"], "unknown error"))
 		}
 		if terminal, _ := resp["terminal"].(bool); terminal {
-			fmt.Fprintf(os.Stderr, "autopilot stop turn=%d reason=%s\n", turnIndex, stringOrDefault(resp["reason"], "terminal"))
+			if _, err := fmt.Fprintf(os.Stderr, "autopilot stop turn=%d reason=%s\n", turnIndex, stringOrDefault(resp["reason"], "terminal")); err != nil {
+				return nil, fmt.Errorf("write autopilot status: %w", err)
+			}
 			return logs, nil
 		}
 		stateVersion := intFromAny(resp["state_version"])
@@ -63,7 +67,7 @@ func (r *Runner) runAutopilot(ctx context.Context, startTurnIndex int) ([]TurnLo
 		if !ok {
 			return nil, fmt.Errorf("lean next_opportunity returned unknown role: %s", opportunity.Role)
 		}
-		fmt.Fprintf(
+		if _, err := fmt.Fprintf(
 			os.Stderr,
 			"agent call turn=%d source=next_opportunity role=%s opportunity_id=%s phase=%s kind=%s may_pass=%t why=%s allowed=%s\n",
 			turnIndex,
@@ -74,7 +78,9 @@ func (r *Runner) runAutopilot(ctx context.Context, startTurnIndex int) ([]TurnLo
 			opportunity.MayPass,
 			opportunity.Objective,
 			strings.Join(opportunity.AllowedTools, ","),
-		)
+		); err != nil {
+			return nil, fmt.Errorf("write agent call: %w", err)
+		}
 		var turnLog TurnLog
 		if opportunity.DeterministicAction != nil {
 			turn := spec.TurnSpec{
@@ -104,7 +110,7 @@ func (r *Runner) runAutopilot(ctx context.Context, startTurnIndex int) ([]TurnLo
 		}
 		turnLog.Source = "next_opportunity"
 		turnLog.ActionID = opportunity.OpportunityID
-		turnLogsApplyOpportunity(turnIndex, &turnLog, opportunity)
+		turnLogsApplyOpportunity(&turnLog, opportunity)
 		logs = append(logs, turnLog)
 	}
 	return nil, fmt.Errorf("autopilot exhausted max_turns=%d without stop", loop.MaxTurns)
@@ -183,7 +189,7 @@ func parseLeanOpportunity(payload map[string]any) (leanOpportunity, error) {
 	}, nil
 }
 
-func turnLogsApplyOpportunity(turnIndex int, log *TurnLog, opportunity leanOpportunity) {
+func turnLogsApplyOpportunity(log *TurnLog, opportunity leanOpportunity) {
 	if log == nil {
 		return
 	}
@@ -196,7 +202,6 @@ func turnLogsApplyOpportunity(turnIndex int, log *TurnLog, opportunity leanOppor
 	if log.ActionID == "" {
 		log.ActionID = opportunity.OpportunityID
 	}
-	_ = turnIndex
 }
 
 func (r *Runner) shouldStopOnCaseStatus(status string) bool {

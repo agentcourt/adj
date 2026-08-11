@@ -1,6 +1,8 @@
 package runner
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/jsmorph/adj/adc/runtime/spec"
@@ -26,5 +28,12 @@ func TestEffectiveRoleTemperatureUsesJurorOverrideOnlyForJurors(t *testing.T) {
 	gotJudge := r.effectiveRoleTemperature(spec.RoleSpec{Name: "judge"})
 	if gotJudge == nil || *gotJudge != general {
 		t.Fatalf("judge temperature = %v, want %v", gotJudge, general)
+	}
+}
+
+func TestMarshalStringReportsEncodingFailure(t *testing.T) {
+	got := marshalString(map[string]any{"unsupported": make(chan int)})
+	if !json.Valid([]byte(got)) || !strings.Contains(got, "encode JSON") {
+		t.Fatalf("marshalString = %q", got)
 	}
 }

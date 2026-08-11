@@ -4,11 +4,15 @@ import (
 	"encoding/json"
 	"maps"
 	"sort"
+	"strconv"
 	"strings"
 )
 
 func marshalString(v any) string {
-	raw, _ := json.Marshal(v)
+	raw, err := json.Marshal(v)
+	if err != nil {
+		return `{"ok":false,"error":` + strconv.Quote("encode JSON: "+err.Error()) + `}`
+	}
 	return string(raw)
 }
 

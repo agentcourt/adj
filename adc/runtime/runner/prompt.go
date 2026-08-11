@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"encoding/json"
 	"strings"
 
 	"github.com/jsmorph/adj/adc/runtime/spec"
@@ -46,7 +45,7 @@ func (r *Runner) effectiveRoleTemperatureByName(roleName string) *float64 {
 }
 
 func buildSystemPrompt(role spec.RoleSpec, view map[string]any) string {
-	payload, _ := json.MarshalIndent(view, "", "  ")
+	payload := marshalString(view)
 	allowed := role.EffectiveAllowedActions()
 	preamble := ""
 	if strings.TrimSpace(role.PromptPreamble) != "" {
@@ -58,7 +57,7 @@ func buildSystemPrompt(role spec.RoleSpec, view map[string]any) string {
 		"\nAllowed actions: " + strings.Join(allowed, ", ") +
 		"\nUse only listed tools with precise payloads." +
 		"\nWhen you decide to act, call exactly one tool rather than replying with prose." +
-		"\nCurrent view:\n" + string(payload)
+		"\nCurrent view:\n" + payload
 }
 
 func buildOpportunityPrompt(role spec.RoleSpec, opportunity leanOpportunity) string {
@@ -74,9 +73,7 @@ func buildOpportunityPrompt(role spec.RoleSpec, opportunity leanOpportunity) str
 		lines = append(lines, "Reference tools: "+strings.Join(referenceTools, ", "))
 	}
 	if len(opportunity.Constraints) > 0 {
-		if raw, err := json.Marshal(opportunity.Constraints); err == nil {
-			lines = append(lines, "Opportunity constraints: "+string(raw))
-		}
+		lines = append(lines, "Opportunity constraints: "+marshalString(opportunity.Constraints))
 	}
 	if opportunity.MayPass {
 		lines = append(lines, "You may decline this opportunity by calling pass_turn.")
