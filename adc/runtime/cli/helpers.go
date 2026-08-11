@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/jsmorph/adj/adc/runtime/runner"
+	"github.com/jsmorph/adj/common/cliio"
 )
 
 const (
@@ -34,9 +35,17 @@ func (f *stringListFlag) Set(value string) error {
 
 func newFlagSet(name string, stderr io.Writer, usage func()) *flag.FlagSet {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
-	fs.SetOutput(stderr)
+	fs.SetOutput(cliio.NewErrorWriter(stderr))
 	fs.Usage = usage
 	return fs
+}
+
+func parseFlagSet(fs *flag.FlagSet, args []string) (bool, error) {
+	output, ok := fs.Output().(*cliio.ErrorWriter)
+	if !ok {
+		return false, fmt.Errorf("flag output is not an error-tracking writer")
+	}
+	return cliio.Parse(fs, args, output)
 }
 
 func loadPromptText(prompt string, promptFile string) (string, error) {

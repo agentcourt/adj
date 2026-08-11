@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -10,18 +9,21 @@ import (
 )
 
 func runValidate(args []string, stdout io.Writer, stderr io.Writer) error {
-	fs := flag.NewFlagSet("validate", flag.ContinueOnError)
-	fs.SetOutput(stderr)
+	fs := newCommandFlagSet("validate", stderr)
 	complaintPath := fs.String("complaint", "", "Complaint markdown file")
 	fs.Usage = func() {
-		fmt.Fprintf(stderr, "Usage: aar validate --complaint FILE\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: aar validate --complaint FILE\n\n")
 		fs.PrintDefaults()
 	}
-	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return nil
-		}
-		return err
+	help, parseErr := parseCommandFlags(fs, args)
+	if parseErr != nil {
+		return parseErr
+	}
+	if help {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("aar validate accepts no positional arguments")
 	}
 	if *complaintPath == "" {
 		return fmt.Errorf("--complaint is required")

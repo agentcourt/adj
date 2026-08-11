@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"strings"
@@ -23,8 +22,7 @@ type caseRunSummary struct {
 }
 
 func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
-	fs := flag.NewFlagSet("case", flag.ContinueOnError)
-	fs.SetOutput(stderr)
+	fs := newCommandFlagSet("case", stderr)
 	var caseFiles explicitFileList
 	complaintPath := fs.String("complaint", "", "Complaint markdown file")
 	fs.Var(&caseFiles, "file", "Explicit case file path or glob. May be repeated. Overrides automatic complaint-directory scanning")
@@ -49,14 +47,18 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	runID := fs.String("run-id", "", "Run ID override")
 	caseID := fs.String("case-id", proceeding.DefaultCaseID, "Case ID")
 	fs.Usage = func() {
-		fmt.Fprintf(stderr, "Usage: aar case --complaint FILE --out-dir DIR\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: aar case --complaint FILE --out-dir DIR\n\n")
 		fs.PrintDefaults()
 	}
-	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return nil
-		}
-		return reportCaseError(stdout, err)
+	help, parseErr := parseCommandFlags(fs, args)
+	if parseErr != nil {
+		return reportCaseError(stdout, parseErr)
+	}
+	if help {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return reportCaseError(stdout, fmt.Errorf("aar case accepts no positional arguments"))
 	}
 	if strings.TrimSpace(*complaintPath) == "" || strings.TrimSpace(*outDir) == "" {
 		return reportCaseError(stdout, fmt.Errorf("--complaint and --out-dir are required"))

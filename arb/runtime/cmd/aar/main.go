@@ -25,8 +25,7 @@ func main() {
 
 func dispatch(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
 	if len(args) == 0 {
-		printRootUsage(stderr)
-		return fmt.Errorf("subcommand is required")
+		return errors.Join(fmt.Errorf("subcommand is required"), printRootUsage(stderr))
 	}
 	switch args[0] {
 	case "case":
@@ -41,8 +40,7 @@ func dispatch(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 		return runVerifyCertificate(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
 		if len(args) == 1 {
-			printRootUsage(stdout)
-			return nil
+			return printRootUsage(stdout)
 		}
 		switch args[1] {
 		case "case":
@@ -56,26 +54,26 @@ func dispatch(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 		case "verify-certificate":
 			return runVerifyCertificate([]string{"-h"}, stdout, stderr)
 		default:
-			printRootUsage(stderr)
-			return fmt.Errorf("unknown help topic %q", args[1])
+			return errors.Join(fmt.Errorf("unknown help topic %q", args[1]), printRootUsage(stderr))
 		}
 	default:
-		printRootUsage(stderr)
-		return fmt.Errorf("unknown subcommand %q", args[0])
+		return errors.Join(fmt.Errorf("unknown subcommand %q", args[0]), printRootUsage(stderr))
 	}
 }
 
-func printRootUsage(w io.Writer) {
-	fmt.Fprintln(w, "Usage: aar <subcommand> [options]")
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Subcommands:")
-	fmt.Fprintln(w, "  case       Initialize an arbitration case from a complaint")
-	fmt.Fprintln(w, "  case-packet  Build a deterministic case packet")
-	fmt.Fprintln(w, "  complain   Draft complaint.md from a situation markdown file")
-	fmt.Fprintln(w, "  validate   Validate a complaint file")
-	fmt.Fprintln(w, "  verify-certificate  Verify certificate.json against state.json")
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Use 'aar help <subcommand>' for subcommand flags.")
+func printRootUsage(w io.Writer) error {
+	_, err := fmt.Fprint(w, `Usage: aar <subcommand> [options]
+
+Subcommands:
+  case       Initialize an arbitration case from a complaint
+  case-packet  Build a deterministic case packet
+  complain   Draft complaint.md from a situation markdown file
+  validate   Validate a complaint file
+  verify-certificate  Verify certificate.json against state.json
+
+Use 'aar help <subcommand>' for subcommand flags.
+`)
+	return err
 }
 
 type reportedError struct {

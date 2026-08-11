@@ -13,16 +13,20 @@ import (
 func RunValidate(args []string, stdout io.Writer, stderr io.Writer) error {
 	var fs *flag.FlagSet
 	fs = newFlagSet("validate", stderr, func() {
-		fmt.Fprintf(stderr, "Usage: adc validate --scenario <json>\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: adc validate --scenario <json>\n\n")
 		fs.PrintDefaults()
 	})
 	scenarioPath := fs.String("scenario", "", "Path to scenario JSON")
 	jsonSummary := fs.Bool("json", true, "Emit JSON summary")
-	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return nil
-		}
-		return err
+	help, parseErr := parseFlagSet(fs, args)
+	if parseErr != nil {
+		return parseErr
+	}
+	if help {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("adc validate accepts no positional arguments")
 	}
 	if strings.TrimSpace(*scenarioPath) == "" {
 		return fmt.Errorf("--scenario is required")

@@ -15,18 +15,22 @@ import (
 func RunVerifyCertificate(args []string, stdout io.Writer, stderr io.Writer) error {
 	var fs *flag.FlagSet
 	fs = newFlagSet("verify-certificate", stderr, func() {
-		fmt.Fprintf(stderr, "Usage: adc verify-certificate --dir DIR\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: adc verify-certificate --dir DIR\n\n")
 		fs.PrintDefaults()
 	})
 	packetDir := fs.String("dir", "", "ADC output packet directory")
 	certificatePath := fs.String("certificate", "", "Certificate JSON path. Default: DIR/certificate.json")
 	statePath := fs.String("state", "", "Final state JSON path. Default: DIR/state.json")
 	engineCommand := fs.String("engine", defaultEngineCommand(), "Engine command string")
-	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return nil
-		}
-		return err
+	help, parseErr := parseFlagSet(fs, args)
+	if parseErr != nil {
+		return parseErr
+	}
+	if help {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("adc verify-certificate accepts no positional arguments")
 	}
 	dir := strings.TrimSpace(*packetDir)
 	cert := strings.TrimSpace(*certificatePath)

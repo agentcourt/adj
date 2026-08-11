@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"strings"
@@ -12,22 +11,25 @@ import (
 )
 
 func runCasePacket(_ context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
-	fs := flag.NewFlagSet("case-packet", flag.ContinueOnError)
-	fs.SetOutput(stderr)
+	fs := newCommandFlagSet("case-packet", stderr)
 	var caseFiles explicitFileList
 	complaintPath := fs.String("complaint", "", "Complaint markdown file")
 	fs.Var(&caseFiles, "file", "Explicit case file path or glob. May be repeated. Overrides automatic complaint-directory scanning")
 	packetPath := fs.String("packet", "", "Output case packet tar.gz")
 	manifestPath := fs.String("manifest", "", "Output case packet manifest JSON")
 	fs.Usage = func() {
-		fmt.Fprintf(stderr, "Usage: aar case-packet --complaint FILE --packet case.tar.gz --manifest case-packet.json\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: aar case-packet --complaint FILE --packet case.tar.gz --manifest case-packet.json\n\n")
 		fs.PrintDefaults()
 	}
-	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return nil
-		}
-		return err
+	help, parseErr := parseCommandFlags(fs, args)
+	if parseErr != nil {
+		return parseErr
+	}
+	if help {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("aar case-packet accepts no positional arguments")
 	}
 	if strings.TrimSpace(*complaintPath) == "" || strings.TrimSpace(*packetPath) == "" || strings.TrimSpace(*manifestPath) == "" {
 		return fmt.Errorf("--complaint, --packet, and --manifest are required")

@@ -18,7 +18,7 @@ import (
 func RunComplain(args []string, stdout io.Writer, stderr io.Writer) error {
 	var fs *flag.FlagSet
 	fs = newFlagSet("complain", stderr, func() {
-		fmt.Fprintf(stderr, "Usage: adc complain --situation <markdown> [options]\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: adc complain --situation <markdown> [options]\n\n")
 		fs.PrintDefaults()
 	})
 	situationPath := fs.String("situation", "", "Path to situation markdown")
@@ -26,11 +26,15 @@ func RunComplain(args []string, stdout io.Writer, stderr io.Writer) error {
 	courtRef := fs.String("court", courts.DefaultCourtName, "Court profile name or JSON path")
 	model := fs.String("model", casegen.DefaultPlannerModel(), "Model for complaint drafting")
 	timeoutSeconds := fs.Int("timeout-seconds", defaultLLMTimeoutSeconds, "LLM HTTP timeout in seconds")
-	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return nil
-		}
-		return err
+	help, parseErr := parseFlagSet(fs, args)
+	if parseErr != nil {
+		return parseErr
+	}
+	if help {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("adc complain accepts no positional arguments")
 	}
 	if strings.TrimSpace(*situationPath) == "" {
 		return fmt.Errorf("--situation is required")

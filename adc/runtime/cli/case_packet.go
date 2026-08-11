@@ -13,17 +13,21 @@ import (
 func RunCasePacket(args []string, stdout io.Writer, stderr io.Writer) error {
 	var fs *flag.FlagSet
 	fs = newFlagSet("case-packet", stderr, func() {
-		fmt.Fprintf(stderr, "Usage: adc case-packet --complaint FILE --packet case.tar.gz --manifest case-packet.json\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: adc case-packet --complaint FILE --packet case.tar.gz --manifest case-packet.json\n\n")
 		fs.PrintDefaults()
 	})
 	complaintPath := fs.String("complaint", "", "Complaint markdown file")
 	packetPath := fs.String("packet", "", "Output case packet tar.gz")
 	manifestPath := fs.String("manifest", "", "Output case packet manifest JSON")
-	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return nil
-		}
-		return err
+	help, parseErr := parseFlagSet(fs, args)
+	if parseErr != nil {
+		return parseErr
+	}
+	if help {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("adc case-packet accepts no positional arguments")
 	}
 	if strings.TrimSpace(*complaintPath) == "" || strings.TrimSpace(*packetPath) == "" || strings.TrimSpace(*manifestPath) == "" {
 		return fmt.Errorf("--complaint, --packet, and --manifest are required")

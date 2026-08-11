@@ -23,7 +23,7 @@ import (
 func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
 	var fs *flag.FlagSet
 	fs = newFlagSet("case", stderr, func() {
-		fmt.Fprintf(stderr, "Usage: adc case --complaint <markdown> [options]\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: adc case --complaint <markdown> [options]\n\n")
 		fs.PrintDefaults()
 	})
 	complaintPath := fs.String("complaint", "", "Path to complaint markdown")
@@ -58,11 +58,15 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	engineCommand := fs.String("engine", defaultEngineCommand(), "Engine command string")
 	jsonSummary := fs.Bool("json-summary", true, "Emit JSON summary to stdout")
 	fs.Var(&externalRoles, "external-role", "Role to serve through the role API during opportunity turns; repeat as needed")
-	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return nil
-		}
-		return err
+	help, parseErr := parseFlagSet(fs, args)
+	if parseErr != nil {
+		return parseErr
+	}
+	if help {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("adc case accepts no positional arguments")
 	}
 	if strings.TrimSpace(*complaintPath) == "" {
 		return fmt.Errorf("--complaint is required")

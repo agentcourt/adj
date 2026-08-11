@@ -14,18 +14,22 @@ import (
 func RunPacer(args []string, stdout io.Writer, stderr io.Writer) error {
 	var fs *flag.FlagSet
 	fs = newFlagSet("pacer", stderr, func() {
-		fmt.Fprintf(stderr, "Usage: adc pacer --db <sqlite> [--case-id <id>] [--document-id <id>]\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: adc pacer --db <sqlite> [--case-id <id>] [--document-id <id>]\n\n")
 		fs.PrintDefaults()
 	})
 	dbPath := fs.String("db", "out/adc-run.db", "SQLite path")
 	caseID := fs.String("case-id", "", "Case ID (optional; latest case if omitted)")
 	documentID := fs.String("document-id", "", "Document ID for single-document fetch")
 	jsonSummary := fs.Bool("json", true, "Emit JSON output")
-	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return nil
-		}
-		return err
+	help, parseErr := parseFlagSet(fs, args)
+	if parseErr != nil {
+		return parseErr
+	}
+	if help {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("adc pacer accepts no positional arguments")
 	}
 
 	st, err := store.Open(*dbPath)

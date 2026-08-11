@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -10,19 +9,22 @@ import (
 )
 
 func runComplain(args []string, stdout io.Writer, stderr io.Writer) error {
-	fs := flag.NewFlagSet("complain", flag.ContinueOnError)
-	fs.SetOutput(stderr)
+	fs := newCommandFlagSet("complain", stderr)
 	situationPath := fs.String("situation", "", "Situation markdown file")
 	outPath := fs.String("out", "", "Output complaint markdown file")
 	fs.Usage = func() {
-		fmt.Fprintf(stderr, "Usage: aard complain --situation FILE --out FILE\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: aard complain --situation FILE --out FILE\n\n")
 		fs.PrintDefaults()
 	}
-	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return nil
-		}
-		return err
+	help, parseErr := parseCommandFlags(fs, args)
+	if parseErr != nil {
+		return parseErr
+	}
+	if help {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("aard complain accepts no positional arguments")
 	}
 	if *situationPath == "" || *outPath == "" {
 		return fmt.Errorf("--situation and --out are required")

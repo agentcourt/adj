@@ -20,7 +20,7 @@ import (
 func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
 	var fs *flag.FlagSet
 	fs = newFlagSet("scenario", stderr, func() {
-		fmt.Fprintf(stderr, "Usage: adc scenario --scenario <json> [options]\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: adc scenario --scenario <json> [options]\n\n")
 		fs.PrintDefaults()
 	})
 	scenarioPath := fs.String("scenario", "", "Path to scenario JSON")
@@ -52,11 +52,15 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 	reportModel := fs.String("report-model", "", "Model for digest generation")
 	allowAssertionFailures := fs.Bool("allow-assertion-failures", false, "Return success after recording failed scenario assertions")
 	fs.Var(&externalRoles, "external-role", "Role to serve through the role API during opportunity turns; repeat as needed")
-	if err := fs.Parse(args); err != nil {
-		if err == flag.ErrHelp {
-			return nil
-		}
-		return err
+	help, parseErr := parseFlagSet(fs, args)
+	if parseErr != nil {
+		return parseErr
+	}
+	if help {
+		return nil
+	}
+	if fs.NArg() != 0 {
+		return fmt.Errorf("adc scenario accepts no positional arguments")
 	}
 	if strings.TrimSpace(*scenarioPath) == "" {
 		return fmt.Errorf("--scenario is required")
