@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -1052,12 +1053,16 @@ func resolveMarkdownLink(baseDir string, target string) (string, error) {
 	return "", fmt.Errorf("linked file not found from markdown target %q", target)
 }
 
-func previewFile(path string) (string, string, error) {
+func previewFile(path string) (kind string, text string, err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", "", fmt.Errorf("open linked file %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close linked file %s: %w", path, closeErr))
+		}
+	}()
 	buf := make([]byte, 4096)
 	n, err := f.Read(buf)
 	if err != nil && err != io.EOF {
@@ -1070,7 +1075,7 @@ func previewFile(path string) (string, string, error) {
 	if !utf8.Valid(buf) {
 		return "binary", "", nil
 	}
-	text := string(buf)
+	text = string(buf)
 	text = strings.TrimSpace(text)
 	info, err := f.Stat()
 	if err != nil {
@@ -1082,7 +1087,7 @@ func previewFile(path string) (string, string, error) {
 	return "text_excerpt", text, nil
 }
 
-func copyFile(src string, dst string) error {
+func copyFile(src string, dst string) (err error) {
 	srcAbs, err := filepath.Abs(src)
 	if err != nil {
 		return err
@@ -1098,7 +1103,11 @@ func copyFile(src string, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() {
+		if closeErr := in.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close source file %s: %w", src, closeErr))
+		}
+	}()
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
@@ -1106,11 +1115,18 @@ func copyFile(src string, dst string) error {
 	if err != nil {
 		return err
 	}
-	if _, err := io.Copy(out, in); err != nil {
-		_ = out.Close()
-		return err
-	}
-	if err := out.Close(); err != nil {
+	_, copyErr := io.Copy(out, in)
+	closeErr := out.Close()
+	if copyErr != nil || closeErr != nil {
+		if copyErr != nil {
+			err = errors.Join(err, fmt.Errorf("copy %s to %s: %w", src, dst, copyErr))
+		}
+		if closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close destination file %s: %w", dst, closeErr))
+		}
+		if removeErr := os.Remove(dst); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			err = errors.Join(err, fmt.Errorf("remove incomplete destination file %s: %w", dst, removeErr))
+		}
 		return err
 	}
 	return nil

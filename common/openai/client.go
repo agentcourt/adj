@@ -315,7 +315,15 @@ func (c *Client) attachOpenRouterGeneration(ctx context.Context, resp *Response)
 		resp.OpenRouterGenerationError = err.Error()
 		return
 	}
-	defer httpResp.Body.Close()
+	defer func() {
+		if closeErr := httpResp.Body.Close(); closeErr != nil {
+			closeErr = fmt.Errorf("close OpenRouter generation response: %w", closeErr)
+			if resp.OpenRouterGenerationError != "" {
+				closeErr = errors.Join(errors.New(resp.OpenRouterGenerationError), closeErr)
+			}
+			resp.OpenRouterGenerationError = closeErr.Error()
+		}
+	}()
 	body, err := io.ReadAll(io.LimitReader(httpResp.Body, 2*1024*1024))
 	if err != nil {
 		resp.OpenRouterGenerationError = err.Error()

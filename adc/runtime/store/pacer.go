@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -28,7 +29,7 @@ type PacerDocument struct {
 	Metadata     map[string]any `json:"metadata,omitempty"`
 }
 
-func (s *Store) LoadLatestCase(caseID string) (PacerCase, error) {
+func (s *Store) LoadLatestCase(caseID string) (result PacerCase, err error) {
 	rows, err := s.db.Query(
 		`SELECT run_id, scenario_name, final_state_json, started_at, finished_at
 		   FROM runs
@@ -38,7 +39,11 @@ func (s *Store) LoadLatestCase(caseID string) (PacerCase, error) {
 	if err != nil {
 		return PacerCase{}, fmt.Errorf("query runs: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close run rows: %w", closeErr))
+		}
+	}()
 
 	for rows.Next() {
 		var runID string

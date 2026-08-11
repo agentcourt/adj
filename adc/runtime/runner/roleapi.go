@@ -1083,7 +1083,7 @@ func (r *Runner) legalToolSpecs(allowedTools []string) []map[string]any {
 	return specs
 }
 
-func (r *Runner) writeWorkNotes(turn *externalOpportunityTurn, notes string) (map[string]any, error) {
+func (r *Runner) writeWorkNotes(turn *externalOpportunityTurn, notes string) (result map[string]any, err error) {
 	if turn == nil {
 		return nil, fmt.Errorf("active turn is required")
 	}
@@ -1112,7 +1112,11 @@ func (r *Runner) writeWorkNotes(turn *externalOpportunityTurn, notes string) (ma
 	if err != nil {
 		return nil, fmt.Errorf("open work notes: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close work notes: %w", closeErr))
+		}
+	}()
 	if _, err := f.Write(append(raw, '\n')); err != nil {
 		return nil, fmt.Errorf("write work notes: %w", err)
 	}
