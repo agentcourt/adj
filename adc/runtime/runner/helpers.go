@@ -2,6 +2,7 @@ package runner
 
 import (
 	"encoding/json"
+	"maps"
 	"sort"
 	"strings"
 )
@@ -164,10 +165,7 @@ func ternary[T any](cond bool, yes T, no T) T {
 }
 
 func cloneMap(input map[string]any) map[string]any {
-	raw, _ := json.Marshal(input)
-	var out map[string]any
-	_ = json.Unmarshal(raw, &out)
-	return out
+	return maps.Clone(input)
 }
 
 func normalizePolicy(input map[string]any) map[string]any {

@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -20,7 +21,9 @@ func Open(path string) (*Store, error) {
 	}
 	s := &Store{db: db}
 	if err := s.migrate(); err != nil {
-		_ = db.Close()
+		if closeErr := db.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close sqlite after migration failure: %w", closeErr))
+		}
 		return nil, err
 	}
 	return s, nil

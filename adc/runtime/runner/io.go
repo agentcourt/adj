@@ -2,6 +2,7 @@ package runner
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -71,22 +72,22 @@ func (r *Runner) persistAgentCompletionResult(
 	return r.persistAgentEvent(turnIndex, sequence, actorRole, "agent_completion_result", payload)
 }
 
-func appendEventLine(path string, line map[string]any) error {
+func appendEventLine(path string, line map[string]any) (err error) {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		return fmt.Errorf("open events path: %w", err)
 	}
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close events path: %w", closeErr))
+		}
+	}()
 	enc, err := json.Marshal(line)
 	if err != nil {
-		_ = f.Close()
 		return fmt.Errorf("marshal events line: %w", err)
 	}
 	if _, err := f.Write(append(enc, '\n')); err != nil {
-		_ = f.Close()
 		return fmt.Errorf("write events path: %w", err)
-	}
-	if err := f.Close(); err != nil {
-		return fmt.Errorf("close events path: %w", err)
 	}
 	return nil
 }
@@ -192,7 +193,7 @@ func manifestCaseFileName(fileObj map[string]any) string {
 	return fileID + "-" + sanitizeUploadedCaseFilename(name)
 }
 
-func writeJSONFileAtomic(path string, value any) error {
+func writeJSONFileAtomic(path string, value any) (err error) {
 	raw, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return err
@@ -205,32 +206,42 @@ func writeJSONFileAtomic(path string, value any) error {
 		return err
 	}
 	tmpName := tmp.Name()
+	closed := false
+	renamed := false
+	defer func() {
+		if !closed {
+			if closeErr := tmp.Close(); closeErr != nil {
+				err = errors.Join(err, fmt.Errorf("close temporary file %s: %w", tmpName, closeErr))
+			}
+		}
+		if !renamed {
+			if removeErr := os.Remove(tmpName); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+				err = errors.Join(err, fmt.Errorf("remove temporary file %s: %w", tmpName, removeErr))
+			}
+		}
+	}()
 	if _, err := tmp.Write(raw); err != nil {
-		_ = tmp.Close()
-		_ = os.Remove(tmpName)
 		return err
 	}
 	if _, err := tmp.Write([]byte("\n")); err != nil {
-		_ = tmp.Close()
-		_ = os.Remove(tmpName)
 		return err
 	}
 	if err := tmp.Close(); err != nil {
-		_ = os.Remove(tmpName)
+		closed = true
 		return err
 	}
+	closed = true
 	if err := os.Chmod(tmpName, 0o644); err != nil {
-		_ = os.Remove(tmpName)
 		return err
 	}
 	if err := os.Rename(tmpName, path); err != nil {
-		_ = os.Remove(tmpName)
 		return err
 	}
+	renamed = true
 	return nil
 }
 
-func copyFileAtomic(src string, dst string) error {
+func copyFileAtomic(src string, dst string) (err error) {
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
@@ -238,29 +249,45 @@ func copyFileAtomic(src string, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() {
+		if closeErr := in.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close source file %s: %w", src, closeErr))
+		}
+	}()
 	tmp, err := os.CreateTemp(filepath.Dir(dst), "."+filepath.Base(dst)+".*.tmp")
 	if err != nil {
 		return err
 	}
 	tmpName := tmp.Name()
+	closed := false
+	renamed := false
+	defer func() {
+		if !closed {
+			if closeErr := tmp.Close(); closeErr != nil {
+				err = errors.Join(err, fmt.Errorf("close temporary file %s: %w", tmpName, closeErr))
+			}
+		}
+		if !renamed {
+			if removeErr := os.Remove(tmpName); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+				err = errors.Join(err, fmt.Errorf("remove temporary file %s: %w", tmpName, removeErr))
+			}
+		}
+	}()
 	if _, err := io.Copy(tmp, in); err != nil {
-		_ = tmp.Close()
-		_ = os.Remove(tmpName)
 		return err
 	}
 	if err := tmp.Close(); err != nil {
-		_ = os.Remove(tmpName)
+		closed = true
 		return err
 	}
+	closed = true
 	if err := os.Chmod(tmpName, 0o644); err != nil {
-		_ = os.Remove(tmpName)
 		return err
 	}
 	if err := os.Rename(tmpName, dst); err != nil {
-		_ = os.Remove(tmpName)
 		return err
 	}
+	renamed = true
 	return nil
 }
 
