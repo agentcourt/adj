@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -307,12 +308,11 @@ func validateScenarioActions(scenario spec.FormalScenario, roles map[string]spec
 	return nil
 }
 
-func (r *Runner) Run(ctx context.Context) (Result, error) {
+func (r *Runner) Run(ctx context.Context) (result Result, err error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	var api *caseAPIServer
-	var err error
 	if strings.TrimSpace(r.cfg.CaseAPIAddr) != "" {
 		api, err = startCaseAPIServer(r)
 		if err != nil {
@@ -321,10 +321,9 @@ func (r *Runner) Run(ctx context.Context) (Result, error) {
 		defer func() {
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
-			_ = api.Close(shutdownCtx)
+			err = errors.Join(err, api.Close(shutdownCtx))
 		}()
 	}
-	var result Result
 	defer func() {
 		if r.roleAPI != nil {
 			r.roleAPI.setTerminal(result, err)
@@ -379,14 +378,26 @@ func (r *Runner) Run(ctx context.Context) (Result, error) {
 			break
 		}
 	}
-	evidenceMap := map[string]any{}
-	if raw, err := json.Marshal(result); err == nil {
-		_ = json.Unmarshal(raw, &evidenceMap)
+	evidenceMap, err := resultMap(result)
+	if err != nil {
+		return Result{}, err
 	}
 	if err := r.store.FinishRun(r.cfg.RunID, status, r.state, evidenceMap); err != nil {
 		return Result{}, err
 	}
 	return result, nil
+}
+
+func resultMap(result Result) (map[string]any, error) {
+	raw, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("marshal run result for storage: %w", err)
+	}
+	var evidenceMap map[string]any
+	if err := json.Unmarshal(raw, &evidenceMap); err != nil {
+		return nil, fmt.Errorf("decode run result for storage: %w", err)
+	}
+	return evidenceMap, nil
 }
 
 func (r *Runner) executeAction(turnIndex, stepIndex int, actorRole, actionType string, payload map[string]any) (ActionExecution, error) {
