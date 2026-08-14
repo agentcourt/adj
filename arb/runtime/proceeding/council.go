@@ -203,10 +203,15 @@ func (rc *runContext) removeInvalidResponseCouncilMember(opportunity Opportunity
 
 func (rc *runContext) removeCouncilMember(opportunity Opportunity, seat CouncilSeat, reason string, cause error) error {
 	memberID := seat.MemberID
-	if err := rc.failOpportunity(opportunity, reason, cause.Error(), map[string]any{
+	details := map[string]any{
 		"member_id": memberID,
 		"model":     seat.Model,
-	}); err != nil {
+	}
+	if class := openaiapi.ErrorClass(cause); class != "" {
+		details["error_class"] = string(class)
+		rc.failureErrorClass = string(class)
+	}
+	if err := rc.failOpportunity(opportunity, reason, cause.Error(), details); err != nil {
 		return err
 	}
 	rc.signalRoleAPIs()
@@ -265,11 +270,7 @@ func isCouncilTimeoutError(err error) bool {
 }
 
 func isCouncilRequestError(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "responses request failed:") || strings.Contains(msg, "responses failed after retries:")
+	return openaiapi.ErrorClass(err) != ""
 }
 
 func councilResponseOversizeReason(size int, limit int) string {

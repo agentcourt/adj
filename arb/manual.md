@@ -77,7 +77,7 @@ go test -count=1 ./runtime/...
 
 The council pool is a JSONL file containing request specifications and persona paths.  A local `pool.jsonl` takes precedence when `--council-pool` is omitted, followed by `<common-root>/data/personas/pool.jsonl`.  Relative persona paths resolve from the pool's base directory, and the output packet records the sampled council roster.
 
-Direct council calls support `openai` and `openrouter` request-spec endpoints.  OpenAI entries require `OPENAI_API_KEY` and may use `OPENAI_BASE_URL`; OpenRouter entries require `OPENROUTER_API_KEY`.  The case command checks sampled council members before it opens the case API listener, including when external clients will submit the final votes.
+Direct council calls support `openai` and `openrouter` request-spec endpoints.  OpenAI entries require `OPENAI_API_KEY` and may use `OPENAI_BASE_URL`; OpenRouter entries require `OPENROUTER_API_KEY`.  The case command checks sampled council members before it opens the case API listener, including when external clients will submit the final votes.  Provider failures carry one of four machine-readable classes: `provider_transient`, `provider_authentication`, `provider_request`, or `provider_protocol`.
 
 ## Complaint Files
 
@@ -173,6 +173,7 @@ Important flags:
 | `--caseapi-addr` | Private Case API listen address.  Default: `127.0.0.1:0`. |
 | `--council-backend` | `direct` or `councilapi`. |
 | `--timeout-seconds` | Council LLM timeout override for direct council. |
+| `--council-request-attempts` | Provider attempts per direct council request, from 1 through 4. |
 | `--lawyer-timeout-seconds` | Lawyer turn timeout override. |
 | `--max-response-bytes` | Parsed response byte limit override. |
 | `--invalid-attempt-limit` | Invalid tool-call attempt limit override. |
@@ -294,7 +295,7 @@ Every completed or failed case writes a run packet under its output directory.  
 | `case-manifest.json` | Run identity, start time, core version, and bound case API address. |
 | `policy.json` | Effective policy values. |
 | `runtime.json` | Effective runtime limits. |
-| `run.json` | Final structured result. |
+| `run.json` | Final structured result, including `council_cost_usd`. |
 | `state.json` | Final case state. |
 | `certificate.json` | Initialization request, accepted public actions, claimed final state, and final-state hash for replay checking. |
 | `council.json` | Council roster and related council metadata. |
@@ -325,7 +326,7 @@ The default policy has five council members, a preponderance evidence standard, 
 
 Policy validation rejects a zero council size, a zero decision threshold, a threshold above the council size, and any threshold that is not a strict majority.  The strict-majority rule prevents one vote distribution from satisfying both substantive outcomes.  The engine enforces rules that change the legal state, including phase order, filing limits, vote thresholds, deliberation rounds, and admitted-material counts.  Go enforces transport limits and byte-transfer budgets before material reaches the engine.
 
-The default runtime allows 900 seconds per lawyer turn, 240 seconds per direct council model call, a 128 KiB parsed response, three invalid attempts per opportunity, and 4096 council output tokens.  A request specification may set its own output-token limit; otherwise the runtime uses the 4096-token value.  `aar case` flags override the lawyer deadline, council timeout, response byte limit, and invalid-attempt limit.
+The default runtime allows 900 seconds per lawyer turn, 240 seconds per direct council model call, four provider attempts per request, a 128 KiB parsed response, three invalid attempts per opportunity, and 4096 council output tokens.  A request specification may set its own output-token limit; otherwise the runtime uses the 4096-token value.  `aar case` flags override the lawyer deadline, council timeout, provider attempts, response byte limit, and invalid-attempt limit.
 
 A lawyer failure fails the case.  Examples include deadline expiration and exhausting invalid attempts.  A council member failure dismisses that member, records the failure, and lets the case continue under council rules.
 
@@ -333,7 +334,7 @@ A lawyer failure fails the case.  Examples include deadline expiration and exhau
 
 Case status can be `draft`, an active phase name, `closed`, or `failed`.  `aar case` exits `0` for a procedural failure after it records the failure and writes the final packet.  Its stdout summary then contains `status: "failed"`, an error, and a structured failure object.
 
-A process-level error exits nonzero.  Examples include an unreadable complaint, an invalid policy, an unavailable council pool, missing model credentials, or an unavailable Lean engine.  The command writes a JSON error summary to stdout and a diagnostic to stderr.
+A process-level error exits nonzero.  Examples include an unreadable complaint, an invalid policy, an unavailable council pool, missing model credentials, or an unavailable Lean engine.  The command writes a JSON error summary to stdout and a diagnostic to stderr.  A provider error summary includes `error_class`, and every case summary includes the accumulated `council_cost_usd` available from successful OpenRouter generation lookups.
 
 ## Running Examples
 

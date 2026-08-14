@@ -59,6 +59,9 @@ func (rc *runContext) failOpportunity(opportunity Opportunity, reason string, me
 			"failure_reason": reason,
 			"cause":          mapString(payload["message"]),
 		}
+		if class := mapString(payload["error_class"]); class != "" {
+			eventPayload["error_class"] = class
+		}
 		if err := rc.recordEvent("council_member_removed", "system", opportunity.Phase, eventPayload); err != nil {
 			return err
 		}

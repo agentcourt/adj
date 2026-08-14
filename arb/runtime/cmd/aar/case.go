@@ -8,17 +8,20 @@ import (
 	"strings"
 
 	"github.com/jsmorph/adj/arb/runtime/proceeding"
+	openaiapi "github.com/jsmorph/adj/common/openai"
 )
 
 type caseRunSummary struct {
-	Status       string         `json:"status"`
-	Result       string         `json:"result,omitempty"`
-	VotesFor     *int           `json:"votes_for,omitempty"`
-	VotesAgainst *int           `json:"votes_against,omitempty"`
-	RunID        string         `json:"run_id,omitempty"`
-	OutputDir    string         `json:"out_dir,omitempty"`
-	Error        string         `json:"error,omitempty"`
-	Failure      map[string]any `json:"failure,omitempty"`
+	Status         string         `json:"status"`
+	Result         string         `json:"result,omitempty"`
+	VotesFor       *int           `json:"votes_for,omitempty"`
+	VotesAgainst   *int           `json:"votes_against,omitempty"`
+	RunID          string         `json:"run_id,omitempty"`
+	OutputDir      string         `json:"out_dir,omitempty"`
+	Error          string         `json:"error,omitempty"`
+	ErrorClass     string         `json:"error_class,omitempty"`
+	Failure        map[string]any `json:"failure,omitempty"`
+	CouncilCostUSD float64        `json:"council_cost_usd"`
 }
 
 func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
@@ -40,6 +43,7 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	caseAPIAddr := fs.String("caseapi-addr", proceeding.DefaultCaseAPIAddr, "Private case API listen address")
 	councilBackend := fs.String("council-backend", proceeding.DefaultCouncilBackend, "Council backend: direct or councilapi")
 	timeoutSeconds := fs.Int("timeout-seconds", 0, "Override runtime council LLM timeout in seconds")
+	councilRequestAttempts := fs.Int("council-request-attempts", 0, "Override council provider attempts per request: 1 through 4")
 	lawyerTimeoutSeconds := fs.Int("lawyer-timeout-seconds", 0, "Override runtime lawyer turn timeout in seconds")
 	maxResponseBytes := fs.Int("max-response-bytes", 0, "Override runtime max parsed response bytes")
 	invalidAttemptLimit := fs.Int("invalid-attempt-limit", 0, "Override runtime invalid-attempt limit")
@@ -81,6 +85,7 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 		CaseAPIAddr:                *caseAPIAddr,
 		CouncilBackend:             *councilBackend,
 		CouncilTimeoutSeconds:      *timeoutSeconds,
+		CouncilRequestAttempts:     *councilRequestAttempts,
 		LawyerTimeoutSeconds:       *lawyerTimeoutSeconds,
 		MaxResponseBytes:           *maxResponseBytes,
 		InvalidAttemptLimit:        *invalidAttemptLimit,
@@ -114,22 +119,27 @@ func (f *explicitFileList) Set(value string) error {
 
 func buildCaseSuccessSummary(result proceeding.Result, outDir string) caseRunSummary {
 	votesFor, votesAgainst := finalVoteCounts(result.FinalState)
+	errorClass, _ := result.Failure["error_class"].(string)
 	return caseRunSummary{
-		Status:       strings.TrimSpace(result.Status),
-		Result:       strings.TrimSpace(result.Resolution),
-		VotesFor:     &votesFor,
-		VotesAgainst: &votesAgainst,
-		RunID:        strings.TrimSpace(result.RunID),
-		OutputDir:    strings.TrimSpace(outDir),
-		Error:        strings.TrimSpace(result.Error),
-		Failure:      result.Failure,
+		Status:         strings.TrimSpace(result.Status),
+		Result:         strings.TrimSpace(result.Resolution),
+		VotesFor:       &votesFor,
+		VotesAgainst:   &votesAgainst,
+		RunID:          strings.TrimSpace(result.RunID),
+		OutputDir:      strings.TrimSpace(outDir),
+		Error:          strings.TrimSpace(result.Error),
+		ErrorClass:     strings.TrimSpace(errorClass),
+		Failure:        result.Failure,
+		CouncilCostUSD: result.CouncilCostUSD,
 	}
 }
 
 func buildCaseErrorSummary(err error) caseRunSummary {
 	return caseRunSummary{
-		Status: "error",
-		Error:  strings.TrimSpace(err.Error()),
+		Status:         "error",
+		Error:          strings.TrimSpace(err.Error()),
+		ErrorClass:     string(openaiapi.ErrorClass(err)),
+		CouncilCostUSD: proceeding.CouncilCostUSD(err),
 	}
 }
 

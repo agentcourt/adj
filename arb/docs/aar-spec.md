@@ -49,7 +49,7 @@ Council operations include case reads, evidence listing, evidence metadata, boun
 
 ## Results and Failures
 
-`run.json` records the final state, resolution, council roster, votes, admitted evidence, final reason, and generated artifacts.  `state.json`, `certificate.json`, `events.ndjson`, `evidence-manifest.json`, `transcript.md`, and `digest.md` supply the other durable views.  The command summary identifies the run, output directory, status, and resolution.
+`run.json` records the final state, resolution, council roster, votes, admitted evidence, final reason, generated artifacts, and the council cost reported by successful OpenRouter generation lookups.  `state.json`, `certificate.json`, `events.ndjson`, `evidence-manifest.json`, `transcript.md`, and `digest.md` supply the other durable views.  The command summary identifies the run, output directory, status, resolution, and council cost.  Provider failures also expose a machine-readable error class in the command summary and, when the proceeding reaches a failed terminal state, in the structured failure.
 
 A lawyer failure ends the arbitration and records a structured failure.  The failure identifies the role, phase, opportunity, reason, and message.  A council-member failure dismisses that member and permits the remaining seated council to continue when the policy allows it.
 

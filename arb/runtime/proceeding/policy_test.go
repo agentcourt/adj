@@ -7,6 +7,9 @@ import (
 
 func TestCouncilRequestTimeoutIsShorterThanTurnTimeout(t *testing.T) {
 	limits := DefaultRuntimeLimits()
+	if got, want := limits.CouncilRequestAttempts, 4; got != want {
+		t.Fatalf("CouncilRequestAttempts = %d, want %d", got, want)
+	}
 	if got, want := limits.CouncilTimeout(), 240*time.Second; got != want {
 		t.Fatalf("CouncilTimeout = %s, want %s", got, want)
 	}

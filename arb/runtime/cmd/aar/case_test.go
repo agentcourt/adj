@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jsmorph/adj/arb/runtime/proceeding"
+	openaiapi "github.com/jsmorph/adj/common/openai"
 )
 
 func TestFinalVoteCountsUsesFinalRound(t *testing.T) {
@@ -28,6 +31,27 @@ func TestFinalVoteCountsUsesFinalRound(t *testing.T) {
 	votesFor, votesAgainst := finalVoteCounts(state)
 	if votesFor != 2 || votesAgainst != 1 {
 		t.Fatalf("finalVoteCounts = (%d, %d), want (2, 1)", votesFor, votesAgainst)
+	}
+}
+
+func TestCaseSummariesCarryProviderFailureData(t *testing.T) {
+	result := proceeding.Result{
+		Status:         "failed",
+		Failure:        map[string]any{"error_class": "provider_transient"},
+		CouncilCostUSD: 0.025,
+	}
+	summary := buildCaseSuccessSummary(result, "/tmp/out")
+	if summary.ErrorClass != "provider_transient" || summary.CouncilCostUSD != 0.025 {
+		t.Fatalf("success summary = %+v", summary)
+	}
+
+	err := &openaiapi.ProviderError{
+		Class: openaiapi.ProviderErrorAuthentication,
+		Err:   errors.New("authentication failed"),
+	}
+	summary = buildCaseErrorSummary(err)
+	if summary.ErrorClass != "provider_authentication" {
+		t.Fatalf("error summary error_class = %q", summary.ErrorClass)
 	}
 }
 

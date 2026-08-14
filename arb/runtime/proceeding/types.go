@@ -37,6 +37,7 @@ type Policy struct {
 
 type RuntimeLimits struct {
 	CouncilLLMTimeoutSeconds int   `json:"council_llm_timeout_seconds"`
+	CouncilRequestAttempts   int   `json:"council_request_attempts"`
 	LawyerTurnTimeoutSeconds int   `json:"lawyer_turn_timeout_seconds"`
 	MaxResponseBytes         int   `json:"max_response_bytes"`
 	InvalidAttemptLimit      int   `json:"invalid_attempt_limit"`
@@ -65,6 +66,7 @@ type Options struct {
 	CaseAPIAddr                string
 	CouncilBackend             string
 	CouncilTimeoutSeconds      int
+	CouncilRequestAttempts     int
 	LawyerTimeoutSeconds       int
 	MaxResponseBytes           int
 	InvalidAttemptLimit        int
@@ -114,6 +116,7 @@ type Result struct {
 	Events            []Event                 `json:"events"`
 	FinalState        map[string]any          `json:"final_state"`
 	FinalReason       string                  `json:"final_reason"`
+	CouncilCostUSD    float64                 `json:"council_cost_usd"`
 }
 
 type CaseFile struct {
@@ -245,6 +248,7 @@ type runContext struct {
 	workProductDirs    map[string]string
 	events             []Event
 	turn               int
+	failureErrorClass  string
 	responseErrMu      sync.Mutex
 	responseErr        error
 }

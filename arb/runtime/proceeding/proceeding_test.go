@@ -1651,11 +1651,12 @@ func TestIsCouncilRequestError(t *testing.T) {
 	if isCouncilRequestError(context.Canceled) {
 		t.Fatalf("unexpected request-error match for context cancellation")
 	}
-	if !isCouncilRequestError(fmt.Errorf("responses request failed: 404 model not found")) {
-		t.Fatalf("expected responses request failure to count as request error")
+	providerErr := &openaiapi.ProviderError{
+		Class: openaiapi.ProviderErrorRequest,
+		Err:   fmt.Errorf("responses request failed: 404 model not found"),
 	}
-	if !isCouncilRequestError(fmt.Errorf("responses failed after retries: 503 unavailable")) {
-		t.Fatalf("expected exhausted responses retries to count as request error")
+	if !isCouncilRequestError(providerErr) {
+		t.Fatalf("expected typed provider failure to count as request error")
 	}
 }
 

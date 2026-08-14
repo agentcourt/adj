@@ -403,3 +403,42 @@ func TestRetryHelpers(t *testing.T) {
 		t.Fatalf("sleepBeforeRetry zero delay error = %v", err)
 	}
 }
+
+func TestProviderAttemptsClassAndCost(t *testing.T) {
+	client := &Client{retryDelays: append([]time.Duration(nil), defaultRetryDelays...)}
+	if err := client.SetMaxAttempts(1); err != nil {
+		t.Fatalf("SetMaxAttempts error = %v", err)
+	}
+	if len(client.retryDelays) != 0 {
+		t.Fatalf("retryDelays length = %d, want 0", len(client.retryDelays))
+	}
+	if err := client.SetMaxAttempts(0); err == nil {
+		t.Fatal("SetMaxAttempts accepted zero attempts")
+	}
+
+	request := &http.Request{
+		Method: http.MethodPost,
+		URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/v1/responses"},
+	}
+	classes := map[int]ProviderErrorClass{
+		http.StatusUnauthorized:        ProviderErrorAuthentication,
+		http.StatusBadRequest:          ProviderErrorRequest,
+		http.StatusTooManyRequests:     ProviderErrorTransient,
+		http.StatusInternalServerError: ProviderErrorTransient,
+	}
+	for status, want := range classes {
+		err := &openaisdk.Error{
+			StatusCode: status,
+			Request:    request,
+			Response:   &http.Response{StatusCode: status},
+		}
+		if got := providerFailureClass(err); got != want {
+			t.Errorf("providerFailureClass(%d) = %q, want %q", status, got, want)
+		}
+	}
+
+	payload := map[string]any{"data": map[string]any{"total_cost": 0.0125}}
+	if got, want := openRouterGenerationCost(payload), 0.0125; got != want {
+		t.Fatalf("openRouterGenerationCost = %v, want %v", got, want)
+	}
+}

@@ -2,6 +2,7 @@ package proceeding
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"time"
@@ -11,15 +12,34 @@ import (
 )
 
 type directCouncilClient struct {
-	timeout time.Duration
-	mu      sync.Mutex
-	clients map[string]*openaiapi.Client
+	timeout      time.Duration
+	maxAttempts  int
+	mu           sync.Mutex
+	clients      map[string]*openaiapi.Client
+	totalCostUSD float64
 }
 
-func newDirectCouncilClient(timeout time.Duration) *directCouncilClient {
+type councilCostError struct {
+	costUSD float64
+	err     error
+}
+
+func (e *councilCostError) Error() string { return e.err.Error() }
+func (e *councilCostError) Unwrap() error { return e.err }
+
+func CouncilCostUSD(err error) float64 {
+	var costErr *councilCostError
+	if errors.As(err, &costErr) {
+		return costErr.costUSD
+	}
+	return 0
+}
+
+func newDirectCouncilClient(timeout time.Duration, maxAttempts int) *directCouncilClient {
 	return &directCouncilClient{
-		timeout: timeout,
-		clients: map[string]*openaiapi.Client{},
+		timeout:     timeout,
+		maxAttempts: maxAttempts,
+		clients:     map[string]*openaiapi.Client{},
 	}
 }
 
@@ -34,7 +54,14 @@ func (c *directCouncilClient) CreateResponseWithRequestSpec(
 	if err != nil {
 		return openaiapi.Response{}, err
 	}
-	return client.CreateResponseWithRequestSpec(ctx, spec, inputItems, tools, previousResponseID)
+	resp, err := client.CreateResponseWithRequestSpec(ctx, spec, inputItems, tools, previousResponseID)
+	if err != nil {
+		return openaiapi.Response{}, err
+	}
+	c.mu.Lock()
+	c.totalCostUSD += resp.OpenRouterCostUSD
+	c.mu.Unlock()
+	return resp, nil
 }
 
 func (c *directCouncilClient) clientForEndpoint(endpoint string) (*openaiapi.Client, error) {
@@ -48,6 +75,15 @@ func (c *directCouncilClient) clientForEndpoint(endpoint string) (*openaiapi.Cli
 	if err != nil {
 		return nil, err
 	}
+	if err := client.SetMaxAttempts(c.maxAttempts); err != nil {
+		return nil, err
+	}
 	c.clients[endpoint] = client
 	return client, nil
+}
+
+func (c *directCouncilClient) TotalCostUSD() float64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.totalCostUSD
 }

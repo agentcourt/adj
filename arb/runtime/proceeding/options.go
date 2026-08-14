@@ -70,6 +70,9 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	if opts.CouncilTimeoutSeconds > 0 {
 		runtimeLimits.CouncilLLMTimeoutSeconds = opts.CouncilTimeoutSeconds
 	}
+	if opts.CouncilRequestAttempts > 0 {
+		runtimeLimits.CouncilRequestAttempts = opts.CouncilRequestAttempts
+	}
 	if opts.LawyerTimeoutSeconds > 0 {
 		runtimeLimits.LawyerTurnTimeoutSeconds = opts.LawyerTimeoutSeconds
 	}

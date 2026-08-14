@@ -53,7 +53,14 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 	for _, attorney := range attorneys {
 		attorneyMap[attorney.Role] = attorney
 	}
-	llmClient := newDirectCouncilClient(cfg.Runtime.CouncilRequestTimeout())
+	llmClient := newDirectCouncilClient(cfg.Runtime.CouncilRequestTimeout(), cfg.Runtime.CouncilRequestAttempts)
+	defer func() {
+		cost := llmClient.TotalCostUSD()
+		result.CouncilCostUSD = cost
+		if err != nil && cost > 0 {
+			err = &councilCostError{costUSD: cost, err: err}
+		}
+	}()
 	var caseFiles []CaseFile
 	if len(cfg.CaseFilePaths) != 0 {
 		caseFiles, err = loadCaseFilesFromPaths(cfg.CaseFilePaths)
@@ -164,6 +171,12 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 			if mapString(caseObj["status"]) == "failed" {
 				status = "failed"
 				failure = caseFailure(rc.state)
+				if rc.failureErrorClass != "" {
+					if failure == nil {
+						failure = map[string]any{}
+					}
+					failure["error_class"] = rc.failureErrorClass
+				}
 				errorMessage = caseFailureError(rc.state)
 			}
 			result := Result{
@@ -187,6 +200,7 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 				Events:            rc.events,
 				FinalState:        rc.state,
 				FinalReason:       reason,
+				CouncilCostUSD:    llmClient.TotalCostUSD(),
 			}
 			if err := writeEvidence(cfg, result, rc); err != nil {
 				return Result{}, err

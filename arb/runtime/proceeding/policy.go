@@ -42,6 +42,7 @@ func DefaultPolicy() Policy {
 func DefaultRuntimeLimits() RuntimeLimits {
 	return RuntimeLimits{
 		CouncilLLMTimeoutSeconds: 240,
+		CouncilRequestAttempts:   4,
 		LawyerTurnTimeoutSeconds: 900,
 		MaxResponseBytes:         128 * 1024,
 		InvalidAttemptLimit:      3,
@@ -156,6 +157,8 @@ func ValidateRuntimeLimits(limits RuntimeLimits) error {
 	switch {
 	case limits.CouncilLLMTimeoutSeconds <= 0:
 		return fmt.Errorf("runtime.council_llm_timeout_seconds must be positive")
+	case limits.CouncilRequestAttempts < 1 || limits.CouncilRequestAttempts > 4:
+		return fmt.Errorf("runtime.council_request_attempts must be between 1 and 4")
 	case limits.LawyerTurnTimeoutSeconds <= 0:
 		return fmt.Errorf("runtime.lawyer_turn_timeout_seconds must be positive")
 	case limits.MaxResponseBytes <= 0:

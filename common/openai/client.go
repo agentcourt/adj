@@ -38,7 +38,35 @@ type Response struct {
 	OpenRouterMetadata        map[string]any
 	OpenRouterGeneration      map[string]any
 	OpenRouterGenerationError string
+	OpenRouterCostUSD         float64
 }
+
+type ProviderErrorClass string
+
+const (
+	ProviderErrorTransient      ProviderErrorClass = "provider_transient"
+	ProviderErrorAuthentication ProviderErrorClass = "provider_authentication"
+	ProviderErrorRequest        ProviderErrorClass = "provider_request"
+	ProviderErrorProtocol       ProviderErrorClass = "provider_protocol"
+)
+
+type ProviderError struct {
+	Class ProviderErrorClass
+	Err   error
+}
+
+func (e *ProviderError) Error() string { return e.Err.Error() }
+func (e *ProviderError) Unwrap() error { return e.Err }
+
+func ErrorClass(err error) ProviderErrorClass {
+	var providerErr *ProviderError
+	if errors.As(err, &providerErr) {
+		return providerErr.Class
+	}
+	return ""
+}
+
+var defaultRetryDelays = []time.Duration{0, 5 * time.Second, 30 * time.Second}
 
 type Client struct {
 	client             openai.Client
@@ -87,8 +115,16 @@ func New(apiKey string, baseURL string, online bool, timeout time.Duration) (*Cl
 		baseURL:            baseURL,
 		online:             online,
 		defaultTemperature: defaultTemperature,
-		retryDelays:        []time.Duration{0, 5 * time.Second, 30 * time.Second},
+		retryDelays:        append([]time.Duration(nil), defaultRetryDelays...),
 	}, nil
+}
+
+func (c *Client) SetMaxAttempts(attempts int) error {
+	if attempts < 1 || attempts > 1+len(defaultRetryDelays) {
+		return fmt.Errorf("provider attempts must be between 1 and %d", 1+len(defaultRetryDelays))
+	}
+	c.retryDelays = append([]time.Duration(nil), defaultRetryDelays[:attempts-1]...)
+	return nil
 }
 
 func NewFromEnv(online bool, timeout time.Duration) (*Client, error) {
@@ -117,7 +153,7 @@ func NewForEndpoint(endpoint string, online bool, timeout time.Duration) (*Clien
 	case "openai":
 		apiKey := strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
 		if apiKey == "" {
-			return nil, fmt.Errorf("OPENAI_API_KEY is required for openai models")
+			return nil, &ProviderError{Class: ProviderErrorAuthentication, Err: fmt.Errorf("OPENAI_API_KEY is required for openai models")}
 		}
 		baseURL := strings.TrimSpace(os.Getenv("OPENAI_BASE_URL"))
 		if baseURL == "" {
@@ -127,11 +163,11 @@ func NewForEndpoint(endpoint string, online bool, timeout time.Duration) (*Clien
 	case "openrouter":
 		apiKey := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY"))
 		if apiKey == "" {
-			return nil, fmt.Errorf("OPENROUTER_API_KEY is required for openrouter models")
+			return nil, &ProviderError{Class: ProviderErrorAuthentication, Err: fmt.Errorf("OPENROUTER_API_KEY is required for openrouter models")}
 		}
 		return New(apiKey, "https://openrouter.ai/api/v1", online, timeout)
 	default:
-		return nil, fmt.Errorf("unsupported model endpoint %q", endpoint)
+		return nil, &ProviderError{Class: ProviderErrorRequest, Err: fmt.Errorf("unsupported model endpoint %q", endpoint)}
 	}
 }
 
@@ -196,7 +232,7 @@ func (c *Client) createResponse(
 		if err == nil {
 			parsed, err := parseResponse(res)
 			if err != nil {
-				return Response{}, err
+				return Response{}, &ProviderError{Class: ProviderErrorProtocol, Err: err}
 			}
 			if spec != nil && strings.EqualFold(spec.Endpoint, "openrouter") {
 				c.attachOpenRouterGeneration(ctx, &parsed)
@@ -216,16 +252,17 @@ func (c *Client) createResponse(
 				delay.String(),
 			)
 			if err := c.sleepBeforeRetry(ctx, attempt); err != nil {
-				return Response{}, fmt.Errorf("responses request canceled during backoff: %w", err)
+				failure := fmt.Errorf("responses request canceled during backoff: %w", err)
+				return Response{}, &ProviderError{Class: providerFailureClass(err), Err: failure}
 			}
 			continue
 		}
-		return Response{}, fmt.Errorf("responses request failed: %w", err)
+		return Response{}, &ProviderError{Class: providerFailureClass(err), Err: fmt.Errorf("responses request failed: %w", err)}
 	}
 	if lastErr != nil {
-		return Response{}, fmt.Errorf("responses failed after retries: %w", lastErr)
+		return Response{}, &ProviderError{Class: providerFailureClass(lastErr), Err: fmt.Errorf("responses failed after retries: %w", lastErr)}
 	}
-	return Response{}, fmt.Errorf("responses failed after retries")
+	return Response{}, &ProviderError{Class: ProviderErrorTransient, Err: fmt.Errorf("responses failed after retries")}
 }
 
 func responseParams(
@@ -339,6 +376,16 @@ func (c *Client) attachOpenRouterGeneration(ctx context.Context, resp *Response)
 		return
 	}
 	resp.OpenRouterGeneration = payload
+	resp.OpenRouterCostUSD = openRouterGenerationCost(payload)
+}
+
+func openRouterGenerationCost(payload map[string]any) float64 {
+	data, _ := payload["data"].(map[string]any)
+	cost, _ := data["total_cost"].(float64)
+	if cost < 0 {
+		return 0
+	}
+	return cost
 }
 
 func parseResponse(res *responses.Response) (Response, error) {
@@ -553,6 +600,23 @@ func (c *Client) shouldRetry(err error, attempt int, maxAttempts int) bool {
 		return true
 	}
 	return false
+}
+
+func providerFailureClass(err error) ProviderErrorClass {
+	var apiErr *openai.Error
+	if errors.As(err, &apiErr) {
+		switch apiErr.StatusCode {
+		case http.StatusUnauthorized, http.StatusForbidden:
+			return ProviderErrorAuthentication
+		case http.StatusRequestTimeout, http.StatusConflict, http.StatusTooManyRequests:
+			return ProviderErrorTransient
+		}
+		if apiErr.StatusCode >= 500 && apiErr.StatusCode <= 599 {
+			return ProviderErrorTransient
+		}
+		return ProviderErrorRequest
+	}
+	return ProviderErrorTransient
 }
 
 func (c *Client) retryDelay(attempt int) time.Duration {
