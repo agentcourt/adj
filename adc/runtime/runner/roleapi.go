@@ -32,6 +32,7 @@ const (
 type caseAPIServer struct {
 	server        *http.Server
 	ln            net.Listener
+	baseURL       string
 	serveDone     chan error
 	responseErrMu sync.Mutex
 	responseErr   error
@@ -110,7 +111,11 @@ func startCaseAPIServer(r *Runner) (*caseAPIServer, error) {
 	}
 	roleAPI := newRoleAPIServer(r)
 	r.roleAPI = roleAPI
-	api := &caseAPIServer{ln: ln, serveDone: make(chan error, 1)}
+	api := &caseAPIServer{
+		ln:        ln,
+		baseURL:   "http://" + listenerHostPort(ln.Addr()),
+		serveDone: make(chan error, 1),
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handleCaseAPIHealth)
 	roleAPI.register(mux)
@@ -131,7 +136,7 @@ func startCaseAPIServer(r *Runner) (*caseAPIServer, error) {
 		}
 		api.serveDone <- failure
 	}()
-	if _, err := fmt.Fprintf(os.Stderr, "adc case api listening on http://%s\n", listenerHostPort(ln.Addr())); err != nil {
+	if _, err := fmt.Fprintf(os.Stderr, "adc case api listening on %s\n", api.baseURL); err != nil {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		return nil, errors.Join(fmt.Errorf("write case API address: %w", err), api.Close(shutdownCtx))

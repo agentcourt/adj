@@ -11,6 +11,7 @@ import (
 
 	"github.com/jsmorph/adj/arbd/runtime/lean"
 	"github.com/jsmorph/adj/arbd/runtime/spec"
+	"github.com/jsmorph/adj/common/casemanifest"
 )
 
 const DefaultCaseID = "arbd-1"
@@ -39,6 +40,11 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 	if err := os.MkdirAll(cfg.OutputDir, 0o755); err != nil {
 		return Result{}, fmt.Errorf("create out dir: %w", err)
 	}
+	startedAt := time.Now().UTC()
+	manifest := casemanifest.New(casemanifest.ProcedureARBD, cfg.CaseID, cfg.RunID, startedAt)
+	if err := casemanifest.WriteAtomic(cfg.OutputDir, manifest); err != nil {
+		return Result{}, fmt.Errorf("write case manifest: %w", err)
+	}
 	attorneys, err := attorneyRunInfos(cfg, cfg.ComplaintPath)
 	if err != nil {
 		return Result{}, err
@@ -47,7 +53,6 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 	for _, attorney := range attorneys {
 		attorneyMap[attorney.Role] = attorney
 	}
-	startedAt := time.Now().UTC()
 	llmClient := newDirectCouncilClient(cfg.Runtime.CouncilRequestTimeout())
 	var caseFiles []CaseFile
 	if len(cfg.CaseFilePaths) != 0 {
@@ -110,6 +115,10 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 			err = errors.Join(err, closeErr)
 		}
 	}()
+	manifest.CaseAPIBase = caseAPI.baseURL
+	if err := casemanifest.WriteAtomic(cfg.OutputDir, manifest); err != nil {
+		return Result{}, fmt.Errorf("write case manifest with case API address: %w", err)
+	}
 	if _, err := fmt.Fprintf(os.Stderr, "caseapi listening on %s\n", caseAPI.baseURL); err != nil {
 		return Result{}, fmt.Errorf("write case API address: %w", err)
 	}

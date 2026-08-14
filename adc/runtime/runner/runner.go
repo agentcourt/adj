@@ -14,6 +14,7 @@ import (
 	"github.com/jsmorph/adj/adc/runtime/lean"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 	"github.com/jsmorph/adj/adc/runtime/store"
+	"github.com/jsmorph/adj/common/casemanifest"
 	"github.com/jsmorph/adj/common/openai"
 )
 
@@ -311,6 +312,11 @@ func (r *Runner) Run(ctx context.Context) (result Result, err error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	startedAt := time.Now().UTC()
+	manifest := casemanifest.New(casemanifest.ProcedureADC, r.cfg.CaseID, r.cfg.RunID, startedAt)
+	if err := r.writeCaseManifest(manifest); err != nil {
+		return Result{}, err
+	}
 	var api *caseAPIServer
 	if strings.TrimSpace(r.cfg.CaseAPIAddr) != "" {
 		api, err = startCaseAPIServer(r)
@@ -322,6 +328,10 @@ func (r *Runner) Run(ctx context.Context) (result Result, err error) {
 			defer cancel()
 			err = errors.Join(err, api.Close(shutdownCtx))
 		}()
+		manifest.CaseAPIBase = api.baseURL
+		if err := r.writeCaseManifest(manifest); err != nil {
+			return Result{}, err
+		}
 	}
 	defer func() {
 		if r.roleAPI != nil {
@@ -385,6 +395,16 @@ func (r *Runner) Run(ctx context.Context) (result Result, err error) {
 		return Result{}, err
 	}
 	return result, nil
+}
+
+func (r *Runner) writeCaseManifest(manifest casemanifest.Manifest) error {
+	if strings.TrimSpace(r.cfg.OutputPath) == "" {
+		return nil
+	}
+	if err := casemanifest.WriteAtomic(filepath.Dir(r.cfg.OutputPath), manifest); err != nil {
+		return fmt.Errorf("write case manifest: %w", err)
+	}
+	return nil
 }
 
 func resultMap(result Result) (map[string]any, error) {
