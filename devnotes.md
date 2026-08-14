@@ -23,7 +23,7 @@ Every durable one-case run writes `case-manifest.json` through `common/casemanif
 - [x] Add the versioned manifest schema and atomic writer.
 - [x] Add manifest creation to ADC, ARB, and AARD.
 - [x] Document the paired discovery interface in `adj` and `adjservices`.
-- [ ] Repeat complete core and paired-interface verification.
+- [x] Repeat complete core and paired-interface verification.
 
 ## Verification
 
