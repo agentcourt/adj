@@ -71,7 +71,8 @@ func sampleAvailableCouncil(ctx context.Context, cfg Config, client councilRespo
 		return nil, nil, err
 	}
 	check := func(ctx context.Context, seat CouncilSeat) error {
-		return checkCouncilSeatAvailable(ctx, cfg.Runtime, client, seat)
+		requireTools := NormalizeCouncilBackend(cfg.CouncilBackend) == DefaultCouncilBackend
+		return checkCouncilSeatAvailable(ctx, cfg.Runtime, client, seat, requireTools)
 	}
 	return preflightCouncilCandidates(ctx, candidates, cfg.Policy.CouncilSize, check)
 }
@@ -174,7 +175,12 @@ func newCouncilPreflightError(memberID string, failed []councilPreflightReplacem
 	}
 }
 
-func checkCouncilSeatAvailable(ctx context.Context, limits RuntimeLimits, client councilResponseClient, seat CouncilSeat) error {
+func checkCouncilSeatAvailable(ctx context.Context, limits RuntimeLimits, client councilResponseClient, seat CouncilSeat, requireTools bool) error {
+	if requireTools && seat.RequestSpec != nil {
+		if supported, known := seat.RequestSpec.SupportsParameter("tools"); known && !supported {
+			return fmt.Errorf("council model %s pinned endpoint metadata omits required parameter tools", seat.Model)
+		}
+	}
 	ctx, cancel := withTimeout(ctx, councilPreflightTimeout(limits))
 	defer cancel()
 	maxOutputTokens := int64(16)

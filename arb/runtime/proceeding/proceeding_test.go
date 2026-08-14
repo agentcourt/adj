@@ -709,6 +709,62 @@ func TestPreflightCouncilCandidatesReturnsCancellation(t *testing.T) {
 	}
 }
 
+func TestCheckCouncilSeatAvailableRejectsKnownMissingToolSupport(t *testing.T) {
+	t.Parallel()
+
+	client := &fakeCouncilResponseClient{}
+	requestSpec, err := modelrequest.ParseJSON([]byte(`{
+		"openrouter_model_id":"x-ai/grok-4.20-multi-agent",
+		"endpoint_tag":"xai",
+		"variant":{"supported_parameters":["max_tokens","response_format"]}
+	}`))
+	if err != nil {
+		t.Fatalf("ParseJSON error = %v", err)
+	}
+	seat := CouncilSeat{
+		MemberID:    "C1",
+		Model:       "openrouter://x-ai/grok-4.20-multi-agent",
+		RequestSpec: &requestSpec,
+	}
+	err = checkCouncilSeatAvailable(context.Background(), DefaultRuntimeLimits(), client, seat, true)
+	if err == nil || !strings.Contains(err.Error(), "metadata omits required parameter tools") {
+		t.Fatalf("checkCouncilSeatAvailable error = %v", err)
+	}
+	if client.calls != 0 {
+		t.Fatalf("provider calls = %d, want 0", client.calls)
+	}
+}
+
+func TestCheckCouncilSeatAvailableAllowsUnknownToolSupport(t *testing.T) {
+	t.Parallel()
+
+	client := &fakeCouncilResponseClient{responses: []openaiapi.Response{{}}}
+	requestSpec := modelrequest.Spec{}
+	seat := CouncilSeat{MemberID: "C1", Model: "openai://gpt-5", RequestSpec: &requestSpec}
+	if err := checkCouncilSeatAvailable(context.Background(), DefaultRuntimeLimits(), client, seat, true); err != nil {
+		t.Fatalf("checkCouncilSeatAvailable returned error: %v", err)
+	}
+	if client.calls != 1 {
+		t.Fatalf("provider calls = %d, want 1", client.calls)
+	}
+}
+
+func TestCheckCouncilSeatAvailableDoesNotRequireToolsForCouncilAPI(t *testing.T) {
+	t.Parallel()
+
+	client := &fakeCouncilResponseClient{responses: []openaiapi.Response{{}}}
+	requestSpec := modelrequest.Spec{
+		VariantMetadata: map[string]any{"supported_parameters": []any{"max_tokens"}},
+	}
+	seat := CouncilSeat{MemberID: "C1", Model: "openrouter://model", RequestSpec: &requestSpec}
+	if err := checkCouncilSeatAvailable(context.Background(), DefaultRuntimeLimits(), client, seat, false); err != nil {
+		t.Fatalf("checkCouncilSeatAvailable returned error: %v", err)
+	}
+	if client.calls != 1 {
+		t.Fatalf("provider calls = %d, want 1", client.calls)
+	}
+}
+
 func TestValidateAttorneyPayloadAllowsSupplementalMaterialsInRebuttal(t *testing.T) {
 	policy := DefaultPolicy()
 	fileByID := map[string]CaseFile{

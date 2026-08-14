@@ -197,6 +197,28 @@ func (s Spec) WithFallbackMaxOutputTokens(max int64) Spec {
 	return s
 }
 
+// SupportsParameter reports whether endpoint metadata lists name and whether it contains a valid parameter list.
+func (s Spec) SupportsParameter(name string) (bool, bool) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return false, false
+	}
+	raw, ok := s.VariantMetadata["supported_parameters"]
+	if !ok {
+		return false, false
+	}
+	parameters, ok := metadataStringList(raw)
+	if !ok {
+		return false, false
+	}
+	for _, parameter := range parameters {
+		if strings.EqualFold(parameter, name) {
+			return true, true
+		}
+	}
+	return false, true
+}
+
 func stringField(raw map[string]any, key string) string {
 	value, _ := raw[key].(string)
 	return strings.TrimSpace(value)
@@ -327,8 +349,11 @@ func variantMetadata(raw map[string]any) map[string]any {
 		"equivalent_endpoints",
 	}
 	out := map[string]any{}
+	variant, _ := raw["variant"].(map[string]any)
 	for _, key := range keys {
 		if value, ok := raw[key]; ok {
+			out[key] = value
+		} else if value, ok := variant[key]; ok {
 			out[key] = value
 		}
 	}
@@ -336,6 +361,25 @@ func variantMetadata(raw map[string]any) map[string]any {
 		return nil
 	}
 	return out
+}
+
+func metadataStringList(value any) ([]string, bool) {
+	switch values := value.(type) {
+	case []string:
+		return compactStrings(values), true
+	case []any:
+		out := make([]string, 0, len(values))
+		for _, value := range values {
+			text, ok := value.(string)
+			if !ok {
+				return nil, false
+			}
+			out = append(out, text)
+		}
+		return compactStrings(out), true
+	default:
+		return nil, false
+	}
 }
 
 func boolField(raw map[string]any, key string) (bool, bool) {

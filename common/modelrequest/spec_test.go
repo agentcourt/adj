@@ -147,3 +147,39 @@ func TestParseJSONRejectsEndpointModelString(t *testing.T) {
 		t.Fatalf("error = %v", err)
 	}
 }
+
+func TestParseJSONReadsNestedVariantParameterSupport(t *testing.T) {
+	t.Parallel()
+
+	spec, err := ParseJSON([]byte(`{
+		"openrouter_model_id":"x-ai/grok-4.20-multi-agent",
+		"endpoint_tag":"xai",
+		"persona":"p.txt",
+		"variant":{"supported_parameters":["max_tokens","response_format"]}
+	}`))
+	if err != nil {
+		t.Fatalf("ParseJSON error = %v", err)
+	}
+	if supported, known := spec.SupportsParameter("tools"); supported || !known {
+		t.Fatalf("SupportsParameter(tools) = %t, %t, want false, true", supported, known)
+	}
+	if supported, known := spec.SupportsParameter("response_format"); !supported || !known {
+		t.Fatalf("SupportsParameter(response_format) = %t, %t, want true, true", supported, known)
+	}
+}
+
+func TestSupportsParameterReportsMissingOrMalformedMetadataUnknown(t *testing.T) {
+	t.Parallel()
+
+	for name, metadata := range map[string]map[string]any{
+		"missing":   nil,
+		"malformed": {"supported_parameters": "tools"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			spec := Spec{VariantMetadata: metadata}
+			if supported, known := spec.SupportsParameter("tools"); supported || known {
+				t.Fatalf("SupportsParameter(tools) = %t, %t, want false, false", supported, known)
+			}
+		})
+	}
+}

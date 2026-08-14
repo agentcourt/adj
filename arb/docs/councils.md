@@ -8,7 +8,7 @@ The runtime draws council members from a pool file, converts the draw into Lean 
 |---|---|---|
 | CLI configuration | [case command](../runtime/cmd/aar/case.go) | Loads policy, applies `--council-size` and `--council-pool`, and builds proceeding options. |
 | Pool loading | [persona loader](../../common/persona/persona.go) | Reads the pool file, validates model ids, resolves persona files, and loads persona text. |
-| Sampling | [proceeding helpers](../runtime/proceeding/helpers.go) | Draws `council_size` records without replacement and assigns seat ids in draw order. |
+| Sampling and preflight | [council preflight](../runtime/proceeding/council_preflight.go) | Shuffles the pool, rejects unavailable or incompatible direct-council candidates, and assigns seat ids. |
 | Engine initialization | [Lean engine](../engine/Main.lean) | Requires exact council length, requires unique member ids, rewrites all members to `seated`, and opens the case. |
 | Recording | [main proceeding](../runtime/proceeding/run.go) and [renderer](../runtime/proceeding/render.go) | Writes the constituted council into the initialization event and the final run evidence. |
 | Deliberation order | [Lean engine](../engine/Main.lean) | Selects the first seated member who has not yet voted in the current round. |
@@ -25,11 +25,13 @@ The pool file comes from `--council-pool` when the caller supplies it.  Otherwis
 
 Each usable line becomes one independent sampleable record.  The loader resolves the persona filename relative to the pool file, reads the persona text immediately, and requires that text to be non-empty.  If the pool file repeats a line, the runtime treats each repeated line as a separate entry in the sampling pool, because the loader preserves record multiplicity rather than collapsing identical records.
 
+The direct council request requires the `tools` parameter for `submit_council_vote`.  When a pool record contains endpoint `supported_parameters`, preflight excludes that candidate if the list omits `tools` and records the replacement cause.  A record without endpoint capability metadata proceeds to the provider availability check.
+
 ## Sampling
 
-[The council sampler](../runtime/proceeding/helpers.go) receives the parsed pool and the already-validated `council_size`.  It requires `council_size <= len(specs)`, builds an index list over the pool records, and draws from that index list with `crypto/rand`.  Each successful draw removes one index from the remaining set, so sampling proceeds without replacement across the pool records for that run.
+[Council preflight](../runtime/proceeding/council_preflight.go) receives the parsed pool and the already-validated `council_size`.  It requires `council_size <= len(specs)` and shuffles the pool records with `crypto/rand`.  It checks each candidate in shuffled order and moves to the next record when endpoint metadata or the provider availability request rejects a candidate.
 
-The draw order determines the seat ids.  The first sampled record becomes `C1`, the second becomes `C2`, and the sequence continues until the runtime has drawn `council_size` records.  Each drawn seat carries four runtime values at this stage: the synthetic `member_id`, the selected model id, the persona filename, and the loaded persona text.
+The accepted order determines the seat ids.  The first accepted record becomes `C1`, the second becomes `C2`, and the sequence continues until preflight seats `council_size` records.  Each seat carries the synthetic `member_id`, selected model id, request spec, persona filename, and loaded persona text.
 
 The runtime keeps the persona text for prompting, but the public council metadata carries only the seat id, model id, and persona filename.  That separation appears directly in [the council seat type](../runtime/proceeding/types.go), where `PersonaText` is excluded from JSON output.  The draw therefore produces both the public description of the council and the private prompt material that the council runtime will later feed to each model.
 
