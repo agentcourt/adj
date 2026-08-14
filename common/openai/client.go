@@ -59,6 +59,9 @@ func (e *ProviderError) Error() string { return e.Err.Error() }
 func (e *ProviderError) Unwrap() error { return e.Err }
 
 func ErrorClass(err error) ProviderErrorClass {
+	if errors.Is(err, context.Canceled) {
+		return ""
+	}
 	var providerErr *ProviderError
 	if errors.As(err, &providerErr) {
 		return providerErr.Class
@@ -239,6 +242,12 @@ func (c *Client) createResponse(
 			}
 			return parsed, nil
 		}
+		if errors.Is(ctx.Err(), context.Canceled) {
+			return Response{}, context.Canceled
+		}
+		if errors.Is(err, context.Canceled) {
+			return Response{}, err
+		}
 		lastErr = err
 		if c.shouldRetry(err, attempt, maxAttempts) {
 			delay := c.retryDelay(attempt)
@@ -252,8 +261,7 @@ func (c *Client) createResponse(
 				delay.String(),
 			)
 			if err := c.sleepBeforeRetry(ctx, attempt); err != nil {
-				failure := fmt.Errorf("responses request canceled during backoff: %w", err)
-				return Response{}, &ProviderError{Class: providerFailureClass(err), Err: failure}
+				return Response{}, fmt.Errorf("responses request canceled during backoff: %w", err)
 			}
 			continue
 		}
@@ -603,6 +611,9 @@ func (c *Client) shouldRetry(err error, attempt int, maxAttempts int) bool {
 }
 
 func providerFailureClass(err error) ProviderErrorClass {
+	if errors.Is(err, context.Canceled) {
+		return ""
+	}
 	var apiErr *openai.Error
 	if errors.As(err, &apiErr) {
 		switch apiErr.StatusCode {

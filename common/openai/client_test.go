@@ -415,6 +415,13 @@ func TestProviderAttemptsClassAndCost(t *testing.T) {
 	if err := client.SetMaxAttempts(0); err == nil {
 		t.Fatal("SetMaxAttempts accepted zero attempts")
 	}
+	if got := providerFailureClass(context.Canceled); got != "" {
+		t.Fatalf("providerFailureClass(context.Canceled) = %q, want empty", got)
+	}
+	canceled := &ProviderError{Class: ProviderErrorTransient, Err: context.Canceled}
+	if got := ErrorClass(canceled); got != "" {
+		t.Fatalf("ErrorClass(wrapped context.Canceled) = %q, want empty", got)
+	}
 
 	request := &http.Request{
 		Method: http.MethodPost,

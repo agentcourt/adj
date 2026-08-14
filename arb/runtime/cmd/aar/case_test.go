@@ -45,13 +45,26 @@ func TestCaseSummariesCarryProviderFailureData(t *testing.T) {
 		t.Fatalf("success summary = %+v", summary)
 	}
 
-	err := &openaiapi.ProviderError{
-		Class: openaiapi.ProviderErrorAuthentication,
-		Err:   errors.New("authentication failed"),
+	classes := []openaiapi.ProviderErrorClass{
+		openaiapi.ProviderErrorAuthentication,
+		openaiapi.ProviderErrorTransient,
+		openaiapi.ProviderErrorRequest,
+		openaiapi.ProviderErrorProtocol,
 	}
-	summary = buildCaseErrorSummary(err)
-	if summary.ErrorClass != "provider_authentication" {
-		t.Fatalf("error summary error_class = %q", summary.ErrorClass)
+	for _, class := range classes {
+		providerErr := &openaiapi.ProviderError{Class: class, Err: errors.New("provider failed")}
+		preflightErr := &proceeding.CouncilPreflightError{
+			MemberID:                   "C1",
+			UnavailableCandidates:      1,
+			LastUnavailableModel:       "model",
+			LastUnavailablePersonaFile: "persona.md",
+			Cause:                      providerErr.Error(),
+			Err:                        providerErr,
+		}
+		summary = buildCaseErrorSummary(preflightErr)
+		if summary.ErrorClass != string(class) {
+			t.Fatalf("error summary error_class = %q, want %q", summary.ErrorClass, class)
+		}
 	}
 }
 

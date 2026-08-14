@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -651,13 +652,50 @@ func TestPreflightCouncilCandidatesReplacesUnavailableSeat(t *testing.T) {
 func TestPreflightCouncilCandidatesFailsWhenAvailablePoolExhausted(t *testing.T) {
 	candidates := []CouncilSeat{
 		{Model: "bad-a", PersonaFile: "bad-a.md"},
-		{Model: "bad-b", PersonaFile: "bad-b.md"},
 	}
-	_, _, err := preflightCouncilCandidates(context.Background(), candidates, 1, func(_ context.Context, seat CouncilSeat) error {
-		return fmt.Errorf("%s unavailable", seat.Model)
-	})
-	if err == nil || !strings.Contains(err.Error(), "could not seat C1") {
-		t.Fatalf("preflightCouncilCandidates error = %v, want seating failure", err)
+	classes := []openaiapi.ProviderErrorClass{
+		openaiapi.ProviderErrorAuthentication,
+		openaiapi.ProviderErrorTransient,
+		openaiapi.ProviderErrorRequest,
+		openaiapi.ProviderErrorProtocol,
+	}
+	for _, class := range classes {
+		class := class
+		t.Run(string(class), func(t *testing.T) {
+			providerErr := &openaiapi.ProviderError{Class: class, Err: fmt.Errorf("%s unavailable", class)}
+			_, _, err := preflightCouncilCandidates(context.Background(), candidates, 1, func(_ context.Context, _ CouncilSeat) error {
+				return providerErr
+			})
+			var preflightErr *CouncilPreflightError
+			if !errors.As(err, &preflightErr) {
+				t.Fatalf("preflightCouncilCandidates error = %T, want *CouncilPreflightError", err)
+			}
+			if !errors.Is(err, providerErr) {
+				t.Fatalf("preflight error does not wrap provider error")
+			}
+			if got := openaiapi.ErrorClass(err); got != class {
+				t.Fatalf("ErrorClass = %q, want %q", got, class)
+			}
+		})
+	}
+}
+
+func TestPreflightCouncilCandidatesReturnsCancellation(t *testing.T) {
+	canceled := &openaiapi.ProviderError{Class: openaiapi.ProviderErrorTransient, Err: context.Canceled}
+	_, replacements, err := preflightCouncilCandidates(
+		context.Background(),
+		[]CouncilSeat{{Model: "model", PersonaFile: "persona.md"}},
+		1,
+		func(_ context.Context, _ CouncilSeat) error { return canceled },
+	)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("preflight error = %v, want context.Canceled", err)
+	}
+	if len(replacements) != 0 {
+		t.Fatalf("replacements = %#v, want none", replacements)
+	}
+	if class := openaiapi.ErrorClass(err); class != "" {
+		t.Fatalf("ErrorClass = %q, want empty", class)
 	}
 }
 
@@ -1650,6 +1688,9 @@ func TestIsCouncilRequestError(t *testing.T) {
 	}
 	if isCouncilRequestError(context.Canceled) {
 		t.Fatalf("unexpected request-error match for context cancellation")
+	}
+	if isCouncilRequestError(&openaiapi.ProviderError{Class: openaiapi.ProviderErrorTransient, Err: context.Canceled}) {
+		t.Fatalf("unexpected request-error match for wrapped context cancellation")
 	}
 	providerErr := &openaiapi.ProviderError{
 		Class: openaiapi.ProviderErrorRequest,

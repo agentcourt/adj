@@ -3,6 +3,7 @@ package proceeding
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -29,7 +30,30 @@ type councilPreflightReplacement struct {
 	ReplacementModel       string
 	ReplacementPersonaFile string
 	Cause                  string
+	err                    error
 }
+
+type CouncilPreflightError struct {
+	MemberID                   string
+	UnavailableCandidates      int
+	LastUnavailableModel       string
+	LastUnavailablePersonaFile string
+	Cause                      string
+	Err                        error
+}
+
+func (e *CouncilPreflightError) Error() string {
+	return fmt.Sprintf(
+		"council preflight could not seat %s after %d unavailable candidate(s); last unavailable model %s from %s: %s",
+		e.MemberID,
+		e.UnavailableCandidates,
+		e.LastUnavailableModel,
+		e.LastUnavailablePersonaFile,
+		e.Cause,
+	)
+}
+
+func (e *CouncilPreflightError) Unwrap() error { return e.Err }
 
 func sampleAvailableCouncil(ctx context.Context, cfg Config, client councilResponseClient) ([]CouncilSeat, []councilPreflightReplacement, error) {
 	specs, err := councilPoolMeta(cfg.CouncilPoolPath, cfg.CommonRoot)
@@ -92,6 +116,9 @@ func preflightCouncilCandidates(
 	seated := make([]CouncilSeat, 0, count)
 	replacements := make([]councilPreflightReplacement, 0)
 	for i := 0; i < count; i++ {
+		if err := ctx.Err(); err != nil {
+			return nil, nil, err
+		}
 		memberID := fmt.Sprintf("C%d", i+1)
 		failed := make([]councilPreflightReplacement, 0)
 		for len(candidates) > 0 {
@@ -99,11 +126,18 @@ func preflightCouncilCandidates(
 			candidates = candidates[1:]
 			candidate.MemberID = memberID
 			if err := check(ctx, candidate); err != nil {
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return nil, nil, ctxErr
+				}
+				if errors.Is(err, context.Canceled) {
+					return nil, nil, err
+				}
 				failed = append(failed, councilPreflightReplacement{
 					MemberID:               memberID,
 					UnavailableModel:       candidate.Model,
 					UnavailablePersonaFile: candidate.PersonaFile,
 					Cause:                  err.Error(),
+					err:                    err,
 				})
 				continue
 			}
@@ -120,7 +154,14 @@ func preflightCouncilCandidates(
 				return nil, nil, fmt.Errorf("council preflight could not seat %s: no candidates remained", memberID)
 			}
 			last := failed[len(failed)-1]
-			return nil, nil, fmt.Errorf("council preflight could not seat %s after %d unavailable candidate(s); last unavailable model %s from %s: %s", memberID, len(failed), last.UnavailableModel, last.UnavailablePersonaFile, last.Cause)
+			return nil, nil, &CouncilPreflightError{
+				MemberID:                   memberID,
+				UnavailableCandidates:      len(failed),
+				LastUnavailableModel:       last.UnavailableModel,
+				LastUnavailablePersonaFile: last.UnavailablePersonaFile,
+				Cause:                      last.Cause,
+				Err:                        last.err,
+			}
 		}
 	}
 	return seated, replacements, nil
