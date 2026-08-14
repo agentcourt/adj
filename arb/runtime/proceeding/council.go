@@ -209,7 +209,7 @@ func (rc *runContext) removeCouncilMember(opportunity Opportunity, seat CouncilS
 	}
 	if class := openaiapi.ErrorClass(cause); class != "" {
 		details["error_class"] = string(class)
-		rc.failureErrorClass = string(class)
+		rc.providerErrorClass = string(class)
 	}
 	if err := rc.failOpportunity(opportunity, reason, cause.Error(), details); err != nil {
 		return err

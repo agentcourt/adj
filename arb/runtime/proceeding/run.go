@@ -171,12 +171,6 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 			if mapString(caseObj["status"]) == "failed" {
 				status = "failed"
 				failure = caseFailure(rc.state)
-				if rc.failureErrorClass != "" {
-					if failure == nil {
-						failure = map[string]any{}
-					}
-					failure["error_class"] = rc.failureErrorClass
-				}
 				errorMessage = caseFailureError(rc.state)
 			}
 			result := Result{
@@ -186,6 +180,7 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 				FinishedAt:        finishedAt.Format(time.RFC3339),
 				Status:            status,
 				Error:             errorMessage,
+				ErrorClass:        rc.providerErrorClass,
 				Failure:           failure,
 				Phase:             currentPhase(rc.state),
 				Resolution:        currentResolution(rc.state),

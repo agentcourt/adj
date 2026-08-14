@@ -1782,12 +1782,22 @@ func TestRemoveRequestFailedCouncilMemberRecordsEvent(t *testing.T) {
 	rc := newCouncilRemovalTestContext(t, opportunityFailureRequestFailed)
 	opportunity := Opportunity{ID: "deliberation:1:C1", Role: "council", Phase: "deliberation"}
 	seat := CouncilSeat{MemberID: "C1", Model: "openrouter://anthropic/claude-3.7-sonnet"}
-	if err := rc.removeRequestFailedCouncilMember(opportunity, seat, fmt.Errorf("responses request failed: 404 model not found")); err != nil {
+	providerErr := &openaiapi.ProviderError{
+		Class: openaiapi.ProviderErrorRequest,
+		Err:   fmt.Errorf("responses request failed: 404 model not found"),
+	}
+	if err := rc.removeRequestFailedCouncilMember(opportunity, seat, providerErr); err != nil {
 		t.Fatalf("removeRequestFailedCouncilMember returned error: %v", err)
 	}
 	assertFailedCouncilMember(t, rc, opportunityFailureRequestFailed)
 	if got := mapString(rc.events[1].Payload["cause"]); !strings.Contains(got, "404") {
 		t.Fatalf("cause = %q, want 404 marker", got)
+	}
+	if got := mapString(rc.events[1].Payload["error_class"]); got != "provider_request" {
+		t.Fatalf("error_class = %q, want provider_request", got)
+	}
+	if rc.providerErrorClass != "provider_request" {
+		t.Fatalf("providerErrorClass = %q, want provider_request", rc.providerErrorClass)
 	}
 }
 

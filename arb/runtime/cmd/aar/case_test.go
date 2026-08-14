@@ -36,8 +36,9 @@ func TestFinalVoteCountsUsesFinalRound(t *testing.T) {
 
 func TestCaseSummariesCarryProviderFailureData(t *testing.T) {
 	result := proceeding.Result{
-		Status:         "failed",
-		Failure:        map[string]any{"error_class": "provider_transient"},
+		Status:         "ok",
+		Resolution:     "no_majority",
+		ErrorClass:     "provider_transient",
 		CouncilCostUSD: 0.025,
 	}
 	summary := buildCaseSuccessSummary(result, "/tmp/out")

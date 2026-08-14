@@ -119,7 +119,6 @@ func (f *explicitFileList) Set(value string) error {
 
 func buildCaseSuccessSummary(result proceeding.Result, outDir string) caseRunSummary {
 	votesFor, votesAgainst := finalVoteCounts(result.FinalState)
-	errorClass, _ := result.Failure["error_class"].(string)
 	return caseRunSummary{
 		Status:         strings.TrimSpace(result.Status),
 		Result:         strings.TrimSpace(result.Resolution),
@@ -128,7 +127,7 @@ func buildCaseSuccessSummary(result proceeding.Result, outDir string) caseRunSum
 		RunID:          strings.TrimSpace(result.RunID),
 		OutputDir:      strings.TrimSpace(outDir),
 		Error:          strings.TrimSpace(result.Error),
-		ErrorClass:     strings.TrimSpace(errorClass),
+		ErrorClass:     strings.TrimSpace(result.ErrorClass),
 		Failure:        result.Failure,
 		CouncilCostUSD: result.CouncilCostUSD,
 	}

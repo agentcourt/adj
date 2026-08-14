@@ -1,11 +1,25 @@
 package proceeding
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestRunRejectsInvalidCouncilRequestAttempts(t *testing.T) {
+	for _, attempts := range []int{-1, 5} {
+		_, err := Run(context.Background(), Options{
+			ComplaintPath:          "complaint.md",
+			OutputDir:              "out",
+			CouncilRequestAttempts: attempts,
+		})
+		if err == nil || !strings.Contains(err.Error(), "council request attempts must be between 1 and 4") {
+			t.Errorf("Run CouncilRequestAttempts=%d error = %v", attempts, err)
+		}
+	}
+}
 
 func TestResolveExplicitCaseFilesExpandsGlob(t *testing.T) {
 	dir := t.TempDir()

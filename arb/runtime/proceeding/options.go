@@ -17,6 +17,9 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	if strings.TrimSpace(opts.ComplaintPath) == "" || strings.TrimSpace(opts.OutputDir) == "" {
 		return Result{}, fmt.Errorf("complaint path and output dir are required")
 	}
+	if attempts := opts.CouncilRequestAttempts; attempts != 0 && (attempts < 1 || attempts > 4) {
+		return Result{}, fmt.Errorf("council request attempts must be between 1 and 4 when set")
+	}
 	raw, err := os.ReadFile(opts.ComplaintPath)
 	if err != nil {
 		return Result{}, fmt.Errorf("read complaint: %w", err)

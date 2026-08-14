@@ -102,6 +102,7 @@ type Result struct {
 	FinishedAt        string                  `json:"finished_at"`
 	Status            string                  `json:"status"`
 	Error             string                  `json:"error,omitempty"`
+	ErrorClass        string                  `json:"error_class,omitempty"`
 	Failure           map[string]any          `json:"failure,omitempty"`
 	Phase             string                  `json:"phase"`
 	Resolution        string                  `json:"resolution"`
@@ -248,7 +249,7 @@ type runContext struct {
 	workProductDirs    map[string]string
 	events             []Event
 	turn               int
-	failureErrorClass  string
+	providerErrorClass string
 	responseErrMu      sync.Mutex
 	responseErr        error
 }

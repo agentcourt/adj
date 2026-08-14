@@ -77,7 +77,7 @@ go test -count=1 ./runtime/...
 
 The council pool is a JSONL file containing request specifications and persona paths.  A local `pool.jsonl` takes precedence when `--council-pool` is omitted, followed by `<common-root>/data/personas/pool.jsonl`.  Relative persona paths resolve from the pool's base directory, and the output packet records the sampled council roster.
 
-Direct council calls support `openai` and `openrouter` request-spec endpoints.  OpenAI entries require `OPENAI_API_KEY` and may use `OPENAI_BASE_URL`; OpenRouter entries require `OPENROUTER_API_KEY`.  The case command checks sampled council members before it opens the case API listener, including when external clients will submit the final votes.  Provider failures carry one of four machine-readable classes: `provider_transient`, `provider_authentication`, `provider_request`, or `provider_protocol`.
+Direct council calls support `openai` and `openrouter` request-spec endpoints.  OpenAI entries require `OPENAI_API_KEY` and may use `OPENAI_BASE_URL`; OpenRouter entries require `OPENROUTER_API_KEY`.  The case command checks sampled council members before it opens the case API listener, including when external clients will submit the final votes.  Provider failures carry one of four machine-readable classes: `provider_transient`, `provider_authentication`, `provider_request`, or `provider_protocol`.  Each provider-failure removal event records its class, and the terminal result records the last class.
 
 ## Complaint Files
 
@@ -295,7 +295,7 @@ Every completed or failed case writes a run packet under its output directory.  
 | `case-manifest.json` | Run identity, start time, core version, and bound case API address. |
 | `policy.json` | Effective policy values. |
 | `runtime.json` | Effective runtime limits. |
-| `run.json` | Final structured result, including `council_cost_usd`. |
+| `run.json` | Final structured result, including `council_cost_usd` and the last council `error_class`. |
 | `state.json` | Final case state. |
 | `certificate.json` | Initialization request, accepted public actions, claimed final state, and final-state hash for replay checking. |
 | `council.json` | Council roster and related council metadata. |
@@ -334,7 +334,7 @@ A lawyer failure fails the case.  Examples include deadline expiration and exhau
 
 Case status can be `draft`, an active phase name, `closed`, or `failed`.  `aar case` exits `0` for a procedural failure after it records the failure and writes the final packet.  Its stdout summary then contains `status: "failed"`, an error, and a structured failure object.
 
-A process-level error exits nonzero.  Examples include an unreadable complaint, an invalid policy, an unavailable council pool, missing model credentials, or an unavailable Lean engine.  The command writes a JSON error summary to stdout and a diagnostic to stderr.  A provider error summary includes `error_class`, and every case summary includes the accumulated `council_cost_usd` available from successful OpenRouter generation lookups.
+A process-level error exits nonzero.  Examples include an unreadable complaint, an invalid policy, an unavailable council pool, missing model credentials, or an unavailable Lean engine.  The command writes a JSON error summary to stdout and a diagnostic to stderr.  A provider error summary includes `error_class`; a completed case whose council lost members to provider errors includes the last class; and every case summary includes the accumulated `council_cost_usd` available from successful OpenRouter generation lookups.
 
 ## Running Examples
 
