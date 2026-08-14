@@ -47,7 +47,7 @@ The core commands can expose live participant opportunities through their case-o
 
 ## Durable Record
 
-Every procedure writes `run.json`, `state.json`, `certificate.json`, `events.ndjson`, `transcript.md`, `digest.md`, work notes, and evidence records when applicable.  Keep the files in one output directory because the verifier and inspection commands treat that directory as one case packet.  Each procedure manual defines its complete file set and terminal behavior.
+Every procedure writes `case-manifest.json` when a run begins, then writes `run.json`, `state.json`, `certificate.json`, `events.ndjson`, `transcript.md`, `digest.md`, work notes, and evidence records as the run progresses.  Keep the files in one output directory because the verifier and inspection commands treat that directory as one case packet.  Each procedure manual defines its complete file set and terminal behavior.
 
 ## Documentation
 

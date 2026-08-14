@@ -35,12 +35,41 @@ Service may reach a private case API only through its configured loopback addres
 
 Core validates case identifiers, principal identifiers, opportunity identifiers, legal tool calls, attempts, deadlines, file visibility, and evidence access.  Service selects a case process and forwards bytes, status, and relevant HTTP headers.  MCP adapters translate MCP requests to these APIs but hold no procedural state.
 
+## Discovery Manifest
+
+Each one-case command writes `case-manifest.json` atomically in its output directory when the run begins.  The command replaces the manifest after the private listener starts so `case_api_base` contains the address that the operating system assigned.  A filesystem observer can discover the directory before terminal artifacts exist and can test the `/health` route beneath the recorded base URL for current liveness.
+
+```json
+{
+  "schema_version": "adj.case-manifest.v1",
+  "procedure": "arb",
+  "case_id": "case-1",
+  "run_id": "run-1",
+  "started_at": "2026-08-14T12:30:00.000000123Z",
+  "core_version": "v0.1.0",
+  "case_api_base": "http://127.0.0.1:21345"
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `schema_version` | Manifest schema, currently `adj.case-manifest.v1`. |
+| `procedure` | `adc`, `arb`, or `arbd`. |
+| `case_id` | Case identifier supplied to the core command. |
+| `run_id` | Run identifier supplied to the core command. |
+| `started_at` | UTC start time in RFC 3339 format with available fractional precision. |
+| `core_version` | Go main-module version, or `(devel)` for an unversioned development build. |
+| `case_api_base` | Bound private HTTP base URL.  ADC omits it when its case API is disabled. |
+
+The manifest declares startup identity and addressing.  `run.json` records terminal status and result data, while `events.ndjson` records progress.  Failure to write or replace the manifest terminates the core command and returns the write error.
+
 ## Durable Record
 
 Core writes the durable adjudication record beneath the selected output directory.  Service may list, read, range-serve, and render documented files without changing them.  The certificate verifier on core remains the authority for replaying accepted actions and comparing the replayed terminal state with the recorded state.
 
 | File or directory | Owner and use |
 | --- | --- |
+| `case-manifest.json` | Core startup identity, version, start time, and bound private API address used for discovery. |
 | `run.json` | Core terminal result and run metadata consumed by service status reconciliation. |
 | `state.json` | Core terminal state consumed by verification and reporting. |
 | `certificate.json` | Core accepted-action replay certificate. |

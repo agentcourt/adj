@@ -37,7 +37,7 @@ The runtime distinguishes record evidence from work notes.  Evidence is part of 
 
 Use AAR when the proceeding should decide whether one proposition has been demonstrated under an evidence standard.  Keep the proposition narrow enough that lawyers can search for evidence, test provenance, and argue the record within the configured filing limits.  Use AARD when the desired output is a numeric answer or supported degree; AAR reduces the merits question to `demonstrated` or `not_demonstrated`.
 
-Treat the output directory as the case record for one run.  Preserve `run.json`, `state.json`, `certificate.json`, `transcript.md`, `digest.md`, `events.ndjson`, `work-notes.ndjson`, `evidence-manifest.json`, `evidence-store/`, and `council-turns/` together.  Use `events.ndjson` to reconstruct process sequence, `transcript.md` to read the record, `digest.md` to check the outcome, `certificate.json` to replay-check the accepted state transitions, and `work-notes.ndjson` to review lawyer planning that stayed outside the evidentiary record.
+Treat the output directory as the case record for one run.  Preserve `case-manifest.json`, `run.json`, `state.json`, `certificate.json`, `transcript.md`, `digest.md`, `events.ndjson`, `work-notes.ndjson`, `evidence-manifest.json`, `evidence-store/`, and `council-turns/` together.  Use `events.ndjson` to reconstruct process sequence, `transcript.md` to read the record, `digest.md` to check the outcome, `certificate.json` to replay-check the accepted state transitions, and `work-notes.ndjson` to review lawyer planning that stayed outside the evidentiary record.
 
 ## Repository Layout
 
@@ -291,6 +291,7 @@ Every completed or failed case writes a run packet under its output directory.  
 | File | Contents |
 | --- | --- |
 | `complaint.md` | Canonical complaint. |
+| `case-manifest.json` | Run identity, start time, core version, and bound case API address. |
 | `policy.json` | Effective policy values. |
 | `runtime.json` | Effective runtime limits. |
 | `run.json` | Final structured result. |

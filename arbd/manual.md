@@ -31,7 +31,7 @@ The record contains lawyer filings, admitted evidence, technical reports, and co
 
 ## Operator Guidance
 
-Use AARD for a question whose supported answer falls on a scale from 0 through 100.  The question should permit lawyers to identify evidence, challenge provenance, and argue an answer range within the filing limits.  Preserve `run.json`, `state.json`, `certificate.json`, `transcript.md`, `digest.md`, `events.ndjson`, `work-notes.ndjson`, `evidence-manifest.json`, and `evidence-store/` together.  These files record the outcome, engine state, procedural sequence, off-record planning, and admitted evidence for one case.  Use `aard verify-certificate` to check that the accepted actions reproduce the recorded final state.
+Use AARD for a question whose supported answer falls on a scale from 0 through 100.  The question should permit lawyers to identify evidence, challenge provenance, and argue an answer range within the filing limits.  Preserve `case-manifest.json`, `run.json`, `state.json`, `certificate.json`, `transcript.md`, `digest.md`, `events.ndjson`, `work-notes.ndjson`, `evidence-manifest.json`, and `evidence-store/` together.  These files record the outcome, engine state, procedural sequence, off-record planning, and admitted evidence for one case.  Use `aard verify-certificate` to check that the accepted actions reproduce the recorded final state.
 
 ## Repository Layout
 
@@ -256,6 +256,7 @@ Every completed or procedurally failed case writes a packet under its output dir
 | File | Contents |
 | --- | --- |
 | `complaint.md` | Canonical complaint. |
+| `case-manifest.json` | Run identity, start time, core version, and bound case API address. |
 | `policy.json` | Effective policy values. |
 | `runtime.json` | Effective runtime limits. |
 | `run.json` | Final structured result. |

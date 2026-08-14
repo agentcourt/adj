@@ -16,6 +16,15 @@ Long-running case commands derive their execution context from interrupt signals
 
 The [core process interface](docs/service-interface.md) defines the executable, private HTTP, and durable-record behavior consumed by `adjservices`.  An interface edit requires corresponding test and documentation edits in both repositories.  The paired interface tests use explicit core binaries and an explicit core checkout.
 
+## Case Discovery
+
+Every durable one-case run writes `case-manifest.json` through `common/casemanifest`.  ADC, ARB, and AARD write the identity record when the run starts and replace it with the bound private API address after the listener starts.  The shared package validates required fields and returns atomic-write and cleanup errors to the procedure command.
+
+- [x] Add the versioned manifest schema and atomic writer.
+- [x] Add manifest creation to ADC, ARB, and AARD.
+- [x] Document the paired discovery interface in `adj` and `adjservices`.
+- [ ] Repeat complete core and paired-interface verification.
+
 ## Verification
 
 Verification begins by building each procedure's engine and proof targets with Lean 4.32.0 through the configured resource-limited runner.  The complete Go suite runs after the engine builds because an ADC integration test executes the engine.  Go verification also includes `go vet ./...` and builds of the three command packages, while documentation verification checks every relative Markdown link against the repository tree.

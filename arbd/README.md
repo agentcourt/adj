@@ -56,7 +56,7 @@ export OPENROUTER_API_KEY=REPLACE_WITH_KEY
 
 ## Output
 
-Case output contains `run.json`, `state.json`, `certificate.json`, `transcript.md`, `digest.md`, `events.ndjson`, `work-notes.ndjson`, `evidence-manifest.json`, and `evidence-store/`.  Council status and request specifications appear in `council.json`.  Keep these files together as the durable record of one case.
+Case output contains `case-manifest.json`, `run.json`, `state.json`, `certificate.json`, `transcript.md`, `digest.md`, `events.ndjson`, `work-notes.ndjson`, `evidence-manifest.json`, and `evidence-store/`.  Council status and request specifications appear in `council.json`.  Keep these files together as the durable record of one case.
 
 ## License
 

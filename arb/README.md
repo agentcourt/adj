@@ -58,7 +58,7 @@ export OPENROUTER_API_KEY=REPLACE_WITH_KEY
 
 ## Output
 
-Run output contains `run.json`, `state.json`, `transcript.md`, `digest.md`, `events.ndjson`, `work-notes.ndjson`, `evidence-manifest.json`, `evidence-store/`, and `certificate.json`.  Council turn snapshots live under `council-turns/` as deliberation begins.  Keep these files together as the durable record of one case.
+Run output contains `case-manifest.json`, `run.json`, `state.json`, `transcript.md`, `digest.md`, `events.ndjson`, `work-notes.ndjson`, `evidence-manifest.json`, `evidence-store/`, and `certificate.json`.  Council turn snapshots live under `council-turns/` as deliberation begins.  Keep these files together as the durable record of one case.
 
 ## License
 

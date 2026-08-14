@@ -216,6 +216,7 @@ Complaint preparation and adjudication share one output directory.  The prepared
 | `plaintiff-strategy.md` | Private plaintiff strategy. |
 | `defense-strategy.md` | Private defense strategy. |
 | `generated-scenario.json` | Scenario produced by complaint preparation. |
+| `case-manifest.json` | Run identity, start time, core version, and bound case API address. |
 | `runtime.json` | Normalized timeout, response-size, and invalid-attempt limits. |
 | `events.ndjson` | Runtime event log. |
 | `run.db` | SQLite case record. |
