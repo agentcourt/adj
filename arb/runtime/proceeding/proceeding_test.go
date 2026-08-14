@@ -652,6 +652,7 @@ func TestPreflightCouncilCandidatesReplacesUnavailableSeat(t *testing.T) {
 func TestPreflightCouncilCandidatesFailsWhenAvailablePoolExhausted(t *testing.T) {
 	candidates := []CouncilSeat{
 		{Model: "bad-a", PersonaFile: "bad-a.md"},
+		{Model: "bad-b", PersonaFile: "bad-b.md"},
 	}
 	classes := []openaiapi.ProviderErrorClass{
 		openaiapi.ProviderErrorAuthentication,
@@ -663,7 +664,9 @@ func TestPreflightCouncilCandidatesFailsWhenAvailablePoolExhausted(t *testing.T)
 		class := class
 		t.Run(string(class), func(t *testing.T) {
 			providerErr := &openaiapi.ProviderError{Class: class, Err: fmt.Errorf("%s unavailable", class)}
+			checks := 0
 			_, _, err := preflightCouncilCandidates(context.Background(), candidates, 1, func(_ context.Context, _ CouncilSeat) error {
+				checks++
 				return providerErr
 			})
 			var preflightErr *CouncilPreflightError
@@ -675,6 +678,13 @@ func TestPreflightCouncilCandidatesFailsWhenAvailablePoolExhausted(t *testing.T)
 			}
 			if got := openaiapi.ErrorClass(err); got != class {
 				t.Fatalf("ErrorClass = %q, want %q", got, class)
+			}
+			wantChecks := len(candidates)
+			if class == openaiapi.ProviderErrorAuthentication {
+				wantChecks = 1
+			}
+			if checks != wantChecks {
+				t.Fatalf("checks = %d, want %d", checks, wantChecks)
 			}
 		})
 	}

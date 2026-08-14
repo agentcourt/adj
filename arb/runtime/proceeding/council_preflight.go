@@ -139,6 +139,9 @@ func preflightCouncilCandidates(
 					Cause:                  err.Error(),
 					err:                    err,
 				})
+				if openaiapi.ErrorClass(err) == openaiapi.ProviderErrorAuthentication {
+					return nil, nil, newCouncilPreflightError(memberID, failed)
+				}
 				continue
 			}
 			seated = append(seated, candidate)
@@ -153,18 +156,22 @@ func preflightCouncilCandidates(
 			if len(failed) == 0 {
 				return nil, nil, fmt.Errorf("council preflight could not seat %s: no candidates remained", memberID)
 			}
-			last := failed[len(failed)-1]
-			return nil, nil, &CouncilPreflightError{
-				MemberID:                   memberID,
-				UnavailableCandidates:      len(failed),
-				LastUnavailableModel:       last.UnavailableModel,
-				LastUnavailablePersonaFile: last.UnavailablePersonaFile,
-				Cause:                      last.Cause,
-				Err:                        last.err,
-			}
+			return nil, nil, newCouncilPreflightError(memberID, failed)
 		}
 	}
 	return seated, replacements, nil
+}
+
+func newCouncilPreflightError(memberID string, failed []councilPreflightReplacement) *CouncilPreflightError {
+	last := failed[len(failed)-1]
+	return &CouncilPreflightError{
+		MemberID:                   memberID,
+		UnavailableCandidates:      len(failed),
+		LastUnavailableModel:       last.UnavailableModel,
+		LastUnavailablePersonaFile: last.UnavailablePersonaFile,
+		Cause:                      last.Cause,
+		Err:                        last.err,
+	}
 }
 
 func checkCouncilSeatAvailable(ctx context.Context, limits RuntimeLimits, client councilResponseClient, seat CouncilSeat) error {
