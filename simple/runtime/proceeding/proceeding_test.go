@@ -391,6 +391,33 @@ func TestBuildInputItemsSupportsTextImagesAndPDF(t *testing.T) {
 	}
 }
 
+func TestBuildInputItemsWithoutDocumentsAllowsEstablishedKnowledge(t *testing.T) {
+	t.Parallel()
+
+	items, err := buildInputItems(
+		"A square has four sides.",
+		"preponderance of the evidence",
+		t.TempDir(),
+		documents.Manifest{SchemaVersion: documents.SchemaVersion, Files: []documents.File{}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(items)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	for _, required := range []string{"relevant established knowledge", "absence of documents does not decide the proposition"} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("request omits %q\n%s", required, text)
+		}
+	}
+	if strings.Contains(text, "supplied material demonstrates") {
+		t.Fatalf("request makes supplied documents dispositive\n%s", text)
+	}
+}
+
 func TestParseDecisionRejectsMalformedCalls(t *testing.T) {
 	t.Parallel()
 
