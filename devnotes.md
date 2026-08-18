@@ -51,7 +51,7 @@ Every durable one-case run writes `case-manifest.json` through `common/casemanif
 
 The `simple` procedure decides one proposition through one direct provider request and requires a structured `demonstrated` or `not_demonstrated` response with a rationale.  The caller supplies an evidence standard, explicit document limits, one request specification, and explicit permission to use API-key billing.  The decision uses the proposition, relevant established knowledge, and any supplied documents, so an empty document set does not determine the result.
 
-`common/documents` imports regular files in bytewise path order, rejects symbolic links and source changes, and records byte counts, media types, and SHA-256 hashes.  Its verified reader confines each path to the imported root and checks type, size, and digest before returning the bytes to a procedure.  `common/recordio` supplies the JSON, atomic JSON, and append-only JSON-line operations used by the new procedures, while the simple record excludes document contents, encoded media, and request-header values from `model-request.json`.
+`common/documents` imports regular files in bytewise path order, rejects symbolic links and source changes, and records byte counts, media types, and SHA-256 hashes.  Its verified reader confines each path to the imported root and checks type, size, and digest before returning the bytes to a procedure.  The replacement test creates a distinct file before renaming it over the source, avoiding a filesystem-dependent assumption that immediate removal and recreation receive different inode numbers.  `common/recordio` supplies the JSON, atomic JSON, and append-only JSON-line operations used by the new procedures, while the simple record excludes document contents, encoded media, and request-header values from `model-request.json`.
 
 The shared provider response retains input, cached-input, output, reasoning, and total token counts from the completed Responses payload.  It reads OpenRouter's inline `usage.cost` before considering the generation-metadata endpoint, which can return 404 while OpenRouter indexes a completed generation.  The common accounting object records request count, observed-value counts, and sums, allowing every procedure to retain partial usage and cost observations without representing an unknown value as zero.
 
@@ -60,6 +60,8 @@ Focused tests cover document import, record replacement, command argument handli
 A live OpenRouter simple case first returned 831 tokens and $0.0001018248 in its completed response, but the old client ignored both fields and wrote zero after an immediate generation-metadata request returned HTTP 404.  After correction, the same proposition completed in 2.6 seconds and recorded 385 input, 164 output, 53 reasoning, and 549 total tokens together with $0.0000578956.  The second run made no generation-metadata request because the completed response supplied its cost.
 
 A final OpenAI GPT-5 mini case used the committed code and one 189-byte text document.  It completed in 9.8 seconds and recorded 204 input, 597 output, 448 reasoning, and 801 total tokens in the response, terminal result, and provider-response event.  OpenAI supplied no monetary cost, and each record omitted the cost field.
+
+A rebuilt OpenRouter case decided “A square has four sides” without documents after the established-knowledge prompt clarification.  It completed in 6.0 seconds, returned `demonstrated`, and recorded 407 input, 236 output, 110 reasoning, and 643 total tokens.  The completed response supplied a cost of $0.000067683.
 
 ## Quick Adjudication
 
@@ -98,6 +100,8 @@ Verification built `adcengine` and the maintained `Proofs` target with Lean 4.32
 ## Verification
 
 Verification begins by building each procedure's engine and proof targets with Lean 4.32.0 through the configured resource-limited runner.  The complete Go suite runs after the engine builds because an ADC integration test executes the engine.  Go verification also includes `go vet ./...` and builds of the three command packages, while documentation verification checks every relative Markdown link against the repository tree.
+
+The current verification pass built `Main`, `Proofs`, and the executable target for ADC, ARB, and AARD with Lean 4.32.0.  The local runner used a 900-second timeout, 4 GiB memory high, 6 GiB memory maximum, 1 GiB swap, 100% CPU, and one job slot; it reported successful completion without persistent job identifiers.  The complete Go tests, vet checks, package builds, repeated document-replacement tests, and relative-link checks passed.
 
 - [x] Run the complete Go test suite.
 - [x] Run the complete Go vet suite.
