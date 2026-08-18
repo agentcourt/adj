@@ -1249,7 +1249,23 @@ def requireSingleClaimMetadata (c : CaseState) : Except String Unit := do
   let _elements ← claim.getObjVal? "elements"
   let _defenses ← claim.getObjVal? "defenses"
   let _damages ← getString claim "damages_question"
+  let _declaratoryOnly ← getBoolD claim "declaratory_only" false
   pure ()
+
+def singleClaimDeclaratoryOnly (c : CaseState) : Except String Bool := do
+  match c.single_claim with
+  | some claim => getBoolD claim "declaratory_only" false
+  | none => pure false
+
+def validateDeclaratoryDamages (c : CaseState) (damages : Float) : Except String Unit := do
+  let declaratoryOnly ← singleClaimDeclaratoryOnly c
+  if declaratoryOnly then
+    if damages > 0.0 then
+      throw "declaratory-only claim requires zero damages"
+    else
+      pure ()
+  else
+    pure ()
 
 def getSingleClaimId (c : CaseState) : Except String String := do
   let claim ← match c.single_claim with
@@ -3502,6 +3518,7 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
           throw "cannot transition to judgment_entered without jury verdict"
         if c.hung_jury.isSome then
           throw "cannot transition to judgment_entered after hung jury"
+        validateDeclaratoryDamages c (judgmentAmountFromCaseState c)
       pure <| updateCase s { c with status := nextStatus }
   | "set_jury_configuration" =>
       requireRole a ["clerk"]
@@ -3932,6 +3949,7 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
         throw "juror vote damages must be nonnegative"
       if vote = "defendant" && damages != 0.0 then
         throw "juror vote damages must be zero on a defense vote"
+      validateDeclaratoryDamages c damages
       if !(confidence = "high" || confidence = "medium" || confidence = "low") then
         throw s!"invalid confidence: {confidence}"
       let entry : JurorVote := {
@@ -4780,6 +4798,7 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       let amount ← getFloatD a.payload "amount" 0.0
       if amount < 0.0 then
         throw "amount must be >= 0"
+      validateDeclaratoryDamages c amount
       let basis := match getStringOpt a.payload "basis" with
         | .ok (some value) => value
         | _ => ""
@@ -4797,6 +4816,7 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       let amount ← getFloatD a.payload "amount" 0.0
       if amount < 0.0 then
         throw "amount must be >= 0"
+      validateDeclaratoryDamages c amount
       let offerId :=
         match getStringOpt a.payload "offer_id" with
         | .ok (some value) =>
@@ -4855,6 +4875,7 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       let actor := normalizePartyToken a.actor_role
       if actor != offer.offeree then
         throw "only the offeree may accept rule68 offer"
+      validateDeclaratoryDamages c offer.amount
       let acceptedAt := match getStringOpt a.payload "accepted_at" with
         | .ok (some value) =>
             let trimmed := trimString value
@@ -4911,6 +4932,7 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       let finalAmount ← getFloatD a.payload "amount" 0.0
       if finalAmount < 0.0 then
         throw "amount must be >= 0"
+      validateDeclaratoryDamages c finalAmount
       let awardedToRaw := match getStringOpt a.payload "awarded_to" with
         | .ok (some value) => value
         | _ => "plaintiff"
@@ -4995,6 +5017,7 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       let amount := match amountOpt with
         | some n => n
         | none => 0.0
+      validateDeclaratoryDamages c amount
       let cUpdated := { c with status := "judgment_entered", monetary_judgment := amount }
       let amountDesc := match amountOpt with
         | some n => toString n
@@ -5027,6 +5050,7 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       let amount := match amountOpt with
         | some n => n
         | none => 0.0
+      validateDeclaratoryDamages c amount
       let nextStatus := if consentJudgment || amount > 0.0 then "judgment_entered" else "closed"
       let amountDesc := match amountOpt with
         | some n => toString n
@@ -5157,6 +5181,7 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       requireClaimIdMatch c a.payload
       let basis ← getString a.payload "basis"
       let amount := judgmentAmountFromCaseState c
+      validateDeclaratoryDamages c amount
       let c1 := appendTrace { c with monetary_judgment := amount } "enter_judgment" basis ["FRCP 58"]
       let c2 := appendDocket { c1 with status := "judgment_entered" } "Judgment entered" basis
       pure <| updateCase s c2

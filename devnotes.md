@@ -2,7 +2,7 @@
 
 ## Repository Scope
 
-This repository owns the ADC, ARB, and AARD procedures.  Each procedure includes its rules, Lean engine and proofs, one-case Go runtime, command-line program, private participant API, durable record, examples, and tests.  Operational consumers use the documented process interface without importing procedure implementation packages.
+This repository owns the ADC, ARB, AARD, simple, and quick procedures.  Each procedure includes the rules, one-case Go runtime, command-line program, durable record, and tests that its design requires, while ADC, ARB, and AARD also include Lean engines and proofs.  Operational consumers use the documented process interface without importing procedure implementation packages.
 
 The shared `common/` tree contains code required by more than one procedure.  New shared packages must have at least two current consumers and a narrower API than the code they replace.  Procedure-specific behavior belongs in its procedure tree.
 
@@ -52,6 +52,30 @@ The `simple` procedure decides one proposition through one direct provider reque
 `common/documents` imports regular files in bytewise path order, rejects symbolic links and source changes, and records byte counts, media types, and SHA-256 hashes.  Its verified reader confines each path to the imported root and checks type, size, and digest before returning the bytes to a procedure.  `common/recordio` supplies the JSON, atomic JSON, and append-only JSON-line operations used by the new procedures, while the simple record excludes document contents, encoded media, and request-header values from `model-request.json`.
 
 Focused tests cover document import, record replacement, command argument handling, input-media construction, one-request success, typed provider failure, malformed tool output, and failure records.  Race tests, Go vet, and a command build also passed.  Verification used fake provider clients and made no external provider calls.
+
+## Quick Adjudication
+
+The `quick` procedure gives a proponent and an opponent one sequential argument each, then asks a selected council to vote through direct provider requests.  The opponent receives the proponent's argument, and neither lawyer receives a rebuttal or closing opportunity.  The procedure requires a strict-majority threshold, an evidence standard, explicit document limits, and explicit permission to use API-key billing.
+
+The core samples council records without replacement through `crypto/rand`, giving every remaining pool record equal probability at each seat.  A selected record cannot occupy a second seat in the same case, and selecting the full pool includes every record once.  The sampler accepts an internal random-index function so tests can fix the selection sequence and return entropy errors without replacing production randomness.
+
+The private lawyer API uses the AAR lawyer paths and tool shapes so `adjservices` can present either procedure through the same MCP adapter.  Each lawyer can inspect immutable staged documents through list, stat, and range-read operations, and the shared verified reader rejects a changed file before returning its bytes.  The council prompt contains the two accepted arguments and verified document contents, and each selected member must submit one structured `demonstrated` or `not_demonstrated` vote with a rationale.
+
+Production startup initializes every distinct selected council endpoint before the case API opens, which detects a missing credential or unsupported endpoint without sending a provider request.  The durable record contains resolved input, runtime identity, document metadata, ordered events, private lawyer work notes, both arguments, council votes, provider response identifiers, recovered cost, and the terminal result.  Request headers and query parameters remain in memory and do not enter council metadata or other durable records.
+
+Council requests run sequentially by default.  The optional parallel mode starts the selected requests together, cancels outstanding request contexts after the first observed failure, waits for every started request to return, and records successful votes in roster order.  `input.json` and the `council_started` event record the resolved mode.
+
+Focused tests cover lawyer-turn deadlines, cancellation, concurrent submissions, durable event order, document verification, majority results, complete pool validation before sampling, endpoint tool support, explicit billing authorization, typed protocol errors, error redaction, terminal shutdown and response-write failures, complete early command results, and short output writes.  Council-mode tests verify sequential execution by default, concurrent starts, roster-order persistence after reverse-order completion, and outstanding-request cancellation after a provider failure.  Focused ordinary and race tests, Go vet, a command build, repeated concurrency tests, and the diff check passed; verification used fake provider clients and local HTTP calls and made no external provider request.
+
+## ADC Proposition Input
+
+`adc case` accepts exactly one complaint or proposition.  Proposition setup creates `Proponent v. Opponent` in the programmatic Proposition Tribunal, assigns the burden to the Proponent, and requests a declaration whether the proposition has been demonstrated.  The Tribunal accepts `proposition_adjudication` jurisdiction without subject-matter screening, and `--trial-mode=auto` selects a jury.
+
+The caller selects either `preponderance_of_the_evidence` or `clear_and_convincing` because the Lean engine accepts those two claim standards.  Setup imports an optional document tree through `common/documents`, records the manifest, verifies each imported file before scenario construction, and preserves the manifest size and SHA-256 values in the case attachments.  The runtime verifies the formal attachment path, regular-file type, exact size, and SHA-256 before it exports evidence, returns bytes through the role API, or adds file contents to a model prompt.  Positive count, per-file, and total-byte limits remain required when the document tree is absent.
+
+Proposition setup constructs the normalized claim, both role strategies, and the scenario without an intake or planner model request.  The existing ADC runtime then handles pleadings, discovery, trial, verdict, and judgment with the selected direct or external roles.  Focused tests cover the Tribunal profile, deterministic case fields, accepted standards, document import and hash preservation, changed-document rejection, size drift, symbolic-link replacement, role API reads, model-prompt attachments, the proposition input flags, empty document records, and the jury default.
+
+Proposition claims set `declaratory_only` to true, while an absent field defaults to false for existing civil claims.  The Lean engine rejects a positive damages amount at juror voting, monetary judgment, Rule 68, settlement, and final jury or bench disposition boundaries.  Focused race tests, Go vet, and the ADC engine and maintained proof builds passed with Lean 4.32.0 through the local resource-limited runner.
 
 ## Verification
 

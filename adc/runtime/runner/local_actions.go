@@ -539,10 +539,9 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 				"actor_message": "This case file has no stored path and cannot be read.",
 			}}, true, nil
 		}
-		resolvedPath := resolveStoredCaseFilePath(storedPath, r.cfg.ScenarioBaseDir)
-		raw, err := os.ReadFile(resolvedPath)
+		raw, err := r.readCaseFile(internalFile)
 		if err != nil {
-			return ActionExecution{}, true, fmt.Errorf("read case file %s: %w", fileID, err)
+			return ActionExecution{}, true, err
 		}
 		if !utf8.Valid(raw) {
 			return ActionExecution{Result: map[string]any{
@@ -585,10 +584,9 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 				"actor_message": "This case file has no stored path and cannot be attached.",
 			}}, true, nil
 		}
-		resolvedPath := resolveStoredCaseFilePath(storedPath, r.cfg.ScenarioBaseDir)
-		raw, err := os.ReadFile(resolvedPath)
+		raw, err := r.readCaseFile(internalFile)
 		if err != nil {
-			return ActionExecution{}, true, fmt.Errorf("read case file %s: %w", fileID, err)
+			return ActionExecution{}, true, err
 		}
 		contentItems, err := caseFileAttachmentContent(internalFile, raw)
 		if err != nil {

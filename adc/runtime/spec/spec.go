@@ -17,6 +17,7 @@ type ClaimSpec struct {
 	Elements        []string `json:"elements"`
 	Defenses        []string `json:"defenses"`
 	DamagesQuestion string   `json:"damages_question"`
+	DeclaratoryOnly bool     `json:"declaratory_only,omitempty"`
 }
 
 type RoleSpec struct {

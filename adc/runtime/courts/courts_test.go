@@ -136,3 +136,24 @@ func TestResolveDefaultBuiltInFromRepoRoot(t *testing.T) {
 		t.Fatalf("Resolve(\"\") name = %q, want %q", profile.Name, DefaultCourtName)
 	}
 }
+
+func TestPropositionTribunal(t *testing.T) {
+	t.Parallel()
+
+	profile := PropositionTribunal()
+	if err := profile.Validate(); err != nil {
+		t.Fatalf("Validate() error = %v", err)
+	}
+	if profile.Name != PropositionTribunalName {
+		t.Fatalf("Name = %q, want %q", profile.Name, PropositionTribunalName)
+	}
+	if profile.JurisdictionScreen {
+		t.Fatalf("JurisdictionScreen = true, want false")
+	}
+	if !profile.AllowsJurisdictionBasis(PropositionAdjudicationBasis) {
+		t.Fatalf("AllowedJurisdictionBases = %v", profile.AllowedJurisdictionBases)
+	}
+	if strings.TrimSpace(profile.RulesMarkdown) == "" {
+		t.Fatalf("RulesMarkdown is empty")
+	}
+}

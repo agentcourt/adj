@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -151,9 +150,12 @@ func (r *Runner) evidenceManifestItem(outputDir string, caseObj map[string]any, 
 	if storedPath == "" {
 		return nil, fmt.Errorf("case file %s has no storage_relpath", fileID)
 	}
-	src := resolveStoredCaseFilePath(storedPath, r.cfg.ScenarioBaseDir)
 	name := manifestCaseFileName(fileObj)
-	if err := copyFileAtomic(src, filepath.Join(outputDir, "submitted-evidence", name)); err != nil {
+	raw, err := r.readCaseFile(fileObj)
+	if err != nil {
+		return nil, err
+	}
+	if err := writeFileAtomic(filepath.Join(outputDir, "submitted-evidence", name), raw); err != nil {
 		return nil, fmt.Errorf("copy case file %s into submitted evidence: %w", fileID, err)
 	}
 	item := map[string]any{
@@ -241,19 +243,10 @@ func writeJSONFileAtomic(path string, value any) (err error) {
 	return nil
 }
 
-func copyFileAtomic(src string, dst string) (err error) {
+func writeFileAtomic(dst string, raw []byte) (err error) {
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return err
 	}
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if closeErr := in.Close(); closeErr != nil {
-			err = errors.Join(err, fmt.Errorf("close source file %s: %w", src, closeErr))
-		}
-	}()
 	tmp, err := os.CreateTemp(filepath.Dir(dst), "."+filepath.Base(dst)+".*.tmp")
 	if err != nil {
 		return err
@@ -273,7 +266,7 @@ func copyFileAtomic(src string, dst string) (err error) {
 			}
 		}
 	}()
-	if _, err := io.Copy(tmp, in); err != nil {
+	if _, err := tmp.Write(raw); err != nil {
 		return err
 	}
 	if err := tmp.Close(); err != nil {

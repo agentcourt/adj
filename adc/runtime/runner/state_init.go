@@ -109,6 +109,7 @@ func buildSingleClaim(claims []spec.ClaimSpec) map[string]any {
 		"elements":          []string{"duty", "breach", "causation", "damages"},
 		"defenses":          []string{},
 		"damages_question":  "What damages, if any, are proven?",
+		"declaratory_only":  false,
 	}
 	if len(claims) == 0 {
 		return claim
@@ -123,6 +124,7 @@ func buildSingleClaim(claims []spec.ClaimSpec) map[string]any {
 		"elements":          c.Elements,
 		"defenses":          c.Defenses,
 		"damages_question":  c.DamagesQuestion,
+		"declaratory_only":  c.DeclaratoryOnly,
 	}
 }
 

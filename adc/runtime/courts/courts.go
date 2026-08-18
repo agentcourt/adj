@@ -11,7 +11,21 @@ import (
 const (
 	DefaultCourtName              = "United States District"
 	InternationalClawDistrictName = "International Claw District"
+	PropositionTribunalName       = "Proposition Tribunal"
+	PropositionAdjudicationBasis  = "proposition_adjudication"
 )
+
+const propositionTribunalRules = `# Proposition Tribunal
+
+Jurisdiction:
+- The Tribunal hears a submitted proposition under the proposition_adjudication basis.
+- The Tribunal does not apply subject-matter-jurisdiction screening.
+
+Procedure:
+- The Proponent is the plaintiff, and the Opponent is the defendant.
+- The Proponent bears the burden to establish the submitted proposition under the standard recorded in the claim.
+- The requested relief is a declaration whether the proposition has been demonstrated. Monetary damages are unavailable.
+- Imported documents enter the case as complaint attachments and remain subject to the ordinary rules for trial evidence.`
 
 type Profile struct {
 	Name                         string   `json:"name"`
@@ -58,6 +72,20 @@ func (p Profile) Validate() error {
 
 func (p Profile) AllowsJurisdictionBasis(basis string) bool {
 	return containsBasis(p.AllowedJurisdictionBases, basis)
+}
+
+func PropositionTribunal() Profile {
+	return Profile{
+		Name:                         PropositionTribunalName,
+		RulesMarkdown:                propositionTribunalRules,
+		JurisdictionScreen:           false,
+		AllowedJurisdictionBases:     []string{PropositionAdjudicationBasis},
+		PreferredJurisdictionBasis:   PropositionAdjudicationBasis,
+		RequireJurisdictionStatement: true,
+		RequireDiversityCitizenship:  false,
+		RequireAmountInControversy:   false,
+		MinimumAmountInControversy:   0,
+	}
 }
 
 func Resolve(ref string) (Profile, error) {

@@ -57,7 +57,7 @@ func printRootUsage(w io.Writer) error {
 	_, err := fmt.Fprint(w, `Usage: adc <subcommand> [options]
 
 Subcommands:
-  case       Read a complaint, plan both sides, and run the case
+  case       Prepare a complaint or proposition and run the case
   case-packet  Build a deterministic complaint packet
   complain   Draft complaint.md from a situation markdown file
   scenario   Run an existing scenario JSON without starting agents

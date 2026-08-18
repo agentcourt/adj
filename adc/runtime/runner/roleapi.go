@@ -1208,7 +1208,7 @@ func (r *Runner) readCaseFileBytes(actorRole string, fileID string) map[string]a
 	if storedPath == "" {
 		return map[string]any{"ok": false, "error": "stored path missing for case file"}
 	}
-	raw, err := os.ReadFile(resolveStoredCaseFilePath(storedPath, r.cfg.ScenarioBaseDir))
+	raw, err := r.readCaseFile(internalFile)
 	if err != nil {
 		return map[string]any{"ok": false, "error": err.Error()}
 	}

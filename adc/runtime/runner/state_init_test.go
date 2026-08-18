@@ -1,6 +1,24 @@
 package runner
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/jsmorph/adj/adc/runtime/spec"
+)
+
+func TestBuildSingleClaimDefaultsToCivilDamages(t *testing.T) {
+	claim := buildSingleClaim(nil)
+	if declaratoryOnly, ok := claim["declaratory_only"].(bool); !ok || declaratoryOnly {
+		t.Fatalf("declaratory_only = %#v, want false", claim["declaratory_only"])
+	}
+}
+
+func TestBuildSingleClaimPreservesDeclaratoryOnly(t *testing.T) {
+	claim := buildSingleClaim([]spec.ClaimSpec{{DeclaratoryOnly: true}})
+	if declaratoryOnly, ok := claim["declaratory_only"].(bool); !ok || !declaratoryOnly {
+		t.Fatalf("declaratory_only = %#v, want true", claim["declaratory_only"])
+	}
+}
 
 func TestBuildInitialPolicyNormalizesJuryConfiguration(t *testing.T) {
 	policy := buildInitialPolicy(map[string]any{

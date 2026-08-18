@@ -17,16 +17,23 @@ import (
 	"github.com/jsmorph/adj/adc/runtime/report"
 	"github.com/jsmorph/adj/adc/runtime/runner"
 	"github.com/jsmorph/adj/adc/runtime/store"
+	"github.com/jsmorph/adj/common/documents"
 	"github.com/jsmorph/adj/common/openai"
 )
 
 func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
 	var fs *flag.FlagSet
 	fs = newFlagSet("case", stderr, func() {
-		fmt.Fprintf(fs.Output(), "Usage: adc case --complaint <markdown> [options]\n\n")
+		fmt.Fprintf(fs.Output(), "Usage: adc case (--complaint FILE | --proposition TEXT) [options]\n\n")
 		fs.PrintDefaults()
 	})
 	complaintPath := fs.String("complaint", "", "Path to complaint markdown")
+	proposition := fs.String("proposition", "", "Proposition to adjudicate in the Proposition Tribunal")
+	evidenceStandard := fs.String("evidence-standard", "", "Proposition evidence standard: preponderance_of_the_evidence or clear_and_convincing")
+	documentsDir := fs.String("documents", "", "Directory of documents imported for proposition adjudication")
+	maxDocumentFiles := fs.Int("max-document-files", 0, "Maximum number of imported proposition documents")
+	maxDocumentFileBytes := fs.Int64("max-document-file-bytes", 0, "Maximum bytes in one imported proposition document")
+	maxDocumentsTotalBytes := fs.Int64("max-documents-total-bytes", 0, "Maximum total imported proposition document bytes")
 	courtRef := fs.String("court", courts.DefaultCourtName, "Court profile name or JSON path")
 	outDir := fs.String("out-dir", "out/case", "Output directory for staged inputs and run evidence")
 	model := fs.String("model", casegen.DefaultRuntimeModel(), "Runtime model for litigation agents")
@@ -68,8 +75,22 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	if fs.NArg() != 0 {
 		return fmt.Errorf("adc case accepts no positional arguments")
 	}
-	if strings.TrimSpace(*complaintPath) == "" {
-		return fmt.Errorf("--complaint is required")
+	setFlags := make(map[string]bool)
+	fs.Visit(func(value *flag.Flag) {
+		setFlags[value.Name] = true
+	})
+	if err := validateCaseInputFlags(caseInputFlags{
+		ComplaintPath:          *complaintPath,
+		Proposition:            *proposition,
+		EvidenceStandard:       *evidenceStandard,
+		DocumentsDir:           *documentsDir,
+		MaxDocumentFiles:       *maxDocumentFiles,
+		MaxDocumentFileBytes:   *maxDocumentFileBytes,
+		MaxDocumentsTotalBytes: *maxDocumentsTotalBytes,
+		CourtSet:               setFlags["court"],
+		PlannerModelSet:        setFlags["planner-model"],
+	}); err != nil {
+		return err
 	}
 	if strings.TrimSpace(*outDir) == "" {
 		return fmt.Errorf("--out-dir is required")
@@ -110,25 +131,53 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 		return err
 	}
 
-	setup, err := prepareComplaintScenario(ctx, client, complaintSetupOptions{
-		ComplaintPath:       *complaintPath,
-		CourtRef:            *courtRef,
-		OutDir:              *outDir,
-		RuntimeModel:        *model,
-		PlannerModel:        *plannerModel,
-		NonJurorModel:       *nonJurorModel,
-		PlaintiffModel:      *plaintiffModel,
-		DefendantModel:      *defendantModel,
-		JudgeModel:          *judgeModel,
-		ClerkModel:          *clerkModel,
-		Temperature:         tempPtr,
-		NonJurorTemperature: nonJurorTempPtr,
-		TrialModeOverride:   *trialMode,
-		SkipVoirDire:        *skipVoirDire,
-		JurorCount:          *jurorCount,
-		MinimumConcurring:   *minimumConcurring,
-		UnanimousRequired:   unanimousRequiredPtr,
-	})
+	var setup caseSetupResult
+	if strings.TrimSpace(*proposition) != "" {
+		setup, err = preparePropositionScenario(propositionSetupOptions{
+			Proposition:      *proposition,
+			EvidenceStandard: *evidenceStandard,
+			DocumentsDir:     *documentsDir,
+			DocumentLimits: documents.Limits{
+				MaxFiles:      *maxDocumentFiles,
+				MaxFileBytes:  *maxDocumentFileBytes,
+				MaxTotalBytes: *maxDocumentsTotalBytes,
+			},
+			OutDir:              *outDir,
+			RuntimeModel:        *model,
+			NonJurorModel:       *nonJurorModel,
+			PlaintiffModel:      *plaintiffModel,
+			DefendantModel:      *defendantModel,
+			JudgeModel:          *judgeModel,
+			ClerkModel:          *clerkModel,
+			Temperature:         tempPtr,
+			NonJurorTemperature: nonJurorTempPtr,
+			TrialModeOverride:   *trialMode,
+			SkipVoirDire:        *skipVoirDire,
+			JurorCount:          *jurorCount,
+			MinimumConcurring:   *minimumConcurring,
+			UnanimousRequired:   unanimousRequiredPtr,
+		})
+	} else {
+		setup, err = prepareComplaintScenario(ctx, client, complaintSetupOptions{
+			ComplaintPath:       *complaintPath,
+			CourtRef:            *courtRef,
+			OutDir:              *outDir,
+			RuntimeModel:        *model,
+			PlannerModel:        *plannerModel,
+			NonJurorModel:       *nonJurorModel,
+			PlaintiffModel:      *plaintiffModel,
+			DefendantModel:      *defendantModel,
+			JudgeModel:          *judgeModel,
+			ClerkModel:          *clerkModel,
+			Temperature:         tempPtr,
+			NonJurorTemperature: nonJurorTempPtr,
+			TrialModeOverride:   *trialMode,
+			SkipVoirDire:        *skipVoirDire,
+			JurorCount:          *jurorCount,
+			MinimumConcurring:   *minimumConcurring,
+			UnanimousRequired:   unanimousRequiredPtr,
+		})
+	}
 	if err != nil {
 		return err
 	}
@@ -202,7 +251,6 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 
 	summary := map[string]any{
 		"run_id":             effectiveRunID,
-		"complaint":          setup.Complaint.StagedRelPath,
 		"normalized_case":    normalizedCasePath,
 		"plaintiff_strategy": plaintiffStrategyPath,
 		"defense_strategy":   defenseStrategyPath,
@@ -214,6 +262,13 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 		"transcript":         transcriptPath,
 		"digest":             digestPath,
 	}
+	if strings.TrimSpace(*proposition) != "" {
+		summary["proposition"] = strings.TrimSpace(*proposition)
+		summary["documents"] = setup.DocumentManifestPath
+		summary["document_dir"] = setup.DocumentsPath
+	} else {
+		summary["complaint"] = setup.Complaint.StagedRelPath
+	}
 	if *jsonSummary {
 		payload, err := json.MarshalIndent(summary, "", "  ")
 		if err != nil {
@@ -224,4 +279,52 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	}
 	_, err = fmt.Fprintf(stdout, "run_id=%s out_dir=%s scenario=%s output=%s runtime=%s digest=%s transcript=%s\n", effectiveRunID, *outDir, scenarioPath, outputPath, runtimePath, digestPath, transcriptPath)
 	return err
+}
+
+type caseInputFlags struct {
+	ComplaintPath          string
+	Proposition            string
+	EvidenceStandard       string
+	DocumentsDir           string
+	MaxDocumentFiles       int
+	MaxDocumentFileBytes   int64
+	MaxDocumentsTotalBytes int64
+	CourtSet               bool
+	PlannerModelSet        bool
+}
+
+func validateCaseInputFlags(flags caseInputFlags) error {
+	hasComplaint := strings.TrimSpace(flags.ComplaintPath) != ""
+	hasProposition := strings.TrimSpace(flags.Proposition) != ""
+	if hasComplaint == hasProposition {
+		return fmt.Errorf("exactly one of --complaint or --proposition is required")
+	}
+	if !hasProposition {
+		if strings.TrimSpace(flags.EvidenceStandard) != "" || strings.TrimSpace(flags.DocumentsDir) != "" || flags.MaxDocumentFiles != 0 || flags.MaxDocumentFileBytes != 0 || flags.MaxDocumentsTotalBytes != 0 {
+			return fmt.Errorf("--evidence-standard, --documents, and document-limit flags require --proposition")
+		}
+		return nil
+	}
+	if strings.TrimSpace(flags.EvidenceStandard) == "" {
+		return fmt.Errorf("--evidence-standard is required with --proposition")
+	}
+	if flags.CourtSet {
+		return fmt.Errorf("--court cannot be used with --proposition; proposition cases use the Proposition Tribunal")
+	}
+	if flags.PlannerModelSet {
+		return fmt.Errorf("--planner-model cannot be used with --proposition; proposition setup does not call a planner")
+	}
+	if err := casegen.ValidateEvidenceStandard(strings.TrimSpace(flags.EvidenceStandard)); err != nil {
+		return fmt.Errorf("invalid --evidence-standard: %w", err)
+	}
+	if flags.MaxDocumentFiles <= 0 {
+		return fmt.Errorf("--max-document-files must be positive with --proposition")
+	}
+	if flags.MaxDocumentFileBytes <= 0 {
+		return fmt.Errorf("--max-document-file-bytes must be positive with --proposition")
+	}
+	if flags.MaxDocumentsTotalBytes <= 0 {
+		return fmt.Errorf("--max-documents-total-bytes must be positive with --proposition")
+	}
+	return nil
 }
