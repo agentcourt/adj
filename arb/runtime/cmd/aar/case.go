@@ -32,6 +32,7 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	outDir := fs.String("out-dir", "", "Output directory")
 	policyPath := fs.String("policy", "", "Policy JSON file. Default: ./etc/policy.json when present")
 	councilSize := fs.Int("council-size", 0, "Override policy council_size")
+	requiredVotes := fs.Int("required-votes", 0, "Override policy required_votes_for_decision")
 	evidenceStandard := fs.String("evidence-standard", "", "Override policy evidence_standard")
 	attorneyInstructionsPath := fs.String("attorney-instructions", "", "Attorney instructions markdown file. Default: ./attorney-instructions/default.md when present")
 	promptDir := fs.String("prompt-dir", "", "Prompt directory override. Files found here override ./prompts by matching filename")
@@ -74,6 +75,7 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 		OutputDir:                  *outDir,
 		PolicyPath:                 *policyPath,
 		CouncilSize:                *councilSize,
+		RequiredVotes:              *requiredVotes,
 		EvidenceStandard:           *evidenceStandard,
 		AttorneyInstructionsPath:   *attorneyInstructionsPath,
 		PromptDir:                  *promptDir,

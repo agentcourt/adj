@@ -20,6 +20,8 @@ The [core process interface](docs/service-interface.md) defines the executable, 
 
 The AAR command accepts `--council-request-attempts` so a supervising service can own retry policy without multiplying provider calls inside one case attempt.  The default remains four attempts for existing callers, while a supervisor can select one.  Direct provider failures carry stable classes for transient, authentication, request, and response-protocol failures, which removes the need for consumers to infer severity from error text.
 
+The AAR command also accepts `--required-votes` together with its existing council-size and evidence-standard overrides.  A supervising service can therefore apply one common council configuration to AAR and quick adjudication without creating a temporary policy file.  The runtime applies all three overrides before policy validation and council sampling.
+
 `run.json` and the command summary report `council_cost_usd` from successful OpenRouter generation metadata lookups.  The total includes council preflight and voting calls made by the direct council client.  A failed provider call can incur a charge that the generation lookup does not recover, so the reported amount can understate provider billing after a failed request.
 
 Verification covered the complete ARB Go test suite, the root and ARB Go vet suites, and the ARB command and Lean engine build.  Focused tests check the default and one-attempt settings, provider error classification, OpenRouter cost parsing, and command-summary fields.  The verification made no provider calls.

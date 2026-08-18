@@ -6,7 +6,7 @@ The runtime draws council members from a pool file, converts the draw into Lean 
 
 | Stage | Code path | Effect |
 |---|---|---|
-| CLI configuration | [case command](../runtime/cmd/aar/case.go) | Loads policy, applies `--council-size` and `--council-pool`, and builds proceeding options. |
+| CLI configuration | [case command](../runtime/cmd/aar/case.go) | Loads policy, applies the council-size, required-vote, and pool overrides, and builds proceeding options. |
 | Pool loading | [persona loader](../../common/persona/persona.go) | Reads the pool file, validates model ids, resolves persona files, and loads persona text. |
 | Sampling and preflight | [council preflight](../runtime/proceeding/council_preflight.go) | Shuffles the pool, rejects unavailable or incompatible direct-council candidates, and assigns seat ids. |
 | Engine initialization | [Lean engine](../engine/Main.lean) | Requires exact council length, requires unique member ids, rewrites all members to `seated`, and opens the case. |
@@ -17,7 +17,7 @@ The runtime draws council members from a pool file, converts the draw into Lean 
 
 `aar case` loads the complaint, resolves the shared `common` tree, loads the arbitration policy, and applies the explicit CLI overrides before it touches the council pool.  The policy controls council size and the decision threshold, so those values must be fixed before sampling begins.  The default policy in [the proceeding policy layer](../runtime/proceeding/policy.go) and [the repository policy file](../etc/policy.json) sets `council_size` to `5` and `required_votes_for_decision` to `3`.
 
-The case command accepts `--council-size` as a direct override, and then validates the resulting policy before it starts the run.  [Policy validation](../runtime/proceeding/policy.go) requires a positive council size, a positive threshold, a threshold no greater than the council size, and a strict-majority relation `2 * required_votes_for_decision > council_size`.  That validation determines the shape of the deciding body before the runtime reads a single council record from the pool.
+The case command accepts `--council-size` and `--required-votes` as direct overrides, and then validates the resulting policy before it starts the run.  [Policy validation](../runtime/proceeding/policy.go) requires a positive council size, a positive threshold, a threshold no greater than the council size, and a strict-majority relation `2 * required_votes_for_decision > council_size`.  That validation determines the shape of the deciding body before the runtime reads a single council record from the pool.
 
 ## Pool File
 

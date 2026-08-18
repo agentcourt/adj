@@ -55,6 +55,7 @@ type Options struct {
 	OutputDir                  string
 	PolicyPath                 string
 	CouncilSize                int
+	RequiredVotes              int
 	EvidenceStandard           string
 	AttorneyInstructionsPath   string
 	PromptDir                  string

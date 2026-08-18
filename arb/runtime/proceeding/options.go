@@ -63,6 +63,9 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	if opts.CouncilSize > 0 {
 		policy.CouncilSize = opts.CouncilSize
 	}
+	if opts.RequiredVotes > 0 {
+		policy.RequiredVotesForDecision = opts.RequiredVotes
+	}
 	if strings.TrimSpace(opts.EvidenceStandard) != "" {
 		policy.EvidenceStandard = strings.TrimSpace(opts.EvidenceStandard)
 	}

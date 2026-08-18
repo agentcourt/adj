@@ -162,6 +162,7 @@ Important flags:
 | `--file` | Initial evidence file or glob.  May repeat. |
 | `--policy` | Policy JSON file.  Defaults to `./etc/policy.json` when present. |
 | `--council-size` | Override `policy.council_size`. |
+| `--required-votes` | Override `policy.required_votes_for_decision`. |
 | `--evidence-standard` | Override `policy.evidence_standard`. |
 | `--attorney-instructions` | Standing lawyer instructions file. |
 | `--prompt-dir` | Prompt directory override. |
