@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"path/filepath"
 	"testing"
@@ -92,12 +91,12 @@ func newTimeoutTestRunner(t *testing.T) *Runner {
 	if err := st.CreateRun("run-1", "timeout-test"); err != nil {
 		t.Fatalf("create run: %v", err)
 	}
-	engineDir, err := filepath.Abs(filepath.Join("..", "..", "engine"))
+	enginePath, err := filepath.Abs(filepath.Join("..", "..", "engine", ".lake", "build", "bin", "adcengine"))
 	if err != nil {
-		t.Fatalf("resolve engine dir: %v", err)
+		t.Fatalf("resolve engine path: %v", err)
 	}
 	return &Runner{
-		lean:  lean.New([]string{"bash", "-lc", fmt.Sprintf("cd %s && lake exe adcengine", engineDir)}),
+		lean:  lean.New([]string{enginePath}),
 		store: st,
 		cfg: Config{
 			RunID: "run-1",

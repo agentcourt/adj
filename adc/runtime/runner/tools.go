@@ -515,7 +515,14 @@ func buildActionSchemas() map[string]map[string]any {
 		"argument",
 	), "deliver_closing_argument")
 
-	register(schemaObj(map[string]any{"text": map[string]any{"type": "string"}}, "text"), "file_bench_opinion")
+	register(schemaObj(
+		map[string]any{
+			"text":        map[string]any{"type": "string"},
+			"verdict_for": map[string]any{"type": "string", "enum": []string{"plaintiff", "defendant"}},
+		},
+		"text",
+		"verdict_for",
+	), "file_bench_opinion")
 
 	register(schemaObj(
 		map[string]any{

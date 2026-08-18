@@ -11,3 +11,4 @@ import Proofs.CertificateExamples
 import Proofs.CertificateOutcomeFacts
 import Proofs.CertificateOutcomeExamples
 import Proofs.DeclaratoryDamages
+import Proofs.AdjudicationResolution

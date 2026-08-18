@@ -34,6 +34,7 @@ func buildInitialState(scenario spec.FormalScenario, courtProfile courts.Profile
 			"filed_on":                      filedOn,
 			"auto_rule11":                   boolOrDefault(initialCase["auto_rule11"], false),
 			"status":                        "filed",
+			"resolution":                    "pending",
 			"trial_mode":                    "unset",
 			"phase":                         "none",
 			"last_pleading_served_on":       "",

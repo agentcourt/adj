@@ -312,6 +312,9 @@
 | `recordOpportunityPassFor_rule56_closes_window` | `Proofs/Rule56WindowBasics.lean` | low |  |
 | `reopenRule56Windows_clears_party` | `Proofs/Rule56WindowBasics.lean` | trivial |  |
 | `reopenRule56Windows_restores_eligibility` | `Proofs/Rule56Eligibility.lean` | medium | Shows that reopening the Rule 56 window restores eligibility when the ordinary prerequisites still hold. |
+| `resolveDeclaratoryForWinner_maps_burden_holder_to_demonstrated` | `Proofs/AdjudicationResolution.lean` | high | Connects a declaratory claim's burden holder to the common demonstrated result. |
+| `resolveDeclaratoryForWinner_maps_opponent_to_not_demonstrated` | `Proofs/AdjudicationResolution.lean` | high | Connects an opposing merits winner to the common not-demonstrated result. |
+| `resolveDeclaratoryForWinner_preserves_ordinary_cases` | `Proofs/AdjudicationResolution.lean` | medium | Keeps the proposition resolution field inactive for ordinary civil claims. |
 | `rule12GroundSummary_internationalClaw_omits_subject_matter_jurisdiction` | `Proofs/RecentCourtProfiles.lean` | low |  |
 | `rule56WindowEligible_false_when_window_closed` | `Proofs/Rule56Eligibility.lean` | low |  |
 | `rule56WindowEligible_true_when_prerequisites_hold` | `Proofs/Rule56Eligibility.lean` | medium | Captures the exact objective prerequisites for Rule 56 eligibility. |
@@ -330,6 +333,7 @@
 | `step_add_juror_rejects_duplicate_id` | `Proofs/JurySetup.lean` | low |  |
 | `step_advance_trial_phase_propagates_validator_error` | `Proofs/StepPostconditions.lean` | trivial |  |
 | `step_amended_complaint_after_initial_disclosures_reopens_rule56` | `Proofs/Rule56Lifecycle.lean` | low |  |
+| `step_bench_opinion_records_structured_resolution` | `Proofs/AdjudicationResolution.lean` | high | Shows that the required bench winner produces a durable declaratory resolution. |
 | `step_challenge_for_cause_granted_marks_excused` | `Proofs/VoirDire.lean` | low |  |
 | `step_decide_rule11_denied_cannot_include_sanction` | `Proofs/Rule11.lean` | low |  |
 | `step_decide_rule11_denied_without_sanction_records_order` | `Proofs/Rule11.lean` | low |  |
@@ -387,8 +391,12 @@
 | `step_file_rule60_enforces_one_year_window_for_60b1_to_60b3` | `Proofs/PostJudgmentMotions.lean` | low |  |
 | `step_file_rule60_requires_judgment_date` | `Proofs/PostJudgmentMotions.lean` | low |  |
 | `step_finalize_interrogatories_requires_prior_service` | `Proofs/Interrogatories.lean` | low |  |
+| `step_hung_jury_close_records_no_decision` | `Proofs/AdjudicationResolution.lean` | high | Shows that a hung-jury closure records the absence of a merits decision. |
 | `step_initial_disclosures_after_rule56_pass_keeps_rule56_unavailable` | `Proofs/Rule56Lifecycle.lean` | low |  |
 | `step_initial_disclosures_after_rule56_pass_preserves_closed_window` | `Proofs/Rule56Lifecycle.lean` | low |  |
+| `step_jury_judgment_records_demonstrated` | `Proofs/AdjudicationResolution.lean` | high | Shows that a jury verdict for the burden holder reaches the common demonstrated result. |
+| `step_jury_judgment_records_not_demonstrated` | `Proofs/AdjudicationResolution.lean` | high | Shows that a jury verdict for the opponent reaches the common not-demonstrated result. |
+| `step_jury_status_transition_records_demonstrated` | `Proofs/AdjudicationResolution.lean` | medium | Preserves the declaratory resolution on the direct jury-judgment transition path. |
 | `step_jurisdiction_dismissal_blocks_next_opportunity` | `Proofs/JurisdictionDismissal.lean` | medium | Connects jurisdiction dismissal to the public opportunity boundary. |
 | `step_jurisdiction_dismissal_closes_case_and_records_docket` | `Proofs/JurisdictionDismissal.lean` | medium | Shows that a jurisdiction dismissal has the expected closure and record effects. |
 | `step_jurisdiction_dismissal_requires_reasoning` | `Proofs/JurisdictionDismissal.lean` | low |  |
@@ -420,6 +428,7 @@
 | `step_settle_jury_instructions_records_docket` | `Proofs/JuryInstructions.lean` | low |  |
 | `step_settle_jury_instructions_requires_jury_charge` | `Proofs/JuryInstructions.lean` | low |  |
 | `step_settle_jury_instructions_requires_proposal` | `Proofs/JuryInstructions.lean` | low |  |
+| `step_settlement_records_no_decision` | `Proofs/AdjudicationResolution.lean` | high | Shows that settlement closes a declaratory case without a merits decision. |
 | `step_swear_jury_marks_required_count_sworn` | `Proofs/JurySetup.lean` | low |  |
 | `step_swear_jury_requires_configuration` | `Proofs/JurySetup.lean` | low |  |
 | `step_swear_jury_requires_enough_available_jurors` | `Proofs/JurySetup.lean` | low |  |

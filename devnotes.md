@@ -79,6 +79,10 @@ Proposition setup constructs the normalized claim, both role strategies, and the
 
 Proposition claims set `declaratory_only` to true, while an absent field defaults to false for existing civil claims.  The Lean engine rejects a positive damages amount at juror voting, monetary judgment, Rule 68, settlement, and final jury or bench disposition boundaries.  Focused race tests, Go vet, and the ADC engine and maintained proof builds passed with Lean 4.32.0 through the local resource-limited runner.
 
+The Lean case state records a declaratory `resolution` as `pending`, `demonstrated`, `not_demonstrated`, or `no_decision`.  Jury and default judgments derive a merits resolution from the winning party and the claim's burden holder, while a bench opinion supplies a required structured winner.  Hung juries, settlements, accepted offers, and procedural dismissals record `no_decision`, and ordinary civil claims retain `pending` because these values describe proposition adjudication.
+
+Verification built `adcengine` and the maintained `Proofs` target with Lean 4.32.0 through the local resource-limited runner.  The complete ADC runtime race tests, ADC runtime vet checks, command build, and diff check passed.  The timeout integration tests now execute the prebuilt engine binary, preserving the required runner boundary for every Lean build.
+
 ## Verification
 
 Verification begins by building each procedure's engine and proof targets with Lean 4.32.0 through the configured resource-limited runner.  The complete Go suite runs after the engine builds because an ADC integration test executes the engine.  Go verification also includes `go vet ./...` and builds of the three command packages, while documentation verification checks every relative Markdown link against the repository tree.

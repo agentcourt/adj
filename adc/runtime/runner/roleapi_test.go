@@ -271,6 +271,30 @@ func TestRoleAPIStatusExpiresPastDeadline(t *testing.T) {
 	}
 }
 
+func TestRoleAPIStatusIncludesAdjudicationResolution(t *testing.T) {
+	t.Parallel()
+
+	r := &Runner{
+		cfg: Config{CaseID: "case-1"},
+		state: map[string]any{
+			"case": map[string]any{
+				"status":     "judgment_entered",
+				"phase":      "post_verdict",
+				"resolution": "demonstrated",
+			},
+		},
+	}
+	api := newRoleAPIServer(r)
+	response := api.statusResponseLocked(roleAPIRequest{CaseID: "case-1", RoleID: "observer"})
+	caseStatus, ok := response["case_status"].(map[string]any)
+	if !ok {
+		t.Fatalf("case_status = %#v", response["case_status"])
+	}
+	if got := caseStatus["resolution"]; got != "demonstrated" {
+		t.Fatalf("resolution = %#v, want demonstrated", got)
+	}
+}
+
 func testRoleAPIWithActiveTurn(t *testing.T) (*roleAPIServer, *externalOpportunityTurn) {
 	t.Helper()
 

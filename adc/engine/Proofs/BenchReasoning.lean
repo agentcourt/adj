@@ -37,7 +37,9 @@ def fileBenchOpinionAction : CourtAction :=
   { action_type := "file_bench_opinion"
   , actor_role := "judge"
   , payload := Lean.Json.mkObj
-      [ ("text", Lean.Json.str "Findings and conclusions entered for judgment.") ]
+      [ ("text", Lean.Json.str "Findings and conclusions entered for judgment.")
+      , ("verdict_for", Lean.Json.str "plaintiff")
+      ]
   }
 
 def stepErrorMessage (r : Except String CourtState) : String :=

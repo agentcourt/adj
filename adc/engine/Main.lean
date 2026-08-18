@@ -178,6 +178,7 @@ structure CaseState where
   filed_on : String
   auto_rule11 : Bool := false
   status : String := "filed"
+  resolution : String := "pending"
   trial_mode : String := "unset"
   phase : String := "none"
   last_pleading_served_on : String := ""
@@ -1257,6 +1258,36 @@ def singleClaimDeclaratoryOnly (c : CaseState) : Except String Bool := do
   | some claim => getBoolD claim "declaratory_only" false
   | none => pure false
 
+def singleClaimBurdenHolder (c : CaseState) : Except String String := do
+  let claim ← match c.single_claim with
+    | some value => pure value
+    | none => throw "single_claim metadata required before resolution"
+  let burdenHolder ← getString claim "burden_holder"
+  let burden := normalizePartyToken burdenHolder
+  if burden = "plaintiff" || burden = "defendant" then
+    pure burden
+  else
+    throw s!"invalid single_claim.burden_holder: {burdenHolder}"
+
+def resolveDeclaratoryForWinner (c : CaseState) (winnerRaw : String) : Except String CaseState := do
+  let declaratoryOnly ← singleClaimDeclaratoryOnly c
+  if !declaratoryOnly then
+    pure c
+  else
+    let winner := normalizePartyToken winnerRaw
+    if !(winner = "plaintiff" || winner = "defendant") then
+      throw s!"invalid adjudication winner: {winnerRaw}"
+    let burdenHolder ← singleClaimBurdenHolder c
+    let resolution := if winner = burdenHolder then "demonstrated" else "not_demonstrated"
+    pure { c with resolution := resolution }
+
+def resolveDeclaratoryWithoutDecision (c : CaseState) : Except String CaseState := do
+  let declaratoryOnly ← singleClaimDeclaratoryOnly c
+  if declaratoryOnly then
+    pure { c with resolution := "no_decision" }
+  else
+    pure c
+
 def validateDeclaratoryDamages (c : CaseState) (damages : Float) : Except String Unit := do
   let declaratoryOnly ← singleClaimDeclaratoryOnly c
   if declaratoryOnly then
@@ -1438,6 +1469,7 @@ def publicCaseJson (c : CaseState) : Json :=
     ("judge", toJson c.judge),
     ("filed_on", toJson c.filed_on),
     ("status", toJson c.status),
+    ("resolution", toJson c.resolution),
     ("trial_mode", toJson c.trial_mode),
     ("phase", toJson c.phase),
     ("last_pleading_served_on", toJson c.last_pleading_served_on),
@@ -3088,7 +3120,7 @@ def trialCandidates (req : OpportunityRequest) (c : CaseState) (facts : TurnFact
   if c.phase = "verdict_return" then
     if c.trial_mode = "bench" && !facts.hasBenchOpinion &&
         roleAllowsAll req.roles "judge" ["file_bench_opinion"] then
-      actions := actions.concat (mkTurn "judge" "For case 0, file a bench opinion explaining findings of fact, conclusions of law, and why judgment should be entered." ["file_bench_opinion"] true maxSteps)
+      actions := actions.concat (mkTurn "judge" "For case 0, file a bench opinion with a structured verdict for plaintiff or defendant, explaining findings of fact, conclusions of law, and why judgment should be entered." ["file_bench_opinion"] true maxSteps)
     if roleAllowsAll req.roles "judge" ["advance_trial_phase"] &&
         ((c.trial_mode = "jury" && (c.jury_verdict.isSome || c.hung_jury.isSome)) ||
           (c.trial_mode = "bench" && facts.hasBenchOpinion)) then
@@ -3519,7 +3551,17 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
         if c.hung_jury.isSome then
           throw "cannot transition to judgment_entered after hung jury"
         validateDeclaratoryDamages c (judgmentAmountFromCaseState c)
-      pure <| updateCase s { c with status := nextStatus }
+      let cNext := { c with status := nextStatus }
+      let cResolved ←
+        if nextStatusV1 = CaseStatusV1.judgmentEntered then
+          match c.jury_verdict with
+          | some verdict => resolveDeclaratoryForWinner cNext verdict.verdict_for
+          | none => pure cNext
+        else if nextStatusV1 = CaseStatusV1.closed && c.hung_jury.isSome then
+          resolveDeclaratoryWithoutDecision cNext
+        else
+          pure cNext
+      pure <| updateCase s cResolved
   | "set_jury_configuration" =>
       requireRole a ["clerk"]
       if hasSwornJuror c.jurors then
@@ -4482,11 +4524,11 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       if disposition = "granted" && ground = "failure_to_state_a_claim" then
         if missingElements.isEmpty then
           throw "failure_to_state_a_claim dismissal requires missing_elements"
-      let cResolved :=
+      let cResolved ←
         if disposition = "granted" then
-          { c with status := "closed" }
+          resolveDeclaratoryWithoutDecision { c with status := "closed" }
         else
-          c
+          pure c
       let c1 := appendTrace (appendDocket cResolved "Rule 12 Order"
         s!"ground={ground} disposition={disposition} with_prejudice={if withPrejudice then "true" else "false"} leave_to_amend={if leaveToAmend then "true" else "false"} reasoning: {reasoning}")
         "decide_rule12_motion" disposition ["FRCP 12"]
@@ -4508,7 +4550,8 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       if trimString reasoning = "" then
         throw "subject-matter-jurisdiction dismissal requires reasoning"
       let leaveToAmend := (← getBoolOpt a.payload "leave_to_amend").getD false
-      let c1 := appendTrace (appendDocket { c with status := "closed" } "Subject-Matter Jurisdiction Dismissal"
+      let cClosed ← resolveDeclaratoryWithoutDecision { c with status := "closed" }
+      let c1 := appendTrace (appendDocket cClosed "Subject-Matter Jurisdiction Dismissal"
         s!"jurisdiction_basis_rejected={jurisdictionBasisRejected} leave_to_amend={if leaveToAmend then "true" else "false"} reasoning: {reasoning}")
         "dismiss_for_lack_of_subject_matter_jurisdiction" "dismissed" ["FRCP 12(h)(3)"]
       pure <| updateCase s c1
@@ -4886,7 +4929,8 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
             status := "accepted"
             accepted_at := some acceptedAt }
       let updatedOffers := setRule68OfferAt c.rule68_offers idx updatedOffer
-      let cAccepted := { c with rule68_offers := updatedOffers, status := "judgment_entered", monetary_judgment := offer.amount }
+      let cAccepted ← resolveDeclaratoryWithoutDecision
+        { c with rule68_offers := updatedOffers, status := "judgment_entered", monetary_judgment := offer.amount }
       let c1 := appendTrace (appendDocket cAccepted "Rule 68 Offer Accepted"
         s!"offer_id={offer.offer_id} accepted_by={actor} amount={offer.amount}")
         "accept_rule68_offer" "accepted" ["FRCP 68(a)"]
@@ -5018,7 +5062,9 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
         | some n => n
         | none => 0.0
       validateDeclaratoryDamages c amount
-      let cUpdated := { c with status := "judgment_entered", monetary_judgment := amount }
+      let winner := if againstParty = "plaintiff" then "defendant" else "plaintiff"
+      let cUpdated ← resolveDeclaratoryForWinner
+        { c with status := "judgment_entered", monetary_judgment := amount } winner
       let amountDesc := match amountOpt with
         | some n => toString n
         | none => "0"
@@ -5031,7 +5077,7 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       let reason := match getStringOpt a.payload "reason" with
         | .ok (some s) => s
         | _ => ""
-      let cClosed := { c with status := "closed" }
+      let cClosed ← resolveDeclaratoryWithoutDecision { c with status := "closed" }
       let c1 := appendTrace (appendDocket cClosed "Case dismissed (Rule 41)"
         s!"with_prejudice={withPrejudice} reason={reason}")
         "dismiss_case_rule41" (if withPrejudice then "with_prejudice" else "without_prejudice") ["FRCP 41(a)"]
@@ -5055,7 +5101,8 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       let amountDesc := match amountOpt with
         | some n => toString n
         | none => "0"
-      let cSettled := { c with status := nextStatus, monetary_judgment := amount }
+      let cSettled ← resolveDeclaratoryWithoutDecision
+        { c with status := nextStatus, monetary_judgment := amount }
       let c1 := appendTrace (appendDocket cSettled "Settlement entered"
         s!"amount={amountDesc} consent_judgment={consentJudgment} summary={summary}")
         "enter_settlement" "entered" ["FRCP 41(a)"]
@@ -5171,8 +5218,12 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
   | "file_bench_opinion" =>
       requireRole a ["judge"]
       let text ← getString a.payload "text"
+      let verdictFor ← getString a.payload "verdict_for"
+      if !(verdictFor = "plaintiff" || verdictFor = "defendant") then
+        throw s!"invalid bench verdict_for: {verdictFor}"
       validateBenchOpinion c text
-      let c1 := appendTrace (appendDocket c "Bench Opinion" text) "file_bench_opinion" "entered" ["FRCP 52(a)(1)"]
+      let cResolved ← resolveDeclaratoryForWinner c verdictFor
+      let c1 := appendTrace (appendDocket cResolved "Bench Opinion" text) "file_bench_opinion" verdictFor ["FRCP 52(a)(1)"]
       pure <| updateCase s c1
   | "enter_judgment" =>
       requireRole a ["judge"]
@@ -5182,7 +5233,14 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       let basis ← getString a.payload "basis"
       let amount := judgmentAmountFromCaseState c
       validateDeclaratoryDamages c amount
-      let c1 := appendTrace { c with monetary_judgment := amount } "enter_judgment" basis ["FRCP 58"]
+      let cResolved ← match c.jury_verdict with
+        | some verdict => resolveDeclaratoryForWinner c verdict.verdict_for
+        | none => pure c
+      let declaratoryOnly ← singleClaimDeclaratoryOnly cResolved
+      if declaratoryOnly &&
+          !(cResolved.resolution = "demonstrated" || cResolved.resolution = "not_demonstrated") then
+        throw "declaratory judgment requires a merits resolution"
+      let c1 := appendTrace { cResolved with monetary_judgment := amount } "enter_judgment" basis ["FRCP 58"]
       let c2 := appendDocket { c1 with status := "judgment_entered" } "Judgment entered" basis
       pure <| updateCase s c2
   | "hold_in_contempt" =>

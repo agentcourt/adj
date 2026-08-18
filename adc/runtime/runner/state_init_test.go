@@ -3,6 +3,7 @@ package runner
 import (
 	"testing"
 
+	"github.com/jsmorph/adj/adc/runtime/courts"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 )
 
@@ -10,6 +11,19 @@ func TestBuildSingleClaimDefaultsToCivilDamages(t *testing.T) {
 	claim := buildSingleClaim(nil)
 	if declaratoryOnly, ok := claim["declaratory_only"].(bool); !ok || declaratoryOnly {
 		t.Fatalf("declaratory_only = %#v, want false", claim["declaratory_only"])
+	}
+}
+
+func TestBuildInitialStateStartsWithPendingResolution(t *testing.T) {
+	t.Parallel()
+
+	state := buildInitialState(spec.FormalScenario{}, courts.PropositionTribunal())
+	caseState, ok := state["case"].(map[string]any)
+	if !ok {
+		t.Fatalf("case state = %#v", state["case"])
+	}
+	if got := caseState["resolution"]; got != "pending" {
+		t.Fatalf("resolution = %#v, want pending", got)
 	}
 }
 
