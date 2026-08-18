@@ -136,10 +136,11 @@ func TestCopyFileRejectsReplacement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Remove(path); err != nil {
+	replacement := filepath.Join(root, "replacement.txt")
+	if err := os.WriteFile(replacement, []byte("other"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, []byte("other"), 0o644); err != nil {
+	if err := os.Rename(replacement, path); err != nil {
 		t.Fatal(err)
 	}
 	_, err = copyFile(root, t.TempDir(), "document.txt", original, Limits{MaxFiles: 1, MaxFileBytes: 10, MaxTotalBytes: 10})
