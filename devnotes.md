@@ -59,6 +59,8 @@ Focused tests cover document import, record replacement, command argument handli
 
 A live OpenRouter simple case first returned 831 tokens and $0.0001018248 in its completed response, but the old client ignored both fields and wrote zero after an immediate generation-metadata request returned HTTP 404.  After correction, the same proposition completed in 2.6 seconds and recorded 385 input, 164 output, 53 reasoning, and 549 total tokens together with $0.0000578956.  The second run made no generation-metadata request because the completed response supplied its cost.
 
+A final OpenAI GPT-5 mini case used the committed code and one 189-byte text document.  It completed in 9.8 seconds and recorded 204 input, 597 output, 448 reasoning, and 801 total tokens in the response, terminal result, and provider-response event.  OpenAI supplied no monetary cost, and each record omitted the cost field.
+
 ## Quick Adjudication
 
 The `quick` procedure gives a proponent and an opponent one sequential argument each, then asks a selected council to vote through direct provider requests.  The opponent receives the proponent's argument, and neither lawyer receives a rebuttal or closing opportunity.  The procedure requires a strict-majority threshold, an evidence standard, explicit document limits, and explicit permission to use API-key billing.
