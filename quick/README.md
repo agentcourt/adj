@@ -2,7 +2,7 @@
 
 Quick adjudication gives a proponent and an opponent one argument each, then asks a council to vote on the proposition.  The procedure does not invoke Lean or add later argument rounds.  The caller must state the council size, required majority, evidence standard, document limits, and council request-spec pool.  The core samples distinct council records from that pool with cryptographic randomness and records the selected endpoint, model, and persona metadata.
 
-The core exposes one local HTTP API for the lawyer turns.  Its paths match the lawyer portion of the AAR case API, allowing the adjservices AAR MCP adapter to present the turns to external agents.  Council members run through direct Responses-compatible provider calls, which require `--allow-api-key`; before opening a lawyer turn, the core checks every selected endpoint for supported configuration and required credentials without sending a provider request.
+The core exposes one local HTTP API for the lawyer turns.  Its paths match the lawyer portion of the AAR case API, allowing the adjservices AAR MCP adapter to present the turns to external agents.  Council members run through direct Responses-compatible provider calls, which require `--allow-api-key`.  Before opening a lawyer turn, the core checks every selected endpoint for supported configuration and required credentials without sending a provider request.
 
 ## Command
 
@@ -29,7 +29,18 @@ Council requests run sequentially by default.  `--parallel-council` starts all s
 
 ## Records
 
-The output directory must be empty.  `input.json` records the resolved inputs, including whether council requests run in parallel; `runtime.json` records the local case API address; `documents.json` describes the imported documents; `events.ndjson` records ordered events; `transcript.json` contains the two arguments and council votes; and `run.json` contains the current or final result.  `case-manifest.json` supports case discovery by adjservices.
+The output directory must be empty.  The core writes the current result as the case progresses and leaves a complete terminal record.  `case-manifest.json` supports case discovery by adjservices.
+
+| Path | Contents |
+| --- | --- |
+| `case-manifest.json` | Procedure, case, run, version, start time, and case API address. |
+| `input.json` | Resolved proposition, policy, limits, identifiers, and council mode. |
+| `runtime.json` | Local case API address and runtime identity. |
+| `documents.json` and `documents/` | Imported document metadata, hashes, and bytes. |
+| `events.ndjson` | Ordered procedure events. |
+| `work-notes.jsonl` | Private lawyer notes. |
+| `transcript.json` | The two arguments and council votes. |
+| `run.json` | Current or terminal result and provider accounting. |
 
 Council records contain the selected endpoint/model reference, persona filename, and available provider token usage and cost for each vote.  The terminal `provider` object counts logical council requests and separately counts responses that supplied usage or cost, allowing its totals to represent partial observations.  Provider request headers remain in memory for the provider call and do not appear in the durable council, transcript, event, or run records.
 

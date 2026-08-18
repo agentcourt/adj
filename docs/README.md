@@ -1,6 +1,6 @@
 # Repository Docs
 
-This directory contains notes spanning more than one core procedure.  Procedure-specific rules and proof references remain under `adc/docs/`, `arb/docs/`, and `arbd/docs/`.  The current proof note records proof and replay-certificate status across ADC, ARB, and AARD.
+This directory contains interfaces and formal-method notes spanning more than one core procedure.  Procedure-specific rules and proof references remain under `adc/docs/`, `arb/docs/`, and `arbd/docs/`, while simple and quick keep their operating references beside their code.  The proof note covers ADC, ARB, and AARD because those procedures have Lean engines and replay certificates.
 
 ## Documents
 
