@@ -55,7 +55,8 @@ func terminalResult(opts Options, startedAt time.Time, manifest documents.Manife
 		Error:            strings.TrimSpace(errorMessage),
 		ErrorClass:       strings.TrimSpace(errorClass),
 		ResponseID:       response.ResponseID,
-		ProviderCostUSD:  response.OpenRouterCostUSD,
+		ProviderUsage:    response.TokenUsage(),
+		ProviderCostUSD:  response.CostUSD(),
 		Documents:        manifest,
 	}
 }

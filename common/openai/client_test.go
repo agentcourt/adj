@@ -303,6 +303,40 @@ func TestParseResponse(t *testing.T) {
 	}
 }
 
+func TestParseResponseRetainsUsageAndInlineCost(t *testing.T) {
+	t.Parallel()
+
+	var response responses.Response
+	if err := json.Unmarshal([]byte(`{
+  "id":"gen-1",
+  "output":[],
+  "usage":{
+    "input_tokens":386,
+    "input_tokens_details":{"cached_tokens":17},
+    "output_tokens":445,
+    "output_tokens_details":{"reasoning_tokens":334},
+    "total_tokens":831,
+    "cost":0.0001018248
+  }
+}`), &response); err != nil {
+		t.Fatal(err)
+	}
+	got, err := parseResponse(&response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantUsage := Usage{InputTokens: 386, CachedInputTokens: 17, OutputTokens: 445, ReasoningTokens: 334, TotalTokens: 831}
+	if got.Usage != wantUsage {
+		t.Fatalf("usage = %+v, want %+v", got.Usage, wantUsage)
+	}
+	if usage := got.TokenUsage(); usage == nil || *usage != wantUsage {
+		t.Fatalf("TokenUsage = %+v, want %+v", usage, wantUsage)
+	}
+	if cost := got.CostUSD(); cost == nil || *cost != 0.0001018248 {
+		t.Fatalf("cost = %v, want 0.0001018248", cost)
+	}
+}
+
 func TestResponseParamsSetsMaxOutputTokens(t *testing.T) {
 	t.Parallel()
 

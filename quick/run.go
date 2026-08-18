@@ -402,14 +402,24 @@ func (r *runner) recordCouncilVote(vote Vote) error {
 		r.transcript.Votes = r.transcript.Votes[:len(r.transcript.Votes)-1]
 		return err
 	}
-	return r.appendEventLocked("council_vote", "council", map[string]any{
+	payload := map[string]any{
 		"member_id":    vote.MemberID,
 		"model":        vote.Model,
 		"persona_file": vote.PersonaFile,
 		"vote":         vote.Vote,
 		"rationale":    vote.Rationale,
 		"response_id":  vote.ResponseID,
-	})
+	}
+	if vote.ProviderUsage != nil {
+		payload["provider_usage"] = vote.ProviderUsage
+	}
+	if vote.ProviderCostUSD != nil {
+		payload["provider_cost_usd"] = *vote.ProviderCostUSD
+	}
+	if vote.ProviderMetadataError != "" {
+		payload["provider_metadata_error"] = vote.ProviderMetadataError
+	}
+	return r.appendEventLocked("council_vote", "council", payload)
 }
 
 func (r *runner) recordEvent(eventType, role string, payload map[string]any) error {
@@ -482,6 +492,7 @@ func (r *runner) result(caseAPIBase string, runErr error) Result {
 		Arguments:        append([]Argument(nil), r.transcript.Arguments...),
 		Votes:            append([]Vote(nil), r.transcript.Votes...),
 		Events:           append([]Event(nil), r.events...),
+		CouncilUsage:     r.client.TotalUsage(),
 		CouncilCostUSD:   r.client.TotalCostUSD(),
 	}
 	if runErr != nil {

@@ -20,7 +20,8 @@ type responseClient interface {
 		[]map[string]any,
 		string,
 	) (openaiapi.Response, error)
-	TotalCostUSD() float64
+	TotalUsage() *openaiapi.Usage
+	TotalCostUSD() *float64
 }
 
 type councilEndpointPreflighter interface {
@@ -32,7 +33,11 @@ type directClient struct {
 	maxAttempts  int
 	mu           sync.Mutex
 	clients      map[string]*openaiapi.Client
+	totalUsage   openaiapi.Usage
+	usageKnown   bool
 	totalCostUSD float64
+	costKnown    bool
+	responses    int
 }
 
 func newDirectClient(timeout time.Duration, maxAttempts int) *directClient {
@@ -58,10 +63,31 @@ func (c *directClient) CreateResponseWithRequestSpec(
 	if err != nil {
 		return openaiapi.Response{}, err
 	}
-	c.mu.Lock()
-	c.totalCostUSD += response.OpenRouterCostUSD
-	c.mu.Unlock()
+	c.recordResponse(response)
 	return response, nil
+}
+
+func (c *directClient) recordResponse(response openaiapi.Response) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.totalUsage.InputTokens += response.Usage.InputTokens
+	c.totalUsage.CachedInputTokens += response.Usage.CachedInputTokens
+	c.totalUsage.OutputTokens += response.Usage.OutputTokens
+	c.totalUsage.ReasoningTokens += response.Usage.ReasoningTokens
+	c.totalUsage.TotalTokens += response.Usage.TotalTokens
+	if c.responses == 0 {
+		c.usageKnown = true
+		c.costKnown = true
+	}
+	c.responses++
+	if response.TokenUsage() == nil {
+		c.usageKnown = false
+	}
+	if cost := response.CostUSD(); cost != nil {
+		c.totalCostUSD += *cost
+	} else {
+		c.costKnown = false
+	}
 }
 
 func (c *directClient) clientForEndpoint(endpoint string) (*openaiapi.Client, error) {
@@ -82,10 +108,24 @@ func (c *directClient) clientForEndpoint(endpoint string) (*openaiapi.Client, er
 	return client, nil
 }
 
-func (c *directClient) TotalCostUSD() float64 {
+func (c *directClient) TotalUsage() *openaiapi.Usage {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.totalCostUSD
+	if c.responses == 0 || !c.usageKnown {
+		return nil
+	}
+	usage := c.totalUsage
+	return &usage
+}
+
+func (c *directClient) TotalCostUSD() *float64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.responses == 0 || !c.costKnown {
+		return nil
+	}
+	cost := c.totalCostUSD
+	return &cost
 }
 
 func (c *directClient) PreflightCouncilEndpoints(council []CouncilMember) error {

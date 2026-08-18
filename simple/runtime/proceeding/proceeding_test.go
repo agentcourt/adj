@@ -78,7 +78,10 @@ func TestRunWritesCompleteRecord(t *testing.T) {
 		}},
 		OpenRouterMetadata:   map[string]any{"provider": "test"},
 		OpenRouterGeneration: map[string]any{"data": map[string]any{"total_cost": 0.0125}},
+		Usage:                openaiapi.Usage{InputTokens: 10, OutputTokens: 5, TotalTokens: 15},
+		UsageKnown:           true,
 		OpenRouterCostUSD:    0.0125,
+		OpenRouterCostKnown:  true,
 	}
 	client := &fakeResponseClient{response: response}
 	factory := &fakeClientFactory{client: client}
@@ -93,7 +96,7 @@ func TestRunWritesCompleteRecord(t *testing.T) {
 	if result.Status != "ok" || result.Decision == nil || result.Decision.Value != "demonstrated" {
 		t.Fatalf("result = %#v", result)
 	}
-	if result.ProviderCostUSD != 0.0125 || result.ResponseID != "resp-1" {
+	if result.ProviderCostUSD == nil || *result.ProviderCostUSD != 0.0125 || result.ResponseID != "resp-1" {
 		t.Fatalf("provider result = %#v", result)
 	}
 	if factory.newCalls != 1 || client.calls != 1 {
@@ -134,6 +137,15 @@ func TestRunWritesCompleteRecord(t *testing.T) {
 	for _, required := range []string{"resp-1", `\"id\":\"resp-1\"`, "provider_metadata", "0.0125"} {
 		if !strings.Contains(string(responseWire), required) {
 			t.Fatalf("model response omits %q\n%s", required, responseWire)
+		}
+	}
+	events, err := os.ReadFile(filepath.Join(opts.OutputDir, "events.ndjson"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{`"provider_usage"`, `"input_tokens":10`, `"provider_cost_usd":0.0125`} {
+		if !strings.Contains(string(events), required) {
+			t.Fatalf("events omit %q\n%s", required, events)
 		}
 	}
 	for _, name := range []string{
@@ -179,6 +191,22 @@ func TestRunRejectsMalformedDecisionWithoutAnotherRequest(t *testing.T) {
 	}
 	if !strings.Contains(string(raw), string(openaiapi.ProviderErrorProtocol)) || !strings.Contains(string(raw), "resp-bad") {
 		t.Fatalf("model response did not preserve protocol error and response: %s", raw)
+	}
+	if strings.Contains(string(raw), "recovered_cost_usd") {
+		t.Fatalf("model response represented an unknown provider cost: %s", raw)
+	}
+	if strings.Contains(string(raw), "provider_usage") {
+		t.Fatalf("model response represented unknown provider usage: %s", raw)
+	}
+	runRecord, readErr := os.ReadFile(filepath.Join(opts.OutputDir, "run.json"))
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if strings.Contains(string(runRecord), "provider_cost_usd") {
+		t.Fatalf("run record represented an unknown provider cost: %s", runRecord)
+	}
+	if strings.Contains(string(runRecord), "provider_usage") {
+		t.Fatalf("run record represented unknown provider usage: %s", runRecord)
 	}
 }
 

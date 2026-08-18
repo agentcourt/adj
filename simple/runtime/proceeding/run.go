@@ -140,7 +140,19 @@ func RunWithClientFactory(ctx context.Context, opts Options, factory ClientFacto
 	if providerErr != nil {
 		return finishError(resolved, startedAt, documentManifest, response, errorClass(providerErr), providerErr, recorder)
 	}
-	if err := recorder.append("provider_response_received", map[string]any{"response_id": response.ResponseID}); err != nil {
+	responseEvent := map[string]any{
+		"response_id": response.ResponseID,
+	}
+	if usage := response.TokenUsage(); usage != nil {
+		responseEvent["provider_usage"] = usage
+	}
+	if cost := response.CostUSD(); cost != nil {
+		responseEvent["provider_cost_usd"] = *cost
+	}
+	if response.OpenRouterGenerationError != "" {
+		responseEvent["provider_metadata_error"] = response.OpenRouterGenerationError
+	}
+	if err := recorder.append("provider_response_received", responseEvent); err != nil {
 		return finishError(resolved, startedAt, documentManifest, response, "storage", err, recorder)
 	}
 	decision, err := parseDecision(response)
@@ -318,7 +330,8 @@ func modelResponseRecord(response openaiapi.Response, err error) ModelResponseRe
 		ProviderMetadata:        response.OpenRouterMetadata,
 		ProviderGeneration:      response.OpenRouterGeneration,
 		ProviderGenerationError: response.OpenRouterGenerationError,
-		RecoveredCostUSD:        response.OpenRouterCostUSD,
+		ProviderUsage:           response.TokenUsage(),
+		RecoveredCostUSD:        response.CostUSD(),
 		Error:                   errorText(err),
 		ErrorClass:              errorClass(err),
 	}

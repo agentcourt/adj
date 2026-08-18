@@ -48,14 +48,16 @@ The tool schema requires `decision` and `rationale`, rejects other properties, a
 | `documents.json` | Ordered document paths, media types, sizes, and hashes. |
 | `documents/` | Imported document bytes with their original hierarchy. |
 | `model-request.json` | Redacted request specification, fixed prompt, proposition, document references, and tool schema. |
-| `model-response.json` | Raw response, response identifier, parsed calls, provider metadata, recovered cost, and typed error. |
+| `model-response.json` | Raw response, response identifier, parsed calls, provider metadata, token usage, available provider cost, and typed error. |
 | `decision.json` | Parsed decision or terminal decision error. |
 | `state.json` | Terminal procedure state. |
 | `events.ndjson` | Ordered initialization, provider, decision, and failure events. |
 | `transcript.md` | Human-readable proposition, document index, and decision. |
 | `digest.md` | Human-readable case summary. |
-| `run.json` | Atomic terminal result. |
+| `run.json` | Atomic terminal result, including token usage and available provider cost. |
 
 The request record redacts every request-header value because a custom header may contain a credential.  It refers to imported documents by path, size, media type, and hash instead of copying their text or data URLs.  The document directory and manifest retain the exact request material.
+
+Provider usage records input, cached-input, output, reasoning, and total token counts from the completed response.  OpenRouter cost comes from the completed response when present and otherwise from available generation metadata.  The records omit usage or cost that the provider did not supply, preserving the distinction between unknown and zero.
 
 The command writes one JSON result to standard output.  Exit status zero identifies a valid terminal decision, while configuration, input, storage, provider, cancellation, and response-protocol errors return a nonzero status.  Once the output directory exists, document, media, and provider failures write terminal state and `run.json` when the filesystem permits those records.

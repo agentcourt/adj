@@ -35,10 +35,37 @@ type Response struct {
 	ToolCalls                 []ToolCall
 	ResponseID                string
 	RawJSON                   string
+	Usage                     Usage
+	UsageKnown                bool
 	OpenRouterMetadata        map[string]any
 	OpenRouterGeneration      map[string]any
 	OpenRouterGenerationError string
 	OpenRouterCostUSD         float64
+	OpenRouterCostKnown       bool
+}
+
+type Usage struct {
+	InputTokens       int64 `json:"input_tokens"`
+	CachedInputTokens int64 `json:"cached_input_tokens,omitempty"`
+	OutputTokens      int64 `json:"output_tokens"`
+	ReasoningTokens   int64 `json:"reasoning_tokens,omitempty"`
+	TotalTokens       int64 `json:"total_tokens"`
+}
+
+func (r Response) CostUSD() *float64 {
+	if !r.OpenRouterCostKnown {
+		return nil
+	}
+	cost := r.OpenRouterCostUSD
+	return &cost
+}
+
+func (r Response) TokenUsage() *Usage {
+	if !r.UsageKnown {
+		return nil
+	}
+	usage := r.Usage
+	return &usage
 }
 
 type ProviderErrorClass string
@@ -341,6 +368,9 @@ func (c *Client) attachOpenRouterGeneration(ctx context.Context, resp *Response)
 	if resp == nil || strings.TrimSpace(resp.ResponseID) == "" {
 		return
 	}
+	if resp.OpenRouterCostKnown {
+		return
+	}
 	apiKey := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY"))
 	if apiKey == "" {
 		return
@@ -384,16 +414,27 @@ func (c *Client) attachOpenRouterGeneration(ctx context.Context, resp *Response)
 		return
 	}
 	resp.OpenRouterGeneration = payload
-	resp.OpenRouterCostUSD = openRouterGenerationCost(payload)
+	cost, ok := openRouterGenerationCostValue(payload)
+	if !ok {
+		resp.OpenRouterGenerationError = "OpenRouter generation metadata omitted nonnegative data.total_cost"
+		return
+	}
+	resp.OpenRouterCostUSD = cost
+	resp.OpenRouterCostKnown = true
 }
 
 func openRouterGenerationCost(payload map[string]any) float64 {
-	data, _ := payload["data"].(map[string]any)
-	cost, _ := data["total_cost"].(float64)
-	if cost < 0 {
-		return 0
-	}
+	cost, _ := openRouterGenerationCostValue(payload)
 	return cost
+}
+
+func openRouterGenerationCostValue(payload map[string]any) (float64, bool) {
+	data, _ := payload["data"].(map[string]any)
+	cost, ok := data["total_cost"].(float64)
+	if !ok || cost < 0 {
+		return 0, false
+	}
+	return cost, true
 }
 
 func parseResponse(res *responses.Response) (Response, error) {
@@ -404,12 +445,26 @@ func parseResponse(res *responses.Response) (Response, error) {
 		ResponseID: res.ID,
 		Text:       res.OutputText(),
 		RawJSON:    res.RawJSON(),
+		UsageKnown: res.JSON.Usage.Valid(),
+		Usage: Usage{
+			InputTokens:       res.Usage.InputTokens,
+			CachedInputTokens: res.Usage.InputTokensDetails.CachedTokens,
+			OutputTokens:      res.Usage.OutputTokens,
+			ReasoningTokens:   res.Usage.OutputTokensDetails.ReasoningTokens,
+			TotalTokens:       res.Usage.TotalTokens,
+		},
 	}
 	if out.RawJSON != "" {
 		var raw map[string]any
 		if err := json.Unmarshal([]byte(out.RawJSON), &raw); err == nil {
 			if metadata, ok := raw["openrouter_metadata"].(map[string]any); ok {
 				out.OpenRouterMetadata = metadata
+			}
+			if usage, ok := raw["usage"].(map[string]any); ok {
+				if cost, ok := usage["cost"].(float64); ok && cost >= 0 {
+					out.OpenRouterCostUSD = cost
+					out.OpenRouterCostKnown = true
+				}
 			}
 		}
 	}

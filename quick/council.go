@@ -87,13 +87,16 @@ func parseVote(member CouncilMember, response openaiapi.Response, maxResponseByt
 		return Vote{}, fmt.Errorf("rationale must be non-empty")
 	}
 	return Vote{
-		MemberID:    member.MemberID,
-		Model:       member.Model,
-		PersonaFile: member.PersonaFile,
-		Vote:        vote,
-		Rationale:   rationale,
-		ResponseID:  response.ResponseID,
-		SubmittedAt: time.Now().UTC(),
+		MemberID:              member.MemberID,
+		Model:                 member.Model,
+		PersonaFile:           member.PersonaFile,
+		Vote:                  vote,
+		Rationale:             rationale,
+		ResponseID:            response.ResponseID,
+		ProviderUsage:         response.TokenUsage(),
+		ProviderCostUSD:       response.CostUSD(),
+		ProviderMetadataError: response.OpenRouterGenerationError,
+		SubmittedAt:           time.Now().UTC(),
 	}, nil
 }
 

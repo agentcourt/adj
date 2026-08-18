@@ -26,4 +26,4 @@ Run one case with an environment credential already configured for the selected 
   --max-documents-bytes 104857600
 ```
 
-The output directory contains the imported bytes, hashes, model request description, raw provider response, parsed decision, terminal state, events, transcript, digest, and atomic `run.json`.  The model-request record contains document references, hashes, and redacted request-header values, while `documents/` contains the exact imported bytes.  [The manual](manual.md) defines the flags, accepted media, error behavior, and record files.
+The output directory contains the imported bytes, hashes, model request description, raw provider response, parsed decision, terminal state, events, transcript, digest, and atomic `run.json`.  The model-response and run records include standardized token usage and provider cost when the provider supplied them, while the model-request record contains document references, hashes, and redacted request-header values.  The `documents/` directory contains the exact imported bytes, and [the manual](manual.md) defines the flags, accepted media, error behavior, and record files.

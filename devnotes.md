@@ -22,7 +22,7 @@ The AAR command accepts `--council-request-attempts` so a supervising service ca
 
 The AAR command also accepts `--required-votes` together with its existing council-size and evidence-standard overrides.  A supervising service can therefore apply one common council configuration to AAR and quick adjudication without creating a temporary policy file.  The runtime applies all three overrides before policy validation and council sampling.
 
-`run.json` and the command summary report `council_cost_usd` from successful OpenRouter generation metadata lookups.  The total includes council preflight and voting calls made by the direct council client.  A failed provider call can incur a charge that the generation lookup does not recover, so the reported amount can understate provider billing after a failed request.
+`run.json` and the command summary report `council_cost_usd` when OpenRouter returns a cost in the completed Responses payload or later generation metadata.  The total includes council preflight and voting calls made by the direct council client.  A failed provider call can incur a charge that neither response source returns, so the reported amount can understate provider billing after a failed request.
 
 Verification covered the complete ARB Go test suite, the root and ARB Go vet suites, and the ARB command and Lean engine build.  Focused tests check the default and one-attempt settings, provider error classification, OpenRouter cost parsing, and command-summary fields.  The verification made no provider calls.
 
@@ -53,7 +53,11 @@ The `simple` procedure decides one proposition through one direct provider reque
 
 `common/documents` imports regular files in bytewise path order, rejects symbolic links and source changes, and records byte counts, media types, and SHA-256 hashes.  Its verified reader confines each path to the imported root and checks type, size, and digest before returning the bytes to a procedure.  `common/recordio` supplies the JSON, atomic JSON, and append-only JSON-line operations used by the new procedures, while the simple record excludes document contents, encoded media, and request-header values from `model-request.json`.
 
+The shared provider response retains input, cached-input, output, reasoning, and total token counts from the completed Responses payload.  It reads OpenRouter's inline `usage.cost` before considering the generation-metadata endpoint, which can return 404 while OpenRouter indexes a completed generation.  Simple records omit unknown provider usage and cost instead of representing either as zero.
+
 Focused tests cover document import, record replacement, command argument handling, input-media construction, one-request success, typed provider failure, malformed tool output, and failure records.  Race tests, Go vet, and a command build also passed.  Verification used fake provider clients and made no external provider calls.
+
+A live OpenRouter simple case first returned 831 tokens and $0.0001018248 in its completed response, but the old client ignored both fields and wrote zero after an immediate generation-metadata request returned HTTP 404.  After correction, the same proposition completed in 2.6 seconds and recorded 385 input, 164 output, 53 reasoning, and 549 total tokens together with $0.0000578956.  The second run made no generation-metadata request because the completed response supplied its cost.
 
 ## Quick Adjudication
 
@@ -63,11 +67,15 @@ The core samples council records without replacement through `crypto/rand`, givi
 
 The private lawyer API uses the AAR lawyer paths and tool shapes so `adjservices` can present either procedure through the same MCP adapter.  Each lawyer can inspect immutable staged documents through list, stat, and range-read operations, and the shared verified reader rejects a changed file before returning its bytes.  The council prompt contains the two accepted arguments and verified document contents, and each selected member must submit one structured `demonstrated` or `not_demonstrated` vote with a rationale.
 
-Production startup initializes every distinct selected council endpoint before the case API opens, which detects a missing credential or unsupported endpoint without sending a provider request.  The durable record contains resolved input, runtime identity, document metadata, ordered events, private lawyer work notes, both arguments, council votes, provider response identifiers, recovered cost, and the terminal result.  Request headers and query parameters remain in memory and do not enter council metadata or other durable records.
+Production startup initializes every distinct selected council endpoint before the case API opens, which detects a missing credential or unsupported endpoint without sending a provider request.  Each vote records available provider token usage and cost, while the terminal result omits either council total when any successful response lacks the corresponding data.  The durable record also contains resolved input, runtime identity, document metadata, ordered events, private lawyer work notes, both arguments, provider response identifiers, and the terminal result.
+
+Request headers and query parameters remain in memory and do not enter council metadata or other durable records.  A provider-metadata retrieval error remains attached to its vote when the completed response supplies no inline cost.  Callers can therefore distinguish an unknown cost from a zero cost and inspect the retrieval failure without searching process logs.
 
 Council requests run sequentially by default.  The optional parallel mode starts the selected requests together, cancels outstanding request contexts after the first observed failure, waits for every started request to return, and records successful votes in roster order.  `input.json` and the `council_started` event record the resolved mode.
 
 Focused tests cover lawyer-turn deadlines, cancellation, concurrent submissions, durable event order, document verification, majority results, complete pool validation before sampling, endpoint tool support, explicit billing authorization, typed protocol errors, error redaction, terminal shutdown and response-write failures, complete early command results, and short output writes.  Council-mode tests verify sequential execution by default, concurrent starts, roster-order persistence after reverse-order completion, and outstanding-request cancellation after a provider failure.  Focused ordinary and race tests, Go vet, a command build, repeated concurrency tests, and the diff check passed; verification used fake provider clients and local HTTP calls and made no external provider request.
+
+A live quick case imported one 189-byte text document, and both Codex lawyers used the stat and range-read operations before filing.  The sequential one-member council recorded 909 input, 439 output, 279 reasoning, and 1,348 total tokens together with $0.0001426026.  The complete service run took 72.5 seconds and returned `not_demonstrated`, consistent with the document naming Valve K-17 rather than the proposition's east pump.
 
 ## ADC Proposition Input
 

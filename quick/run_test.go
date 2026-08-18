@@ -33,7 +33,6 @@ type fakeResponseClient struct {
 	mu        sync.Mutex
 	responses []openaiapi.Response
 	requests  []capturedRequest
-	cost      float64
 }
 
 func (c *fakeResponseClient) CreateResponseWithRequestSpec(
@@ -54,7 +53,8 @@ func (c *fakeResponseClient) CreateResponseWithRequestSpec(
 	return response, nil
 }
 
-func (c *fakeResponseClient) TotalCostUSD() float64 { return c.cost }
+func (c *fakeResponseClient) TotalUsage() *openaiapi.Usage { return nil }
+func (c *fakeResponseClient) TotalCostUSD() *float64       { return nil }
 
 type timedCouncilClient struct {
 	mu        sync.Mutex
@@ -91,7 +91,8 @@ func (c *timedCouncilClient) CreateResponseWithRequestSpec(
 	}
 }
 
-func (c *timedCouncilClient) TotalCostUSD() float64 { return 0 }
+func (c *timedCouncilClient) TotalUsage() *openaiapi.Usage { return nil }
+func (c *timedCouncilClient) TotalCostUSD() *float64       { return nil }
 
 type controlledCouncilClient struct {
 	started   chan string
@@ -131,7 +132,8 @@ func (c *controlledCouncilClient) CreateResponseWithRequestSpec(
 	}
 }
 
-func (c *controlledCouncilClient) TotalCostUSD() float64 { return 0 }
+func (c *controlledCouncilClient) TotalUsage() *openaiapi.Usage { return nil }
+func (c *controlledCouncilClient) TotalCostUSD() *float64       { return nil }
 
 func TestRunQuickCase(t *testing.T) {
 	root := t.TempDir()
@@ -144,11 +146,18 @@ func TestRunQuickCase(t *testing.T) {
 	}
 	poolPath := writeCouncilPool(t, root, 3)
 	outputDir := filepath.Join(root, "out")
-	client := &fakeResponseClient{responses: []openaiapi.Response{
+	responses := []openaiapi.Response{
 		voteResponse("response-1", "demonstrated", "The record supports the proposition."),
 		voteResponse("response-2", "not_demonstrated", "The opponent identifies uncertainty."),
 		voteResponse("response-3", "demonstrated", "The evidence meets the stated standard."),
-	}}
+	}
+	for index := range responses {
+		responses[index].Usage = openaiapi.Usage{InputTokens: int64(index + 1), OutputTokens: 1, TotalTokens: int64(index + 2)}
+		responses[index].UsageKnown = true
+		responses[index].OpenRouterCostUSD = float64(index+1) / 10_000
+		responses[index].OpenRouterCostKnown = true
+	}
+	client := &fakeResponseClient{responses: responses}
 	cfg := Config{
 		Proposition:            "The sky is blue.",
 		DocumentsDir:           documentsDir,
@@ -248,6 +257,28 @@ func TestRunQuickCase(t *testing.T) {
 	}
 	assertRecordsDoNotContain(t, outputDir, "secret-header-value")
 	assertRecordsDoNotContain(t, outputDir, "secret-query-value")
+	runRecord, err := os.ReadFile(filepath.Join(outputDir, "run.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(runRecord), "council_cost_usd") {
+		t.Fatalf("run record represented an unknown council cost: %s", runRecord)
+	}
+	if strings.Contains(string(runRecord), "council_usage") {
+		t.Fatalf("run record represented unknown aggregate council usage: %s", runRecord)
+	}
+	events := readEvents(t, filepath.Join(outputDir, "events.ndjson"))
+	for _, event := range events {
+		if event.Type != "council_vote" {
+			continue
+		}
+		if _, ok := event.Payload["provider_usage"]; !ok {
+			t.Fatalf("council vote event omitted provider usage: %#v", event)
+		}
+		if _, ok := event.Payload["provider_cost_usd"]; !ok {
+			t.Fatalf("council vote event omitted provider cost: %#v", event)
+		}
+	}
 }
 
 func TestCouncilRequestsAreSequentialByDefault(t *testing.T) {
@@ -872,6 +903,65 @@ func TestMalformedCouncilResponseHasProtocolClass(t *testing.T) {
 	}
 	if got := openaiapi.ErrorClass(err); got != openaiapi.ProviderErrorProtocol {
 		t.Fatalf("error class = %q, error = %v", got, err)
+	}
+}
+
+func TestCouncilVoteRecordsProviderManagementData(t *testing.T) {
+	response := voteResponse("response-1", "demonstrated", "supported")
+	response.Usage = openaiapi.Usage{InputTokens: 100, CachedInputTokens: 20, OutputTokens: 30, ReasoningTokens: 10, TotalTokens: 130}
+	response.UsageKnown = true
+	response.OpenRouterCostUSD = 0.0002
+	response.OpenRouterCostKnown = true
+	client := &fakeResponseClient{responses: []openaiapi.Response{response}}
+	runner := &runner{
+		cfg:    Config{CouncilTimeout: time.Second, InvalidAttemptLimit: 1, MaxResponseBytes: 1024},
+		client: client,
+		transcript: Transcript{Arguments: []Argument{
+			{Role: "plaintiff", Text: "for"},
+			{Role: "defendant", Text: "against"},
+		}},
+	}
+	member := CouncilMember{MemberID: "C1", Model: "openrouter://model", RequestSpec: &modelrequest.Spec{Endpoint: "openrouter", Model: "model"}}
+	vote, err := runner.requestVote(context.Background(), member)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vote.ProviderUsage == nil || *vote.ProviderUsage != response.Usage {
+		t.Fatalf("usage = %+v, want %+v", vote.ProviderUsage, response.Usage)
+	}
+	if vote.ProviderCostUSD == nil || *vote.ProviderCostUSD != 0.0002 {
+		t.Fatalf("cost = %v, want 0.0002", vote.ProviderCostUSD)
+	}
+}
+
+func TestDirectClientAggregatesProviderManagementData(t *testing.T) {
+	client := newDirectClient(time.Second, 1)
+	first := openaiapi.Response{
+		Usage:               openaiapi.Usage{InputTokens: 100, CachedInputTokens: 20, OutputTokens: 30, ReasoningTokens: 10, TotalTokens: 130},
+		UsageKnown:          true,
+		OpenRouterCostUSD:   0.25,
+		OpenRouterCostKnown: true,
+	}
+	second := openaiapi.Response{
+		Usage:               openaiapi.Usage{InputTokens: 50, OutputTokens: 25, TotalTokens: 75},
+		UsageKnown:          true,
+		OpenRouterCostUSD:   0.5,
+		OpenRouterCostKnown: true,
+	}
+	client.recordResponse(first)
+	client.recordResponse(second)
+	if want := (openaiapi.Usage{InputTokens: 150, CachedInputTokens: 20, OutputTokens: 55, ReasoningTokens: 10, TotalTokens: 205}); client.TotalUsage() == nil || *client.TotalUsage() != want {
+		t.Fatalf("usage = %+v, want %+v", client.TotalUsage(), want)
+	}
+	if cost := client.TotalCostUSD(); cost == nil || *cost != 0.75 {
+		t.Fatalf("cost = %v, want 0.75", cost)
+	}
+	client.recordResponse(openaiapi.Response{})
+	if usage := client.TotalUsage(); usage != nil {
+		t.Fatalf("usage = %v after unknown response, want nil", usage)
+	}
+	if cost := client.TotalCostUSD(); cost != nil {
+		t.Fatalf("cost = %v after unknown response, want nil", cost)
 	}
 }
 

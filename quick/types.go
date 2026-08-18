@@ -5,6 +5,7 @@ import (
 
 	"github.com/jsmorph/adj/common/documents"
 	"github.com/jsmorph/adj/common/modelrequest"
+	openaiapi "github.com/jsmorph/adj/common/openai"
 )
 
 const (
@@ -81,13 +82,16 @@ type CouncilMember struct {
 }
 
 type Vote struct {
-	MemberID    string    `json:"member_id"`
-	Model       string    `json:"model"`
-	PersonaFile string    `json:"persona_file"`
-	Vote        string    `json:"vote"`
-	Rationale   string    `json:"rationale"`
-	ResponseID  string    `json:"response_id,omitempty"`
-	SubmittedAt time.Time `json:"submitted_at"`
+	MemberID              string           `json:"member_id"`
+	Model                 string           `json:"model"`
+	PersonaFile           string           `json:"persona_file"`
+	Vote                  string           `json:"vote"`
+	Rationale             string           `json:"rationale"`
+	ResponseID            string           `json:"response_id,omitempty"`
+	ProviderUsage         *openaiapi.Usage `json:"provider_usage,omitempty"`
+	ProviderCostUSD       *float64         `json:"provider_cost_usd,omitempty"`
+	ProviderMetadataError string           `json:"provider_metadata_error,omitempty"`
+	SubmittedAt           time.Time        `json:"submitted_at"`
 }
 
 type Event struct {
@@ -130,7 +134,8 @@ type Result struct {
 	Arguments        []Argument         `json:"arguments"`
 	Votes            []Vote             `json:"votes"`
 	Events           []Event            `json:"events"`
-	CouncilCostUSD   float64            `json:"council_cost_usd"`
+	CouncilUsage     *openaiapi.Usage   `json:"council_usage,omitempty"`
+	CouncilCostUSD   *float64           `json:"council_cost_usd,omitempty"`
 }
 
 type inputRecord struct {

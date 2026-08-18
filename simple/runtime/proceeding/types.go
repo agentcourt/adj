@@ -71,7 +71,8 @@ type Result struct {
 	Error            string             `json:"error,omitempty"`
 	ErrorClass       string             `json:"error_class,omitempty"`
 	ResponseID       string             `json:"response_id,omitempty"`
-	ProviderCostUSD  float64            `json:"provider_cost_usd"`
+	ProviderUsage    *openaiapi.Usage   `json:"provider_usage,omitempty"`
+	ProviderCostUSD  *float64           `json:"provider_cost_usd,omitempty"`
 	Documents        documents.Manifest `json:"documents"`
 }
 
@@ -148,7 +149,8 @@ type ModelResponseRecord struct {
 	ProviderMetadata        map[string]any   `json:"provider_metadata,omitempty"`
 	ProviderGeneration      map[string]any   `json:"provider_generation,omitempty"`
 	ProviderGenerationError string           `json:"provider_generation_error,omitempty"`
-	RecoveredCostUSD        float64          `json:"recovered_cost_usd"`
+	ProviderUsage           *openaiapi.Usage `json:"provider_usage,omitempty"`
+	RecoveredCostUSD        *float64         `json:"recovered_cost_usd,omitempty"`
 	Error                   string           `json:"error,omitempty"`
 	ErrorClass              string           `json:"error_class,omitempty"`
 }
