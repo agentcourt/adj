@@ -54,3 +54,19 @@ func TestWriteAtomicRejectsInvalidManifest(t *testing.T) {
 		t.Fatal("expected missing case_id error")
 	}
 }
+
+func TestWriteAtomicAcceptsSimpleProcedure(t *testing.T) {
+	t.Parallel()
+	manifest := New(ProcedureSimple, "case-simple", "run-simple", time.Now())
+	if err := WriteAtomic(t.TempDir(), manifest); err != nil {
+		t.Fatalf("write simple manifest: %v", err)
+	}
+}
+
+func TestWriteAtomicAcceptsQuickProcedure(t *testing.T) {
+	t.Parallel()
+	manifest := New(ProcedureQuick, "case-quick", "run-quick", time.Now())
+	if err := WriteAtomic(t.TempDir(), manifest); err != nil {
+		t.Fatalf("write quick manifest: %v", err)
+	}
+}

@@ -12,11 +12,13 @@ import (
 )
 
 const (
-	FileName      = "case-manifest.json"
-	SchemaVersion = "adj.case-manifest.v1"
-	ProcedureADC  = "adc"
-	ProcedureARB  = "arb"
-	ProcedureARBD = "arbd"
+	FileName        = "case-manifest.json"
+	SchemaVersion   = "adj.case-manifest.v1"
+	ProcedureADC    = "adc"
+	ProcedureARB    = "arb"
+	ProcedureARBD   = "arbd"
+	ProcedureSimple = "simple"
+	ProcedureQuick  = "quick"
 )
 
 type Manifest struct {
@@ -108,7 +110,7 @@ func validate(manifest Manifest) error {
 		return fmt.Errorf("case manifest schema_version must be %q", SchemaVersion)
 	}
 	switch manifest.Procedure {
-	case ProcedureADC, ProcedureARB, ProcedureARBD:
+	case ProcedureADC, ProcedureARB, ProcedureARBD, ProcedureSimple, ProcedureQuick:
 	default:
 		return fmt.Errorf("unsupported case manifest procedure %q", manifest.Procedure)
 	}

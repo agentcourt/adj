@@ -45,6 +45,14 @@ Every durable one-case run writes `case-manifest.json` through `common/casemanif
 - [x] Document the paired discovery interface in `adj` and `adjservices`.
 - [x] Repeat complete core and paired-interface verification.
 
+## Simple Adjudication
+
+The `simple` procedure decides one proposition through one direct provider request and requires a structured `demonstrated` or `not_demonstrated` response with a rationale.  The caller supplies an evidence standard, explicit document limits, one request specification, and explicit permission to use API-key billing.  The procedure neither retries the provider nor invokes a lawyer, council, or Lean engine.
+
+`common/documents` imports regular files in bytewise path order, rejects symbolic links and source changes, and records byte counts, media types, and SHA-256 hashes.  `common/recordio` supplies the JSON, atomic JSON, and append-only JSON-line operations used by the new procedures.  The simple record keeps the imported bytes and request description while excluding document contents, encoded media, and request-header values from `model-request.json`.
+
+Focused tests cover document import, record replacement, command argument handling, input-media construction, one-request success, typed provider failure, malformed tool output, and failure records.  Race tests, Go vet, and a command build also passed.  Verification used fake provider clients and made no external provider calls.
+
 ## Verification
 
 Verification begins by building each procedure's engine and proof targets with Lean 4.32.0 through the configured resource-limited runner.  The complete Go suite runs after the engine builds because an ADC integration test executes the engine.  Go verification also includes `go vet ./...` and builds of the three command packages, while documentation verification checks every relative Markdown link against the repository tree.
