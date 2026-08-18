@@ -244,7 +244,7 @@ Case preparation and adjudication share one output directory.  The prepared file
 | `runtime.json` | Normalized timeout, response-size, and invalid-attempt limits. |
 | `events.ndjson` | Runtime event log. |
 | `run.db` | SQLite case record. |
-| `run.json` | Machine-readable result. |
+| `run.json` | Machine-readable result, including provider request, usage, and cost accounting. |
 | `state.json` | Terminal Lean state. |
 | `certificate.json` | Initialization, accepted transitions, claimed state, and hashes. |
 | `transcript.md` | Written transcript. |

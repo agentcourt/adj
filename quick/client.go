@@ -20,8 +20,7 @@ type responseClient interface {
 		[]map[string]any,
 		string,
 	) (openaiapi.Response, error)
-	TotalUsage() *openaiapi.Usage
-	TotalCostUSD() *float64
+	Accounting() openaiapi.Accounting
 }
 
 type councilEndpointPreflighter interface {
@@ -29,15 +28,11 @@ type councilEndpointPreflighter interface {
 }
 
 type directClient struct {
-	timeout      time.Duration
-	maxAttempts  int
-	mu           sync.Mutex
-	clients      map[string]*openaiapi.Client
-	totalUsage   openaiapi.Usage
-	usageKnown   bool
-	totalCostUSD float64
-	costKnown    bool
-	responses    int
+	timeout     time.Duration
+	maxAttempts int
+	mu          sync.Mutex
+	clients     map[string]*openaiapi.Client
+	accounting  openaiapi.AccountingRecorder
 }
 
 func newDirectClient(timeout time.Duration, maxAttempts int) *directClient {
@@ -60,34 +55,15 @@ func (c *directClient) CreateResponseWithRequestSpec(
 		return openaiapi.Response{}, err
 	}
 	response, err := client.CreateResponseWithRequestSpec(ctx, spec, input, tools, previousResponseID)
+	c.accounting.Record(response)
 	if err != nil {
 		return openaiapi.Response{}, err
 	}
-	c.recordResponse(response)
 	return response, nil
 }
 
 func (c *directClient) recordResponse(response openaiapi.Response) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.totalUsage.InputTokens += response.Usage.InputTokens
-	c.totalUsage.CachedInputTokens += response.Usage.CachedInputTokens
-	c.totalUsage.OutputTokens += response.Usage.OutputTokens
-	c.totalUsage.ReasoningTokens += response.Usage.ReasoningTokens
-	c.totalUsage.TotalTokens += response.Usage.TotalTokens
-	if c.responses == 0 {
-		c.usageKnown = true
-		c.costKnown = true
-	}
-	c.responses++
-	if response.TokenUsage() == nil {
-		c.usageKnown = false
-	}
-	if cost := response.CostUSD(); cost != nil {
-		c.totalCostUSD += *cost
-	} else {
-		c.costKnown = false
-	}
+	c.accounting.Record(response)
 }
 
 func (c *directClient) clientForEndpoint(endpoint string) (*openaiapi.Client, error) {
@@ -108,24 +84,8 @@ func (c *directClient) clientForEndpoint(endpoint string) (*openaiapi.Client, er
 	return client, nil
 }
 
-func (c *directClient) TotalUsage() *openaiapi.Usage {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.responses == 0 || !c.usageKnown {
-		return nil
-	}
-	usage := c.totalUsage
-	return &usage
-}
-
-func (c *directClient) TotalCostUSD() *float64 {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.responses == 0 || !c.costKnown {
-		return nil
-	}
-	cost := c.totalCostUSD
-	return &cost
+func (c *directClient) Accounting() openaiapi.Accounting {
+	return c.accounting.Snapshot()
 }
 
 func (c *directClient) PreflightCouncilEndpoints(council []CouncilMember) error {

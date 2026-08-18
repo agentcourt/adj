@@ -51,10 +51,11 @@ type TurnLog struct {
 }
 
 type Result struct {
-	Scenario   string           `json:"scenario"`
-	Assertions []map[string]any `json:"assertions"`
-	TurnLogs   []TurnLog        `json:"turn_logs"`
-	FinalState map[string]any   `json:"final_state"`
+	Scenario   string            `json:"scenario"`
+	Assertions []map[string]any  `json:"assertions"`
+	TurnLogs   []TurnLog         `json:"turn_logs"`
+	FinalState map[string]any    `json:"final_state"`
+	Provider   openai.Accounting `json:"provider"`
 }
 
 type ActionExecution struct {
@@ -376,6 +377,7 @@ func (r *Runner) Run(ctx context.Context) (result Result, err error) {
 		Assertions: assertions,
 		TurnLogs:   turnLogs,
 		FinalState: r.state,
+		Provider:   r.ProviderAccounting(),
 	}
 	if err := r.writeEvidence(result); err != nil {
 		return Result{}, err
@@ -395,6 +397,16 @@ func (r *Runner) Run(ctx context.Context) (result Result, err error) {
 		return Result{}, err
 	}
 	return result, nil
+}
+
+func (r *Runner) ProviderAccounting() openai.Accounting {
+	if r == nil {
+		return openai.Accounting{}
+	}
+	if r.client == r.jurorClient {
+		return r.client.Accounting()
+	}
+	return openai.MergeAccounting(r.client.Accounting(), r.jurorClient.Accounting())
 }
 
 func (r *Runner) writeCaseManifest(manifest casemanifest.Manifest) error {

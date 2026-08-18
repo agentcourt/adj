@@ -12,16 +12,16 @@ import (
 )
 
 type caseRunSummary struct {
-	Status         string         `json:"status"`
-	Result         string         `json:"result,omitempty"`
-	VotesFor       *int           `json:"votes_for,omitempty"`
-	VotesAgainst   *int           `json:"votes_against,omitempty"`
-	RunID          string         `json:"run_id,omitempty"`
-	OutputDir      string         `json:"out_dir,omitempty"`
-	Error          string         `json:"error,omitempty"`
-	ErrorClass     string         `json:"error_class,omitempty"`
-	Failure        map[string]any `json:"failure,omitempty"`
-	CouncilCostUSD float64        `json:"council_cost_usd"`
+	Status       string               `json:"status"`
+	Result       string               `json:"result,omitempty"`
+	VotesFor     *int                 `json:"votes_for,omitempty"`
+	VotesAgainst *int                 `json:"votes_against,omitempty"`
+	RunID        string               `json:"run_id,omitempty"`
+	OutputDir    string               `json:"out_dir,omitempty"`
+	Error        string               `json:"error,omitempty"`
+	ErrorClass   string               `json:"error_class,omitempty"`
+	Failure      map[string]any       `json:"failure,omitempty"`
+	Provider     openaiapi.Accounting `json:"provider"`
 }
 
 func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
@@ -122,25 +122,25 @@ func (f *explicitFileList) Set(value string) error {
 func buildCaseSuccessSummary(result proceeding.Result, outDir string) caseRunSummary {
 	votesFor, votesAgainst := finalVoteCounts(result.FinalState)
 	return caseRunSummary{
-		Status:         strings.TrimSpace(result.Status),
-		Result:         strings.TrimSpace(result.Resolution),
-		VotesFor:       &votesFor,
-		VotesAgainst:   &votesAgainst,
-		RunID:          strings.TrimSpace(result.RunID),
-		OutputDir:      strings.TrimSpace(outDir),
-		Error:          strings.TrimSpace(result.Error),
-		ErrorClass:     strings.TrimSpace(result.ErrorClass),
-		Failure:        result.Failure,
-		CouncilCostUSD: result.CouncilCostUSD,
+		Status:       strings.TrimSpace(result.Status),
+		Result:       strings.TrimSpace(result.Resolution),
+		VotesFor:     &votesFor,
+		VotesAgainst: &votesAgainst,
+		RunID:        strings.TrimSpace(result.RunID),
+		OutputDir:    strings.TrimSpace(outDir),
+		Error:        strings.TrimSpace(result.Error),
+		ErrorClass:   strings.TrimSpace(result.ErrorClass),
+		Failure:      result.Failure,
+		Provider:     result.Provider,
 	}
 }
 
 func buildCaseErrorSummary(err error) caseRunSummary {
 	return caseRunSummary{
-		Status:         "error",
-		Error:          strings.TrimSpace(err.Error()),
-		ErrorClass:     string(openaiapi.ErrorClass(err)),
-		CouncilCostUSD: proceeding.CouncilCostUSD(err),
+		Status:     "error",
+		Error:      strings.TrimSpace(err.Error()),
+		ErrorClass: string(openaiapi.ErrorClass(err)),
+		Provider:   proceeding.CouncilAccounting(err),
 	}
 }
 

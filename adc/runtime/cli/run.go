@@ -17,7 +17,7 @@ import (
 	"github.com/jsmorph/adj/common/openai"
 )
 
-func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
+func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) (returnErr error) {
 	var fs *flag.FlagSet
 	fs = newFlagSet("scenario", stderr, func() {
 		fmt.Fprintf(fs.Output(), "Usage: adc scenario --scenario <json> [options]\n\n")
@@ -87,6 +87,9 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 		}
 		return err
 	}
+	defer func() {
+		returnErr = closeStore(returnErr)
+	}()
 
 	engine := lean.New(strings.Fields(strings.TrimSpace(*engineCommand)))
 	var client *openai.Client
@@ -95,31 +98,31 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 	if !*offline {
 		client, err = openai.NewFromEnv(*online, time.Duration(*timeoutSeconds)*time.Second)
 		if err != nil {
-			return closeStore(err)
+			return err
 		}
 		if strings.TrimSpace(*jurorPersonas) != "" {
 			jurorClient, err = openai.NewFromEnv(*online, time.Duration(*timeoutSeconds)*time.Second)
 			if err != nil {
-				return closeStore(err)
+				return err
 			}
 		}
 	}
 
 	tempPtr, err := parseOptionalFloat(*temperature)
 	if err != nil {
-		return closeStore(fmt.Errorf("parse --temperature: %w", err))
+		return fmt.Errorf("parse --temperature: %w", err)
 	}
 	jurorTempPtr, err := parseOptionalFloat(*jurorTemperature)
 	if err != nil {
-		return closeStore(fmt.Errorf("parse --juror-temperature: %w", err))
+		return fmt.Errorf("parse --juror-temperature: %w", err)
 	}
 	unanimousRequiredPtr, err := parseOptionalBool(*unanimousRequired)
 	if err != nil {
-		return closeStore(fmt.Errorf("parse --unanimous-required: %w", err))
+		return fmt.Errorf("parse --unanimous-required: %w", err)
 	}
 	policyOverrides, err := juryPolicyOverrides(*jurorCount, *minimumConcurring, unanimousRequiredPtr)
 	if err != nil {
-		return closeStore(err)
+		return err
 	}
 
 	runtimeLimits := runner.RuntimeLimits{
@@ -129,7 +132,7 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 		InvalidAttemptLimit:   *invalidAttemptLimit,
 	}.Normalized()
 	if err := writeJSONFile(*runtimePath, runtimeLimits); err != nil {
-		return closeStore(err)
+		return err
 	}
 
 	r, err := runner.New(st, engine, client, jurorClient, runner.Config{
@@ -149,22 +152,30 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 		PolicyOverrides:   policyOverrides,
 	})
 	if err != nil {
-		return closeStore(err)
+		return err
 	}
 	if *offline && r.RequiresLLMTurns() {
 		if _, err := fmt.Fprintln(stderr, "warning: --offline is set, but scenario includes non-deterministic turns that require an LLM"); err != nil {
-			return closeStore(fmt.Errorf("write offline warning: %w", err))
+			return fmt.Errorf("write offline warning: %w", err)
 		}
 	}
 	result, err := r.Run(ctx)
-	if closeErr := closeStore(err); closeErr != nil {
-		return closeErr
+	if err != nil {
+		return err
 	}
 	failed := 0
 	for _, a := range result.Assertions {
 		if passed, _ := a["passed"].(bool); !passed {
 			failed++
 		}
+	}
+	if err := report.WriteTranscript(strings.TrimSpace(*transcriptPath), result); err != nil {
+		return err
+	}
+	digestErr := report.WriteDigestWithClient(strings.TrimSpace(*digestPath), result, strings.TrimSpace(*reportModel), client)
+	accountingErr := r.RefreshProviderAccounting(&result)
+	if err := errors.Join(digestErr, accountingErr); err != nil {
+		return err
 	}
 	summary := map[string]any{
 		"scenario":           result.Scenario,
@@ -197,12 +208,6 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 		); err != nil {
 			return err
 		}
-	}
-	if err := report.WriteTranscript(strings.TrimSpace(*transcriptPath), result); err != nil {
-		return err
-	}
-	if err := report.WriteDigestWithClient(strings.TrimSpace(*digestPath), result, strings.TrimSpace(*reportModel), client); err != nil {
-		return err
 	}
 	if failed > 0 && !*allowAssertionFailures {
 		return fmt.Errorf("assertions failed: %d", failed)

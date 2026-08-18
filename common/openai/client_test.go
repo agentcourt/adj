@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -14,8 +15,15 @@ import (
 	"github.com/jsmorph/adj/common/modelrequest"
 
 	openaisdk "github.com/openai/openai-go"
+	"github.com/openai/openai-go/option"
 	"github.com/openai/openai-go/responses"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
+}
 
 type timeoutError struct{}
 
@@ -31,6 +39,38 @@ func TestNewRejectsMissingConfig(t *testing.T) {
 	}
 	if _, err := New("key", "", false, time.Second); err == nil {
 		t.Fatalf("New missing base URL error = nil, want error")
+	}
+}
+
+func TestClientRecordsLogicalProviderRequest(t *testing.T) {
+	client, err := New("key", "https://provider.test/v1", false, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body: io.NopCloser(strings.NewReader(`{
+  "id":"resp-1",
+  "object":"response",
+  "status":"completed",
+  "output":[],
+  "usage":{"input_tokens":10,"output_tokens":5,"total_tokens":15,"cost":0.125}
+}`)),
+		}, nil
+	})
+	client.client = openaisdk.NewClient(
+		option.WithAPIKey("key"),
+		option.WithBaseURL("https://provider.test/v1"),
+		option.WithHTTPClient(&http.Client{Transport: transport}),
+	)
+	if _, err := client.CreateResponse(context.Background(), "model", []map[string]any{{"role": "user", "content": "test"}}, nil, "", nil); err != nil {
+		t.Fatal(err)
+	}
+	accounting := client.Accounting()
+	if accounting.RequestCount != 1 || accounting.UsageObservedCount != 1 || accounting.Usage == nil || accounting.Usage.TotalTokens != 15 || accounting.CostObservedCount != 1 || accounting.CostUSD == nil || *accounting.CostUSD != 0.125 {
+		t.Fatalf("accounting = %#v", accounting)
 	}
 }
 

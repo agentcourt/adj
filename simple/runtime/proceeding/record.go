@@ -14,12 +14,13 @@ import (
 )
 
 func finishSuccess(opts Options, startedAt time.Time, manifest documents.Manifest, response openaiapi.Response, decision Decision, recorder *eventRecorder) (Result, error) {
-	result := terminalResult(opts, startedAt, manifest, response, "ok", "closed", &decision, "", "")
+	provider := providerAccounting(response)
+	result := terminalResult(opts, startedAt, manifest, response, provider, "ok", "closed", &decision, "", "")
 	if err := recorder.append("decision_submitted", map[string]any{"decision": decision.Value}); err != nil {
-		return finishError(opts, startedAt, manifest, response, "storage", err, recorder)
+		return finishError(opts, startedAt, manifest, response, provider, "storage", err, recorder)
 	}
 	if err := recorder.append("run_completed", map[string]any{"status": result.Status}); err != nil {
-		return finishError(opts, startedAt, manifest, response, "storage", err, recorder)
+		return finishError(opts, startedAt, manifest, response, provider, "storage", err, recorder)
 	}
 	if err := writeTerminalRecords(opts.OutputDir, result); err != nil {
 		return Result{}, err
@@ -27,8 +28,8 @@ func finishSuccess(opts Options, startedAt time.Time, manifest documents.Manifes
 	return result, nil
 }
 
-func finishError(opts Options, startedAt time.Time, manifest documents.Manifest, response openaiapi.Response, class string, runErr error, recorder *eventRecorder) (Result, error) {
-	result := terminalResult(opts, startedAt, manifest, response, "error", "error", nil, runErr.Error(), class)
+func finishError(opts Options, startedAt time.Time, manifest documents.Manifest, response openaiapi.Response, provider openaiapi.Accounting, class string, runErr error, recorder *eventRecorder) (Result, error) {
+	result := terminalResult(opts, startedAt, manifest, response, provider, "error", "error", nil, runErr.Error(), class)
 	recordErr := errors.Join(
 		recorder.append("run_failed", map[string]any{"error": runErr.Error(), "error_class": class}),
 		writeTerminalRecords(opts.OutputDir, result),
@@ -39,7 +40,7 @@ func finishError(opts Options, startedAt time.Time, manifest documents.Manifest,
 	return result, runErr
 }
 
-func terminalResult(opts Options, startedAt time.Time, manifest documents.Manifest, response openaiapi.Response, status, phase string, decision *Decision, errorMessage, errorClass string) Result {
+func terminalResult(opts Options, startedAt time.Time, manifest documents.Manifest, response openaiapi.Response, provider openaiapi.Accounting, status, phase string, decision *Decision, errorMessage, errorClass string) Result {
 	return Result{
 		SchemaVersion:    RunSchemaVersion,
 		Procedure:        "simple",
@@ -55,10 +56,15 @@ func terminalResult(opts Options, startedAt time.Time, manifest documents.Manife
 		Error:            strings.TrimSpace(errorMessage),
 		ErrorClass:       strings.TrimSpace(errorClass),
 		ResponseID:       response.ResponseID,
-		ProviderUsage:    response.TokenUsage(),
-		ProviderCostUSD:  response.CostUSD(),
+		Provider:         provider,
 		Documents:        manifest,
 	}
+}
+
+func providerAccounting(response openaiapi.Response) openaiapi.Accounting {
+	recorder := &openaiapi.AccountingRecorder{}
+	recorder.Record(response)
+	return recorder.Snapshot()
 }
 
 func writeTerminalRecords(outputDir string, result Result) error {

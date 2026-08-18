@@ -21,7 +21,7 @@ import (
 	"github.com/jsmorph/adj/common/openai"
 )
 
-func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
+func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) (returnErr error) {
 	var fs *flag.FlagSet
 	fs = newFlagSet("case", stderr, func() {
 		fmt.Fprintf(fs.Output(), "Usage: adc case (--complaint FILE | --proposition TEXT) [options]\n\n")
@@ -217,6 +217,9 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 		}
 		return err
 	}
+	defer func() {
+		returnErr = closeStore(returnErr)
+	}()
 
 	engine := lean.New(strings.Fields(strings.TrimSpace(*engineCommand)))
 
@@ -236,16 +239,18 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 		PolicyOverrides:   policyOverrides,
 	})
 	if err != nil {
-		return closeStore(err)
+		return err
 	}
 	result, err := r.Run(ctx)
-	if closeErr := closeStore(err); closeErr != nil {
-		return closeErr
+	if err != nil {
+		return err
 	}
 	if err := report.WriteTranscript(transcriptPath, result); err != nil {
 		return err
 	}
-	if err := report.WriteDigestWithClient(digestPath, result, resolvedReportModel, client); err != nil {
+	digestErr := report.WriteDigestWithClient(digestPath, result, resolvedReportModel, client)
+	accountingErr := r.RefreshProviderAccounting(&result)
+	if err := errors.Join(digestErr, accountingErr); err != nil {
 		return err
 	}
 

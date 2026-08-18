@@ -71,7 +71,7 @@ func RunWithClientFactory(ctx context.Context, opts Options, factory ClientFacto
 		if writeErr != nil {
 			return Result{}, errors.Join(err, writeErr)
 		}
-		return finishError(resolved, startedAt, documentManifest, openaiapi.Response{}, "input", err, recorder)
+		return finishError(resolved, startedAt, documentManifest, openaiapi.Response{}, openaiapi.Accounting{}, "input", err, recorder)
 	}
 	if err := recordio.WriteJSON(filepath.Join(resolved.OutputDir, "documents.json"), documentManifest); err != nil {
 		return Result{}, err
@@ -106,7 +106,7 @@ func RunWithClientFactory(ctx context.Context, opts Options, factory ClientFacto
 		if err := recordio.WriteJSON(filepath.Join(resolved.OutputDir, "model-response.json"), responseRecord); err != nil {
 			return Result{}, errors.Join(requestErr, err)
 		}
-		return finishError(resolved, startedAt, documentManifest, openaiapi.Response{}, "input", requestErr, recorder)
+		return finishError(resolved, startedAt, documentManifest, openaiapi.Response{}, openaiapi.Accounting{}, "input", requestErr, recorder)
 	}
 
 	client, err := factory.New(spec, time.Duration(runtime.ProviderTimeoutSeconds)*time.Second)
@@ -116,29 +116,30 @@ func RunWithClientFactory(ctx context.Context, opts Options, factory ClientFacto
 		if writeErr := recordio.WriteJSON(filepath.Join(resolved.OutputDir, "model-response.json"), responseRecord); writeErr != nil {
 			return Result{}, errors.Join(err, writeErr)
 		}
-		return finishError(resolved, startedAt, documentManifest, openaiapi.Response{}, errorClass, err, recorder)
+		return finishError(resolved, startedAt, documentManifest, openaiapi.Response{}, openaiapi.Accounting{}, errorClass, err, recorder)
 	}
 	if client == nil {
 		err := fmt.Errorf("response client factory returned a nil client")
 		if writeErr := recordio.WriteJSON(filepath.Join(resolved.OutputDir, "model-response.json"), ModelResponseRecord{SchemaVersion: ResponseSchemaVersion, Status: "error", Error: err.Error()}); writeErr != nil {
 			return Result{}, errors.Join(err, writeErr)
 		}
-		return finishError(resolved, startedAt, documentManifest, openaiapi.Response{}, "", err, recorder)
+		return finishError(resolved, startedAt, documentManifest, openaiapi.Response{}, openaiapi.Accounting{}, "", err, recorder)
 	}
 	if err := recorder.append("provider_request_started", map[string]any{"model": spec.RuntimeModel()}); err != nil {
 		writeErr := recordio.WriteJSON(filepath.Join(resolved.OutputDir, "model-response.json"), ModelResponseRecord{SchemaVersion: ResponseSchemaVersion, Status: "not_sent", Error: err.Error(), ErrorClass: "storage"})
 		if writeErr != nil {
 			return Result{}, errors.Join(err, writeErr)
 		}
-		return finishError(resolved, startedAt, documentManifest, openaiapi.Response{}, "storage", err, recorder)
+		return finishError(resolved, startedAt, documentManifest, openaiapi.Response{}, openaiapi.Accounting{}, "storage", err, recorder)
 	}
 	response, providerErr := client.CreateResponseWithRequestSpec(ctx, spec, inputItems, tools, "")
+	provider := providerAccounting(response)
 	responseRecord := modelResponseRecord(response, providerErr)
 	if err := recordio.WriteJSON(filepath.Join(resolved.OutputDir, "model-response.json"), responseRecord); err != nil {
 		return Result{}, errors.Join(providerErr, err)
 	}
 	if providerErr != nil {
-		return finishError(resolved, startedAt, documentManifest, response, errorClass(providerErr), providerErr, recorder)
+		return finishError(resolved, startedAt, documentManifest, response, provider, errorClass(providerErr), providerErr, recorder)
 	}
 	responseEvent := map[string]any{
 		"response_id": response.ResponseID,
@@ -153,7 +154,7 @@ func RunWithClientFactory(ctx context.Context, opts Options, factory ClientFacto
 		responseEvent["provider_metadata_error"] = response.OpenRouterGenerationError
 	}
 	if err := recorder.append("provider_response_received", responseEvent); err != nil {
-		return finishError(resolved, startedAt, documentManifest, response, "storage", err, recorder)
+		return finishError(resolved, startedAt, documentManifest, response, provider, "storage", err, recorder)
 	}
 	decision, err := parseDecision(response)
 	if err != nil {
@@ -161,7 +162,7 @@ func RunWithClientFactory(ctx context.Context, opts Options, factory ClientFacto
 		if writeErr := recordio.WriteJSON(filepath.Join(resolved.OutputDir, "model-response.json"), responseRecord); writeErr != nil {
 			return Result{}, errors.Join(err, writeErr)
 		}
-		return finishError(resolved, startedAt, documentManifest, response, errorClass(err), err, recorder)
+		return finishError(resolved, startedAt, documentManifest, response, provider, errorClass(err), err, recorder)
 	}
 	return finishSuccess(resolved, startedAt, documentManifest, response, decision, recorder)
 }

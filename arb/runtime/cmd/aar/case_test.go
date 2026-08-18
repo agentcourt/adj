@@ -36,13 +36,17 @@ func TestFinalVoteCountsUsesFinalRound(t *testing.T) {
 
 func TestCaseSummariesCarryProviderFailureData(t *testing.T) {
 	result := proceeding.Result{
-		Status:         "ok",
-		Resolution:     "no_majority",
-		ErrorClass:     "provider_transient",
-		CouncilCostUSD: 0.025,
+		Status:     "ok",
+		Resolution: "no_majority",
+		ErrorClass: "provider_transient",
+		Provider: openaiapi.Accounting{
+			RequestCount:      1,
+			CostObservedCount: 1,
+			CostUSD:           float64Pointer(0.025),
+		},
 	}
-	summary := buildCaseSuccessSummary(result, "/tmp/out")
-	if summary.ErrorClass != "provider_transient" || summary.CouncilCostUSD != 0.025 {
+	summary := buildCaseSuccessSummary(result, "out")
+	if summary.ErrorClass != "provider_transient" || summary.Provider.CostUSD == nil || *summary.Provider.CostUSD != 0.025 {
 		t.Fatalf("success summary = %+v", summary)
 	}
 
@@ -67,6 +71,10 @@ func TestCaseSummariesCarryProviderFailureData(t *testing.T) {
 			t.Fatalf("error summary error_class = %q, want %q", summary.ErrorClass, class)
 		}
 	}
+}
+
+func float64Pointer(value float64) *float64 {
+	return &value
 }
 
 func TestRunCaseReportsJSONError(t *testing.T) {

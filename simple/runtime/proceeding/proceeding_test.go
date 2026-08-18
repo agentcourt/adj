@@ -96,7 +96,7 @@ func TestRunWritesCompleteRecord(t *testing.T) {
 	if result.Status != "ok" || result.Decision == nil || result.Decision.Value != "demonstrated" {
 		t.Fatalf("result = %#v", result)
 	}
-	if result.ProviderCostUSD == nil || *result.ProviderCostUSD != 0.0125 || result.ResponseID != "resp-1" {
+	if result.Provider.RequestCount != 1 || result.Provider.UsageObservedCount != 1 || result.Provider.CostObservedCount != 1 || result.Provider.CostUSD == nil || *result.Provider.CostUSD != 0.0125 || result.ResponseID != "resp-1" {
 		t.Fatalf("provider result = %#v", result)
 	}
 	if factory.newCalls != 1 || client.calls != 1 {

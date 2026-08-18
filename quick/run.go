@@ -492,8 +492,7 @@ func (r *runner) result(caseAPIBase string, runErr error) Result {
 		Arguments:        append([]Argument(nil), r.transcript.Arguments...),
 		Votes:            append([]Vote(nil), r.transcript.Votes...),
 		Events:           append([]Event(nil), r.events...),
-		CouncilUsage:     r.client.TotalUsage(),
-		CouncilCostUSD:   r.client.TotalCostUSD(),
+		Provider:         r.client.Accounting(),
 	}
 	if runErr != nil {
 		result.Error = sanitizeText(runErr.Error())

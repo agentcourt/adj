@@ -104,6 +104,7 @@ type Client struct {
 	online             bool
 	defaultTemperature *float64
 	retryDelays        []time.Duration
+	accounting         AccountingRecorder
 }
 
 func New(apiKey string, baseURL string, online bool, timeout time.Duration) (*Client, error) {
@@ -234,6 +235,13 @@ func (c *Client) CreateResponseWithRequestSpec(
 	return c.createResponse(ctx, modelForClient(spec, c.baseURL), &spec, inputItems, tools, previousResponseID, spec.Request.Temperature, spec.MaxOutputTokens())
 }
 
+func (c *Client) Accounting() Accounting {
+	if c == nil {
+		return Accounting{}
+	}
+	return c.accounting.Snapshot()
+}
+
 func (c *Client) createResponse(
 	ctx context.Context,
 	model string,
@@ -243,7 +251,7 @@ func (c *Client) createResponse(
 	previousResponseID string,
 	temperature *float64,
 	maxOutputTokens *int64,
-) (Response, error) {
+) (response Response, err error) {
 	convertedInput, err := convertInputItems(inputItems)
 	if err != nil {
 		return Response{}, err
@@ -252,6 +260,9 @@ func (c *Client) createResponse(
 	if err != nil {
 		return Response{}, err
 	}
+	defer func() {
+		c.accounting.Record(response)
+	}()
 	params := responseParams(model, convertedInput, convertedTools, previousResponseID, temperature, c.defaultTemperature, maxOutputTokens, spec)
 	reqOpts := requestOptions(spec)
 

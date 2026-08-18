@@ -30,9 +30,10 @@ type capturedRequest struct {
 }
 
 type fakeResponseClient struct {
-	mu        sync.Mutex
-	responses []openaiapi.Response
-	requests  []capturedRequest
+	mu         sync.Mutex
+	responses  []openaiapi.Response
+	requests   []capturedRequest
+	accounting openaiapi.AccountingRecorder
 }
 
 func (c *fakeResponseClient) CreateResponseWithRequestSpec(
@@ -50,11 +51,11 @@ func (c *fakeResponseClient) CreateResponseWithRequestSpec(
 	}
 	response := c.responses[0]
 	c.responses = c.responses[1:]
+	c.accounting.Record(response)
 	return response, nil
 }
 
-func (c *fakeResponseClient) TotalUsage() *openaiapi.Usage { return nil }
-func (c *fakeResponseClient) TotalCostUSD() *float64       { return nil }
+func (c *fakeResponseClient) Accounting() openaiapi.Accounting { return c.accounting.Snapshot() }
 
 type timedCouncilClient struct {
 	mu        sync.Mutex
@@ -91,8 +92,7 @@ func (c *timedCouncilClient) CreateResponseWithRequestSpec(
 	}
 }
 
-func (c *timedCouncilClient) TotalUsage() *openaiapi.Usage { return nil }
-func (c *timedCouncilClient) TotalCostUSD() *float64       { return nil }
+func (c *timedCouncilClient) Accounting() openaiapi.Accounting { return openaiapi.Accounting{} }
 
 type controlledCouncilClient struct {
 	started   chan string
@@ -132,8 +132,7 @@ func (c *controlledCouncilClient) CreateResponseWithRequestSpec(
 	}
 }
 
-func (c *controlledCouncilClient) TotalUsage() *openaiapi.Usage { return nil }
-func (c *controlledCouncilClient) TotalCostUSD() *float64       { return nil }
+func (c *controlledCouncilClient) Accounting() openaiapi.Accounting { return openaiapi.Accounting{} }
 
 func TestRunQuickCase(t *testing.T) {
 	root := t.TempDir()
@@ -950,18 +949,18 @@ func TestDirectClientAggregatesProviderManagementData(t *testing.T) {
 	}
 	client.recordResponse(first)
 	client.recordResponse(second)
-	if want := (openaiapi.Usage{InputTokens: 150, CachedInputTokens: 20, OutputTokens: 55, ReasoningTokens: 10, TotalTokens: 205}); client.TotalUsage() == nil || *client.TotalUsage() != want {
-		t.Fatalf("usage = %+v, want %+v", client.TotalUsage(), want)
+	accounting := client.Accounting()
+	wantUsage := openaiapi.Usage{InputTokens: 150, CachedInputTokens: 20, OutputTokens: 55, ReasoningTokens: 10, TotalTokens: 205}
+	if accounting.RequestCount != 2 || accounting.UsageObservedCount != 2 || accounting.Usage == nil || *accounting.Usage != wantUsage {
+		t.Fatalf("accounting = %#v, want usage %+v", accounting, wantUsage)
 	}
-	if cost := client.TotalCostUSD(); cost == nil || *cost != 0.75 {
-		t.Fatalf("cost = %v, want 0.75", cost)
+	if accounting.CostObservedCount != 2 || accounting.CostUSD == nil || *accounting.CostUSD != 0.75 {
+		t.Fatalf("accounting = %#v, want cost 0.75", accounting)
 	}
 	client.recordResponse(openaiapi.Response{})
-	if usage := client.TotalUsage(); usage != nil {
-		t.Fatalf("usage = %v after unknown response, want nil", usage)
-	}
-	if cost := client.TotalCostUSD(); cost != nil {
-		t.Fatalf("cost = %v after unknown response, want nil", cost)
+	accounting = client.Accounting()
+	if accounting.RequestCount != 3 || accounting.UsageObservedCount != 2 || accounting.CostObservedCount != 2 || accounting.Usage == nil || *accounting.Usage != wantUsage || accounting.CostUSD == nil || *accounting.CostUSD != 0.75 {
+		t.Fatalf("partial accounting = %#v", accounting)
 	}
 }
 

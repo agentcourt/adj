@@ -55,10 +55,10 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 	}
 	llmClient := newDirectCouncilClient(cfg.Runtime.CouncilRequestTimeout(), cfg.Runtime.CouncilRequestAttempts)
 	defer func() {
-		cost := llmClient.TotalCostUSD()
-		result.CouncilCostUSD = cost
-		if err != nil && cost > 0 {
-			err = &councilCostError{costUSD: cost, err: err}
+		accounting := llmClient.Accounting()
+		result.Provider = accounting
+		if err != nil && accounting.RequestCount > 0 {
+			err = &councilAccountingError{accounting: accounting, err: err}
 		}
 	}()
 	var caseFiles []CaseFile
@@ -195,7 +195,7 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 				Events:            rc.events,
 				FinalState:        rc.state,
 				FinalReason:       reason,
-				CouncilCostUSD:    llmClient.TotalCostUSD(),
+				Provider:          llmClient.Accounting(),
 			}
 			if err := writeEvidence(cfg, result, rc); err != nil {
 				return Result{}, err

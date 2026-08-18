@@ -57,23 +57,22 @@ type Decision struct {
 }
 
 type Result struct {
-	SchemaVersion    string             `json:"schema_version"`
-	Procedure        string             `json:"procedure"`
-	CaseID           string             `json:"case_id"`
-	RunID            string             `json:"run_id"`
-	StartedAt        string             `json:"started_at"`
-	FinishedAt       string             `json:"finished_at"`
-	Status           string             `json:"status"`
-	Phase            string             `json:"phase"`
-	Proposition      string             `json:"proposition"`
-	EvidenceStandard string             `json:"evidence_standard"`
-	Decision         *Decision          `json:"decision,omitempty"`
-	Error            string             `json:"error,omitempty"`
-	ErrorClass       string             `json:"error_class,omitempty"`
-	ResponseID       string             `json:"response_id,omitempty"`
-	ProviderUsage    *openaiapi.Usage   `json:"provider_usage,omitempty"`
-	ProviderCostUSD  *float64           `json:"provider_cost_usd,omitempty"`
-	Documents        documents.Manifest `json:"documents"`
+	SchemaVersion    string               `json:"schema_version"`
+	Procedure        string               `json:"procedure"`
+	CaseID           string               `json:"case_id"`
+	RunID            string               `json:"run_id"`
+	StartedAt        string               `json:"started_at"`
+	FinishedAt       string               `json:"finished_at"`
+	Status           string               `json:"status"`
+	Phase            string               `json:"phase"`
+	Proposition      string               `json:"proposition"`
+	EvidenceStandard string               `json:"evidence_standard"`
+	Decision         *Decision            `json:"decision,omitempty"`
+	Error            string               `json:"error,omitempty"`
+	ErrorClass       string               `json:"error_class,omitempty"`
+	ResponseID       string               `json:"response_id,omitempty"`
+	Provider         openaiapi.Accounting `json:"provider"`
+	Documents        documents.Manifest   `json:"documents"`
 }
 
 type ResponseClient interface {

@@ -12,27 +12,27 @@ import (
 )
 
 type directCouncilClient struct {
-	timeout      time.Duration
-	maxAttempts  int
-	mu           sync.Mutex
-	clients      map[string]*openaiapi.Client
-	totalCostUSD float64
+	timeout     time.Duration
+	maxAttempts int
+	mu          sync.Mutex
+	clients     map[string]*openaiapi.Client
+	accounting  openaiapi.AccountingRecorder
 }
 
-type councilCostError struct {
-	costUSD float64
-	err     error
+type councilAccountingError struct {
+	accounting openaiapi.Accounting
+	err        error
 }
 
-func (e *councilCostError) Error() string { return e.err.Error() }
-func (e *councilCostError) Unwrap() error { return e.err }
+func (e *councilAccountingError) Error() string { return e.err.Error() }
+func (e *councilAccountingError) Unwrap() error { return e.err }
 
-func CouncilCostUSD(err error) float64 {
-	var costErr *councilCostError
-	if errors.As(err, &costErr) {
-		return costErr.costUSD
+func CouncilAccounting(err error) openaiapi.Accounting {
+	var accountingErr *councilAccountingError
+	if errors.As(err, &accountingErr) {
+		return accountingErr.accounting
 	}
-	return 0
+	return openaiapi.Accounting{}
 }
 
 func newDirectCouncilClient(timeout time.Duration, maxAttempts int) *directCouncilClient {
@@ -55,12 +55,10 @@ func (c *directCouncilClient) CreateResponseWithRequestSpec(
 		return openaiapi.Response{}, err
 	}
 	resp, err := client.CreateResponseWithRequestSpec(ctx, spec, inputItems, tools, previousResponseID)
+	c.accounting.Record(resp)
 	if err != nil {
 		return openaiapi.Response{}, err
 	}
-	c.mu.Lock()
-	c.totalCostUSD += resp.OpenRouterCostUSD
-	c.mu.Unlock()
 	return resp, nil
 }
 
@@ -82,8 +80,6 @@ func (c *directCouncilClient) clientForEndpoint(endpoint string) (*openaiapi.Cli
 	return client, nil
 }
 
-func (c *directCouncilClient) TotalCostUSD() float64 {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.totalCostUSD
+func (c *directCouncilClient) Accounting() openaiapi.Accounting {
+	return c.accounting.Snapshot()
 }

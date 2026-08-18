@@ -6,6 +6,7 @@ import (
 	"github.com/jsmorph/adj/arb/runtime/lean"
 	"github.com/jsmorph/adj/arb/runtime/spec"
 	"github.com/jsmorph/adj/common/modelrequest"
+	openaiapi "github.com/jsmorph/adj/common/openai"
 )
 
 type Policy struct {
@@ -118,7 +119,7 @@ type Result struct {
 	Events            []Event                 `json:"events"`
 	FinalState        map[string]any          `json:"final_state"`
 	FinalReason       string                  `json:"final_reason"`
-	CouncilCostUSD    float64                 `json:"council_cost_usd"`
+	Provider          openaiapi.Accounting    `json:"provider"`
 }
 
 type CaseFile struct {

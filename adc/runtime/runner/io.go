@@ -310,6 +310,36 @@ func (r *Runner) writeEvidence(result Result) error {
 	return nil
 }
 
+func (r *Runner) RefreshProviderAccounting(result *Result) error {
+	if r == nil {
+		return fmt.Errorf("runner is nil")
+	}
+	if result == nil {
+		return fmt.Errorf("result is nil")
+	}
+	result.Provider = r.ProviderAccounting()
+	if strings.TrimSpace(r.cfg.OutputPath) != "" {
+		if err := writeJSONFileAtomic(r.cfg.OutputPath, result); err != nil {
+			return fmt.Errorf("write provider accounting: %w", err)
+		}
+	}
+	evidenceMap, err := resultMap(*result)
+	if err != nil {
+		return err
+	}
+	status := "ok"
+	for _, assertion := range result.Assertions {
+		if passed, _ := assertion["passed"].(bool); !passed {
+			status = "assertion_failed"
+			break
+		}
+	}
+	if err := r.store.FinishRun(r.cfg.RunID, status, result.FinalState, evidenceMap); err != nil {
+		return fmt.Errorf("refresh provider accounting in run store: %w", err)
+	}
+	return nil
+}
+
 func exportExternalWorkProduct(outputDir string, workProductDirs map[string]string) error {
 	if len(workProductDirs) == 0 {
 		return nil

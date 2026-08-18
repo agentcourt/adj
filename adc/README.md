@@ -76,7 +76,7 @@ The ADC directory contains the complete procedure-specific implementation.  Shar
 
 ## Records
 
-A complaint-driven run writes `normalized-case.json`, party strategies, and `generated-scenario.json` before adjudication.  The adjudication record includes `case-manifest.json`, `run.json`, `state.json`, `certificate.json`, `runtime.json`, `events.ndjson`, `run.db`, `transcript.md`, `digest.md`, and `work-notes.ndjson`.  `adc verify-certificate` replays the accepted Lean transitions and compares the result with the recorded terminal state.
+A complaint-driven run writes `normalized-case.json`, party strategies, and `generated-scenario.json` before adjudication.  The adjudication record includes `case-manifest.json`, `run.json`, `state.json`, `certificate.json`, `runtime.json`, `events.ndjson`, `run.db`, `transcript.md`, `digest.md`, and `work-notes.ndjson`.  The run and SQLite records include logical provider requests and observed usage and cost totals, including digest generation, while `adc verify-certificate` replays the accepted Lean transitions and compares the result with the recorded terminal state.
 
 ## License
 

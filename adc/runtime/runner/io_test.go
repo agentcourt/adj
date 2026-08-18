@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/jsmorph/adj/adc/runtime/store"
+	"github.com/jsmorph/adj/common/openai"
 )
 
 func TestPersistAgentEventWritesNDJSONAndSQLite(t *testing.T) {
@@ -176,6 +177,48 @@ func TestWriteEvidenceWritesStateArtifact(t *testing.T) {
 	}
 	if cert.CaseID != "case-1" || cert.RunID != "run-1" || cert.ClaimedFinalStateSHA256 == "" {
 		t.Fatalf("certificate = %#v", cert)
+	}
+}
+
+func TestRefreshProviderAccountingUpdatesRunRecord(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	st, err := store.Open(filepath.Join(dir, "run.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Errorf("close store: %v", err)
+		}
+	}()
+	if err := st.CreateRun("run-1", "scenario-1"); err != nil {
+		t.Fatal(err)
+	}
+	r := &Runner{store: st, cfg: Config{RunID: "run-1", OutputPath: filepath.Join(dir, "run.json")}}
+	result := Result{
+		Scenario:   "scenario-1",
+		Assertions: []map[string]any{},
+		FinalState: map[string]any{"case": map[string]any{"status": "closed"}},
+		Provider:   openai.Accounting{RequestCount: 99},
+	}
+	if err := r.RefreshProviderAccounting(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Provider != (openai.Accounting{}) {
+		t.Fatalf("provider accounting = %#v", result.Provider)
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, "run.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var recorded Result
+	if err := json.Unmarshal(raw, &recorded); err != nil {
+		t.Fatal(err)
+	}
+	if recorded.Provider != (openai.Accounting{}) {
+		t.Fatalf("recorded provider accounting = %#v", recorded.Provider)
 	}
 }
 
