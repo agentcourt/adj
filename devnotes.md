@@ -16,6 +16,20 @@ Long-running case commands derive their execution context from interrupt signals
 
 The [core process interface](docs/service-interface.md) defines the executable, private HTTP, and durable-record behavior consumed by `adjservices`.  An interface edit requires corresponding test and documentation edits in both repositories.  The paired interface tests use explicit core binaries and an explicit core checkout.
 
+## AAR Proof Strengthening
+
+The `aar-proof-strengthening` branch strengthens AAR before further ADC or AARD proof work.  The work binds every state-changing action to the exact current opportunity, completes record provenance, proves terminal-run existence and outcome stability, and derives those results from terminal certificate verification.  Engine, runtime, certificate, proof, and documentation changes remain inside AAR except for this development record.
+
+- [ ] Bind actions to the current opportunity id, state version, role, phase, and council member.
+- [ ] Make closed and failed states reject state-changing actions.
+- [ ] Enforce complete evidence provenance and technical-report limits in Lean.
+- [ ] Prove that every valid initialization admits a terminal run within the existing bound.
+- [ ] Prove that a reached substantive threshold determines every terminal continuation.
+- [ ] Prove whole-run council renaming and independent-vote order invariance.
+- [ ] Derive authorization, global invariants, due process, and outcome soundness from terminal certificate verification.
+- [ ] Replace the count-rule characterization assumptions with independent rule properties.
+- [ ] Reconcile the proof root, theorem index, and verification documentation.
+
 ## Supervised AAR Calls
 
 The AAR command accepts `--council-request-attempts` so a supervising service can own retry policy without multiplying provider calls inside one case attempt.  The default remains four attempts for existing callers, while a supervisor can select one.  Direct provider failures carry stable classes for transient, authentication, request, and response-protocol failures, which removes the need for consumers to infer severity from error text.
