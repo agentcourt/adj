@@ -2,11 +2,8 @@ package proceeding
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"unicode/utf8"
@@ -47,7 +44,7 @@ func buildInputItems(proposition, evidenceStandard, documentsDir string, manifes
 		"text": "Proposition:\n" + proposition + "\n\nEvidence standard:\n" + evidenceStandard + "\n\nEvaluate whether this proposition is demonstrated under that standard.",
 	}}
 	for _, document := range manifest.Files {
-		raw, err := readVerifiedDocument(documentsDir, document)
+		raw, err := documents.ReadVerified(documentsDir, document)
 		if err != nil {
 			return nil, err
 		}
@@ -88,22 +85,6 @@ func buildInputItems(proposition, evidenceStandard, documentsDir string, manifes
 			"content_items": content,
 		},
 	}, nil
-}
-
-func readVerifiedDocument(root string, document documents.File) ([]byte, error) {
-	path := filepath.Join(root, filepath.FromSlash(document.Path))
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("read imported document %s: %w", document.Path, err)
-	}
-	if int64(len(raw)) != document.SizeBytes {
-		return nil, fmt.Errorf("imported document %s size changed", document.Path)
-	}
-	hash := sha256.Sum256(raw)
-	if hex.EncodeToString(hash[:]) != document.SHA256 {
-		return nil, fmt.Errorf("imported document %s hash changed", document.Path)
-	}
-	return raw, nil
 }
 
 func dataURL(mediaType string, raw []byte) string {

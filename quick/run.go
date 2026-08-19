@@ -221,6 +221,9 @@ func (r *runner) initializeFiles() error {
 		}
 		r.documents = manifest
 	}
+	if err := validateCouncilDocuments(destination, r.documents); err != nil {
+		return err
+	}
 	if err := recordio.WriteJSON(filepath.Join(r.cfg.OutputDir, "documents.json"), r.documents); err != nil {
 		return err
 	}

@@ -4,9 +4,19 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
+
+func TestCaseAPIHealthIdentifiesRun(t *testing.T) {
+	api := &caseAPIServer{rc: &runContext{cfg: Config{CaseID: "case-1", RunID: "run-1"}}}
+	response := httptest.NewRecorder()
+	api.handleHealth(response, httptest.NewRequest(http.MethodGet, "/health", nil))
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"case_id":"case-1"`) || !strings.Contains(response.Body.String(), `"run_id":"run-1"`) {
+		t.Fatalf("health response: %d %s", response.Code, response.Body.String())
+	}
+}
 
 func TestCaseAPIServerReportsServeFailure(t *testing.T) {
 	err := serveCaseAPI(&http.Server{}, failedListener{err: errors.New("accept failed")})

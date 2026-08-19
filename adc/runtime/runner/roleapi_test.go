@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -11,6 +12,14 @@ import (
 
 	"github.com/jsmorph/adj/adc/runtime/spec"
 )
+
+func TestCaseAPIHealthIdentifiesRun(t *testing.T) {
+	response := httptest.NewRecorder()
+	handleCaseAPIHealth(response, httptest.NewRequest(http.MethodGet, "/health", nil), "case-1", "run-1")
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "case-1") || !strings.Contains(response.Body.String(), "run-1") {
+		t.Fatalf("health response: %d %s", response.Code, response.Body.String())
+	}
+}
 
 func TestObserverCannotActOnActiveTurn(t *testing.T) {
 	api, turn := testRoleAPIWithActiveTurn(t)

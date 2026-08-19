@@ -28,7 +28,7 @@ The `adj` repository retains `validate`, `verify-certificate`, and deterministic
 
 ## Private Case APIs
 
-Service may reach a private case API only through its configured loopback address.  HTTP 204 from `/health` marks a child ready for participant traffic.  Service may proxy the procedure-specific Role API without interpreting or changing procedural requests and responses.
+Service may reach a private case API only through its configured loopback address.  A successful `/health` response is HTTP 200 JSON containing the exact `case_id` and `run_id` for the child.  Service may proxy the procedure-specific Role API without interpreting or changing procedural requests and responses.
 
 | Procedure | Paths owned by core |
 | --- | --- |
@@ -42,7 +42,7 @@ Core validates case identifiers, principal identifiers, opportunity identifiers,
 
 ## Discovery Manifest
 
-Each one-case command writes `case-manifest.json` atomically in its output directory when the run begins.  The command replaces the manifest after the private listener starts so `case_api_base` contains the address that the operating system assigned.  A filesystem observer can discover the directory before terminal artifacts exist and can test the `/health` route beneath the recorded base URL for current liveness.
+Each one-case command writes `case-manifest.json` atomically in its output directory when the run begins.  The command replaces the manifest after the private listener starts so `case_api_base` contains the address that the operating system assigned.  A filesystem observer can discover the directory before terminal artifacts exist and can test the `/health` route beneath the recorded base URL, requiring matching case and run identifiers before treating the process as the manifest's live instance.
 
 ```json
 {

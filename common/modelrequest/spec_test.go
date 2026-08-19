@@ -2,8 +2,22 @@ package modelrequest
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
+
+func TestParseModelRefRejectsQueryWithoutEchoingIt(t *testing.T) {
+	t.Parallel()
+
+	secret := "secret-value"
+	_, err := ParseModelRef("openrouter://model?token=" + secret)
+	if err == nil || !strings.Contains(err.Error(), "must not include a query") {
+		t.Fatalf("error = %v", err)
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("error contains model query: %v", err)
+	}
+}
 
 func TestParseJSONDerivesOpenRouterProviderFromInventoryRow(t *testing.T) {
 	t.Parallel()

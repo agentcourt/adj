@@ -37,7 +37,6 @@ type Spec struct {
 type ModelRef struct {
 	Endpoint string
 	Model    string
-	Query    string
 }
 
 func ParseModelRef(model string) (ModelRef, error) {
@@ -60,18 +59,20 @@ func ParseModelRef(model string) (ModelRef, error) {
 	if strings.Contains(endpoint, " ") || strings.ContainsAny(endpoint, "/?#") {
 		return ModelRef{}, fmt.Errorf("model %q has invalid endpoint %q", model, endpoint)
 	}
-	if strings.Contains(rest, "#") {
-		return ModelRef{}, fmt.Errorf("model %q must not include a fragment", model)
+	if strings.Contains(rest, "?") {
+		return ModelRef{}, fmt.Errorf("model reference must not include a query")
 	}
-	modelID, query, _ := strings.Cut(rest, "?")
-	modelID = strings.TrimSpace(modelID)
+	if strings.Contains(rest, "#") {
+		return ModelRef{}, fmt.Errorf("model reference must not include a fragment")
+	}
+	modelID := strings.TrimSpace(rest)
 	if modelID == "" {
 		return ModelRef{}, fmt.Errorf("model %q has empty model id", model)
 	}
 	if strings.ContainsAny(modelID, " \t\r\n") {
 		return ModelRef{}, fmt.Errorf("model %q has whitespace in model id", model)
 	}
-	return ModelRef{Endpoint: endpoint, Model: modelID, Query: query}, nil
+	return ModelRef{Endpoint: endpoint, Model: modelID}, nil
 }
 
 func ParseJSON(data []byte) (Spec, error) {

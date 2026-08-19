@@ -19,7 +19,7 @@ simple case [flags]
 | `--case-id ID` | Case identifier.  The default is `simple-1`. |
 | `--run-id ID` | Run identifier.  The command generates one when omitted. |
 | `--request-spec FILE` | Request-spec JSON file.  This flag excludes `--model`. |
-| `--model endpoint://model` | Direct model reference.  This flag excludes `--request-spec`. |
+| `--model endpoint://model` | Direct model reference without a query or fragment.  This flag excludes `--request-spec`. |
 | `--allow-api-key` | Explicitly permits a provider request authenticated by an API key. |
 | `--max-documents N` | Required maximum document count. |
 | `--max-document-bytes N` | Required maximum bytes for one document. |
@@ -28,7 +28,7 @@ simple case [flags]
 
 The command rejects a missing proposition, evidence standard, output directory, authentication directive, or limit before it creates a response client.  It also rejects both request-spec flags together and rejects a run with neither source.  An output directory may be absent or empty, which prevents a case from overwriting another record.
 
-`openai://` models use `OPENAI_API_KEY`, while `openrouter://` models use `OPENROUTER_API_KEY`.  The command reads those values only after `--allow-api-key` has authorized a provider request.  A missing or rejected credential produces a typed `provider_authentication` error and a nonzero exit status.
+`openai://` models use `OPENAI_API_KEY`, while `openrouter://` models use `OPENROUTER_API_KEY`.  The command rejects a model reference containing a query or fragment without reproducing the rejected value.  It reads credential values only after `--allow-api-key` has authorized a provider request.  A missing or rejected credential produces a typed `provider_authentication` error and a nonzero exit status.
 
 ## Documents and Requests
 

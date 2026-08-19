@@ -157,7 +157,7 @@ The Role API listens when `--caseapi-addr` supplies an address.  Every role requ
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/health` | Report that the case API is listening. |
+| `GET` | `/health` | Return `ok`, `case_id`, and `run_id` after the case API starts listening. |
 | `GET` or `POST` | `/roleapi/v1/status` | Return case status, current turn, and any caller-owned opportunity. |
 | `GET` or `POST` | `/roleapi/v1/get` | Return the caller's current opportunity without waiting. |
 | `GET` or `POST` | `/roleapi/v1/wait_for_opportunity` | Wait up to 30 seconds for an opportunity or terminal status. |

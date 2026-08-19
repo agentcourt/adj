@@ -117,7 +117,9 @@ func startCaseAPIServer(r *Runner) (*caseAPIServer, error) {
 		serveDone: make(chan error, 1),
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", handleCaseAPIHealth)
+	mux.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
+		handleCaseAPIHealth(w, req, r.cfg.CaseID, r.cfg.RunID)
+	})
 	roleAPI.register(mux)
 	server := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -151,7 +153,7 @@ func serveCaseAPI(server *http.Server, ln net.Listener) error {
 	return nil
 }
 
-func handleCaseAPIHealth(w http.ResponseWriter, r *http.Request) {
+func handleCaseAPIHealth(w http.ResponseWriter, r *http.Request, caseID, runID string) {
 	if r.Method != http.MethodGet {
 		writeRoleAPIJSON(w, http.StatusMethodNotAllowed, map[string]any{
 			"ok":    false,
@@ -159,7 +161,11 @@ func handleCaseAPIHealth(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	writeRoleAPIJSON(w, http.StatusOK, map[string]any{
+		"ok":      true,
+		"case_id": caseID,
+		"run_id":  runID,
+	})
 }
 
 func listenerHostPort(addr net.Addr) string {

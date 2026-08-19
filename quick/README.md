@@ -2,7 +2,7 @@
 
 Quick adjudication gives a proponent and an opponent one argument each, then asks a council to vote on the proposition.  The procedure does not invoke Lean or add later argument rounds.  The caller must state the council size, required majority, evidence standard, document limits, and council request-spec pool.  The core samples distinct council records from that pool with cryptographic randomness and records the selected endpoint, model, and persona metadata.
 
-The core exposes one local HTTP API for the lawyer turns.  Its paths match the lawyer portion of the AAR case API, allowing the adjservices AAR MCP adapter to present the turns to external agents.  Council members run through direct Responses-compatible provider calls, which require `--allow-api-key`.  Before opening a lawyer turn, the core checks every selected endpoint for supported configuration and required credentials without sending a provider request.
+The core exposes one local HTTP API for the lawyer turns.  Its paths match the lawyer portion of the AAR case API, allowing the adjservices AAR MCP adapter to present the turns to external agents.  Council members run through direct Responses-compatible provider calls, which require `--allow-api-key`.  Before opening a lawyer turn, the core checks every selected endpoint for supported configuration and required credentials without sending a provider request.  A request-spec model reference may not contain a query or fragment.
 
 ## Command
 
@@ -27,6 +27,8 @@ The two lawyer agents use role IDs `plaintiff` and `defendant`.  Each calls `sub
 
 Council requests run sequentially by default.  `--parallel-council` starts all selected council requests together and cancels outstanding requests after the first observed failure.  The procedure waits for every started request to return, then records successful votes in council-roster order rather than response-arrival order.
 
+Each council request contains the proposition and accepted arguments followed by verified documents in path order.  UTF-8 documents use text content items, images use image data URLs, and PDFs use file content items.  Another binary media type fails during initialization, before the lawyer API opens or a provider request begins.
+
 ## Records
 
 The output directory must be empty.  The core writes the current result as the case progresses and leaves a complete terminal record.  `case-manifest.json` supports case discovery by adjservices.
@@ -44,4 +46,4 @@ The output directory must be empty.  The core writes the current result as the c
 
 Council records contain the selected endpoint/model reference, persona filename, and available provider token usage and cost for each vote.  The terminal `provider` object counts logical council requests and separately counts responses that supplied usage or cost, allowing its totals to represent partial observations.  Provider request headers remain in memory for the provider call and do not appear in the durable council, transcript, event, or run records.
 
-Imported files reside under `documents/`, retain relative paths, and carry byte counts and SHA-256 digests in `documents.json`.  A provider-metadata error remains on its vote when the completed response omits inline cost and the metadata lookup fails.  This record distinguishes unknown cost from zero cost without treating metadata retrieval as an adjudication failure.
+Imported files reside under `documents/`, retain relative paths, and carry byte counts and SHA-256 digests in `documents.json`.  The council reads each file through the shared verified reader, which rejects type, size, digest, or path changes.  A provider-metadata error remains on its vote when the completed response omits inline cost and the metadata lookup fails.  This record distinguishes unknown cost from zero cost without treating metadata retrieval as an adjudication failure.

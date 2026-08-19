@@ -2,7 +2,7 @@
 
 Simple adjudication asks one model to decide one proposition under a stated evidence standard.  The model uses the proposition, relevant established knowledge, and any staged documents, then must call `submit_simple_decision` exactly once.  The Go runtime records the decision, provider response, request settings, and document hashes as its verification evidence.
 
-The command requires explicit document limits and explicit permission to use API-key authentication.  It accepts one request specification through `--request-spec` or one model reference through `--model endpoint://model`.  It makes one provider attempt and treats malformed tool output as a provider-protocol error.
+The command requires explicit document limits and explicit permission to use API-key authentication.  It accepts one request specification through `--request-spec` or one model reference through `--model endpoint://model`, and it rejects a model reference containing a query or fragment.  It makes one provider attempt and treats malformed tool output as a provider-protocol error.
 
 Build and test the command from this directory:
 

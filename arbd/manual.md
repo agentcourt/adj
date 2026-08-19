@@ -186,7 +186,7 @@ Successful verification prints a JSON object containing `status: "ok"`, case and
 
 The default council backend is `direct`.  Direct mode samples council members and calls their configured model endpoints after lawyer closings.  `councilapi` mode exposes council opportunities for external clients while retaining the same roster and engine procedure.
 
-The Case API provides `GET /health` on the listener.  It returns HTTP `204` after the process has bound its address.  The listener address printed to stderr becomes the base for both role APIs.
+The Case API provides `GET /health` on the listener.  It returns HTTP `200` with JSON containing `ok`, `case_id`, and `run_id` after the process has bound its address.  The listener address printed to stderr becomes the base for both role APIs.
 
 ## Lawyer API
 

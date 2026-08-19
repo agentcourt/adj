@@ -249,11 +249,7 @@ func loadRequestSpec(opts Options) (modelrequest.Spec, error) {
 	if err != nil {
 		return modelrequest.Spec{}, err
 	}
-	modelID := model.Model
-	if model.Query != "" {
-		modelID += "?" + model.Query
-	}
-	return modelrequest.Spec{Endpoint: model.Endpoint, Model: modelID}, nil
+	return modelrequest.Spec{Endpoint: model.Endpoint, Model: model.Model}, nil
 }
 
 func createEmptyOutputDir(path string) error {

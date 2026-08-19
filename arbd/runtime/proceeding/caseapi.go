@@ -85,7 +85,11 @@ func (api *caseAPIServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	writeCaseAPIJSON(w, http.StatusOK, map[string]any{
+		"ok":      true,
+		"case_id": api.rc.cfg.CaseID,
+		"run_id":  api.rc.cfg.RunID,
+	})
 }
 
 func (api *caseAPIServer) Close(ctx context.Context) error {

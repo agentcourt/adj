@@ -154,7 +154,11 @@ func (api *caseAPI) handleHealth(w http.ResponseWriter, req *http.Request) {
 		writeJSON(w, http.StatusMethodNotAllowed, errorResponse("method_not_allowed", "use GET"))
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":      true,
+		"case_id": api.runner.cfg.CaseID,
+		"run_id":  api.runner.cfg.RunID,
+	})
 }
 
 func (api *caseAPI) handleGet(w http.ResponseWriter, req *http.Request) {

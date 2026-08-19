@@ -184,7 +184,7 @@ Important flags:
 
 The default council backend is `direct`.  In direct mode, the case runner samples council members and calls their configured model endpoints.  In `councilapi` mode, the case runner exposes `/councilapi/v1` and waits for external council agents to connect, read the record, and submit votes.
 
-The private Case API has a health endpoint at `/health`.  It returns HTTP `204` after the case process has bound the listener.  The listener address appears on stderr when it becomes available.
+The private Case API has a health endpoint at `/health`.  It returns HTTP `200` with JSON containing `ok`, `case_id`, and `run_id` after the case process has bound the listener.  The listener address appears on stderr when it becomes available.
 
 ## Lawyer API
 
