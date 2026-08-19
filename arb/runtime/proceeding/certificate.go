@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/jsmorph/adj/arb/runtime/lean"
 )
 
 const (
-	ReplayCertificateSchemaVersion = "aar.replay-certificate.v0"
+	ReplayCertificateSchemaVersion = "aar.replay-certificate.v1"
 	ReplayCertificateFileName      = "certificate.json"
 )
 
@@ -33,10 +34,13 @@ type ReplayInitializeRequest struct {
 	CouncilMembers []map[string]any `json:"council_members"`
 }
 
+type OpportunityAuthority = lean.OpportunityAuthority
+
 type ReplayAction struct {
-	ActionType string         `json:"action_type"`
-	ActorRole  string         `json:"actor_role"`
-	Payload    map[string]any `json:"payload"`
+	ActionType string               `json:"action_type"`
+	ActorRole  string               `json:"actor_role"`
+	Authority  OpportunityAuthority `json:"authority"`
+	Payload    map[string]any       `json:"payload"`
 }
 
 type VerifyReplayCertificateOptions struct {
@@ -69,11 +73,15 @@ func newReplayInitializeRequest(state map[string]any, proposition string, counci
 	}, nil
 }
 
-func (rc *runContext) stepForCertificate(actionType string, actorRole string, payload map[string]any) (map[string]any, error) {
+func (rc *runContext) stepForCertificate(opportunity Opportunity, actionType string, actorRole string, payload map[string]any) (map[string]any, error) {
 	if payload == nil {
 		payload = map[string]any{}
 	}
-	stepResp, err := rc.cfg.Engine.Step(rc.state, actionType, actorRole, payload)
+	authority, err := authorityForOpportunity(rc.state, opportunity)
+	if err != nil {
+		return nil, err
+	}
+	stepResp, err := rc.cfg.Engine.Step(rc.state, actionType, actorRole, authority, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -85,10 +93,65 @@ func (rc *runContext) stepForCertificate(actionType string, actorRole string, pa
 		rc.certificateActions = append(rc.certificateActions, ReplayAction{
 			ActionType: actionType,
 			ActorRole:  actorRole,
+			Authority:  authority,
 			Payload:    payloadCopy,
 		})
 	}
 	return stepResp, nil
+}
+
+func authorityForOpportunity(state map[string]any, opportunity Opportunity) (OpportunityAuthority, error) {
+	stateVersion, err := requiredStateVersion(state)
+	if err != nil {
+		return OpportunityAuthority{}, fmt.Errorf("read action authority state_version: %w", err)
+	}
+	if opportunity.StateVersion != stateVersion {
+		return OpportunityAuthority{}, fmt.Errorf("stale opportunity state_version=%d current=%d", opportunity.StateVersion, stateVersion)
+	}
+	authority := OpportunityAuthority{
+		OpportunityID:        opportunity.ID,
+		ExpectedStateVersion: opportunity.StateVersion,
+		Role:                 opportunity.Role,
+		Phase:                opportunity.Phase,
+		MemberID:             opportunity.MemberID,
+	}
+	if err := validateOpportunityAuthority(authority); err != nil {
+		return OpportunityAuthority{}, fmt.Errorf("construct action authority: %w", err)
+	}
+	return authority, nil
+}
+
+func validateOpportunityAuthority(authority OpportunityAuthority) error {
+	fields := []struct {
+		name  string
+		value string
+	}{
+		{name: "opportunity_id", value: authority.OpportunityID},
+		{name: "role", value: authority.Role},
+		{name: "phase", value: authority.Phase},
+	}
+	for _, field := range fields {
+		name, value := field.name, field.value
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf("%s is required", name)
+		}
+		if strings.TrimSpace(value) != value {
+			return fmt.Errorf("%s must not contain surrounding whitespace", name)
+		}
+	}
+	if authority.ExpectedStateVersion < 0 {
+		return fmt.Errorf("expected_state_version must be nonnegative")
+	}
+	if strings.TrimSpace(authority.MemberID) != authority.MemberID {
+		return fmt.Errorf("member_id must not contain surrounding whitespace")
+	}
+	if authority.Role == "council" && authority.MemberID == "" {
+		return fmt.Errorf("member_id is required for council authority")
+	}
+	if authority.Role != "council" && authority.MemberID != "" {
+		return fmt.Errorf("member_id must be empty for %s authority", authority.Role)
+	}
+	return nil
 }
 
 func writeReplayCertificate(cfg Config, result Result, rc *runContext) error {
@@ -209,11 +272,24 @@ func replayCertificateActions(engine lean.Engine, cert ReplayCertificate) (map[s
 		if action.ActorRole == "" {
 			return nil, fmt.Errorf("certificate action %d (%s) has empty actor_role", i+1, action.ActionType)
 		}
+		if err := validateOpportunityAuthority(action.Authority); err != nil {
+			return nil, fmt.Errorf("certificate action %d (%s) has invalid authority: %w", i+1, action.ActionType, err)
+		}
+		stateVersion, err := requiredStateVersion(state)
+		if err != nil {
+			return nil, fmt.Errorf("certificate action %d (%s) state: %w", i+1, action.ActionType, err)
+		}
+		if action.Authority.ExpectedStateVersion != stateVersion {
+			return nil, fmt.Errorf("certificate action %d (%s) authority expected_state_version %d does not match replay state_version %d", i+1, action.ActionType, action.Authority.ExpectedStateVersion, stateVersion)
+		}
 		payload := action.Payload
 		if payload == nil {
 			payload = map[string]any{}
 		}
-		stepResp, err := engine.Step(state, action.ActionType, action.ActorRole, payload)
+		if action.Authority.Role == "council" && actionUsesCouncilMember(action.ActionType) && mapString(payload["member_id"]) != action.Authority.MemberID {
+			return nil, fmt.Errorf("certificate action %d (%s) payload member_id %q does not match authority member_id %q", i+1, action.ActionType, mapString(payload["member_id"]), action.Authority.MemberID)
+		}
+		stepResp, err := engine.Step(state, action.ActionType, action.ActorRole, action.Authority, payload)
 		if err != nil {
 			return nil, fmt.Errorf("certificate action %d (%s) failed: %w", i+1, action.ActionType, err)
 		}
@@ -226,6 +302,15 @@ func replayCertificateActions(engine lean.Engine, cert ReplayCertificate) (map[s
 		}
 	}
 	return state, nil
+}
+
+func actionUsesCouncilMember(actionType string) bool {
+	switch actionType {
+	case "submit_council_vote", "remove_council_member", "fail_opportunity":
+		return true
+	default:
+		return false
+	}
 }
 
 func canonicalJSONSHA256(value any) (string, error) {

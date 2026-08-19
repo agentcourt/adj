@@ -48,16 +48,14 @@ def oneDemonstratedVoteState : ArbitrationState :=
 def afterSecondDemonstratedVote : Except String ArbitrationState :=
   step
     { state := oneDemonstratedVoteState
-    , action := councilVoteAction "C2" "demonstrated" "second vote"
+    , action := councilVoteAction oneDemonstratedVoteState "C2" "demonstrated" "second vote"
     }
 
-def afterThirdDemonstratedVote : Except String ArbitrationState :=
+def afterThirdDemonstratedVote : Except String ArbitrationState := do
+  let state ← afterSecondDemonstratedVote
   step
-    { state :=
-        match afterSecondDemonstratedVote with
-        | .ok state => state
-        | .error _ => default
-    , action := councilVoteAction "C3" "demonstrated" "third vote"
+    { state := state
+    , action := councilVoteAction state "C3" "demonstrated" "third vote"
     }
 
 /-
@@ -83,7 +81,7 @@ def splitRoundState : ArbitrationState :=
 def afterFullSplitRound : Except String ArbitrationState :=
   step
     { state := splitRoundState
-    , action := councilVoteAction "C3" "not_demonstrated" "r3"
+    , action := councilVoteAction splitRoundState "C3" "not_demonstrated" "r3"
     }
 
 /-
@@ -104,17 +102,14 @@ def impossibleAfterRemovalState : ArbitrationState :=
 def afterRemovalMakesThresholdImpossible : Except String ArbitrationState :=
   step
     { state := impossibleAfterRemovalState
-    , action := removeCouncilMemberAction "C3" "timed_out"
+    , action := removeCouncilMemberAction impossibleAfterRemovalState "C1" "timed_out"
     }
 
 def removeVotedMemberState : ArbitrationState :=
   oneDemonstratedVoteState
 
-def afterRemovingCurrentRoundVoter : Except String ArbitrationState :=
-  step
-    { state := removeVotedMemberState
-    , action := removeCouncilMemberAction "C1" "timed_out"
-    }
+def afterCoreRemovingCurrentRoundVoter : Except String ArbitrationState :=
+  removeCouncilMember removeVotedMemberState "C1" "timed_out"
 
 /-
 This sample opportunity state is for member selection.
@@ -180,14 +175,14 @@ theorem removal_that_breaks_the_threshold_keeps_deliberation_open :
   native_decide
 
 /--
-The engine rejects removal of a member who already voted in the current round.
+The core removal transition rejects a member who already voted in the current round.
 
 This guard preserves the meaning of round completion.  Once a current-round
 vote exists for a seated member, that member cannot be removed until the round
 ends.
 -/
-theorem removal_of_current_round_voter_is_rejected :
-    initErrorMessage afterRemovingCurrentRoundVoter =
+theorem core_removal_of_current_round_voter_is_rejected :
+    initErrorMessage afterCoreRemovingCurrentRoundVoter =
       "cannot remove council member after current-round vote: C1" := by
   native_decide
 

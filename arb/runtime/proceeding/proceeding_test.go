@@ -604,7 +604,7 @@ func TestValidateAttorneyPayload(t *testing.T) {
 }
 
 func TestCouncilMemberIDFromOpportunity(t *testing.T) {
-	opportunity := Opportunity{ID: "deliberation:2:C4"}
+	opportunity := Opportunity{ID: "deliberation:2:C4", MemberID: "C4"}
 	if got := councilMemberIDFromOpportunity(opportunity); got != "C4" {
 		t.Fatalf("councilMemberIDFromOpportunity = %q, want C4", got)
 	}
@@ -1779,7 +1779,7 @@ func TestExecuteCouncilOpportunityRetriesAfterOversizeResponse(t *testing.T) {
 			{ToolCalls: []openaiapi.ToolCall{{Name: "submit_council_vote", Arguments: map[string]any{"vote": "demonstrated", "rationale": "record sufficient"}}}, ResponseID: "valid"},
 		},
 	}
-	if err := rc.executeCouncilOpportunity(context.Background(), client, Opportunity{ID: "deliberation:1:C1", Role: "council", Phase: "deliberation"}); err != nil {
+	if err := rc.executeCouncilOpportunity(context.Background(), client, Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}); err != nil {
 		t.Fatalf("executeCouncilOpportunity returned error: %v", err)
 	}
 	if client.calls != 2 {
@@ -1808,7 +1808,7 @@ func TestExecuteCouncilOpportunityFailsMemberAfterRepeatedOversizeResponses(t *t
 			{Text: strings.Repeat("y", 4096), ResponseID: "oversize-2"},
 		},
 	}
-	if err := rc.executeCouncilOpportunity(context.Background(), client, Opportunity{ID: "deliberation:1:C1", Role: "council", Phase: "deliberation"}); err != nil {
+	if err := rc.executeCouncilOpportunity(context.Background(), client, Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}); err != nil {
 		t.Fatalf("executeCouncilOpportunity returned error: %v", err)
 	}
 	if client.calls != 2 {
@@ -1824,7 +1824,7 @@ func TestRemoveTimedOutCouncilMemberRecordsEvent(t *testing.T) {
 	t.Parallel()
 
 	rc := newCouncilRemovalTestContext(t, opportunityFailureDeadline)
-	opportunity := Opportunity{ID: "deliberation:1:C1", Role: "council", Phase: "deliberation"}
+	opportunity := Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}
 	seat := CouncilSeat{MemberID: "C1", Model: "openrouter://openai/gpt-4o"}
 	if err := rc.removeTimedOutCouncilMember(opportunity, seat, context.DeadlineExceeded); err != nil {
 		t.Fatalf("removeTimedOutCouncilMember returned error: %v", err)
@@ -1836,7 +1836,7 @@ func TestRemoveRequestFailedCouncilMemberRecordsEvent(t *testing.T) {
 	t.Parallel()
 
 	rc := newCouncilRemovalTestContext(t, opportunityFailureRequestFailed)
-	opportunity := Opportunity{ID: "deliberation:1:C1", Role: "council", Phase: "deliberation"}
+	opportunity := Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}
 	seat := CouncilSeat{MemberID: "C1", Model: "openrouter://anthropic/claude-3.7-sonnet"}
 	providerErr := &openaiapi.ProviderError{
 		Class: openaiapi.ProviderErrorRequest,
@@ -1894,7 +1894,8 @@ func newCouncilOpportunityTestContext(t *testing.T, failureReason string) *runCo
 		},
 		complaint: spec.Complaint{Proposition: "P"},
 		state: map[string]any{
-			"policy": DefaultPolicy().StateMap(),
+			"state_version": 1,
+			"policy":        DefaultPolicy().StateMap(),
 			"case": map[string]any{
 				"phase":              "deliberation",
 				"deliberation_round": 1,
@@ -1941,6 +1942,7 @@ func newCouncilRemovalTestContext(t *testing.T, failureReason string) *runContex
 			OutputDir: dir,
 		},
 		state: map[string]any{
+			"state_version": 1,
 			"case": map[string]any{
 				"phase": "deliberation",
 			},
@@ -1949,8 +1951,8 @@ func newCouncilRemovalTestContext(t *testing.T, failureReason string) *runContex
 }
 
 func councilEngineScript(failureReason string) string {
-	failureState := fmt.Sprintf(`{"ok":true,"state":{"case":{"phase":"deliberation","resolution":"","council_members":[{"member_id":"C1","status":"failed","failure_reason":"%s","failure_opportunity_id":"deliberation:1:C1","failure_message":"member failed"}]}}}`, failureReason)
-	voteState := `{"ok":true,"state":{"case":{"phase":"deliberation","resolution":"","council_members":[{"member_id":"C1","status":"seated"}],"council_votes":[{"round":1,"member_id":"C1","vote":"demonstrated","rationale":"record sufficient"}]}}}`
+	failureState := fmt.Sprintf(`{"ok":true,"state":{"case":{"phase":"deliberation","resolution":"","council_members":[{"member_id":"C1","status":"failed","failure_reason":"%s","failure_opportunity_id":"deliberation:1:C1","failure_message":"member failed"}]},"state_version":2}}`, failureReason)
+	voteState := `{"ok":true,"state":{"case":{"phase":"deliberation","resolution":"","council_members":[{"member_id":"C1","status":"seated"}],"council_votes":[{"round":1,"member_id":"C1","vote":"demonstrated","rationale":"record sufficient"}]},"state_version":2}}`
 	return fmt.Sprintf(`#!/bin/sh
 request=$(cat)
 case "$request" in

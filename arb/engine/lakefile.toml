@@ -1,6 +1,7 @@
 name = "aarengine"
 version = "0.1.0"
 defaultTargets = ["Main", "Proofs", "aarengine"]
+weakLeanArgs = ["-j1"]
 
 [[lean_lib]]
 name = "Main"

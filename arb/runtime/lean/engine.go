@@ -12,6 +12,14 @@ type Engine struct {
 	Command []string
 }
 
+type OpportunityAuthority struct {
+	OpportunityID        string `json:"opportunity_id"`
+	ExpectedStateVersion int    `json:"expected_state_version"`
+	Role                 string `json:"role"`
+	Phase                string `json:"phase"`
+	MemberID             string `json:"member_id"`
+}
+
 func New(command []string) Engine {
 	if len(command) == 0 {
 		command = []string{"lake", "exe", "aarengine"}
@@ -74,7 +82,7 @@ func (e Engine) InitializeCase(state map[string]any, proposition string, council
 	})
 }
 
-func (e Engine) Step(state map[string]any, actionType string, actorRole string, payload map[string]any) (map[string]any, error) {
+func (e Engine) Step(state map[string]any, actionType string, actorRole string, authority OpportunityAuthority, payload map[string]any) (map[string]any, error) {
 	if payload == nil {
 		payload = map[string]any{}
 	}
@@ -83,6 +91,7 @@ func (e Engine) Step(state map[string]any, actionType string, actorRole string, 
 		"action": map[string]any{
 			"action_type": actionType,
 			"actor_role":  actorRole,
+			"authority":   authority,
 			"payload":     payload,
 		},
 	})

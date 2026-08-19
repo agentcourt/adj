@@ -1660,6 +1660,7 @@ theorem reachable_active_has_nextOpportunity
                   opportunity_id := s!"deliberation:{s.case.deliberation_round}:{member.member_id}"
                   role := "council"
                   phase := "deliberation"
+                  member_id := member.member_id
                   objective := s!"council vote by {member.member_id}"
                   allowed_tools := ["submit_council_vote"]
                 }, ?_⟩

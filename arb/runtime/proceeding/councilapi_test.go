@@ -352,8 +352,10 @@ func testCouncilAPIWithTurnFailureReason(t *testing.T, failureReason string) (*c
 	turn := &councilTurn{
 		opportunity: Opportunity{
 			ID:           "deliberation:1:C1",
+			StateVersion: 1,
 			Role:         "council",
 			Phase:        "deliberation",
+			MemberID:     "C1",
 			AllowedTools: []string{"submit_council_vote"},
 		},
 		seat:              rc.council[0],

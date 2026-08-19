@@ -41,7 +41,7 @@ func (rc *runContext) failOpportunity(opportunity Opportunity, reason string, me
 			payload[key] = value
 		}
 	}
-	stepResp, err := rc.stepForCertificate("fail_opportunity", "system", payload)
+	stepResp, err := rc.stepForCertificate(opportunity, "fail_opportunity", "system", payload)
 	if err != nil {
 		return err
 	}

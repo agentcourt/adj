@@ -58,6 +58,7 @@
 | `continueDeliberation_preserves_phaseShape` | `Proofs/GlobalInvariants.lean` |  |  |
 | `continueDeliberation_preserves_phaseShape_for` | `Proofs/StepPreservation.lean` |  |  |
 | `continueDeliberation_preserves_recordProvenance_for` | `Proofs/RecordProvenance.lean` |  |  |
+| `core_removal_of_current_round_voter_is_rejected` | `Proofs/Deliberation.lean` | medium | Shows that the core removal transition rejects a member who already voted in the current round. |
 | `currentResolution_demonstrated_implies_sound` | `Proofs/OutcomeSoundness.lean` |  |  |
 | `currentResolution_none_implies_below_threshold` | `Proofs/OutcomeSoundness.lean` |  |  |
 | `currentResolution_not_demonstrated_implies_sound` | `Proofs/OutcomeSoundness.lean` |  |  |
@@ -152,8 +153,7 @@
 | `remainingDeliberationSteps_phase_update` | `Proofs/BoundedTermination.lean` |  |  |
 | `remainingDeliberationSteps_removeUnvotedCouncilMember` | `Proofs/BoundedTermination.lean` |  |  |
 | `remainingStepBudget_of_phase_ne_closed` | `Proofs/BoundedTermination.lean` |  |  |
-| `removal_of_current_round_voter_is_rejected` | `Proofs/Deliberation.lean` | medium | Shows that deliberation rejects removal of a member who already voted in the current round. |
-| `removal_that_breaks_the_threshold_closes_no_majority` | `Proofs/Deliberation.lean` |  |  |
+| `removal_that_breaks_the_threshold_keeps_deliberation_open` | `Proofs/Deliberation.lean` |  |  |
 | `reportCount_append` | `Proofs/Reachability.lean` |  |  |
 | `reportCount_eq_length_of_all_role` | `Proofs/AggregateLimits.lean` |  |  |
 | `reportCount_nil` | `Proofs/Reachability.lean` |  |  |
@@ -170,7 +170,7 @@
 | `seatedFilterLength_removeOne` | `Proofs/BoundedTermination.lean` |  |  |
 | `second_argument_advances_to_rebuttals` | `Proofs/MeritsFlow.lean` |  |  |
 | `second_closing_opens_deliberation` | `Proofs/MeritsFlow.lean` |  |  |
-| `second_demonstrated_vote_closes_the_case` | `Proofs/Deliberation.lean` |  |  |
+| `second_demonstrated_vote_keeps_deliberation_open` | `Proofs/Deliberation.lean` |  |  |
 | `second_opening_advances_to_arguments` | `Proofs/MeritsFlow.lean` |  |  |
 | `setCouncilMembers_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
 | `setCouncilVotes_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
@@ -259,6 +259,7 @@
 | `step_submit_surrebuttal_preserves_recordProvenance` | `Proofs/RecordProvenance.lean` |  |  |
 | `technicalReportCountForRole_eq_reportCount` | `Proofs/Reachability.lean` |  |  |
 | `technicalReportCountForRole_foldl` | `Proofs/Reachability.lean` |  |  |
+| `third_demonstrated_vote_closes_the_case` | `Proofs/Deliberation.lean` |  |  |
 | `validatePolicy_ok_implies_max_deliberation_rounds_positive` | `Proofs/BoundedTermination.lean` |  |  |
 | `validatePolicy_rejects_non_strict_majority_threshold` | `Proofs/InitializeCase.lean` | medium | Shows that policy validation rejects thresholds that are not strict majorities. |
 | `validatePolicy_rejects_threshold_above_council_size` | `Proofs/InitializeCase.lean` |  |  |

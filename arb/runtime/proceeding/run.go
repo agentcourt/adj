@@ -262,6 +262,10 @@ func nextOpportunity(engine lean.Engine, state map[string]any) (Opportunity, boo
 	if ok, _ := resp["ok"].(bool); !ok {
 		return Opportunity{}, false, "", fmt.Errorf("next_opportunity rejected: %s", mapString(resp["error"]))
 	}
+	stateVersion, err := requiredStateVersion(resp)
+	if err != nil {
+		return Opportunity{}, false, "", fmt.Errorf("next_opportunity: %w", err)
+	}
 	if terminal, _ := resp["terminal"].(bool); terminal {
 		return Opportunity{}, true, mapString(resp["reason"]), nil
 	}
@@ -269,14 +273,37 @@ func nextOpportunity(engine lean.Engine, state map[string]any) (Opportunity, boo
 	if len(raw) == 0 {
 		return Opportunity{}, false, "", fmt.Errorf("next_opportunity returned empty opportunity")
 	}
-	return Opportunity{
+	opportunity := Opportunity{
 		ID:           mapString(raw["opportunity_id"]),
+		StateVersion: stateVersion,
 		Role:         mapString(raw["role"]),
 		Phase:        mapString(raw["phase"]),
+		MemberID:     mapString(raw["member_id"]),
 		MayPass:      raw["may_pass"] == true,
 		Objective:    mapString(raw["objective"]),
 		AllowedTools: stringList(raw["allowed_tools"]),
-	}, false, "", nil
+	}
+	if err := validateOpportunityAuthority(OpportunityAuthority{
+		OpportunityID:        opportunity.ID,
+		ExpectedStateVersion: opportunity.StateVersion,
+		Role:                 opportunity.Role,
+		Phase:                opportunity.Phase,
+		MemberID:             opportunity.MemberID,
+	}); err != nil {
+		return Opportunity{}, false, "", fmt.Errorf("next_opportunity returned invalid authority: %w", err)
+	}
+	return opportunity, false, "", nil
+}
+
+func requiredStateVersion(values map[string]any) (int, error) {
+	version, err := requiredIntParam(values, "state_version")
+	if err != nil {
+		return 0, err
+	}
+	if version < 0 {
+		return 0, fmt.Errorf("state_version must be nonnegative")
+	}
+	return version, nil
 }
 
 func currentPhase(state map[string]any) string {

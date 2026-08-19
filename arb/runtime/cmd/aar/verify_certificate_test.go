@@ -84,7 +84,13 @@ func verifyCertificateTestCertificate(t *testing.T, enginePath string, finalStat
 		Actions: []proceeding.ReplayAction{{
 			ActionType: "record_opening_statement",
 			ActorRole:  "plaintiff",
-			Payload:    map[string]any{"text": "Opening."},
+			Authority: proceeding.OpportunityAuthority{
+				OpportunityID:        "openings:plaintiff",
+				ExpectedStateVersion: 1,
+				Role:                 "plaintiff",
+				Phase:                "openings",
+			},
+			Payload: map[string]any{"text": "Opening."},
 		}},
 		ClaimedFinalState:       finalState,
 		ClaimedFinalStateSHA256: hash,

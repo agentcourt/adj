@@ -434,18 +434,46 @@ theorem continueDeliberation_ok
                 rfl⟩
   · exact ⟨stateWithCase s c, by simp [hRoundComplete]; rfl⟩
 
+theorem plaintiffThenDefendant_eq_selectedRole_of_bilateralStarted
+    (phase plaintiff defendant : String)
+    (items : List Filing)
+    (hStarted : bilateralStarted phase items) :
+    plaintiffThenDefendant items plaintiff defendant =
+      some (if items = [] then plaintiff else defendant) := by
+  cases items with
+  | nil =>
+      simp [plaintiffThenDefendant]
+  | cons first rest =>
+      cases rest with
+      | nil =>
+          simp [plaintiffThenDefendant]
+      | cons second tail =>
+          simp [bilateralStarted] at hStarted
+
 theorem recordOpeningStatement_success
     (s : ArbitrationState)
     (hStatus : s.case.status = "active")
     (hPhase : s.case.phase = "openings")
+    (hStarted : bilateralStarted "openings" s.case.openings)
     (hLimit : 0 < s.policy.max_opening_chars) :
     ∃ action t, step { state := s, action := action } = .ok t := by
   let role := if s.case.openings = [] then "plaintiff" else "defendant"
   have hRole : requireRole role role = .ok PUnit.unit := by
     exact requireRole_selectedPartyProp (s.case.openings = [])
   have hText := requireTextWithinLimit_x "opening statement" s.policy.max_opening_chars hLimit
-  refine ⟨openingAction role "x", stateWithCase s (addFiling s.case "openings" role "x"), ?_⟩
-  simp [step, hStatus, stepCore, openingAction, hPhase, role, hRole,
+  have hNextRole :=
+    plaintiffThenDefendant_eq_selectedRole_of_bilateralStarted
+      "openings" "plaintiff" "defendant" s.case.openings hStarted
+  have hOpportunityPrefix :
+      toString ("openings" : String) ++ toString (":" : String) =
+        toString ("openings:" : String) := by
+    decide
+  refine ⟨openingAction s role "x", stateWithCase s (addFiling s.case "openings" role "x"), ?_⟩
+  simp [step, authorizeAction, currentOpportunity, authorizeOpportunityAction,
+    requireOpportunityAuthority,
+    nextOpportunity, nextOpportunityForPhase,
+    partyAuthority, authorityForOpportunity, hStatus, stepCore, openingAction,
+    hPhase, hNextRole, hOpportunityPrefix, role, hRole,
     getString_textPayload, trimString_x, hText, Bind.bind, Except.bind,
     Except.pure, Pure.pure]
 
@@ -453,6 +481,7 @@ theorem submitArgument_success
     (s : ArbitrationState)
     (hStatus : s.case.status = "active")
     (hPhase : s.case.phase = "arguments")
+    (hStarted : bilateralStarted "arguments" s.case.arguments)
     (hMaterials : materialLimitsRespected s)
     (hLimit : 0 < s.policy.max_argument_chars) :
     ∃ action t, step { state := s, action := action } = .ok t := by
@@ -460,6 +489,13 @@ theorem submitArgument_success
   have hRole : requireRole role role = .ok PUnit.unit := by
     exact requireRole_selectedPartyProp (s.case.arguments = [])
   have hText := requireTextWithinLimit_x "argument" s.policy.max_argument_chars hLimit
+  have hNextRole :=
+    plaintiffThenDefendant_eq_selectedRole_of_bilateralStarted
+      "arguments" "plaintiff" "defendant" s.case.arguments hStarted
+  have hOpportunityPrefix :
+      toString ("arguments" : String) ++ toString (":" : String) =
+        toString ("arguments:" : String) := by
+    decide
   have hOfferedCap :
       offeredEvidenceCountForRole s.case.offered_evidence role ≤
         s.policy.max_exhibits_per_side := by
@@ -488,10 +524,14 @@ theorem submitArgument_success
       ¬ s.policy.max_reports_per_side <
         technicalReportCountForRole s.case.technical_reports role := by
     omega
-  refine ⟨argumentAction role "x",
+  refine ⟨argumentAction s role "x",
     stateWithCase s (appendSupplementalMaterials (addFiling s.case "arguments" role "x") [] []),
     ?_⟩
-  simp [step, hStatus, stepCore, argumentAction, recordMeritsSubmission, hPhase,
+  simp [step, authorizeAction, currentOpportunity, authorizeOpportunityAction,
+    requireOpportunityAuthority,
+    nextOpportunity, nextOpportunityForPhase,
+    partyAuthority, authorityForOpportunity, hStatus, stepCore, argumentAction,
+    recordMeritsSubmission, hPhase, hNextRole, hOpportunityPrefix,
     role, hRole, getString_meritsPayload, trimString_x, hText,
     parseOfferedEvidence_meritsPayload, parseTechnicalReports_meritsPayload,
     requireCountWithinLimit, hOfferedNotOver, hReportsNotOver,
@@ -506,8 +546,17 @@ theorem passRebuttal_success
     ∃ action t, step { state := s, action := action } = .ok t := by
   have hRole : requireRole "plaintiff" "plaintiff" = .ok PUnit.unit := by
     exact requireRole_self_of_trim "plaintiff" trimString_plaintiff
-  refine ⟨passAction "plaintiff", stateWithCase s { s.case with phase := "surrebuttals" }, ?_⟩
-  simp [step, hStatus, stepCore, passAction, hPhase, hEmpty, hRole,
+  have hOpportunityId :
+      toString ("rebuttals" : String) ++ toString (":" : String) ++
+          toString ("plaintiff" : String) =
+        ("rebuttals:plaintiff" : String) := by
+    decide
+  refine ⟨passAction s "plaintiff", stateWithCase s { s.case with phase := "surrebuttals" }, ?_⟩
+  simp [step, authorizeAction, currentOpportunity, authorizeOpportunityAction,
+    requireOpportunityAuthority,
+    nextOpportunity, nextOpportunityForPhase,
+    partyAuthority, authorityForOpportunity, hStatus, stepCore, passAction,
+    hPhase, hEmpty, hRole, hOpportunityId,
     Except.pure, Bind.bind, Except.bind, Pure.pure]
 
 theorem passSurrebuttal_success
@@ -518,22 +567,43 @@ theorem passSurrebuttal_success
     ∃ action t, step { state := s, action := action } = .ok t := by
   have hRole : requireRole "defendant" "defendant" = .ok PUnit.unit := by
     exact requireRole_self_of_trim "defendant" trimString_defendant
-  refine ⟨passAction "defendant", stateWithCase s { s.case with phase := "closings" }, ?_⟩
-  simp [step, hStatus, stepCore, passAction, hPhase, hEmpty, hRole,
+  have hOpportunityId :
+      toString ("surrebuttals" : String) ++ toString (":" : String) ++
+          toString ("defendant" : String) =
+        ("surrebuttals:defendant" : String) := by
+    decide
+  refine ⟨passAction s "defendant", stateWithCase s { s.case with phase := "closings" }, ?_⟩
+  simp [step, authorizeAction, currentOpportunity, authorizeOpportunityAction,
+    requireOpportunityAuthority,
+    nextOpportunity, nextOpportunityForPhase,
+    partyAuthority, authorityForOpportunity, hStatus, stepCore, passAction,
+    hPhase, hEmpty, hRole, hOpportunityId,
     Except.pure, Bind.bind, Except.bind, Pure.pure]
 
 theorem deliverClosingStatement_success
     (s : ArbitrationState)
     (hStatus : s.case.status = "active")
     (hPhase : s.case.phase = "closings")
+    (hStarted : bilateralStarted "closings" s.case.closings)
     (hLimit : 0 < s.policy.max_closing_chars) :
     ∃ action t, step { state := s, action := action } = .ok t := by
   let role := if s.case.closings = [] then "plaintiff" else "defendant"
   have hRole : requireRole role role = .ok PUnit.unit := by
     exact requireRole_selectedPartyProp (s.case.closings = [])
   have hText := requireTextWithinLimit_x "closing statement" s.policy.max_closing_chars hLimit
-  refine ⟨closingAction role "x", stateWithCase s (addFiling s.case "closings" role "x"), ?_⟩
-  simp [step, hStatus, stepCore, closingAction, hPhase, role, hRole,
+  have hNextRole :=
+    plaintiffThenDefendant_eq_selectedRole_of_bilateralStarted
+      "closings" "plaintiff" "defendant" s.case.closings hStarted
+  have hOpportunityPrefix :
+      toString ("closings" : String) ++ toString (":" : String) =
+        toString ("closings:" : String) := by
+    decide
+  refine ⟨closingAction s role "x", stateWithCase s (addFiling s.case "closings" role "x"), ?_⟩
+  simp [step, authorizeAction, currentOpportunity, authorizeOpportunityAction,
+    requireOpportunityAuthority,
+    nextOpportunity, nextOpportunityForPhase,
+    partyAuthority, authorityForOpportunity, hStatus, stepCore, closingAction,
+    hPhase, hNextRole, hOpportunityPrefix, role, hRole,
     getString_textPayload, trimString_x, hText, requireNoSupplementalMaterials,
     getOptionalArray_textPayload_offered, getOptionalArray_textPayload_reports,
     Bind.bind, Except.bind, Except.pure, Pure.pure]
@@ -591,14 +661,24 @@ theorem submitCouncilVote_success
   have hStepCore :
       stepCore
         { state := s
-          action := councilVoteAction member.member_id "demonstrated" "" } = .ok t := by
+          action := councilVoteAction s member.member_id "demonstrated" "" } = .ok t := by
     simp [stepCore, councilVoteAction, requireRole_council,
       getString_councilVoteJson_member, getString_councilVoteJson_vote,
       getOptionalString_councilVoteJson_rationale, hCanonical.1,
       trimString_demonstrated, trimString_empty, hRecord,
       Bind.bind, Except.bind]
-  refine ⟨councilVoteAction member.member_id "demonstrated" "", t, ?_⟩
-  simp [step, hStatus, hStepCore]
+  refine ⟨councilVoteAction s member.member_id "demonstrated" "", t, ?_⟩
+  simp [step, authorizeAction, currentOpportunity, authorizeOpportunityAction,
+    requireOpportunityAuthority,
+    nextOpportunity, nextOpportunityForPhase,
+    councilAuthority, authorityForOpportunity, requireCouncilOpportunityMember,
+    councilVoteAction, hStatus, hPhase, hNext, requireRole_council,
+    hCanonical.1,
+    getString_councilVoteJson_member,
+    Bind.bind, Except.bind, Except.pure, Pure.pure]
+  simpa [councilVoteAction, councilAuthority, nextOpportunity,
+    nextOpportunityForPhase, hStatus, hPhase, hNext,
+    authorityForOpportunity] using hStepCore
 
 theorem reachable_active_has_successful_step
     (s : ArbitrationState)
@@ -609,9 +689,22 @@ theorem reachable_active_has_successful_step
   have hLimits := reachable_textLimitsPositive s hs
   have hMaterials := reachable_materialLimitsRespected s hs
   by_cases hOpenings : s.case.phase = "openings"
-  · exact recordOpeningStatement_success s hStatus hOpenings hLimits.opening
+  · have hOpeningShape :
+        bilateralStarted "openings" s.case.openings ∧
+          s.case.arguments = [] ∧ s.case.rebuttals = [] ∧
+            s.case.surrebuttals = [] ∧ s.case.closings = [] := by
+      simpa [phaseShape, hOpenings] using hShape
+    exact recordOpeningStatement_success
+      s hStatus hOpenings hOpeningShape.1 hLimits.opening
   · by_cases hArguments : s.case.phase = "arguments"
-    · exact submitArgument_success s hStatus hArguments hMaterials hLimits.argument
+    · have hArgumentShape :
+          bilateralComplete "openings" s.case.openings ∧
+            bilateralStarted "arguments" s.case.arguments ∧
+              s.case.rebuttals = [] ∧ s.case.surrebuttals = [] ∧
+                s.case.closings = [] := by
+        simpa [phaseShape, hArguments] using hShape
+      exact submitArgument_success
+        s hStatus hArguments hArgumentShape.2.1 hMaterials hLimits.argument
     · by_cases hRebuttals : s.case.phase = "rebuttals"
       · have hRebuttalShape :
             bilateralComplete "openings" s.case.openings ∧
@@ -631,7 +724,15 @@ theorem reachable_active_has_successful_step
             simpa [phaseShape, hSurrebuttals] using hShape
           exact passSurrebuttal_success s hStatus hSurrebuttals hSurrebuttalShape.2.2.2.1
         · by_cases hClosings : s.case.phase = "closings"
-          · exact deliverClosingStatement_success s hStatus hClosings hLimits.closing
+          · have hClosingShape :
+                bilateralComplete "openings" s.case.openings ∧
+                  bilateralComplete "arguments" s.case.arguments ∧
+                    plaintiffOptionalSequence "rebuttals" s.case.rebuttals ∧
+                      defendantOptionalSequence "surrebuttals" s.case.surrebuttals ∧
+                        bilateralStarted "closings" s.case.closings := by
+              simpa [phaseShape, hClosings] using hShape
+            exact deliverClosingStatement_success
+              s hStatus hClosings hClosingShape.2.2.2.2 hLimits.closing
           · by_cases hDeliberation : s.case.phase = "deliberation"
             · exact submitCouncilVote_success s hs hStatus hDeliberation
             · have hPhaseNotClosed : s.case.phase ≠ "closed" := by

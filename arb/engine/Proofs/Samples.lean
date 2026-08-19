@@ -199,45 +199,74 @@ def meritsPayload (text : String) : Json :=
     , ("technical_reports", Json.arr #[])
     ]
 
-def openingAction (role text : String) : CourtAction :=
+def partyAuthority
+    (s : ArbitrationState)
+    (phase role : String) : OpportunityAuthority :=
+  { opportunity_id := s!"{phase}:{role}"
+  , expected_state_version := s.state_version
+  , role := role
+  , phase := phase
+  , member_id := ""
+  }
+
+def councilAuthority
+    (s : ArbitrationState)
+    (memberId : String) : OpportunityAuthority :=
+  { opportunity_id := s!"deliberation:{s.case.deliberation_round}:{memberId}"
+  , expected_state_version := s.state_version
+  , role := "council"
+  , phase := "deliberation"
+  , member_id := memberId
+  }
+
+def openingAction (s : ArbitrationState) (role text : String) : CourtAction :=
   { action_type := "record_opening_statement"
   , actor_role := role
+  , authority := partyAuthority s "openings" role
   , payload := textPayload text
   }
 
-def argumentAction (role text : String) : CourtAction :=
+def argumentAction (s : ArbitrationState) (role text : String) : CourtAction :=
   { action_type := "submit_argument"
   , actor_role := role
+  , authority := partyAuthority s "arguments" role
   , payload := meritsPayload text
   }
 
-def rebuttalAction (text : String) : CourtAction :=
+def rebuttalAction (s : ArbitrationState) (text : String) : CourtAction :=
   { action_type := "submit_rebuttal"
   , actor_role := "plaintiff"
+  , authority := partyAuthority s "rebuttals" "plaintiff"
   , payload := meritsPayload text
   }
 
-def surrebuttalAction (text : String) : CourtAction :=
+def surrebuttalAction (s : ArbitrationState) (text : String) : CourtAction :=
   { action_type := "submit_surrebuttal"
   , actor_role := "defendant"
+  , authority := partyAuthority s "surrebuttals" "defendant"
   , payload := meritsPayload text
   }
 
-def closingAction (role text : String) : CourtAction :=
+def closingAction (s : ArbitrationState) (role text : String) : CourtAction :=
   { action_type := "deliver_closing_statement"
   , actor_role := role
+  , authority := partyAuthority s "closings" role
   , payload := textPayload text
   }
 
-def passAction (role : String) : CourtAction :=
+def passAction (s : ArbitrationState) (role : String) : CourtAction :=
   { action_type := "pass_phase_opportunity"
   , actor_role := role
+  , authority := partyAuthority s s.case.phase role
   , payload := Json.null
   }
 
-def councilVoteAction (memberId vote rationale : String) : CourtAction :=
+def councilVoteAction
+    (s : ArbitrationState)
+    (memberId vote rationale : String) : CourtAction :=
   { action_type := "submit_council_vote"
   , actor_role := "council"
+  , authority := councilAuthority s memberId
   , payload := Json.mkObj
       [ ("member_id", Json.str memberId)
       , ("vote", Json.str vote)
@@ -245,9 +274,12 @@ def councilVoteAction (memberId vote rationale : String) : CourtAction :=
       ]
   }
 
-def removeCouncilMemberAction (memberId status : String) : CourtAction :=
+def removeCouncilMemberAction
+    (s : ArbitrationState)
+    (memberId status : String) : CourtAction :=
   { action_type := "remove_council_member"
   , actor_role := "system"
+  , authority := councilAuthority s memberId
   , payload := Json.mkObj
       [ ("member_id", Json.str memberId)
       , ("status", Json.str status)

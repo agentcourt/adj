@@ -44,7 +44,14 @@ theorem stepCore_ok_of_step_ok
   · simp [hClosed] at hStep
   · by_cases hFailed : s.case.status = "failed"
     · simp [hFailed] at hStep
-    · simpa [hClosed, hFailed] using hStep
+    · simp [hClosed, hFailed] at hStep
+      cases hAuthority : authorizeAction s action with
+      | error err =>
+          rw [hAuthority] at hStep
+          contradiction
+      | ok opportunity =>
+          rw [hAuthority] at hStep
+          exact hStep
 
 def bilateralStarted (phase : String) : List Filing → Prop
   | [] => True

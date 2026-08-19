@@ -9,6 +9,10 @@ structure ClosedCertificateFacts
     (claimed : ArbitrationState) : Prop where
   replay_exact :
     replayInitialized req actions = .ok claimed
+  authority_conforming :
+    ∃ start,
+      initializeCase req = .ok start ∧
+        AuthorityConformingReplay start actions
   reachable :
     Reachable claimed
   length_bound :
@@ -56,6 +60,10 @@ structure FailedCertificateFacts
     (claimed : ArbitrationState) : Prop where
   replay_exact :
     replayInitialized req actions = .ok claimed
+  authority_conforming :
+    ∃ start,
+      initializeCase req = .ok start ∧
+        AuthorityConformingReplay start actions
   reachable :
     Reachable claimed
   length_bound :
@@ -118,6 +126,9 @@ theorem checkReplayCertificate_status_closed_facts
             req actions claimed hCheck hPhase hNoMajority⟩)
   exact
     { replay_exact := hReplay
+      authority_conforming :=
+        checkReplayCertificate_ok_authorityConforming
+          req actions claimed hCheck
       reachable := hReachable
       length_bound :=
         checkReplayCertificate_ok_length_le_initializedBudget
@@ -149,6 +160,9 @@ theorem checkReplayCertificate_status_failed_facts
     checkReplayCertificate_ok_reachable req actions claimed hCheck
   exact
     { replay_exact := hReplay
+      authority_conforming :=
+        checkReplayCertificate_ok_authorityConforming
+          req actions claimed hCheck
       reachable := hReachable
       length_bound :=
         checkReplayCertificate_ok_length_le_initializedBudget

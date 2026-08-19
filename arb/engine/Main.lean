@@ -114,9 +114,18 @@ structure ArbitrationState where
   state_version : Nat := 0
   deriving Inhabited, ToJson, FromJson, DecidableEq
 
+structure OpportunityAuthority where
+  opportunity_id : String
+  expected_state_version : Nat
+  role : String
+  phase : String
+  member_id : String
+  deriving Inhabited, ToJson, FromJson, DecidableEq
+
 structure CourtAction where
   action_type : String
   actor_role : String
+  authority : OpportunityAuthority
   payload : Json
   deriving Inhabited, ToJson, FromJson
 
@@ -135,6 +144,7 @@ structure OpportunitySpec where
   opportunity_id : String
   role : String
   phase : String
+  member_id : String := ""
   may_pass : Bool := false
   objective : String
   allowed_tools : List String
@@ -157,6 +167,16 @@ structure NextOpportunityOk where
   state_version : Nat := 0
   opportunity : Option OpportunitySpec := none
   deriving Inhabited, ToJson, DecidableEq
+
+def authorityForOpportunity
+    (state : ArbitrationState)
+    (opportunity : OpportunitySpec) : OpportunityAuthority :=
+  { opportunity_id := opportunity.opportunity_id
+  , expected_state_version := state.state_version
+  , role := opportunity.role
+  , phase := opportunity.phase
+  , member_id := opportunity.member_id
+  }
 
 def trimString (s : String) : String :=
   s.trimAscii.toString
@@ -318,6 +338,7 @@ def nextOpportunityForPhase (s : ArbitrationState) : NextOpportunityOk :=
               opportunity_id := s!"deliberation:{c.deliberation_round}:{member.member_id}"
               role := "council"
               phase := "deliberation"
+              member_id := member.member_id
               objective := s!"council vote by {member.member_id}"
               allowed_tools := ["submit_council_vote"]
             } }
@@ -346,6 +367,69 @@ def requireRole (actual expected : String) : Except String Unit :=
     pure ()
   else
     throw s!"invalid actor role: expected {expected}, got {actual}"
+
+def requireCouncilOpportunityMember
+    (opportunity : OpportunitySpec)
+    (action : CourtAction) : Except String Unit := do
+  let memberId := trimString (← getString action.payload "member_id")
+  if memberId != opportunity.member_id then
+    throw s!"action member_id {memberId} does not match current member_id {opportunity.member_id}"
+
+def opportunityAuthorityMismatch
+    (actual expected : OpportunityAuthority) : String :=
+  if actual.expected_state_version != expected.expected_state_version then
+    s!"stale opportunity state_version={actual.expected_state_version} current={expected.expected_state_version}"
+  else if actual.opportunity_id != expected.opportunity_id then
+    s!"opportunity_id {actual.opportunity_id} does not match current opportunity {expected.opportunity_id}"
+  else if actual.role != expected.role then
+    s!"opportunity role {actual.role} does not match current role {expected.role}"
+  else if actual.phase != expected.phase then
+    s!"opportunity phase {actual.phase} does not match current phase {expected.phase}"
+  else if actual.member_id != expected.member_id then
+    s!"opportunity member_id {actual.member_id} does not match current member_id {expected.member_id}"
+  else
+    "opportunity authority does not match current opportunity"
+
+def requireOpportunityAuthority
+    (actual expected : OpportunityAuthority) : Except String Unit :=
+  if actual = expected then
+    .ok ()
+  else
+    .error (opportunityAuthorityMismatch actual expected)
+
+def authorizeOpportunityAction
+    (opportunity : OpportunitySpec)
+    (action : CourtAction) : Except String Unit := do
+  if action.action_type = "fail_opportunity" then
+    requireRole action.actor_role "system"
+    if opportunity.role = "council" then
+      requireCouncilOpportunityMember opportunity action
+  else if action.action_type = "remove_council_member" then
+    requireRole action.actor_role "system"
+    if opportunity.role != "council" then
+      throw "council member removal requires a council opportunity"
+    requireCouncilOpportunityMember opportunity action
+  else
+    requireRole action.actor_role opportunity.role
+    if !(opportunity.allowed_tools.contains action.action_type) then
+      throw s!"action {action.action_type} is not allowed for opportunity {opportunity.opportunity_id}"
+    if action.action_type = "submit_council_vote" then
+      if opportunity.role != "council" then
+        throw "council vote requires a council opportunity"
+      requireCouncilOpportunityMember opportunity action
+
+def currentOpportunity (s : ArbitrationState) : Except String OpportunitySpec :=
+  match (nextOpportunity s).opportunity with
+  | some opportunity => .ok opportunity
+  | none => .error "no active opportunity"
+
+def authorizeAction
+    (s : ArbitrationState)
+    (action : CourtAction) : Except String OpportunitySpec := do
+  let opportunity ← currentOpportunity s
+  requireOpportunityAuthority action.authority (authorityForOpportunity s opportunity)
+  authorizeOpportunityAction opportunity action
+  pure opportunity
 
 def requireTextWithinLimit (label text : String) (limit : Nat) : Except String Unit := do
   let cleaned := trimString text
@@ -880,7 +964,8 @@ def step (req : StepRequest) : Except String ArbitrationState :=
     .error "case is closed"
   else if c.status = "failed" then
     .error "case has failed"
-  else
+  else do
+    let _ ← authorizeAction req.state req.action
     stepCore req
 
 def parseJsonInput (input : String) : Except String Json := do

@@ -135,11 +135,12 @@ func (rc *runContext) executeAttorneyOpportunity(ctx context.Context, _ any, opp
 	if err != nil {
 		return err
 	}
+	timeout := rc.cfg.Runtime.LawyerTurnTimeout()
 	turn := &lawyerTurn{
 		opportunity:       opportunity,
 		turnNumber:        rc.turn,
 		prompt:            prompt,
-		deadline:          time.Now().Add(rc.cfg.Runtime.LawyerTurnTimeout()),
+		deadline:          time.Now().Add(timeout),
 		attemptsMax:       rc.cfg.Runtime.InvalidAttemptLimit,
 		attemptsRemaining: rc.cfg.Runtime.InvalidAttemptLimit,
 		evidenceBudget:    &evidenceReadBudget{},
@@ -155,13 +156,29 @@ func (rc *runContext) executeAttorneyOpportunity(ctx context.Context, _ any, opp
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-timer.C:
-		err := fmt.Errorf("%s lawyer opportunity timed out after %s", opportunity.Role, rc.cfg.Runtime.LawyerTurnTimeout())
-		failErr := rc.failOpportunity(opportunity, opportunityFailureDeadline, err.Error(), nil)
-		rc.lawyerAPI.finishTurn(turn, failErr)
-		return failErr
+		return rc.lawyerAPI.timeoutTurn(turn, timeout)
 	case err := <-turn.done:
 		return err
 	}
+}
+
+func (api *lawyerAPIServer) timeoutTurn(turn *lawyerTurn, timeout time.Duration) error {
+	api.mu.Lock()
+	if turn == nil || api.active != turn {
+		api.mu.Unlock()
+		return fmt.Errorf("lawyerapi timed-out turn is no longer active")
+	}
+	if turn.completed {
+		done := turn.done
+		api.mu.Unlock()
+		return <-done
+	}
+	turn.completed = true
+	opportunity := turn.opportunity
+	api.signalChangedLocked()
+	api.mu.Unlock()
+	err := fmt.Errorf("%s lawyer opportunity timed out after %s", opportunity.Role, timeout)
+	return api.rc.failOpportunity(opportunity, opportunityFailureDeadline, err.Error(), nil)
 }
 
 func (api *lawyerAPIServer) finishTurn(turn *lawyerTurn, err error) {
@@ -723,18 +740,23 @@ func (api *lawyerAPIServer) commitEvidenceUploadLocked(turn *lawyerTurn, args ma
 		return nil, err
 	}
 	payload := submittedEvidencePayload(meta)
-	stepResp, err := api.rc.stepForCertificate("submit_evidence", turn.opportunity.Role, payload)
+	stepResp, err := api.rc.stepForCertificate(turn.opportunity, "submit_evidence", turn.opportunity.Role, payload)
 	if err != nil {
 		return nil, err
 	}
 	if ok, _ := stepResp["ok"].(bool); !ok {
 		return nil, fmt.Errorf("%s", mapString(stepResp["error"]))
 	}
+	nextState, nextVersion, err := acceptedStepState(stepResp)
+	if err != nil {
+		return nil, err
+	}
 	meta, file, evidence, err := api.rc.finalizeEvidenceUpload(session, meta)
 	if err != nil {
 		return nil, err
 	}
-	api.rc.state = mapAny(stepResp["state"])
+	api.rc.state = nextState
+	turn.opportunity.StateVersion = nextVersion
 	api.signalChangedLocked()
 	if api.rc.councilAPI != nil {
 		api.rc.councilAPI.signalChanged()
@@ -761,12 +783,16 @@ func (api *lawyerAPIServer) submitEvidenceLocked(turn *lawyerTurn, args map[stri
 		return nil, err
 	}
 	payload := submittedEvidencePayload(meta)
-	stepResp, err := api.rc.stepForCertificate("submit_evidence", turn.opportunity.Role, payload)
+	stepResp, err := api.rc.stepForCertificate(turn.opportunity, "submit_evidence", turn.opportunity.Role, payload)
 	if err != nil {
 		return nil, err
 	}
 	if ok, _ := stepResp["ok"].(bool); !ok {
 		return nil, fmt.Errorf("%s", mapString(stepResp["error"]))
+	}
+	nextState, nextVersion, err := acceptedStepState(stepResp)
+	if err != nil {
+		return nil, err
 	}
 	file, err := api.rc.writeSubmittedEvidenceFile(meta, raw)
 	if err != nil {
@@ -777,7 +803,8 @@ func (api *lawyerAPIServer) submitEvidenceLocked(turn *lawyerTurn, args map[stri
 		return nil, err
 	}
 	meta.EvidenceID = evidence.EvidenceID
-	api.rc.state = mapAny(stepResp["state"])
+	api.rc.state = nextState
+	turn.opportunity.StateVersion = nextVersion
 	api.signalChangedLocked()
 	if api.rc.councilAPI != nil {
 		api.rc.councilAPI.signalChanged()
@@ -798,6 +825,18 @@ func (api *lawyerAPIServer) submitEvidenceLocked(turn *lawyerTurn, args map[stri
 	}, nil
 }
 
+func acceptedStepState(stepResp map[string]any) (map[string]any, int, error) {
+	state := mapAny(stepResp["state"])
+	if len(state) == 0 {
+		return nil, 0, fmt.Errorf("accepted Lean step returned empty state")
+	}
+	version, err := requiredStateVersion(state)
+	if err != nil {
+		return nil, 0, fmt.Errorf("accepted Lean step state: %w", err)
+	}
+	return state, version, nil
+}
+
 func (api *lawyerAPIServer) submitDecisionLocked(turn *lawyerTurn, args map[string]any) (map[string]any, error) {
 	if turn.completed {
 		return nil, fmt.Errorf("decision already submitted for this opportunity")
@@ -809,7 +848,7 @@ func (api *lawyerAPIServer) submitDecisionLocked(turn *lawyerTurn, args map[stri
 	if err := api.rc.validateAttorneyPayloadAgainstState(turn.opportunity, actionType, payload); err != nil {
 		return nil, err
 	}
-	stepResp, err := api.rc.stepForCertificate(actionType, turn.opportunity.Role, payload)
+	stepResp, err := api.rc.stepForCertificate(turn.opportunity, actionType, turn.opportunity.Role, payload)
 	if err != nil {
 		return nil, err
 	}

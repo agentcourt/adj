@@ -20,8 +20,8 @@ The [core process interface](docs/service-interface.md) defines the executable, 
 
 The `aar-proof-strengthening` branch strengthens AAR before further ADC or AARD proof work.  The work binds every state-changing action to the exact current opportunity, completes record provenance, proves terminal-run existence and outcome stability, and derives those results from terminal certificate verification.  Engine, runtime, certificate, proof, and documentation changes remain inside AAR except for this development record.
 
-- [ ] Bind actions to the current opportunity id, state version, role, phase, and council member.
-- [ ] Make closed and failed states reject state-changing actions.
+- [x] Bind actions to the current opportunity id, state version, role, phase, and council member.
+- [x] Make closed and failed states reject state-changing actions.
 - [ ] Enforce complete evidence provenance and technical-report limits in Lean.
 - [ ] Prove that every valid initialization admits a terminal run within the existing bound.
 - [ ] Prove that a reached substantive threshold determines every terminal continuation.
@@ -29,6 +29,12 @@ The `aar-proof-strengthening` branch strengthens AAR before further ADC or AARD 
 - [ ] Derive authorization, global invariants, due process, and outcome soundness from terminal certificate verification.
 - [ ] Replace the count-rule characterization assumptions with independent rule properties.
 - [ ] Reconcile the proof root, theorem index, and verification documentation.
+
+Each action now carries the opportunity id, expected state version, role, phase, and scheduled council-member id supplied by `next_opportunity`.  The public Lean step checks that authority against the current state before applying the action, and the Go runtime records the same authority in `aar.replay-certificate.v1`.  A successful certificate replay yields an `AuthorityConformingReplay`, which states the source opportunity and exact authority for every accepted action.  Separate theorems state that closed and failed cases reject every action.
+
+Verification built the complete AAR `Proofs` target with Lean 4.32.0 through the local resource-limited runner.  The AAR Go tests, focused race tests, vet checks, command build, and diff check passed.  The checks used local fake engines and made no provider call.
+
+Local AAR proof checks set `LEAN_NUM_THREADS=1` so Lake schedules one standard build job at a time.  The AAR Lake package passes `-j1` to each Lean compiler process through `weakLeanArgs`, while `LEANRUN_JOBS=1` prevents concurrent runner invocations.  The runner also applies one CPU, finite memory, and a 64-task ceiling to the complete process tree.
 
 ## Supervised AAR Calls
 

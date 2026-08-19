@@ -573,7 +573,7 @@ func (api *councilAPIServer) submitCouncilVoteLocked(turn *councilTurn, args map
 	if mapString(payload["vote"]) == "" || mapString(payload["rationale"]) == "" {
 		return nil, fmt.Errorf("submit_council_vote requires vote and rationale")
 	}
-	stepResp, err := api.rc.stepForCertificate("submit_council_vote", "council", payload)
+	stepResp, err := api.rc.stepForCertificate(turn.opportunity, "submit_council_vote", "council", payload)
 	if err != nil {
 		return nil, err
 	}

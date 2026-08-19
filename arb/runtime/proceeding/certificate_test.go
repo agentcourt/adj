@@ -35,6 +35,7 @@ func TestVerifyReplayCertificateAcceptsMatchingPacket(t *testing.T) {
 		Actions: []ReplayAction{{
 			ActionType: "record_opening_statement",
 			ActorRole:  "plaintiff",
+			Authority:  certificateTestAuthority(),
 			Payload:    map[string]any{"text": "Opening."},
 		}},
 		ClaimedFinalState:       finalState,
@@ -81,6 +82,7 @@ func TestVerifyReplayCertificateRejectsPacketStateMismatch(t *testing.T) {
 		Actions: []ReplayAction{{
 			ActionType: "record_opening_statement",
 			ActorRole:  "plaintiff",
+			Authority:  certificateTestAuthority(),
 			Payload:    map[string]any{"text": "Opening."},
 		}},
 		ClaimedFinalState:       finalState,
@@ -160,6 +162,7 @@ func TestVerifyReplayCertificateRejectsReplayAction(t *testing.T) {
 	cert.Actions = []ReplayAction{{
 		ActionType: "reject_action",
 		ActorRole:  "plaintiff",
+		Authority:  certificateTestAuthority(),
 		Payload:    map[string]any{"text": "Opening."},
 	}}
 	certPath := filepath.Join(dir, ReplayCertificateFileName)
@@ -204,6 +207,89 @@ func TestVerifyReplayCertificateRejectsAlteredPayload(t *testing.T) {
 	}
 }
 
+func TestVerifyReplayCertificateRejectsTamperedAuthority(t *testing.T) {
+	dir := t.TempDir()
+	enginePath := writeAuthoritySensitiveCertificateTestEngine(t, dir)
+	finalState := certificateTestFinalState()
+	cert := certificateTestCertificate(t, enginePath, finalState)
+	cert.Actions[0].Authority.OpportunityID = "openings:defendant"
+	certPath := filepath.Join(dir, ReplayCertificateFileName)
+	statePath := filepath.Join(dir, "state.json")
+	if err := writeJSONFile(certPath, cert); err != nil {
+		t.Fatalf("write certificate: %v", err)
+	}
+	if err := writeJSONFile(statePath, finalState); err != nil {
+		t.Fatalf("write state: %v", err)
+	}
+	_, err := VerifyReplayCertificate(VerifyReplayCertificateOptions{
+		CertificatePath: certPath,
+		StatePath:       statePath,
+		Engine:          lean.New([]string{enginePath}),
+	})
+	if err == nil || !strings.Contains(err.Error(), "authority rejected for test") {
+		t.Fatalf("error = %v, want authority rejection", err)
+	}
+}
+
+func TestVerifyReplayCertificateRejectsWrongCouncilMember(t *testing.T) {
+	dir := t.TempDir()
+	enginePath := writeCouncilAuthorityCertificateTestEngine(t, dir)
+	finalState := certificateTestFinalState()
+	cert := certificateTestCertificate(t, enginePath, finalState)
+	cert.Actions[0] = ReplayAction{
+		ActionType: "submit_council_vote",
+		ActorRole:  "council",
+		Authority: OpportunityAuthority{
+			OpportunityID:        "deliberation:1:C1",
+			ExpectedStateVersion: 1,
+			Role:                 "council",
+			Phase:                "deliberation",
+			MemberID:             "C2",
+		},
+		Payload: map[string]any{"member_id": "C2", "vote": "demonstrated", "rationale": "Reason."},
+	}
+	certPath := filepath.Join(dir, ReplayCertificateFileName)
+	statePath := filepath.Join(dir, "state.json")
+	if err := writeJSONFile(certPath, cert); err != nil {
+		t.Fatalf("write certificate: %v", err)
+	}
+	if err := writeJSONFile(statePath, finalState); err != nil {
+		t.Fatalf("write state: %v", err)
+	}
+	_, err := VerifyReplayCertificate(VerifyReplayCertificateOptions{
+		CertificatePath: certPath,
+		StatePath:       statePath,
+		Engine:          lean.New([]string{enginePath}),
+	})
+	if err == nil || !strings.Contains(err.Error(), "wrong council member") {
+		t.Fatalf("error = %v, want wrong council member rejection", err)
+	}
+}
+
+func TestVerifyReplayCertificateValidatesAuthorityFields(t *testing.T) {
+	dir := t.TempDir()
+	enginePath := writeCertificateTestEngine(t, dir)
+	finalState := certificateTestFinalState()
+	cert := certificateTestCertificate(t, enginePath, finalState)
+	cert.Actions[0].Authority.Phase = ""
+	certPath := filepath.Join(dir, ReplayCertificateFileName)
+	statePath := filepath.Join(dir, "state.json")
+	if err := writeJSONFile(certPath, cert); err != nil {
+		t.Fatalf("write certificate: %v", err)
+	}
+	if err := writeJSONFile(statePath, finalState); err != nil {
+		t.Fatalf("write state: %v", err)
+	}
+	_, err := VerifyReplayCertificate(VerifyReplayCertificateOptions{
+		CertificatePath: certPath,
+		StatePath:       statePath,
+		Engine:          lean.New([]string{enginePath}),
+	})
+	if err == nil || !strings.Contains(err.Error(), "phase is required") {
+		t.Fatalf("error = %v, want missing authority phase", err)
+	}
+}
+
 func TestStepForCertificateRecordsAcceptedStepsOnly(t *testing.T) {
 	dir := t.TempDir()
 	enginePath := filepath.Join(dir, "engine.sh")
@@ -221,15 +307,16 @@ esac
 		cfg: Config{
 			Engine: lean.New([]string{enginePath}),
 		},
-		state: map[string]any{"case": map[string]any{"phase": "draft"}},
+		state: map[string]any{"case": map[string]any{"phase": "openings"}, "state_version": 1},
 	}
+	opportunity := Opportunity{ID: "openings:plaintiff", StateVersion: 1, Role: "plaintiff", Phase: "openings"}
 	payload := map[string]any{"text": "accepted", "nested": map[string]any{"value": "original"}}
-	if _, err := rc.stepForCertificate("record_opening_statement", "plaintiff", payload); err != nil {
+	if _, err := rc.stepForCertificate(opportunity, "record_opening_statement", "plaintiff", payload); err != nil {
 		t.Fatalf("accepted step: %v", err)
 	}
 	payload["text"] = "mutated"
 	mapAny(payload["nested"])["value"] = "mutated"
-	if _, err := rc.stepForCertificate("reject_me", "plaintiff", map[string]any{}); err != nil {
+	if _, err := rc.stepForCertificate(opportunity, "reject_me", "plaintiff", map[string]any{}); err != nil {
 		t.Fatalf("rejected step transport: %v", err)
 	}
 	if len(rc.certificateActions) != 1 {
@@ -241,6 +328,106 @@ esac
 	}
 	if mapString(mapAny(recorded.Payload["nested"])["value"]) != "original" {
 		t.Fatalf("recorded payload was not cloned: %#v", recorded.Payload)
+	}
+	if recorded.Authority != certificateTestAuthority() {
+		t.Fatalf("recorded authority = %#v, want %#v", recorded.Authority, certificateTestAuthority())
+	}
+}
+
+func TestStepForCertificateUsesRefreshedVersionForRepeatedSubmitEvidence(t *testing.T) {
+	dir := t.TempDir()
+	enginePath := filepath.Join(dir, "engine.sh")
+	script := `#!/bin/sh
+request=$(cat)
+case "$request" in
+  *\"expected_state_version\":1*\"state_version\":1*) printf '%s\n' '{"ok":true,"state":{"case":{"phase":"arguments"},"state_version":2}}' ;;
+  *\"expected_state_version\":2*\"state_version\":2*) printf '%s\n' '{"ok":true,"state":{"case":{"phase":"arguments"},"state_version":3}}' ;;
+  *) printf '%s\n' '{"ok":false,"error":"authority state version mismatch"}' ;;
+esac
+`
+	if err := os.WriteFile(enginePath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write engine script: %v", err)
+	}
+	rc := &runContext{
+		cfg:   Config{Engine: lean.New([]string{enginePath})},
+		state: map[string]any{"case": map[string]any{"phase": "arguments"}, "state_version": 1},
+	}
+	opportunity := Opportunity{ID: "arguments:plaintiff", StateVersion: 1, Role: "plaintiff", Phase: "arguments"}
+	for _, evidenceID := range []string{"E1", "E2"} {
+		stepResp, err := rc.stepForCertificate(opportunity, "submit_evidence", "plaintiff", map[string]any{"evidence_id": evidenceID})
+		if err != nil {
+			t.Fatalf("submit evidence %s: %v", evidenceID, err)
+		}
+		if ok, _ := stepResp["ok"].(bool); !ok {
+			t.Fatalf("submit evidence %s rejected: %v", evidenceID, stepResp["error"])
+		}
+		rc.state = mapAny(stepResp["state"])
+		opportunity.StateVersion++
+	}
+	if len(rc.certificateActions) != 2 {
+		t.Fatalf("recorded actions = %d, want 2", len(rc.certificateActions))
+	}
+	if rc.certificateActions[0].Authority.ExpectedStateVersion != 1 || rc.certificateActions[1].Authority.ExpectedStateVersion != 2 {
+		t.Fatalf("recorded authority versions = %d, %d; want 1, 2", rc.certificateActions[0].Authority.ExpectedStateVersion, rc.certificateActions[1].Authority.ExpectedStateVersion)
+	}
+}
+
+func TestStepForCertificateRejectsStaleOpportunity(t *testing.T) {
+	rc := &runContext{
+		state: map[string]any{"case": map[string]any{"phase": "arguments"}, "state_version": 2},
+	}
+	opportunity := Opportunity{ID: "arguments:plaintiff", StateVersion: 1, Role: "plaintiff", Phase: "arguments"}
+	_, err := rc.stepForCertificate(opportunity, "submit_evidence", "plaintiff", map[string]any{"evidence_id": "E2"})
+	if err == nil || !strings.Contains(err.Error(), "stale opportunity state_version=1 current=2") {
+		t.Fatalf("error = %v, want stale opportunity error", err)
+	}
+	if len(rc.certificateActions) != 0 {
+		t.Fatalf("recorded actions = %d, want 0", len(rc.certificateActions))
+	}
+}
+
+func TestStepForCertificateRequiresCurrentStateVersion(t *testing.T) {
+	rc := &runContext{state: map[string]any{"case": map[string]any{"phase": "openings"}}}
+	opportunity := Opportunity{ID: "openings:plaintiff", Role: "plaintiff", Phase: "openings"}
+	_, err := rc.stepForCertificate(opportunity, "record_opening_statement", "plaintiff", map[string]any{"text": "Opening."})
+	if err == nil || !strings.Contains(err.Error(), "state_version is required") {
+		t.Fatalf("error = %v, want required state_version", err)
+	}
+}
+
+func TestNextOpportunityParsesAuthorityFields(t *testing.T) {
+	dir := t.TempDir()
+	enginePath := filepath.Join(dir, "engine.sh")
+	script := `#!/bin/sh
+printf '%s\n' '{"ok":true,"terminal":false,"state_version":7,"opportunity":{"opportunity_id":"deliberation:2:C3","role":"council","phase":"deliberation","member_id":"C3","objective":"vote","allowed_tools":["submit_council_vote"]}}'
+`
+	if err := os.WriteFile(enginePath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write engine script: %v", err)
+	}
+	opportunity, terminal, _, err := nextOpportunity(lean.New([]string{enginePath}), map[string]any{"state_version": 7})
+	if err != nil {
+		t.Fatalf("next opportunity: %v", err)
+	}
+	if terminal {
+		t.Fatal("next opportunity returned terminal")
+	}
+	if opportunity.ID != "deliberation:2:C3" || opportunity.StateVersion != 7 || opportunity.Role != "council" || opportunity.Phase != "deliberation" || opportunity.MemberID != "C3" {
+		t.Fatalf("opportunity = %#v", opportunity)
+	}
+}
+
+func TestNextOpportunityRequiresStateVersion(t *testing.T) {
+	dir := t.TempDir()
+	enginePath := filepath.Join(dir, "engine.sh")
+	script := `#!/bin/sh
+printf '%s\n' '{"ok":true,"terminal":false,"opportunity":{"opportunity_id":"openings:plaintiff","role":"plaintiff","phase":"openings","objective":"open","allowed_tools":["record_opening_statement"]}}'
+`
+	if err := os.WriteFile(enginePath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write engine script: %v", err)
+	}
+	_, _, _, err := nextOpportunity(lean.New([]string{enginePath}), map[string]any{"state_version": 1})
+	if err == nil || !strings.Contains(err.Error(), "state_version is required") {
+		t.Fatalf("error = %v, want required state_version", err)
 	}
 }
 
@@ -264,10 +451,20 @@ func certificateTestCertificate(t *testing.T, enginePath string, finalState map[
 		Actions: []ReplayAction{{
 			ActionType: "record_opening_statement",
 			ActorRole:  "plaintiff",
+			Authority:  certificateTestAuthority(),
 			Payload:    map[string]any{"text": "Opening."},
 		}},
 		ClaimedFinalState:       finalState,
 		ClaimedFinalStateSHA256: hash,
+	}
+}
+
+func certificateTestAuthority() OpportunityAuthority {
+	return OpportunityAuthority{
+		OpportunityID:        "openings:plaintiff",
+		ExpectedStateVersion: 1,
+		Role:                 "plaintiff",
+		Phase:                "openings",
 	}
 }
 
@@ -309,6 +506,40 @@ case "$request" in
   *Changed*) printf '%s\n' '{"ok":true,"state":{"case":{"phase":"closed","resolution":"not_demonstrated"},"state_version":2}}' ;;
   *record_opening_statement*) printf '%s\n' '{"ok":true,"state":{"case":{"phase":"closed","resolution":"demonstrated"},"state_version":2}}' ;;
   *) printf '%s\n' '{"ok":false,"error":"unexpected request"}' ;;
+esac
+`
+	if err := os.WriteFile(enginePath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write engine script: %v", err)
+	}
+	return enginePath
+}
+
+func writeAuthoritySensitiveCertificateTestEngine(t *testing.T, dir string) string {
+	t.Helper()
+	enginePath := filepath.Join(dir, "engine.sh")
+	script := `#!/bin/sh
+request=$(cat)
+case "$request" in
+  *initialize_case*) printf '%s\n' '{"ok":true,"state":{"case":{"phase":"openings"},"state_version":1}}' ;;
+  *\"opportunity_id\":\"openings:plaintiff\"*) printf '%s\n' '{"ok":true,"state":{"case":{"phase":"closed","resolution":"demonstrated"},"state_version":2}}' ;;
+  *) printf '%s\n' '{"ok":false,"error":"authority rejected for test"}' ;;
+esac
+`
+	if err := os.WriteFile(enginePath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write engine script: %v", err)
+	}
+	return enginePath
+}
+
+func writeCouncilAuthorityCertificateTestEngine(t *testing.T, dir string) string {
+	t.Helper()
+	enginePath := filepath.Join(dir, "engine.sh")
+	script := `#!/bin/sh
+request=$(cat)
+case "$request" in
+  *initialize_case*) printf '%s\n' '{"ok":true,"state":{"case":{"phase":"deliberation"},"state_version":1}}' ;;
+  *\"opportunity_id\":\"deliberation:1:C1\"*\"member_id\":\"C1\"*) printf '%s\n' '{"ok":true,"state":{"case":{"phase":"closed","resolution":"demonstrated"},"state_version":2}}' ;;
+  *) printf '%s\n' '{"ok":false,"error":"wrong council member"}' ;;
 esac
 `
 	if err := os.WriteFile(enginePath, []byte(script), 0o755); err != nil {

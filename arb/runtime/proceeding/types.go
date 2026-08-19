@@ -205,8 +205,10 @@ type CouncilSeat struct {
 
 type Opportunity struct {
 	ID           string
+	StateVersion int
 	Role         string
 	Phase        string
+	MemberID     string
 	MayPass      bool
 	Objective    string
 	AllowedTools []string

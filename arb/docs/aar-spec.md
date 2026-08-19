@@ -14,7 +14,7 @@ The command writes one JSON summary line to standard output when the case ends. 
 
 ## Common HTTP Rules
 
-The private API listens only for the running case.  Requests identify the configured `case_id`, and mutating participant requests include the current opportunity id.  The case process validates identity, role authority, deadline, attempt budget, evidence rules, and phase before accepting an operation.
+The private API listens only for the running case.  Requests identify the configured `case_id`, and mutating participant requests include the current opportunity id.  The case process binds the resulting engine action to that opportunity's current state version, role, phase, and scheduled council member, then validates identity, deadline, attempt budget, evidence rules, and the requested operation.
 
 JSON responses include `ok` unless an endpoint serves bytes.  Request failures use an HTTP error status and a structured error object.  A procedurally invalid tool call can return HTTP 200 with `ok: false` because the case process received and rejected the operation.
 

@@ -3,6 +3,7 @@ package proceeding
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -181,7 +182,7 @@ func TestLawyerSubmitEvidenceWritesLiveManifest(t *testing.T) {
 	api, turn := testLawyerAPIWithTurn()
 	dir := t.TempDir()
 	enginePath := filepath.Join(dir, "engine.sh")
-	engineScript := "#!/bin/sh\ncat >/dev/null\nprintf '%s\\n' '{\"ok\":true,\"state\":{\"case\":{\"status\":\"open\",\"phase\":\"arguments\",\"submitted_evidence\":[]}}}'\n"
+	engineScript := "#!/bin/sh\ncat >/dev/null\nprintf '%s\\n' '{\"ok\":true,\"state\":{\"case\":{\"status\":\"open\",\"phase\":\"arguments\",\"submitted_evidence\":[]},\"state_version\":1}}'\n"
 	if err := os.WriteFile(enginePath, []byte(engineScript), 0o755); err != nil {
 		t.Fatalf("write fake engine: %v", err)
 	}
@@ -216,6 +217,9 @@ func TestLawyerSubmitEvidenceWritesLiveManifest(t *testing.T) {
 	if got["ok"] != true {
 		t.Fatalf("ok = %#v, body = %#v", got["ok"], got)
 	}
+	if turn.opportunity.StateVersion != 1 {
+		t.Fatalf("turn state version = %d, want 1", turn.opportunity.StateVersion)
+	}
 	result := got["result"].(map[string]any)
 	evidenceID := mapString(result["evidence_id"])
 	if evidenceID == "" {
@@ -234,6 +238,91 @@ func TestLawyerSubmitEvidenceWritesLiveManifest(t *testing.T) {
 	}
 	if manifest.EvidenceCount != 1 || len(manifest.Evidence) != 1 || manifest.Evidence[0].EvidenceID != evidenceID {
 		t.Fatalf("manifest evidence = %#v, want %q", manifest, evidenceID)
+	}
+}
+
+func TestLawyerTimeoutUsesRefreshedEvidenceStateVersion(t *testing.T) {
+	api, turn := testLawyerAPIWithTurn()
+	dir := t.TempDir()
+	enginePath := filepath.Join(dir, "engine.sh")
+	engineScript := `#!/bin/sh
+request=$(cat)
+case "$request" in
+  *\"action_type\":\"submit_evidence\"*\"expected_state_version\":0*)
+    printf '%s\n' '{"ok":true,"state":{"case":{"status":"active","phase":"arguments","submitted_evidence":[]},"state_version":1}}'
+    ;;
+  *\"action_type\":\"fail_opportunity\"*\"expected_state_version\":1*)
+    printf '%s\n' '{"ok":true,"state":{"case":{"status":"failed","phase":"arguments","submitted_evidence":[]},"state_version":2}}'
+    ;;
+  *)
+    printf '%s\n' '{"ok":false,"error":"unexpected authority"}'
+    ;;
+esac
+`
+	if err := os.WriteFile(enginePath, []byte(engineScript), 0o755); err != nil {
+		t.Fatalf("write fake engine: %v", err)
+	}
+	api.rc.cfg.OutputDir = dir
+	api.rc.cfg.Engine = lean.New([]string{enginePath})
+	api.rc.evidenceStoreDir = filepath.Join(dir, "evidence-store")
+	caseObj := mapAny(api.rc.state["case"])
+	caseObj["status"] = "active"
+	caseObj["phase"] = "arguments"
+	turn.opportunity = Opportunity{
+		ID:           "arguments:plaintiff",
+		StateVersion: 0,
+		Role:         "plaintiff",
+		Phase:        "arguments",
+		AllowedTools: []string{"submit_evidence", "submit_argument"},
+	}
+
+	status, got := callLawyerAPIDo(t, api, map[string]any{
+		"case_id":        "arb-1",
+		"role_id":        "plaintiff",
+		"opportunity_id": "arguments:plaintiff",
+		"tool":           "submit_evidence",
+		"arguments": map[string]any{
+			"title":               "Source",
+			"mime_type":           "text/plain",
+			"source_url":          "https://example.test/source",
+			"relevance":           "Shows the disputed fact.",
+			"content":             "source evidence\n",
+			"retrieval_timestamp": "2026-07-09T12:00:00Z",
+		},
+	})
+	if status != http.StatusOK || got["ok"] != true {
+		t.Fatalf("submit evidence status = %d, response = %#v", status, got)
+	}
+	if turn.opportunity.StateVersion != 1 {
+		t.Fatalf("turn state version = %d, want 1", turn.opportunity.StateVersion)
+	}
+	if err := api.timeoutTurn(turn, time.Second); err != nil {
+		t.Fatalf("time out refreshed turn: %v", err)
+	}
+	if !turn.completed {
+		t.Fatal("timed-out turn remains open")
+	}
+	if got := mapString(mapAny(api.rc.state["case"])["status"]); got != "failed" {
+		t.Fatalf("case status = %q, want failed", got)
+	}
+	if len(api.rc.certificateActions) != 2 {
+		t.Fatalf("certificate actions = %d, want 2", len(api.rc.certificateActions))
+	}
+	if got := api.rc.certificateActions[1].Authority.ExpectedStateVersion; got != 1 {
+		t.Fatalf("failure authority state version = %d, want 1", got)
+	}
+}
+
+func TestLawyerTimeoutPreservesCompletedTurnResult(t *testing.T) {
+	api, turn := testLawyerAPIWithTurn()
+	want := errors.New("completed turn result")
+	api.finishTurn(turn, want)
+
+	if err := api.timeoutTurn(turn, time.Second); !errors.Is(err, want) {
+		t.Fatalf("timeout result = %v, want %v", err, want)
+	}
+	if len(api.rc.certificateActions) != 0 {
+		t.Fatalf("certificate actions = %d, want 0", len(api.rc.certificateActions))
 	}
 }
 

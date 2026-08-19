@@ -127,7 +127,7 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 			})
 			continue
 		}
-		stepResp, err := rc.stepForCertificate("submit_council_vote", "council", payload)
+		stepResp, err := rc.stepForCertificate(opportunity, "submit_council_vote", "council", payload)
 		if err != nil {
 			return err
 		}
@@ -228,11 +228,7 @@ func (rc *runContext) findCouncilSeat(memberID string) (CouncilSeat, bool) {
 }
 
 func councilMemberIDFromOpportunity(opportunity Opportunity) string {
-	parts := strings.Split(opportunity.ID, ":")
-	if len(parts) == 3 {
-		return strings.TrimSpace(parts[2])
-	}
-	return ""
+	return strings.TrimSpace(opportunity.MemberID)
 }
 
 func (rc *runContext) buildCouncilPrompt(seat CouncilSeat, _ Opportunity) (string, error) {
