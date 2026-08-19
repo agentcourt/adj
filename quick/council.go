@@ -1,17 +1,15 @@
 package quick
 
 import (
-	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jsmorph/adj/common/documents"
+	"github.com/jsmorph/adj/common/modelinput"
 	openaiapi "github.com/jsmorph/adj/common/openai"
 )
 
@@ -135,7 +133,7 @@ func (r *runner) councilInput(member CouncilMember) ([]map[string]any, error) {
 			}
 			metadata := fmt.Sprintf("Document %q (%s, %d bytes, SHA-256 %s):", document.Path, document.MediaType, document.SizeBytes, document.SHA256)
 			content = append(content, map[string]any{"type": "input_text", "text": metadata})
-			item, err := councilDocumentContentItem(document, raw)
+			item, err := modelinput.DocumentContentItem(document, raw)
 			if err != nil {
 				return nil, err
 			}
@@ -152,39 +150,13 @@ func (r *runner) councilInput(member CouncilMember) ([]map[string]any, error) {
 	}, nil
 }
 
-func documentDataURL(mediaType string, raw []byte) string {
-	return "data:" + mediaType + ";base64," + base64.StdEncoding.EncodeToString(raw)
-}
-
-func councilDocumentContentItem(document documents.File, raw []byte) (map[string]any, error) {
-	mediaType := strings.ToLower(strings.TrimSpace(strings.Split(document.MediaType, ";")[0]))
-	switch {
-	case strings.HasPrefix(mediaType, "image/"):
-		return map[string]any{
-			"type":      "input_image",
-			"image_url": documentDataURL(mediaType, raw),
-			"detail":    "auto",
-		}, nil
-	case mediaType == "application/pdf":
-		return map[string]any{
-			"type":      "input_file",
-			"file_data": documentDataURL(mediaType, raw),
-			"filename":  filepath.Base(filepath.FromSlash(document.Path)),
-		}, nil
-	case utf8.Valid(raw) && !bytes.ContainsRune(raw, '\x00'):
-		return map[string]any{"type": "input_text", "text": string(raw)}, nil
-	default:
-		return nil, fmt.Errorf("document %q has unsupported media type %q", document.Path, document.MediaType)
-	}
-}
-
 func validateCouncilDocuments(root string, manifest documents.Manifest) error {
 	for _, document := range manifest.Files {
 		raw, err := documents.ReadVerified(root, document)
 		if err != nil {
 			return fmt.Errorf("read council document %s: %w", document.Path, err)
 		}
-		if _, err := councilDocumentContentItem(document, raw); err != nil {
+		if _, err := modelinput.DocumentContentItem(document, raw); err != nil {
 			return err
 		}
 	}

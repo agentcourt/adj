@@ -27,7 +27,7 @@ The two lawyer agents use role IDs `plaintiff` and `defendant`.  Each calls `sub
 
 Council requests run sequentially by default.  `--parallel-council` starts all selected council requests together and cancels outstanding requests after the first observed failure.  The procedure waits for every started request to return, then records successful votes in council-roster order rather than response-arrival order.
 
-Each council request contains the proposition and accepted arguments followed by verified documents in path order.  UTF-8 documents use text content items, images use image data URLs, and PDFs use file content items.  Another binary media type fails during initialization, before the lawyer API opens or a provider request begins.
+Each council request contains the proposition and accepted arguments followed by verified documents in path order.  UTF-8 documents use text content items, `image/*` documents use image data URLs, and PDFs use file content items.  Another binary media type fails during initialization, before the lawyer API opens or a provider request begins.  Request-spec metadata does not describe input modalities, so a provider or model can reject an encoded image or PDF through the normal provider error path.
 
 ## Records
 

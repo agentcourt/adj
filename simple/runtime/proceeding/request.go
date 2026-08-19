@@ -1,14 +1,10 @@
 package proceeding
 
 import (
-	"bytes"
-	"encoding/base64"
 	"fmt"
-	"path/filepath"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/jsmorph/adj/common/documents"
+	"github.com/jsmorph/adj/common/modelinput"
 )
 
 func decisionTools() []map[string]any {
@@ -52,28 +48,11 @@ func buildInputItems(proposition, evidenceStandard, documentsDir string, manifes
 			"type": "input_text",
 			"text": fmt.Sprintf("Document %q:", document.Path),
 		})
-		mediaType := strings.ToLower(strings.TrimSpace(strings.Split(document.MediaType, ";")[0]))
-		switch {
-		case strings.HasPrefix(mediaType, "image/"):
-			content = append(content, map[string]any{
-				"type":      "input_image",
-				"image_url": dataURL(mediaType, raw),
-				"detail":    "auto",
-			})
-		case mediaType == "application/pdf":
-			content = append(content, map[string]any{
-				"type":      "input_file",
-				"file_data": dataURL(mediaType, raw),
-				"filename":  filepath.Base(filepath.FromSlash(document.Path)),
-			})
-		case utf8.Valid(raw) && !bytes.ContainsRune(raw, '\x00'):
-			content = append(content, map[string]any{
-				"type": "input_text",
-				"text": string(raw),
-			})
-		default:
-			return nil, fmt.Errorf("document %q has unsupported media type %q", document.Path, document.MediaType)
+		item, err := modelinput.DocumentContentItem(document, raw)
+		if err != nil {
+			return nil, err
 		}
+		content = append(content, item)
 	}
 	return []map[string]any{
 		{
@@ -85,8 +64,4 @@ func buildInputItems(proposition, evidenceStandard, documentsDir string, manifes
 			"content_items": content,
 		},
 	}, nil
-}
-
-func dataURL(mediaType string, raw []byte) string {
-	return "data:" + mediaType + ";base64," + base64.StdEncoding.EncodeToString(raw)
 }
