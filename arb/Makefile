@@ -1,19 +1,23 @@
-.PHONY: build test prove install demo clean
+.DEFAULT_GOAL := build
+
+.PHONY: aarengine build test prove install demo clean
 
 BIN_DIR := .bin
 GO_ENV := CGO_ENABLED=0 GOCACHE=$(CURDIR)/.cache/go-build
 
-build:
+aarengine:
 	mkdir -p $(BIN_DIR)
-	cd engine && lake build aarengine
+	cd engine && LEAN_NUM_THREADS=1 lake build aarengine
 	install -m 755 engine/.lake/build/bin/aarengine $(BIN_DIR)/aarengine
+
+build: aarengine
 	cd runtime && $(GO_ENV) go build -o ../$(BIN_DIR)/aar ./cmd/aar
 
-test:
+test: aarengine
 	cd runtime && $(GO_ENV) go test ./...
 
 prove:
-	cd engine && lake build Proofs
+	cd engine && LEAN_NUM_THREADS=1 lake build Proofs
 
 install: build
 

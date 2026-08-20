@@ -62,10 +62,17 @@ theorem initializeCase_establishes_phaseShape
                 · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
                     hDuplicate] at hInit
                   cases hInit
-                · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
-                    hDuplicate, Pure.pure] at hInit
-                  cases hInit
-                  simp [phaseShape, bilateralStarted, stateWithCase]
+                · cases hCatalog : validateEvidenceCatalog req.state.evidence_catalog with
+                  | error err =>
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog] at hInit
+                      cases hInit
+                  | ok okv =>
+                      cases okv
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog, Pure.pure] at hInit
+                      cases hInit
+                      simp [phaseShape, bilateralStarted, stateWithCase]
 
 /--
 Successful initialization also starts with empty admitted-material lists.
@@ -105,10 +112,17 @@ theorem initializeCase_establishes_materialLimits
                 · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
                     hDuplicate] at hInit
                   cases hInit
-                · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
-                    hDuplicate, Pure.pure] at hInit
-                  cases hInit
-                  simp [materialLimitsRespected, offeredCount, reportCount, stateWithCase]
+                · cases hCatalog : validateEvidenceCatalog req.state.evidence_catalog with
+                  | error err =>
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog] at hInit
+                      cases hInit
+                  | ok okv =>
+                      cases okv
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog, Pure.pure] at hInit
+                      cases hInit
+                      simp [materialLimitsRespected, offeredCount, reportCount, stateWithCase]
 
 /--
 Appending supplemental materials does not affect the filing shape.

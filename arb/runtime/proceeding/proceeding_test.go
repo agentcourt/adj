@@ -11,10 +11,13 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/jsmorph/adj/arb/runtime/lean"
 	"github.com/jsmorph/adj/arb/runtime/spec"
+	"github.com/jsmorph/adj/common/casemanifest"
 	"github.com/jsmorph/adj/common/modelrequest"
 	openaiapi "github.com/jsmorph/adj/common/openai"
 )
@@ -32,7 +35,7 @@ func TestLoadCaseFiles(t *testing.T) {
 	write("instructions.txt", "hello")
 	write("samantha_public.pem", "pem")
 
-	files, err := loadCaseFiles(dir)
+	files, err := loadCaseFiles(dir, filepath.Join(dir, "complaint.md"))
 	if err != nil {
 		t.Fatalf("loadCaseFiles returned error: %v", err)
 	}
@@ -41,6 +44,262 @@ func TestLoadCaseFiles(t *testing.T) {
 	}
 	if files[0].EvidenceID != "instructions.txt" || files[1].EvidenceID != "samantha_public.pem" {
 		t.Fatalf("unexpected files: %#v", files)
+	}
+}
+
+func TestPrepareOutputDir(t *testing.T) {
+	t.Run("missing", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "out")
+		claimPath, err := prepareOutputDir(path)
+		if err != nil {
+			t.Fatalf("prepareOutputDir returned error: %v", err)
+		}
+		entries, err := os.ReadDir(path)
+		if err != nil || len(entries) != 1 || entries[0].Name() != outputDirClaimFileName {
+			t.Fatalf("prepared directory entries = %d, %v", len(entries), err)
+		}
+		if err := removeOutputDirClaim(claimPath); err != nil {
+			t.Fatalf("remove output directory claim: %v", err)
+		}
+	})
+
+	t.Run("existing empty", func(t *testing.T) {
+		path := t.TempDir()
+		claimPath, err := prepareOutputDir(path)
+		if err != nil {
+			t.Fatalf("prepareOutputDir returned error: %v", err)
+		}
+		if err := removeOutputDirClaim(claimPath); err != nil {
+			t.Fatalf("remove output directory claim: %v", err)
+		}
+	})
+
+	t.Run("file", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "out")
+		original := []byte("keep\n")
+		if err := os.WriteFile(path, original, 0o644); err != nil {
+			t.Fatalf("write output path: %v", err)
+		}
+		if _, err := prepareOutputDir(path); err == nil || !strings.Contains(err.Error(), "not a directory") {
+			t.Fatalf("prepareOutputDir error = %v, want non-directory error", err)
+		}
+		got, err := os.ReadFile(path)
+		if err != nil || !slices.Equal(got, original) {
+			t.Fatalf("output file after rejection = %q, %v", got, err)
+		}
+	})
+
+	t.Run("nonempty directory", func(t *testing.T) {
+		path := t.TempDir()
+		marker := filepath.Join(path, "existing")
+		original := []byte("keep\n")
+		if err := os.WriteFile(marker, original, 0o644); err != nil {
+			t.Fatalf("write marker: %v", err)
+		}
+		if _, err := prepareOutputDir(path); err == nil || !strings.Contains(err.Error(), "not empty") {
+			t.Fatalf("prepareOutputDir error = %v, want nonempty error", err)
+		}
+		entries, err := os.ReadDir(path)
+		if err != nil || len(entries) != 1 || entries[0].Name() != "existing" {
+			t.Fatalf("output directory after rejection = %#v, %v", entries, err)
+		}
+		got, err := os.ReadFile(marker)
+		if err != nil || !slices.Equal(got, original) {
+			t.Fatalf("marker after rejection = %q, %v", got, err)
+		}
+	})
+}
+
+func TestPrepareOutputDirAllowsOneConcurrentClaim(t *testing.T) {
+	type result struct {
+		claimPath string
+		err       error
+	}
+	path := t.TempDir()
+	start := make(chan struct{})
+	results := make(chan result, 2)
+	for range 2 {
+		go func() {
+			<-start
+			claimPath, err := prepareOutputDir(path)
+			results <- result{claimPath: claimPath, err: err}
+		}()
+	}
+	close(start)
+
+	first := <-results
+	second := <-results
+	var winner, loser result
+	if first.err == nil {
+		winner, loser = first, second
+	} else {
+		winner, loser = second, first
+	}
+	if winner.err != nil {
+		t.Fatalf("both output directory claims failed: %v; %v", first.err, second.err)
+	}
+	if loser.err == nil {
+		t.Fatalf("both output directory claims succeeded: %q and %q", first.claimPath, second.claimPath)
+	}
+	if winner.claimPath != filepath.Join(path, outputDirClaimFileName) {
+		t.Fatalf("winning claim path = %q", winner.claimPath)
+	}
+	info, err := os.Stat(winner.claimPath)
+	if err != nil {
+		t.Fatalf("stat winning output directory claim: %v", err)
+	}
+	if !info.Mode().IsRegular() || info.Size() != 0 {
+		t.Fatalf("winning output directory claim mode and size = %s, %d", info.Mode(), info.Size())
+	}
+	if err := removeOutputDirClaim(winner.claimPath); err != nil {
+		t.Fatalf("remove winning output directory claim: %v", err)
+	}
+}
+
+func TestClaimOutputDirRejectsStaleEmptyObservation(t *testing.T) {
+	path := t.TempDir()
+	manifestPath := filepath.Join(path, casemanifest.FileName)
+	original := []byte("published\n")
+	if err := os.WriteFile(manifestPath, original, 0o644); err != nil {
+		t.Fatalf("publish case manifest after empty observation: %v", err)
+	}
+	if _, err := claimOutputDir(path); err == nil || !strings.Contains(err.Error(), "not empty") {
+		t.Fatalf("claimOutputDir error = %v, want nonempty error", err)
+	}
+	if _, err := os.Stat(filepath.Join(path, outputDirClaimFileName)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("stale output directory claim remains: %v", err)
+	}
+	got, err := os.ReadFile(manifestPath)
+	if err != nil || !slices.Equal(got, original) {
+		t.Fatalf("published case manifest after rejected stale claim = %q, %v", got, err)
+	}
+}
+
+func TestWriteInitialCaseManifestReleasesClaim(t *testing.T) {
+	newManifest := func() casemanifest.Manifest {
+		return casemanifest.New(casemanifest.ProcedureARB, "case-1", "run-1", time.Now())
+	}
+
+	t.Run("success", func(t *testing.T) {
+		path := t.TempDir()
+		claimPath, err := prepareOutputDir(path)
+		if err != nil {
+			t.Fatalf("prepare output directory: %v", err)
+		}
+		if err := writeInitialCaseManifest(path, claimPath, newManifest()); err != nil {
+			t.Fatalf("write initial case manifest: %v", err)
+		}
+		if _, err := os.Stat(claimPath); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("output directory claim remains after manifest publication: %v", err)
+		}
+		if _, err := os.Stat(filepath.Join(path, casemanifest.FileName)); err != nil {
+			t.Fatalf("stat published case manifest: %v", err)
+		}
+	})
+
+	t.Run("publication failure", func(t *testing.T) {
+		path := t.TempDir()
+		claimPath, err := prepareOutputDir(path)
+		if err != nil {
+			t.Fatalf("prepare output directory: %v", err)
+		}
+		manifestPath := filepath.Join(path, casemanifest.FileName)
+		if err := os.Mkdir(manifestPath, 0o755); err != nil {
+			t.Fatalf("block case manifest path: %v", err)
+		}
+		err = writeInitialCaseManifest(path, claimPath, newManifest())
+		if err == nil || !strings.Contains(err.Error(), "write case manifest") {
+			t.Fatalf("writeInitialCaseManifest error = %v, want publication error", err)
+		}
+		if _, err := os.Stat(claimPath); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("output directory claim remains after publication failure: %v", err)
+		}
+		info, err := os.Stat(manifestPath)
+		if err != nil || !info.IsDir() {
+			t.Fatalf("case manifest blocker changed after publication failure: %v", err)
+		}
+	})
+
+	t.Run("publication and cleanup failure", func(t *testing.T) {
+		path := t.TempDir()
+		claimPath, err := prepareOutputDir(path)
+		if err != nil {
+			t.Fatalf("prepare output directory: %v", err)
+		}
+		if err := os.Remove(claimPath); err != nil {
+			t.Fatalf("replace output directory claim: %v", err)
+		}
+		if err := os.Mkdir(claimPath, 0o755); err != nil {
+			t.Fatalf("create claim directory: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(claimPath, "keep"), []byte("keep\n"), 0o644); err != nil {
+			t.Fatalf("make claim directory nonempty: %v", err)
+		}
+		if err := os.Mkdir(filepath.Join(path, casemanifest.FileName), 0o755); err != nil {
+			t.Fatalf("block case manifest path: %v", err)
+		}
+		err = writeInitialCaseManifest(path, claimPath, newManifest())
+		if err == nil || !strings.Contains(err.Error(), "write case manifest") || !strings.Contains(err.Error(), "remove output directory claim") {
+			t.Fatalf("writeInitialCaseManifest error = %v, want joined publication and cleanup errors", err)
+		}
+	})
+}
+
+func TestLoadCaseFilesExcludesConfiguredComplaintIdentity(t *testing.T) {
+	dir := t.TempDir()
+	complaintPath := filepath.Join(dir, "claim.md")
+	write := func(path string, body string) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatalf("write %s: %v", path, err)
+		}
+	}
+	write(complaintPath, "# Proposition\n\nP\n")
+	if err := os.Link(complaintPath, filepath.Join(dir, "claim-copy.md")); err != nil {
+		t.Fatalf("link complaint alias: %v", err)
+	}
+	write(filepath.Join(dir, "evidence.txt"), "record\n")
+
+	files, err := loadCaseFiles(dir, complaintPath)
+	if err != nil {
+		t.Fatalf("loadCaseFiles returned error: %v", err)
+	}
+	if len(files) != 1 || files[0].Name != "evidence.txt" {
+		t.Fatalf("automatic case files = %#v, want evidence.txt", files)
+	}
+	if files[0].Text != "" {
+		t.Fatalf("automatic scan read text before snapshot: %q", files[0].Text)
+	}
+	explicit, err := loadCaseFilesFromPaths([]string{complaintPath})
+	if err != nil {
+		t.Fatalf("loadCaseFilesFromPaths complaint: %v", err)
+	}
+	if len(explicit) != 1 || explicit[0].Name != "claim.md" {
+		t.Fatalf("explicit complaint files = %#v, want claim.md", explicit)
+	}
+}
+
+func TestLoadCaseFilesRejectsFIFOWithoutOpeningIt(t *testing.T) {
+	dir := t.TempDir()
+	complaintPath := filepath.Join(dir, "claim.md")
+	if err := os.WriteFile(complaintPath, []byte("# Proposition\n\nP\n"), 0o644); err != nil {
+		t.Fatalf("write complaint: %v", err)
+	}
+	if err := syscall.Mkfifo(filepath.Join(dir, "source.fifo"), 0o644); err != nil {
+		t.Fatalf("create FIFO: %v", err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		_, err := loadCaseFiles(dir, complaintPath)
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err == nil || !strings.Contains(err.Error(), "not a regular file") {
+			t.Fatalf("loadCaseFiles error = %v, want regular-file error", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("loadCaseFiles blocked while examining a FIFO")
 	}
 }
 
@@ -169,10 +428,22 @@ func TestEvidenceRegistryStoresCaseFilesAndReadsBoundedRanges(t *testing.T) {
 		t.Fatalf("manifest evidence = %#v, want %q", manifest, evidence.EvidenceID)
 	}
 	budget := &evidenceReadBudget{}
-	got, err := rc.readEvidenceRange(evidence.EvidenceID, 1, 3, budget)
+	rc.mu.Lock()
+	reservation, err := rc.reserveEvidenceReadLocked(evidence.EvidenceID, 1, 3, budget)
+	rc.mu.Unlock()
 	if err != nil {
-		t.Fatalf("readEvidenceRange returned error: %v", err)
+		t.Fatalf("reserveEvidenceReadLocked returned error: %v", err)
 	}
+	got, bytesRead, err := readReservedEvidenceRange(reservation)
+	if err != nil {
+		rc.mu.Lock()
+		rollbackEvidenceReadLocked(&reservation)
+		rc.mu.Unlock()
+		t.Fatalf("readReservedEvidenceRange returned error: %v", err)
+	}
+	rc.mu.Lock()
+	finalizeEvidenceReadLocked(&reservation, bytesRead)
+	rc.mu.Unlock()
 	if got["content_base64"] != "YmNk" || got["length"] != 3 {
 		t.Fatalf("read result = %#v", got)
 	}
@@ -216,6 +487,7 @@ func TestPrepareSubmittedEvidencePreservesContentAndBuildsVisibleFile(t *testing
 			Policy:    DefaultPolicy(),
 		},
 		submittedEvidence: []SubmittedEvidenceMeta{},
+		evidenceStoreDir:  filepath.Join(dir, "evidence-store"),
 	}
 	opportunity := Opportunity{Role: "plaintiff", Phase: "arguments"}
 	content := "  exact text\n"
@@ -239,9 +511,13 @@ func TestPrepareSubmittedEvidencePreservesContentAndBuildsVisibleFile(t *testing
 	if meta.SHA256 != wantSHA {
 		t.Fatalf("sha = %s, want %s", meta.SHA256, wantSHA)
 	}
-	file, err := rc.writeSubmittedEvidenceFile(meta, raw)
+	evidence, err := submittedEvidenceRecordMeta(meta, true)
 	if err != nil {
-		t.Fatalf("writeSubmittedEvidenceFile returned error: %v", err)
+		t.Fatalf("submittedEvidenceRecordMeta returned error: %v", err)
+	}
+	file, copyPath, err := rc.publishSubmittedEvidence(meta, evidence, raw, "")
+	if err != nil {
+		t.Fatalf("publishSubmittedEvidence returned error: %v", err)
 	}
 	if file.EvidenceID != meta.EvidenceID || !file.TextReadable || file.Text != content {
 		t.Fatalf("written file metadata = %#v", file)
@@ -253,9 +529,13 @@ func TestPrepareSubmittedEvidencePreservesContentAndBuildsVisibleFile(t *testing
 	if string(written) != content {
 		t.Fatalf("written content = %q, want %q", string(written), content)
 	}
+	copyBytes, err := os.ReadFile(copyPath)
+	if err != nil || string(copyBytes) != content {
+		t.Fatalf("submitted copy = %q, %v", string(copyBytes), err)
+	}
 }
 
-func TestChunkedEvidenceUploadCommitsSubmittedEvidenceEvidence(t *testing.T) {
+func TestChunkedEvidenceUploadPreparesSubmittedEvidence(t *testing.T) {
 	dir := t.TempDir()
 	rc := &runContext{
 		cfg: Config{
@@ -268,7 +548,8 @@ func TestChunkedEvidenceUploadCommitsSubmittedEvidenceEvidence(t *testing.T) {
 	}
 	raw := []byte("abcdef")
 	sha := sha256.Sum256(raw)
-	session, err := rc.beginEvidenceUpload(Opportunity{Role: "plaintiff", Phase: "arguments"}, map[string]any{
+	opportunity := Opportunity{Role: "plaintiff", Phase: "arguments"}
+	session, err := rc.beginEvidenceUpload(opportunity, map[string]any{
 		"title":               "Binary source",
 		"mime_type":           "application/octet-stream",
 		"expected_size_bytes": int64(len(raw)),
@@ -279,13 +560,13 @@ func TestChunkedEvidenceUploadCommitsSubmittedEvidenceEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("beginEvidenceUpload returned error: %v", err)
 	}
-	if _, n, err := rc.writeEvidenceChunk(session.UploadID, 0, "YWJj"); err != nil || n != 3 {
+	if _, n, err := rc.writeEvidenceChunk(opportunity, session.UploadID, 0, "YWJj"); err != nil || n != 3 {
 		t.Fatalf("write first chunk = session, %d, %v", n, err)
 	}
-	if _, n, err := rc.writeEvidenceChunk(session.UploadID, 3, "ZGVm"); err != nil || n != 3 {
+	if _, n, err := rc.writeEvidenceChunk(opportunity, session.UploadID, 3, "ZGVm"); err != nil || n != 3 {
 		t.Fatalf("write second chunk = session, %d, %v", n, err)
 	}
-	meta, err := rc.prepareEvidenceUploadCommit(session, "bin")
+	meta, err := rc.prepareEvidenceUploadCommit(opportunity, session, "bin", "")
 	if err != nil {
 		t.Fatalf("prepareEvidenceUploadCommit returned error: %v", err)
 	}
@@ -293,57 +574,14 @@ func TestChunkedEvidenceUploadCommitsSubmittedEvidenceEvidence(t *testing.T) {
 	if fileMeta["evidence_id"] != meta.EvidenceID {
 		t.Fatalf("submitted evidence payload missing evidence_id: %#v", fileMeta)
 	}
-	meta, file, evidence, err := rc.finalizeEvidenceUpload(session, meta)
-	if err != nil {
-		t.Fatalf("finalizeEvidenceUpload returned error: %v", err)
+	if meta.EvidenceID == "" {
+		t.Fatalf("meta=%#v", meta)
 	}
-	if meta.EvidenceID == "" || file.EvidenceID != meta.EvidenceID || evidence.EvidenceID != meta.EvidenceID {
-		t.Fatalf("meta=%#v file=%#v evidence=%#v", meta, file, evidence)
+	if _, ok := rc.uploadSessions[session.UploadID]; !ok {
+		t.Fatalf("prepared upload session was cleared")
 	}
-	if _, ok := rc.uploadSessions[session.UploadID]; ok {
-		t.Fatalf("upload session was not cleared")
-	}
-	if got, err := os.ReadFile(file.Path); err != nil || string(got) != string(raw) {
+	if got, err := os.ReadFile(session.Path); err != nil || string(got) != string(raw) {
 		t.Fatalf("uploaded file = %q, %v", string(got), err)
-	}
-}
-
-func TestSubmittedEvidenceRegistersEvidence(t *testing.T) {
-	dir := t.TempDir()
-	rc := &runContext{
-		cfg: Config{
-			OutputDir: dir,
-			Policy:    DefaultPolicy(),
-		},
-		evidenceByID:     map[string]EvidenceMeta{},
-		evidenceStoreDir: filepath.Join(dir, "evidence-store"),
-	}
-	sha := sha256.Sum256([]byte("source"))
-	name := "submitted-evidence-01-plaintiff-abcd.txt"
-	meta := SubmittedEvidenceMeta{
-		Phase:              "arguments",
-		Role:               "plaintiff",
-		EvidenceID:         evidenceIDForFile(hex.EncodeToString(sha[:]), name),
-		Name:               name,
-		Title:              "Source",
-		SourceURL:          "https://example.test/source",
-		MimeType:           "text/plain",
-		RetrievalTimestamp: "2026-05-21T12:00:00Z",
-		Relevance:          "Shows the fact.",
-	}
-	file := CaseFile{EvidenceID: meta.EvidenceID, Name: meta.Name, Path: filepath.Join(dir, meta.Name), MimeType: meta.MimeType, TextReadable: true, Text: "source"}
-	if err := os.WriteFile(file.Path, []byte(file.Text), 0o644); err != nil {
-		t.Fatalf("write evidence file: %v", err)
-	}
-	evidence, err := rc.registerSubmittedEvidenceEvidence(meta, file)
-	if err != nil {
-		t.Fatalf("registerSubmittedEvidenceEvidence returned error: %v", err)
-	}
-	if evidence.AdmissibilityStatus != "submitted_evidence" || evidence.SubmittedByRole != "plaintiff" || evidence.EvidenceID != meta.EvidenceID {
-		t.Fatalf("evidence metadata = %#v", evidence)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "evidence-store", filepath.FromSlash(evidence.StorageName))); err != nil {
-		t.Fatalf("stored evidence not found: %v", err)
 	}
 }
 
@@ -469,7 +707,7 @@ func TestValidatePolicyKeepsUploadLimitWithinRecordEvidenceLimit(t *testing.T) {
 	}
 }
 
-func TestLoadCaseFilesPreservesTrailingNewline(t *testing.T) {
+func TestLoadCaseFilesDefersTextReadUntilSnapshot(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "situation.md"), []byte("# Proposition\n\nP\n"), 0o644); err != nil {
 		t.Fatalf("write situation: %v", err)
@@ -482,15 +720,15 @@ func TestLoadCaseFilesPreservesTrailingNewline(t *testing.T) {
 		t.Fatalf("write confession: %v", err)
 	}
 
-	files, err := loadCaseFiles(dir)
+	files, err := loadCaseFiles(dir, filepath.Join(dir, "complaint.md"))
 	if err != nil {
 		t.Fatalf("loadCaseFiles returned error: %v", err)
 	}
 	if len(files) != 1 {
 		t.Fatalf("loadCaseFiles returned %d files, want 1", len(files))
 	}
-	if files[0].Text != body {
-		t.Fatalf("file text = %q, want %q", files[0].Text, body)
+	if files[0].Text != "" {
+		t.Fatalf("file text = %q before snapshot, want empty", files[0].Text)
 	}
 }
 
@@ -509,7 +747,7 @@ func TestLoadCaseFilesAllowsNoUsableFiles(t *testing.T) {
 		t.Fatalf("write readme backup: %v", err)
 	}
 
-	files, err := loadCaseFiles(dir)
+	files, err := loadCaseFiles(dir, filepath.Join(dir, "complaint.md"))
 	if err != nil {
 		t.Fatalf("loadCaseFiles returned error: %v", err)
 	}
@@ -539,8 +777,8 @@ func TestLoadCaseFilesFromPaths(t *testing.T) {
 	if files[0].EvidenceID != "instructions.txt" || files[1].EvidenceID != "samantha_public.pem" {
 		t.Fatalf("unexpected files: %#v", files)
 	}
-	if files[0].Text != "hello\n" {
-		t.Fatalf("instructions text = %q, want hello\\n", files[0].Text)
+	if files[0].Text != "" {
+		t.Fatalf("instructions text = %q before snapshot, want empty", files[0].Text)
 	}
 }
 
@@ -571,8 +809,8 @@ func TestLoadCaseFilesFromPathsRejectsDuplicateBaseNames(t *testing.T) {
 
 func TestValidateAttorneyPayload(t *testing.T) {
 	policy := DefaultPolicy()
-	fileByID := map[string]CaseFile{
-		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128},
+	evidenceByID := map[string]EvidenceMeta{
+		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128, RecordVisibility: "juror_visible", AdmissibilityStatus: "case_packet"},
 	}
 	valid := map[string]any{
 		"text": "argument",
@@ -583,23 +821,169 @@ func TestValidateAttorneyPayload(t *testing.T) {
 			map[string]any{"title": "Verification", "summary": "Verified OK."},
 		},
 	}
-	if err := validateAttorneyPayload("submit_argument", valid, fileByID, policy); err != nil {
+	if err := validateAttorneyPayload("submit_argument", valid, evidenceByID, policy); err != nil {
 		t.Fatalf("validateAttorneyPayload returned error: %v", err)
 	}
 	invalid := map[string]any{
 		"text": "",
 	}
-	if err := validateAttorneyPayload("submit_argument", invalid, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("submit_argument", invalid, evidenceByID, policy); err == nil {
 		t.Fatalf("expected validation error for empty text")
 	}
 	badFile := map[string]any{
 		"text": "argument",
 		"offered_evidence": []any{
-			map[string]any{"evidence_id": "missing.txt"},
+			map[string]any{"evidence_id": "missing.txt", "label": "PX-2"},
 		},
 	}
-	if err := validateAttorneyPayload("submit_argument", badFile, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("submit_argument", badFile, evidenceByID, policy); err == nil {
 		t.Fatalf("expected validation error for missing file")
+	}
+	for _, actionType := range []string{"record_opening_statement", "deliver_closing_statement"} {
+		for _, field := range []string{"offered_evidence", "technical_reports"} {
+			payload := map[string]any{
+				"text": "Statement.",
+				field:  []any{map[string]any{}},
+			}
+			if err := validateAttorneyPayload(actionType, payload, evidenceByID, policy); err == nil || !strings.Contains(err.Error(), field+" are allowed only") {
+				t.Fatalf("validateAttorneyPayload(%q, %q) error = %v, want supplemental-material rejection", actionType, field, err)
+			}
+		}
+	}
+}
+
+func TestAttorneyDecisionNormalizesPayloadLikeLean(t *testing.T) {
+	nonbreakingSpace := "\u00a0"
+	evidenceID := nonbreakingSpace + "instructions.txt" + nonbreakingSpace
+	rawText := "\t" + nonbreakingSpace + "argument" + nonbreakingSpace + "\r\n"
+	rawEvidenceID := "\n" + evidenceID + "\t"
+	rawLabel := " " + nonbreakingSpace + "PX-1" + nonbreakingSpace + "\r"
+	rawTitle := "\t" + nonbreakingSpace + "Verification" + nonbreakingSpace + "\n"
+	rawSummary := "\r" + nonbreakingSpace + "Verified." + nonbreakingSpace + " "
+	offered := map[string]any{"evidence_id": rawEvidenceID, "label": rawLabel}
+	report := map[string]any{"title": rawTitle, "summary": rawSummary}
+	rawPayload := map[string]any{
+		"text":              rawText,
+		"offered_evidence":  []any{offered},
+		"technical_reports": []any{report},
+	}
+
+	actionType, payload, err := attorneyDecision(
+		Opportunity{Phase: "arguments", AllowedTools: []string{"submit_argument"}},
+		map[string]any{"kind": "tool", "tool_name": "submit_argument", "payload": rawPayload},
+		map[string]EvidenceMeta{
+			evidenceID: {
+				EvidenceID:          evidenceID,
+				SizeBytes:           128,
+				RecordVisibility:    "juror_visible",
+				AdmissibilityStatus: "case_packet",
+			},
+		},
+		DefaultPolicy(),
+	)
+	if err != nil {
+		t.Fatalf("attorneyDecision returned error: %v", err)
+	}
+	if actionType != "submit_argument" {
+		t.Fatalf("action type = %q, want submit_argument", actionType)
+	}
+	if got, _ := payload["text"].(string); got != nonbreakingSpace+"argument"+nonbreakingSpace {
+		t.Fatalf("normalized text = %q", got)
+	}
+	gotOffered := listOfMaps(payload["offered_evidence"])
+	if len(gotOffered) != 1 || gotOffered[0]["evidence_id"] != evidenceID || gotOffered[0]["label"] != nonbreakingSpace+"PX-1"+nonbreakingSpace {
+		t.Fatalf("normalized offered evidence = %#v", gotOffered)
+	}
+	gotReports := listOfMaps(payload["technical_reports"])
+	if len(gotReports) != 1 || gotReports[0]["title"] != nonbreakingSpace+"Verification"+nonbreakingSpace || gotReports[0]["summary"] != nonbreakingSpace+"Verified."+nonbreakingSpace {
+		t.Fatalf("normalized technical reports = %#v", gotReports)
+	}
+	if rawPayload["text"] != rawText || offered["evidence_id"] != rawEvidenceID || offered["label"] != rawLabel || report["title"] != rawTitle || report["summary"] != rawSummary {
+		t.Fatalf("attorneyDecision mutated its input payload: %#v", rawPayload)
+	}
+}
+
+func TestAttorneyPayloadLimitsCountNonASCIIWhitespace(t *testing.T) {
+	opportunity := Opportunity{Phase: "arguments", AllowedTools: []string{"submit_argument"}}
+
+	t.Run("technical report bytes", func(t *testing.T) {
+		for _, tc := range []struct {
+			name       string
+			field      string
+			wantError  string
+			setLimit   func(*Policy)
+			otherField string
+		}{
+			{
+				name:       "title",
+				field:      "title",
+				wantError:  "technical_reports title exceeds byte limit of 4",
+				setLimit:   func(policy *Policy) { policy.MaxReportTitleBytes = 4 },
+				otherField: "summary",
+			},
+			{
+				name:       "summary",
+				field:      "summary",
+				wantError:  "technical_reports summary exceeds byte limit of 4",
+				setLimit:   func(policy *Policy) { policy.MaxReportSummaryBytes = 4 },
+				otherField: "title",
+			},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				policy := DefaultPolicy()
+				tc.setLimit(&policy)
+				report := map[string]any{
+					tc.field:      "\t\u00a0x\u00a0\n",
+					tc.otherField: "x",
+				}
+				_, _, err := attorneyDecision(
+					opportunity,
+					map[string]any{
+						"kind":      "tool",
+						"tool_name": "submit_argument",
+						"payload": map[string]any{
+							"text":              "argument",
+							"technical_reports": []any{report},
+						},
+					},
+					nil,
+					policy,
+				)
+				if err == nil || err.Error() != tc.wantError {
+					t.Fatalf("attorneyDecision error = %v, want %q", err, tc.wantError)
+				}
+			})
+		}
+	})
+
+	t.Run("filing characters", func(t *testing.T) {
+		policy := DefaultPolicy()
+		policy.MaxArgumentChars = 2
+		actionType, payload, err := attorneyDecision(
+			opportunity,
+			map[string]any{
+				"kind":      "tool",
+				"tool_name": "submit_argument",
+				"payload":   map[string]any{"text": "\t\u00a0x\u00a0\n"},
+			},
+			nil,
+			policy,
+		)
+		if err != nil {
+			t.Fatalf("attorneyDecision returned error: %v", err)
+		}
+		rc := &runContext{cfg: Config{Policy: policy}}
+		err = rc.validateAttorneyPayloadAgainstState(opportunity, actionType, payload)
+		if err == nil || err.Error() != "argument exceeds character limit of 2 (got 3)" {
+			t.Fatalf("character-limit error = %v", err)
+		}
+	})
+}
+
+func TestMarshalIndentedReturnsError(t *testing.T) {
+	_, err := marshalIndented("test value", map[string]any{"invalid": make(chan struct{})})
+	if err == nil || !strings.Contains(err.Error(), "marshal test value") {
+		t.Fatalf("marshalIndented error = %v, want labeled serialization error", err)
 	}
 }
 
@@ -767,46 +1151,46 @@ func TestCheckCouncilSeatAvailableDoesNotRequireToolsForCouncilAPI(t *testing.T)
 
 func TestValidateAttorneyPayloadAllowsSupplementalMaterialsInRebuttal(t *testing.T) {
 	policy := DefaultPolicy()
-	fileByID := map[string]CaseFile{
-		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128},
+	evidenceByID := map[string]EvidenceMeta{
+		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128, RecordVisibility: "juror_visible", AdmissibilityStatus: "case_packet"},
 	}
 	rebuttal := map[string]any{
 		"text": "reply",
 		"offered_evidence": []any{
-			map[string]any{"evidence_id": "instructions.txt"},
+			map[string]any{"evidence_id": "instructions.txt", "label": "PX-1"},
 		},
 		"technical_reports": []any{
 			map[string]any{"title": "Check", "summary": "Done."},
 		},
 	}
-	if err := validateAttorneyPayload("submit_rebuttal", rebuttal, fileByID, policy); err != nil {
+	if err := validateAttorneyPayload("submit_rebuttal", rebuttal, evidenceByID, policy); err != nil {
 		t.Fatalf("expected rebuttal supplemental materials to be accepted: %v", err)
 	}
 }
 
 func TestValidateAttorneyPayloadAllowsSupplementalMaterialsInSurrebuttal(t *testing.T) {
 	policy := DefaultPolicy()
-	fileByID := map[string]CaseFile{
-		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128},
+	evidenceByID := map[string]EvidenceMeta{
+		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128, RecordVisibility: "juror_visible", AdmissibilityStatus: "case_packet"},
 	}
 	surrebuttal := map[string]any{
 		"text": "reply",
 		"offered_evidence": []any{
-			map[string]any{"evidence_id": "instructions.txt"},
+			map[string]any{"evidence_id": "instructions.txt", "label": "PX-1"},
 		},
 		"technical_reports": []any{
 			map[string]any{"title": "Check", "summary": "Done."},
 		},
 	}
-	if err := validateAttorneyPayload("submit_surrebuttal", surrebuttal, fileByID, policy); err != nil {
+	if err := validateAttorneyPayload("submit_surrebuttal", surrebuttal, evidenceByID, policy); err != nil {
 		t.Fatalf("expected surrebuttal supplemental materials to be accepted: %v", err)
 	}
 }
 
 func TestValidateAttorneyPayloadRejectsSupplementalMaterialsInClosing(t *testing.T) {
 	policy := DefaultPolicy()
-	fileByID := map[string]CaseFile{
-		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128},
+	evidenceByID := map[string]EvidenceMeta{
+		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128, RecordVisibility: "juror_visible", AdmissibilityStatus: "case_packet"},
 	}
 	closing := map[string]any{
 		"text": "closing",
@@ -814,7 +1198,7 @@ func TestValidateAttorneyPayloadRejectsSupplementalMaterialsInClosing(t *testing
 			map[string]any{"evidence_id": "instructions.txt"},
 		},
 	}
-	if err := validateAttorneyPayload("deliver_closing_statement", closing, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("deliver_closing_statement", closing, evidenceByID, policy); err == nil {
 		t.Fatalf("expected closing offered_evidence to be rejected")
 	}
 	closing = map[string]any{
@@ -823,7 +1207,7 @@ func TestValidateAttorneyPayloadRejectsSupplementalMaterialsInClosing(t *testing
 			map[string]any{"title": "Late report", "summary": "New analysis."},
 		},
 	}
-	if err := validateAttorneyPayload("deliver_closing_statement", closing, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("deliver_closing_statement", closing, evidenceByID, policy); err == nil {
 		t.Fatalf("expected closing technical_reports to be rejected")
 	}
 }
@@ -831,16 +1215,16 @@ func TestValidateAttorneyPayloadRejectsSupplementalMaterialsInClosing(t *testing
 func TestValidateAttorneyPayloadRejectsOversizeExhibit(t *testing.T) {
 	policy := DefaultPolicy()
 	policy.MaxExhibitBytes = 16
-	fileByID := map[string]CaseFile{
-		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 32},
+	evidenceByID := map[string]EvidenceMeta{
+		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 32, RecordVisibility: "juror_visible", AdmissibilityStatus: "case_packet"},
 	}
 	payload := map[string]any{
 		"text": "argument",
 		"offered_evidence": []any{
-			map[string]any{"evidence_id": "instructions.txt"},
+			map[string]any{"evidence_id": "instructions.txt", "label": "PX-1"},
 		},
 	}
-	if err := validateAttorneyPayload("submit_argument", payload, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("submit_argument", payload, evidenceByID, policy); err == nil {
 		t.Fatalf("expected oversize exhibit to be rejected")
 	}
 }
@@ -848,7 +1232,7 @@ func TestValidateAttorneyPayloadRejectsOversizeExhibit(t *testing.T) {
 func TestValidateAttorneyPayloadRejectsTooManyReports(t *testing.T) {
 	policy := DefaultPolicy()
 	policy.MaxReportsPerFiling = 1
-	fileByID := map[string]CaseFile{}
+	evidenceByID := map[string]EvidenceMeta{}
 	payload := map[string]any{
 		"text": "argument",
 		"technical_reports": []any{
@@ -856,7 +1240,7 @@ func TestValidateAttorneyPayloadRejectsTooManyReports(t *testing.T) {
 			map[string]any{"title": "Two", "summary": "B"},
 		},
 	}
-	if err := validateAttorneyPayload("submit_argument", payload, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("submit_argument", payload, evidenceByID, policy); err == nil {
 		t.Fatalf("expected per-filing report limit to be enforced")
 	}
 }
@@ -1362,7 +1746,10 @@ func TestCouncilSeatRosterIncludesRequestSpec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sampleCouncil error = %v", err)
 	}
-	roster := councilSeatRoster(council, []map[string]any{{"member_id": "C1", "status": "removed"}})
+	roster, err := councilSeatRoster(council, []map[string]any{{"member_id": "C1", "status": "removed"}})
+	if err != nil {
+		t.Fatalf("councilSeatRoster error = %v", err)
+	}
 	if len(roster) != 1 {
 		t.Fatalf("roster length = %d, want 1", len(roster))
 	}
@@ -1386,6 +1773,23 @@ func TestCouncilSeatRosterIncludesRequestSpec(t *testing.T) {
 	request := mapAny(requestSpec["request"])
 	if request["temperature"] == nil || request["top_p"] == nil || request["max_tokens"] == nil {
 		t.Fatalf("request = %#v", request)
+	}
+}
+
+func TestCouncilSeatMapsReturnsRequestSpecMarshalError(t *testing.T) {
+	council := []CouncilSeat{{
+		MemberID: "C1",
+		RequestSpec: &modelrequest.Spec{
+			VariantMetadata: map[string]any{"invalid": make(chan struct{})},
+		},
+	}}
+
+	members, err := councilSeatMaps(council)
+	if err == nil || !strings.Contains(err.Error(), "marshal council member C1 request spec") {
+		t.Fatalf("councilSeatMaps error = %v, want request-spec marshal error", err)
+	}
+	if members != nil {
+		t.Fatalf("councilSeatMaps members = %#v, want nil", members)
 	}
 }
 
@@ -1795,6 +2199,190 @@ func TestExecuteCouncilOpportunityRetriesAfterOversizeResponse(t *testing.T) {
 	}
 }
 
+func TestExecuteCouncilOpportunityRetriesInvalidVote(t *testing.T) {
+	origPromptBaseDir := promptBaseDir
+	promptBaseDir = filepath.Join("..", "..", "prompts")
+	defer func() { promptBaseDir = origPromptBaseDir }()
+
+	rc := newCouncilOpportunityTestContext(t, "")
+	rc.cfg.Runtime.InvalidAttemptLimit = 2
+	client := &fakeCouncilResponseClient{
+		responses: []openaiapi.Response{
+			{ToolCalls: []openaiapi.ToolCall{{Name: "submit_council_vote", Arguments: map[string]any{"vote": "abstain", "rationale": "No vote."}}}},
+			{ToolCalls: []openaiapi.ToolCall{{Name: "submit_council_vote", Arguments: map[string]any{"vote": "demonstrated", "rationale": "Record sufficient."}}}},
+		},
+	}
+	opportunity := Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}
+	if err := rc.executeCouncilOpportunity(context.Background(), client, opportunity); err != nil {
+		t.Fatalf("executeCouncilOpportunity returned error: %v", err)
+	}
+	if client.calls != 2 {
+		t.Fatalf("client calls = %d, want 2", client.calls)
+	}
+	votes := mapList(mapAny(rc.state["case"])["council_votes"])
+	if len(votes) != 1 || mapString(votes[0]["vote"]) != "demonstrated" {
+		t.Fatalf("votes = %#v, want one demonstrated vote", votes)
+	}
+}
+
+func TestExecuteCouncilOpportunityRejectsCallerMemberID(t *testing.T) {
+	origPromptBaseDir := promptBaseDir
+	promptBaseDir = filepath.Join("..", "..", "prompts")
+	defer func() { promptBaseDir = origPromptBaseDir }()
+
+	rc := newCouncilOpportunityTestContext(t, "")
+	rc.cfg.Runtime.InvalidAttemptLimit = 2
+	client := &fakeCouncilResponseClient{
+		responses: []openaiapi.Response{
+			{ToolCalls: []openaiapi.ToolCall{{Name: "submit_council_vote", Arguments: map[string]any{
+				"member_id": "C2",
+				"vote":      "demonstrated",
+				"rationale": "Record sufficient.",
+			}}}},
+			{ToolCalls: []openaiapi.ToolCall{{Name: "submit_council_vote", Arguments: map[string]any{
+				"vote":      "demonstrated",
+				"rationale": "Record sufficient.",
+			}}}},
+		},
+	}
+	opportunity := Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}
+	if err := rc.executeCouncilOpportunity(context.Background(), client, opportunity); err != nil {
+		t.Fatalf("executeCouncilOpportunity returned error: %v", err)
+	}
+	if client.calls != 2 {
+		t.Fatalf("client calls = %d, want 2", client.calls)
+	}
+	if len(client.inputs) < 2 || !strings.Contains(mapString(client.inputs[1][len(client.inputs[1])-1]["content"]), `unknown field "member_id"`) {
+		t.Fatalf("correction = %#v, want unknown member_id field", client.inputs)
+	}
+	votes := mapList(mapAny(rc.state["case"])["council_votes"])
+	if len(votes) != 1 || mapString(votes[0]["member_id"]) != "C1" {
+		t.Fatalf("votes = %#v, want one vote for authoritative member C1", votes)
+	}
+	if len(client.tools) == 0 || len(client.tools[0]) != 1 {
+		t.Fatalf("tool calls = %#v, want one tool specification", client.tools)
+	}
+	parameters := client.tools[0][0]["parameters"].(map[string]any)
+	properties := mapAny(parameters["properties"])
+	if _, ok := properties["member_id"]; ok {
+		t.Fatalf("submit_council_vote schema advertises member_id: %#v", parameters)
+	}
+	required, ok := parameters["required"].([]string)
+	if !ok || len(required) != 2 || required[0] != "vote" || required[1] != "rationale" {
+		t.Fatalf("required fields = %#v, want vote and rationale", parameters["required"])
+	}
+}
+
+func TestExecuteCouncilOpportunityReturnsEngineFailure(t *testing.T) {
+	origPromptBaseDir := promptBaseDir
+	promptBaseDir = filepath.Join("..", "..", "prompts")
+	defer func() { promptBaseDir = origPromptBaseDir }()
+
+	for _, tc := range []struct {
+		name     string
+		response string
+		want     string
+	}{
+		{name: "Lean rejection", response: `{"ok":false,"error":"engine rejected valid vote"}`, want: "engine rejected valid vote"},
+		{name: "malformed accepted state", response: `{"ok":true,"state":{"case":{"status":"active"}}}`, want: "state_version"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rc := newCouncilOpportunityTestContext(t, "")
+			rc.cfg.Engine = roleAPITestEngine(tc.response)
+			client := &fakeCouncilResponseClient{responses: []openaiapi.Response{{
+				ToolCalls: []openaiapi.ToolCall{{Name: "submit_council_vote", Arguments: map[string]any{
+					"vote":      "demonstrated",
+					"rationale": "Record sufficient.",
+				}}},
+			}}}
+			opportunity := Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}
+			err := rc.executeCouncilOpportunity(context.Background(), client, opportunity)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("executeCouncilOpportunity error = %v, want %q", err, tc.want)
+			}
+			if client.calls != 1 {
+				t.Fatalf("client calls = %d, want 1", client.calls)
+			}
+			if len(rc.certificateActions) != 0 || len(rc.events) != 0 {
+				t.Fatalf("runtime failure committed actions or events: actions=%d events=%d", len(rc.certificateActions), len(rc.events))
+			}
+			if got := intNumber(rc.state["state_version"]); got != 1 {
+				t.Fatalf("state version = %d, want 1", got)
+			}
+		})
+	}
+}
+
+func TestExecuteCouncilOpportunityEngineCallCrossingDeadlineRecordsDeadlineFailure(t *testing.T) {
+	origPromptBaseDir := promptBaseDir
+	promptBaseDir = filepath.Join("..", "..", "prompts")
+	defer func() { promptBaseDir = origPromptBaseDir }()
+
+	rc := newCouncilOpportunityTestContext(t, opportunityFailureDeadline)
+	rc.cfg.Runtime.CouncilLLMTimeoutSeconds = 1
+	marker := filepath.Join(t.TempDir(), "engine-entered")
+	rc.cfg.Engine.Command = []string{"/bin/sh", "-c", blockingCouncilEngineScript(opportunityFailureDeadline), "blocking-engine", marker}
+	client := &fakeCouncilResponseClient{responses: []openaiapi.Response{{
+		ToolCalls: []openaiapi.ToolCall{{Name: "submit_council_vote", Arguments: map[string]any{
+			"vote":      "demonstrated",
+			"rationale": "Record sufficient.",
+		}}},
+	}}}
+	opportunity := Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}
+	if err := rc.executeCouncilOpportunity(context.Background(), client, opportunity); err != nil {
+		t.Fatalf("executeCouncilOpportunity: %v", err)
+	}
+	if _, err := os.Stat(marker); err != nil {
+		t.Fatalf("blocking engine did not start: %v", err)
+	}
+	if len(rc.certificateActions) != 1 {
+		t.Fatalf("certificate action count = %d, want one deadline transition", len(rc.certificateActions))
+	}
+	if votes := mapList(mapAny(rc.state["case"])["council_votes"]); len(votes) != 0 {
+		t.Fatalf("council votes = %#v, want none", votes)
+	}
+	assertFailedCouncilMember(t, rc, opportunityFailureDeadline)
+}
+
+func TestExecuteCouncilOpportunityEngineCallStopsOnCaseCancellation(t *testing.T) {
+	origPromptBaseDir := promptBaseDir
+	promptBaseDir = filepath.Join("..", "..", "prompts")
+	defer func() { promptBaseDir = origPromptBaseDir }()
+
+	rc := newCouncilOpportunityTestContext(t, opportunityFailureDeadline)
+	marker := filepath.Join(t.TempDir(), "engine-entered")
+	rc.cfg.Engine.Command = []string{"/bin/sh", "-c", blockingCouncilEngineScript(opportunityFailureDeadline), "blocking-engine", marker}
+	client := &fakeCouncilResponseClient{responses: []openaiapi.Response{{
+		ToolCalls: []openaiapi.ToolCall{{Name: "submit_council_vote", Arguments: map[string]any{
+			"vote":      "demonstrated",
+			"rationale": "Record sufficient.",
+		}}},
+	}}}
+	caseCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	opportunity := Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}
+	done := make(chan error, 1)
+	go func() {
+		done <- rc.executeCouncilOpportunity(caseCtx, client, opportunity)
+	}()
+	waitForFile(t, marker)
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("executeCouncilOpportunity error = %v, want context cancellation", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("canceled council engine call did not return")
+	}
+	if len(rc.certificateActions) != 0 || len(rc.events) != 0 {
+		t.Fatalf("canceled engine call committed %d actions and %d events", len(rc.certificateActions), len(rc.events))
+	}
+	if got := intNumber(rc.state["state_version"]); got != 1 {
+		t.Fatalf("state_version = %d, want 1", got)
+	}
+}
+
 func TestExecuteCouncilOpportunityFailsMemberAfterRepeatedOversizeResponses(t *testing.T) {
 	origPromptBaseDir := promptBaseDir
 	promptBaseDir = filepath.Join("..", "..", "prompts")
@@ -1826,10 +2414,32 @@ func TestRemoveTimedOutCouncilMemberRecordsEvent(t *testing.T) {
 	rc := newCouncilRemovalTestContext(t, opportunityFailureDeadline)
 	opportunity := Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}
 	seat := CouncilSeat{MemberID: "C1", Model: "openrouter://openai/gpt-4o"}
-	if err := rc.removeTimedOutCouncilMember(opportunity, seat, context.DeadlineExceeded); err != nil {
+	if err := rc.removeTimedOutCouncilMember(context.Background(), time.Time{}, opportunity, seat, context.DeadlineExceeded); err != nil {
 		t.Fatalf("removeTimedOutCouncilMember returned error: %v", err)
 	}
 	assertFailedCouncilMember(t, rc, opportunityFailureDeadline)
+}
+
+func TestFailCouncilOpportunityPreservesDeadlineAndRetryErrors(t *testing.T) {
+	rc := newCouncilRemovalTestContext(t, opportunityFailureDeadline)
+	rc.cfg.Runtime = DefaultRuntimeLimits()
+	rc.cfg.Engine.Command = []string{"/bin/sh", "-c", "printf '%s\\n' invalid-json"}
+	rc.state["state_version"] = 1
+	opportunity := Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}
+	seat := CouncilSeat{MemberID: "C1", Model: "openrouter://openai/gpt-4o"}
+
+	rc.mu.Lock()
+	err := rc.failCouncilOpportunityLocked(context.Background(), time.Now().Add(-time.Second), opportunity, seat, opportunityFailureAgentExited, errors.New("agent exited"))
+	rc.mu.Unlock()
+	if err == nil {
+		t.Fatal("failCouncilOpportunityLocked returned nil")
+	}
+	if !errors.Is(err, errTurnDeadlineExceeded) {
+		t.Fatalf("error = %v, want deadline error", err)
+	}
+	if !strings.Contains(err.Error(), "parse lean json") {
+		t.Fatalf("error = %v, want second failure", err)
+	}
 }
 
 func TestRemoveRequestFailedCouncilMemberRecordsEvent(t *testing.T) {
@@ -1842,7 +2452,7 @@ func TestRemoveRequestFailedCouncilMemberRecordsEvent(t *testing.T) {
 		Class: openaiapi.ProviderErrorRequest,
 		Err:   fmt.Errorf("responses request failed: 404 model not found"),
 	}
-	if err := rc.removeRequestFailedCouncilMember(opportunity, seat, providerErr); err != nil {
+	if err := rc.removeRequestFailedCouncilMember(context.Background(), time.Time{}, opportunity, seat, providerErr); err != nil {
 		t.Fatalf("removeRequestFailedCouncilMember returned error: %v", err)
 	}
 	assertFailedCouncilMember(t, rc, opportunityFailureRequestFailed)
@@ -1861,11 +2471,13 @@ type fakeCouncilResponseClient struct {
 	responses []openaiapi.Response
 	errs      []error
 	inputs    [][]map[string]any
+	tools     [][]map[string]any
 	calls     int
 }
 
-func (c *fakeCouncilResponseClient) CreateResponseWithRequestSpec(_ context.Context, _ modelrequest.Spec, inputItems []map[string]any, _ []map[string]any, _ string) (openaiapi.Response, error) {
+func (c *fakeCouncilResponseClient) CreateResponseWithRequestSpec(_ context.Context, _ modelrequest.Spec, inputItems []map[string]any, tools []map[string]any, _ string) (openaiapi.Response, error) {
 	c.inputs = append(c.inputs, append([]map[string]any(nil), inputItems...))
+	c.tools = append(c.tools, append([]map[string]any(nil), tools...))
 	call := c.calls
 	c.calls++
 	if call < len(c.errs) && c.errs[call] != nil {
@@ -1940,6 +2552,7 @@ func newCouncilRemovalTestContext(t *testing.T, failureReason string) *runContex
 		cfg: Config{
 			Engine:    lean.Engine{Command: []string{"/bin/sh", "-c", script}},
 			OutputDir: dir,
+			Runtime:   DefaultRuntimeLimits(),
 		},
 		state: map[string]any{
 			"state_version": 1,
@@ -1960,6 +2573,38 @@ case "$request" in
   *) printf '%%s\n' '%s' ;;
 esac
 `, failureState, voteState)
+}
+
+func blockingCouncilEngineScript(failureReason string) string {
+	failureState := fmt.Sprintf(`{"ok":true,"state":{"case":{"phase":"deliberation","resolution":"","council_members":[{"member_id":"C1","status":"failed","failure_reason":"%s","failure_opportunity_id":"deliberation:1:C1","failure_message":"member failed"}]},"state_version":2}}`, failureReason)
+	return fmt.Sprintf(`#!/bin/sh
+request=$(cat)
+case "$request" in
+  *'"reason":"deadline_expired"'*) printf '%%s\n' '%s' ;;
+  *)
+    if [ -n "$1" ]; then
+      printf 'entered\n' > "$1"
+    fi
+    exec sleep 60
+    ;;
+esac
+`, failureState)
+}
+
+func waitForFile(t *testing.T, path string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if _, err := os.Stat(path); err == nil {
+			return
+		} else if !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("stat %s: %v", path, err)
+		}
+		if !time.Now().Before(deadline) {
+			t.Fatalf("file %s was not created", path)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 }
 
 func assertFailedCouncilMember(t *testing.T, rc *runContext, reason string) {

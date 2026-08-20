@@ -18,7 +18,7 @@ The arbitration proceeds in this order: openings, arguments, rebuttals, surrebut
 
 ## Rule 5: Arguments and Record Material
 
-The parties present merits arguments during the arguments phase.  They may offer visible evidence as exhibits and submit technical reports during arguments.  The claimant may also offer exhibits and submit technical reports during rebuttal when those materials answer the respondent's argument.  The respondent may offer exhibits and submit technical reports during surrebuttal when those materials answer the rebuttal.  All admitted materials become part of the record considered by the council.
+The parties present merits arguments during the arguments phase.  They may submit source evidence, offer visible evidence as exhibits, and submit technical reports during arguments.  An exhibit must identify an item in the initial evidence catalog or an earlier submitted item, and the item's committed size must fit the exhibit limit.  A derived submission must identify an initial or earlier submitted parent and state the derivation method.  AAR records the parent's committed SHA-256 with the derived submission, and every SHA-256 commitment contains exactly 64 lowercase hexadecimal characters.  The claimant may add these materials during rebuttal when they answer the respondent's argument, and the respondent may do so during surrebuttal when they answer the rebuttal.  Technical-report titles and summaries must fit their UTF-8 byte limits, and every accepted material becomes part of the record considered by the council.
 
 ## Rule 6: Closings
 

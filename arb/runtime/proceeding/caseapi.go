@@ -26,7 +26,7 @@ type caseAPIServer struct {
 	serveDone  chan error
 }
 
-func startCaseAPIServer(rc *runContext, includeCouncil bool) (*caseAPIServer, error) {
+func startCaseAPIServer(caseCtx context.Context, rc *runContext, includeCouncil bool) (*caseAPIServer, error) {
 	addr := strings.TrimSpace(rc.cfg.CaseAPIAddr)
 	if addr == "" {
 		addr = DefaultCaseAPIAddr
@@ -44,13 +44,17 @@ func startCaseAPIServer(rc *runContext, includeCouncil bool) (*caseAPIServer, er
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc(caseAPIHealthPath, api.handleHealth)
-	api.lawyerAPI.register(mux)
+	api.lawyerAPI.register(mux, caseCtx)
 	if includeCouncil {
 		api.councilAPI = newCouncilAPIServer(rc)
-		api.councilAPI.register(mux)
+		api.councilAPI.register(mux, caseCtx)
 	}
+	rc.mu.Lock()
+	rc.lawyerAPI = api.lawyerAPI
+	rc.councilAPI = api.councilAPI
+	rc.mu.Unlock()
 	api.server = &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		mux.ServeHTTP(&responseErrorWriter{ResponseWriter: w, rc: rc}, r)
+		mux.ServeHTTP(&responseErrorWriter{ResponseWriter: w, rc: rc, requestDone: r.Context().Done()}, r)
 	})}
 	go func() {
 		api.serveDone <- serveCaseAPI(api.server, ln)
@@ -104,10 +108,16 @@ func (api *caseAPIServer) Close(ctx context.Context) error {
 
 type responseErrorWriter struct {
 	http.ResponseWriter
-	rc *runContext
+	rc          *runContext
+	requestDone <-chan struct{}
 }
 
 func (w *responseErrorWriter) recordResponseError(err error) {
+	select {
+	case <-w.requestDone:
+		return
+	default:
+	}
 	w.rc.recordResponseError(err)
 }
 

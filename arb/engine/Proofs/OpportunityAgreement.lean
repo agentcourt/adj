@@ -182,6 +182,11 @@ theorem recordMeritsSubmission_actor_role
           let totalReports := technicalReportCountForRole s.case.technical_reports expectedRole + reports.length
           requireCountWithinLimit "offered_evidence for this side" totalOffered s.policy.max_exhibits_per_side
           requireCountWithinLimit "technical_reports for this side" totalReports s.policy.max_reports_per_side
+          validateOfferedEvidenceBatch
+            s.evidence_catalog s.case.submitted_evidence
+            s.policy.max_exhibit_bytes offered
+          validateTechnicalReportBatch
+            s.policy.max_report_title_bytes s.policy.max_report_summary_bytes reports
           let c1 := addFiling s.case phase expectedRole text
           let c2 := appendSupplementalMaterials c1 offered reports
           pure <| stateWithCase s c2
@@ -254,6 +259,7 @@ theorem step_record_opening_statement_actor_role
         let rawText ← getString action.payload "text"
         let text := trimString rawText
         requireTextWithinLimit "opening statement" text s.policy.max_opening_chars
+        requireNoSupplementalMaterials action.payload
         pure <| stateWithCase s (addFiling s.case "openings" role text)) = .ok t := by
     simpa [stepCore, hType, hPhase, role] using hStep
   cases hRole : requireRole action.actor_role role with
@@ -405,15 +411,14 @@ theorem submitEvidence_core_actor_role
       (do
         requireRole actorRole expectedRole
         let parsedEvidence ← parseSubmittedEvidence payload s.case.phase expectedRole
-        let evidence := { parsedEvidence with role := expectedRole }
-        if s.case.submitted_evidence.any (fun item => item.evidence_id = evidence.evidence_id) then
-          throw s!"duplicate submitted evidence_id: {evidence.evidence_id}"
-        else if evidence.size_bytes > s.policy.max_submitted_evidence_bytes then
-          throw s!"submitted evidence exceeds byte limit of {s.policy.max_submitted_evidence_bytes}"
-        else
-          let total := submittedEvidenceCountForRole s.case.submitted_evidence expectedRole + 1
-          requireCountWithinLimit "submitted_evidence for this side" total s.policy.max_submitted_evidence_per_side
-          pure <| stateWithCase s (appendSubmittedEvidence s.case evidence)) = .ok t) :
+        let evidence := { parsedEvidence with phase := s.case.phase, role := expectedRole }
+        validateSubmittedEvidenceEntry
+          s.evidence_catalog s.case.submitted_evidence
+          s.policy.max_submitted_evidence_bytes evidence
+        let total := submittedEvidenceCountForRole s.case.submitted_evidence expectedRole + 1
+        requireCountWithinLimit "submitted_evidence for this side" total
+          s.policy.max_submitted_evidence_per_side
+        pure <| stateWithCase s (appendSubmittedEvidence s.case evidence)) = .ok t) :
     trimString actorRole = expectedRole := by
   cases hRole : requireRole actorRole expectedRole with
   | error err =>
@@ -439,17 +444,17 @@ theorem submitEvidence_actor_role
           let parsedEvidence ← parseSubmittedEvidence payload s.case.phase
             (if s.case.arguments.isEmpty then "plaintiff" else "defendant")
           let evidence :=
-            { parsedEvidence with role := (if s.case.arguments.isEmpty then "plaintiff" else "defendant") }
-          if s.case.submitted_evidence.any (fun item => item.evidence_id = evidence.evidence_id) then
-            throw s!"duplicate submitted evidence_id: {evidence.evidence_id}"
-          else if evidence.size_bytes > s.policy.max_submitted_evidence_bytes then
-            throw s!"submitted evidence exceeds byte limit of {s.policy.max_submitted_evidence_bytes}"
-          else
-            let total := submittedEvidenceCountForRole s.case.submitted_evidence
-              (if s.case.arguments.isEmpty then "plaintiff" else "defendant") + 1
-            requireCountWithinLimit "submitted_evidence for this side" total
-              s.policy.max_submitted_evidence_per_side
-            pure <| stateWithCase s (appendSubmittedEvidence s.case evidence)) = .ok t := by
+            { parsedEvidence with
+              phase := s.case.phase
+              role := (if s.case.arguments.isEmpty then "plaintiff" else "defendant") }
+          validateSubmittedEvidenceEntry
+            s.evidence_catalog s.case.submitted_evidence
+            s.policy.max_submitted_evidence_bytes evidence
+          let total := submittedEvidenceCountForRole s.case.submitted_evidence
+            (if s.case.arguments.isEmpty then "plaintiff" else "defendant") + 1
+          requireCountWithinLimit "submitted_evidence for this side" total
+            s.policy.max_submitted_evidence_per_side
+          pure <| stateWithCase s (appendSubmittedEvidence s.case evidence)) = .ok t := by
       simpa [submitEvidence, hArguments] using hSubmit
     exact Or.inl ⟨hArguments,
       submitEvidence_core_actor_role s t actorRole
@@ -464,16 +469,16 @@ theorem submitEvidence_actor_role
               (do
                 requireRole actorRole "plaintiff"
                 let parsedEvidence ← parseSubmittedEvidence payload s.case.phase "plaintiff"
-                let evidence := { parsedEvidence with role := "plaintiff" }
-                if s.case.submitted_evidence.any (fun item => item.evidence_id = evidence.evidence_id) then
-                  throw s!"duplicate submitted evidence_id: {evidence.evidence_id}"
-                else if evidence.size_bytes > s.policy.max_submitted_evidence_bytes then
-                  throw s!"submitted evidence exceeds byte limit of {s.policy.max_submitted_evidence_bytes}"
-                else
-                  let total := submittedEvidenceCountForRole s.case.submitted_evidence "plaintiff" + 1
-                  requireCountWithinLimit "submitted_evidence for this side" total
-                    s.policy.max_submitted_evidence_per_side
-                  pure <| stateWithCase s (appendSubmittedEvidence s.case evidence)) = .ok t := by
+                let evidence :=
+                  { parsedEvidence with phase := s.case.phase, role := "plaintiff" }
+                validateSubmittedEvidenceEntry
+                  s.evidence_catalog s.case.submitted_evidence
+                  s.policy.max_submitted_evidence_bytes evidence
+                let total := submittedEvidenceCountForRole
+                  s.case.submitted_evidence "plaintiff" + 1
+                requireCountWithinLimit "submitted_evidence for this side" total
+                  s.policy.max_submitted_evidence_per_side
+                pure <| stateWithCase s (appendSubmittedEvidence s.case evidence)) = .ok t := by
             simpa [submitEvidence, hArguments, hRebuttals, hEmpty] using hSubmit
           exact Or.inr (Or.inl ⟨hRebuttals,
             submitEvidence_core_actor_role s t actorRole "plaintiff" payload hCore⟩)
@@ -487,16 +492,16 @@ theorem submitEvidence_actor_role
                 (do
                   requireRole actorRole "defendant"
                   let parsedEvidence ← parseSubmittedEvidence payload s.case.phase "defendant"
-                  let evidence := { parsedEvidence with role := "defendant" }
-                  if s.case.submitted_evidence.any (fun item => item.evidence_id = evidence.evidence_id) then
-                    throw s!"duplicate submitted evidence_id: {evidence.evidence_id}"
-                  else if evidence.size_bytes > s.policy.max_submitted_evidence_bytes then
-                    throw s!"submitted evidence exceeds byte limit of {s.policy.max_submitted_evidence_bytes}"
-                  else
-                    let total := submittedEvidenceCountForRole s.case.submitted_evidence "defendant" + 1
-                    requireCountWithinLimit "submitted_evidence for this side" total
-                      s.policy.max_submitted_evidence_per_side
-                    pure <| stateWithCase s (appendSubmittedEvidence s.case evidence)) = .ok t := by
+                  let evidence :=
+                    { parsedEvidence with phase := s.case.phase, role := "defendant" }
+                  validateSubmittedEvidenceEntry
+                    s.evidence_catalog s.case.submitted_evidence
+                    s.policy.max_submitted_evidence_bytes evidence
+                  let total := submittedEvidenceCountForRole
+                    s.case.submitted_evidence "defendant" + 1
+                  requireCountWithinLimit "submitted_evidence for this side" total
+                    s.policy.max_submitted_evidence_per_side
+                  pure <| stateWithCase s (appendSubmittedEvidence s.case evidence)) = .ok t := by
               simpa [submitEvidence, hArguments, hRebuttals, hSurrebuttals, hEmpty] using hSubmit
             exact Or.inr (Or.inr ⟨hSurrebuttals,
               submitEvidence_core_actor_role s t actorRole "defendant" payload hCore⟩)
@@ -553,7 +558,7 @@ theorem step_submit_council_vote_actor_role
         requireRole action.actor_role "council"
         let memberId := trimString (← getString action.payload "member_id")
         let vote := trimString (← getString action.payload "vote")
-        let rationale := getOptionalString action.payload "rationale"
+        let rationale ← getOptionalString action.payload "rationale"
         recordCouncilVote s memberId vote rationale) = .ok t := by
     simpa [stepCore, hType] using hStep
   cases hRole : requireRole action.actor_role "council" with

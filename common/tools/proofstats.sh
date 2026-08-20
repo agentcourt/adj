@@ -67,7 +67,7 @@ category_for() {
         MeritsFlow.lean|Deliberation.lean|StepPreservation.lean)
           printf 'Execution'
           ;;
-        ProcedureShape.lean|AggregateLimits.lean|GlobalInvariants.lean|ReachableInvariants.lean|ReachableMaterialLimits.lean|CaseFrame.lean|CouncilIntegrity.lean|CouncilStatus.lean|RecordProvenance.lean)
+        ProcedureShape.lean|AggregateLimits.lean|GlobalInvariants.lean|ReachableInvariants.lean|ReachableMaterialLimits.lean|CaseFrame.lean|CouncilIntegrity.lean|CouncilStatus.lean|RecordIntegrity.lean|RecordProvenance.lean)
           printf 'Invariants'
           ;;
         OutcomeSoundness.lean|NoStuck.lean|BoundedTermination.lean)

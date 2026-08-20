@@ -30,7 +30,7 @@ make test
 make prove
 ```
 
-`make build` writes `.bin/aar` and `.bin/aarengine`.  `make test` runs the Go tests for the runtime.  `make prove` builds the Lean proof tree.
+`make build` writes `.bin/aar` and `.bin/aarengine`.  `make test` rebuilds `.bin/aarengine` and then runs the Go runtime tests against that binary.  `make prove` builds the Lean proof tree.
 
 ## First Run
 

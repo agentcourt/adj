@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -26,7 +28,7 @@ func TestRunVerifyCertificatePrintsJSON(t *testing.T) {
 	}
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	if err := runVerifyCertificate([]string{"--dir", dir, "--engine", enginePath}, &stdout, &stderr); err != nil {
+	if err := runVerifyCertificate(context.Background(), []string{"--dir", dir, "--engine", enginePath}, &stdout, &stderr); err != nil {
 		t.Fatalf("runVerifyCertificate returned error: %v\nstderr=%s", err, stderr.String())
 	}
 	if stderr.Len() != 0 {
@@ -55,12 +57,38 @@ func TestRunVerifyCertificateReportsFailure(t *testing.T) {
 	}
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := runVerifyCertificate([]string{"--dir", dir, "--engine", enginePath}, &stdout, &stderr)
+	err := runVerifyCertificate(context.Background(), []string{"--dir", dir, "--engine", enginePath}, &stdout, &stderr)
 	if err == nil || !strings.Contains(err.Error(), "certificate final state hash mismatch") {
 		t.Fatalf("error = %v, want certificate hash mismatch", err)
 	}
 	if stdout.Len() != 0 {
 		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+}
+
+func TestRunVerifyCertificateRejectsNonpositiveEngineTimeout(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := runVerifyCertificate(context.Background(), []string{
+		"--certificate", "certificate.json",
+		"--state", "state.json",
+		"--engine-timeout-seconds", "0",
+	}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "--engine-timeout-seconds must be positive") {
+		t.Fatalf("error = %v, want positive engine timeout", err)
+	}
+}
+
+func TestRunVerifyCertificateRejectsEngineTimeoutOverflow(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := runVerifyCertificate(context.Background(), []string{
+		"--certificate", "certificate.json",
+		"--state", "state.json",
+		"--engine-timeout-seconds", strconv.FormatInt(proceeding.MaxRuntimeTimeoutSeconds+1, 10),
+	}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "--engine-timeout-seconds must be at most") {
+		t.Fatalf("error = %v, want bounded engine timeout", err)
 	}
 }
 

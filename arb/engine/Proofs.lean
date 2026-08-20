@@ -15,6 +15,7 @@ import Proofs.CouncilIntegrity
 import Proofs.NoStuck
 import Proofs.CouncilStatus
 import Proofs.RecordProvenance
+import Proofs.RecordIntegrity
 import Proofs.BoundedTermination
 import Proofs.DeliberationSummary
 import Proofs.ViableOutcomes

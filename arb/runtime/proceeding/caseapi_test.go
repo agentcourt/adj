@@ -41,6 +41,21 @@ func TestCaseAPIServerRecordsResponseFailure(t *testing.T) {
 	}
 }
 
+func TestCaseAPIServerIgnoresResponseFailureAfterDisconnect(t *testing.T) {
+	rc := &runContext{}
+	requestDone := make(chan struct{})
+	close(requestDone)
+	w := &responseErrorWriter{
+		ResponseWriter: &failedResponseWriter{header: make(http.Header), err: errors.New("write failed")},
+		rc:             rc,
+		requestDone:    requestDone,
+	}
+	writeCaseAPIJSON(w, http.StatusOK, map[string]any{"ok": true})
+	if err := rc.takeResponseError(); err != nil {
+		t.Fatalf("response error after disconnect = %v, want nil", err)
+	}
+}
+
 type failedListener struct {
 	err error
 }

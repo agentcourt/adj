@@ -4,19 +4,20 @@ This note records the proof agenda after the July 2026 certificate and ARB proof
 
 ## Current ARB Surface
 
-ARB is the most complete proof target.  Its proof library has 38 proof files, 665 theorem or lemma declarations, and 21,297 lines according to `arb/docs/proofstats.md`.  A targeted scan found no `sorry`, no `axiom` declarations, and no `unsafe` declarations in the ARB, ADC, or AARD engine proof trees.  The word `admit` appears only in prose.
+ARB is the most complete proof target.  Its proof library has 39 proof files, 721 theorem or lemma declarations, and 22,858 lines.  A targeted scan found no `sorry`, no `axiom` declarations, and no `unsafe` declarations in the ARB, ADC, or AARD engine proof trees.  The word `admit` appears only in prose.
 
 | Area | Anchor theorem or file | Status |
 | --- | --- | --- |
 | Reachability | `Reachable`, `StepReachableFrom` | Executions are modeled as successful initialization followed by successful public steps. |
 | Phase order and parity | `reachable_phaseShape`, `reachable_proceduralParity` | Merits filings preserve the required order and side-to-side parity. |
 | Case frame | `initialized_run_preserves_caseFrame` | Proposition, policy, and council identity are fixed across a run. |
-| Material limits and provenance | `reachable_materialLimitsRespected`, `reachable_recordProvenance`, `stepReachableFrom_materialsExtend` | Admitted materials respect caps, have allowed origins, and grow by suffix. |
+| Record integrity | `reachable_recordIntegrity`, `step_ok_meritsOffersUsePriorRecord`, `initialized_run_preserves_evidenceCatalog` | Initial commitments remain fixed.  Submitted evidence has validated metadata, size, identity, and lineage.  Each merits offer refers to evidence available before that filing. |
+| Supplemental-material limits and provenance | `reachable_materialLimitsRespected`, `reachable_recordProvenance`, `stepReachableFrom_materialsExtend` | Offered evidence references and technical reports respect caps, have allowed filing origins, and grow by suffix. |
 | Outcome soundness | `reachable_closed_demonstrated_sound`, `reachable_closed_not_demonstrated_sound`, `reachable_closed_no_majority_sound` | Closed outcomes follow from current-round votes, the threshold, and executable closure conditions. |
-| Liveness and realisability | `reachable_nonclosed_has_nextOpportunity`, `reachable_active_has_successful_step` | Reachable live states expose an opportunity and admit at least one successful public action. |
+| Liveness and realisability | `reachable_active_has_nextOpportunity`, `reachable_active_has_successful_step` | Every reachable active state exposes an opportunity and admits at least one successful public action. |
 | Maximal paths | `initializedStepPathMaximal_terminal_accounted` | A maximal successful path from initialization ends closed with an enumerated resolution or failed with an accounted party-opportunity failure. |
-| Opportunity agreement | `accepted_actor_action_matches_current_opportunity` | Accepted actor-facing actions match the advertised role and allowed-tool list. |
-| Replay certificates | `checkReplayCertificate_terminal_facts` | Accepted terminal replay certificates expose exact replay, reachability, bounded length, decision-summary replay, and closed or failed terminal facts. |
+| Opportunity authority | `reachable_actor_step_matches_nextOpportunity`, `checkReplayCertificate_ok_authorityConforming` | Accepted actor-facing actions match the advertised role and tool.  Replayed actions carry the exact opportunity id, state version, role, phase, and council member required at each step. |
+| Replay certificates | `checkReplayCertificate_terminal_facts` | Accepted terminal replay certificates expose exact replay, exact opportunity authority, filing-time evidence chronology, reachability, record integrity, a fixed initial evidence catalog, bounded length, decision-summary replay, and closed or failed terminal facts. |
 | Failure resilience | `step_fail_opportunity_same_round_resilience` | Same-round opportunity failure preserves stored council votes and does not create a substantive result once no substantive outcome remains viable. |
 | Decision rule | `DecisionRuleFacts`, `DecisionRuleCharacterization` | The executable threshold rule has permutation invariance, neutrality, quota monotonicity, and a count-level characterization. |
 | Due process | `reachable_status_closed_merits_complete`, certificate due-process facts | Closed cases and accepted closed certificates carry the ordered mandatory merits filings and filing-count facts. |
@@ -29,7 +30,7 @@ The certificate plan covers all three formal procedures.  ARB remains the refere
 
 | System | Runtime boundary | Proof boundary |
 | --- | --- | --- |
-| ARB | Writes `certificate.json`; `aar verify-certificate` replays against `state.json`. | Accepted terminal certificates expose exact replay, reachability, bounded length, closed outcome soundness, decision-rule facts, due-process facts, decision-summary replay, or failed-opportunity facts. |
+| ARB | Writes `certificate.json`; `aar verify-certificate` replays against `state.json`. | Accepted terminal certificates expose exact replay, exact opportunity authority, filing-time evidence chronology, reachability, record integrity, a fixed initial evidence catalog, bounded length, decision-summary replay, and either closed outcome and due-process facts or failed-opportunity facts. |
 | ADC | Writes `state.json` and `certificate.json`; `adc verify-certificate` checks final-state hashes and replays accepted transitions. | Accepted certificates expose exact replay, replay-start reachability, closed-terminal accounting, verdict facts, juror-failure verdict facts, juror-failure hung-jury facts, judgment facts, a combined outcome package, and concrete replayed examples. |
 | AARD | Writes `state.json` and `certificate.json`; `aard verify-certificate` replays initialization and accepted actions. | Accepted terminal certificates expose exact replay, reachability, terminal accounting, closed answer-pair replay, failed-case failure-record replay, and checked closed and failed examples. |
 

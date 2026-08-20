@@ -13,8 +13,11 @@ import (
 )
 
 func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client councilResponseClient, opportunity Opportunity) error {
+	caseCtx := ctx
 	memberID := councilMemberIDFromOpportunity(opportunity)
-	seat, ok := rc.findCouncilSeat(memberID)
+	rc.mu.Lock()
+	seat, ok := rc.findCouncilSeatLocked(memberID)
+	rc.mu.Unlock()
 	if !ok {
 		return fmt.Errorf("unknown council member %q", memberID)
 	}
@@ -22,11 +25,17 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 	case councilBackendAPI:
 		return rc.executeCouncilAPIOpportunity(ctx, opportunity, seat)
 	}
-	ctx, cancel := withTimeout(ctx, rc.cfg.Runtime.CouncilTimeout())
+	turnCtx, cancel := withTimeout(caseCtx, rc.cfg.Runtime.CouncilTimeout())
 	defer cancel()
+	turnDeadline, ok := turnCtx.Deadline()
+	if !ok {
+		return fmt.Errorf("council turn context has no deadline")
+	}
 
+	rc.mu.Lock()
 	prompt, err := rc.buildCouncilPrompt(seat, opportunity)
 	if err != nil {
+		rc.mu.Unlock()
 		return err
 	}
 	if err := rc.writeCouncilTurnSnapshot(&councilTurn{
@@ -34,13 +43,15 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 		seat:              seat,
 		turnNumber:        rc.turn,
 		prompt:            prompt,
-		deadline:          time.Now().Add(rc.cfg.Runtime.CouncilTimeout()),
+		deadline:          turnDeadline,
 		attemptsMax:       rc.cfg.Runtime.InvalidAttemptLimit,
 		attemptsRemaining: rc.cfg.Runtime.InvalidAttemptLimit,
 		evidenceBudget:    &evidenceReadBudget{},
 	}, prompt); err != nil {
+		rc.mu.Unlock()
 		return err
 	}
+	rc.mu.Unlock()
 	inputItems := []map[string]any{
 		{"role": "system", "content": prompt},
 		{"role": "user", "content": "Call submit_council_vote exactly once for this opportunity."},
@@ -50,16 +61,7 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 			"type":        "function",
 			"name":        "submit_council_vote",
 			"description": "Submit one council vote for the current deliberation opportunity.",
-			"parameters": map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"member_id": map[string]any{"type": "string"},
-					"vote":      map[string]any{"type": "string", "enum": []string{"demonstrated", "not_demonstrated"}},
-					"rationale": map[string]any{"type": "string"},
-				},
-				"required":             []string{"member_id", "vote", "rationale"},
-				"additionalProperties": false,
-			},
+			"parameters":  submitCouncilVoteSchema(),
 		},
 	}
 	prevID := ""
@@ -71,8 +73,11 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 	}
 	maxOutputTokens := rc.cfg.Runtime.CouncilMaxOutputTokens
 	for invalidAttempts < rc.cfg.Runtime.InvalidAttemptLimit {
-		resp, err := rc.createCouncilResponse(ctx, client, seat, inputItems, tools, prevID, maxOutputTokens)
+		resp, err := rc.createCouncilResponse(turnCtx, client, seat, inputItems, tools, prevID, maxOutputTokens)
 		if err != nil {
+			if cause := context.Cause(caseCtx); cause != nil {
+				return cause
+			}
 			if isFunctionArgumentParseError(err) {
 				recordInvalidAttempt(err.Error())
 				inputItems = append(inputItems, map[string]any{
@@ -81,11 +86,11 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 				})
 				continue
 			}
-			if isCouncilTimeoutError(err) {
-				return rc.removeTimedOutCouncilMember(opportunity, seat, err)
+			if isCouncilTimeoutError(err) || errors.Is(context.Cause(turnCtx), context.DeadlineExceeded) {
+				return rc.removeTimedOutCouncilMember(caseCtx, turnDeadline, opportunity, seat, err)
 			}
 			if isCouncilRequestError(err) {
-				return rc.removeRequestFailedCouncilMember(opportunity, seat, err)
+				return rc.removeRequestFailedCouncilMember(caseCtx, turnDeadline, opportunity, seat, err)
 			}
 			return err
 		}
@@ -118,21 +123,8 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 			continue
 		}
 		payload := cloneMap(call.Arguments)
-		payload["member_id"] = memberID
-		if mapString(payload["vote"]) == "" || mapString(payload["rationale"]) == "" {
-			recordInvalidAttempt("submit_council_vote requires vote and rationale.")
-			inputItems = append(inputItems, map[string]any{
-				"role":    "user",
-				"content": "submit_council_vote requires vote and rationale.",
-			})
-			continue
-		}
-		stepResp, err := rc.stepForCertificate(opportunity, "submit_council_vote", "council", payload)
-		if err != nil {
-			return err
-		}
-		if ok, _ := stepResp["ok"].(bool); !ok {
-			reason := mapString(stepResp["error"])
+		if err := validateCouncilVotePayload(payload); err != nil {
+			reason := ensureTerminalPeriod(err.Error())
 			recordInvalidAttempt(reason)
 			inputItems = append(inputItems, map[string]any{
 				"role":    "user",
@@ -140,13 +132,38 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 			})
 			continue
 		}
-		rc.state = mapAny(stepResp["state"])
-		if rc.lawyerAPI != nil {
-			rc.lawyerAPI.signalChanged()
+		payload["member_id"] = memberID
+		rc.mu.Lock()
+		stepResp, replayAction, err := rc.evaluateTurnStepLocked(caseCtx, turnDeadline, opportunity, "submit_council_vote", "council", payload)
+		if err != nil {
+			if errors.Is(err, errTurnDeadlineExceeded) {
+				deadlineErr := rc.failCouncilOpportunityLocked(caseCtx, time.Time{}, opportunity, seat, opportunityFailureDeadline, rc.directCouncilDeadlineError(opportunity, seat))
+				rc.mu.Unlock()
+				return deadlineErr
+			}
+			rc.mu.Unlock()
+			return err
 		}
-		if rc.councilAPI != nil {
-			rc.councilAPI.signalChanged()
+		if ok, _ := stepResp["ok"].(bool); !ok {
+			reason := mapString(stepResp["error"])
+			rc.mu.Unlock()
+			return fmt.Errorf("%s", reason)
 		}
+		nextState, _, err := acceptedStepState(stepResp, opportunity.StateVersion)
+		if err != nil {
+			rc.mu.Unlock()
+			return err
+		}
+		if err := turnStepError(caseCtx, turnDeadline, nil); err != nil {
+			if errors.Is(err, errTurnDeadlineExceeded) {
+				err = rc.failCouncilOpportunityLocked(caseCtx, time.Time{}, opportunity, seat, opportunityFailureDeadline, rc.directCouncilDeadlineError(opportunity, seat))
+			}
+			rc.mu.Unlock()
+			return err
+		}
+		rc.state = nextState
+		rc.certificateActions = append(rc.certificateActions, replayAction)
+		rc.signalRoleAPIsLocked()
 		eventPayload := map[string]any{
 			"member_id": memberID,
 			"model":     seat.Model,
@@ -167,10 +184,12 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 		if resp.OpenRouterGenerationError != "" {
 			eventPayload["openrouter_generation_error"] = resp.OpenRouterGenerationError
 		}
-		return rc.recordEvent("council_vote", "council", opportunity.Phase, eventPayload)
+		eventErr := rc.recordEventLocked("council_vote", "council", opportunity.Phase, eventPayload)
+		rc.mu.Unlock()
+		return eventErr
 	}
 	limitErr := formatInvalidAttemptLimitError(fmt.Sprintf("council member %s", memberID), invalidAttemptReasons)
-	return rc.removeInvalidResponseCouncilMember(opportunity, seat, limitErr)
+	return rc.removeInvalidResponseCouncilMember(caseCtx, turnDeadline, opportunity, seat, limitErr)
 }
 
 func (rc *runContext) createCouncilResponse(
@@ -189,19 +208,25 @@ func (rc *runContext) createCouncilResponse(
 	return client.CreateResponseWithRequestSpec(ctx, spec, inputItems, tools, prevID)
 }
 
-func (rc *runContext) removeTimedOutCouncilMember(opportunity Opportunity, seat CouncilSeat, cause error) error {
-	return rc.removeCouncilMember(opportunity, seat, opportunityFailureDeadline, cause)
+func (rc *runContext) removeTimedOutCouncilMember(ctx context.Context, commitDeadline time.Time, opportunity Opportunity, seat CouncilSeat, cause error) error {
+	return rc.removeCouncilMember(ctx, commitDeadline, opportunity, seat, opportunityFailureDeadline, cause)
 }
 
-func (rc *runContext) removeRequestFailedCouncilMember(opportunity Opportunity, seat CouncilSeat, cause error) error {
-	return rc.removeCouncilMember(opportunity, seat, opportunityFailureRequestFailed, cause)
+func (rc *runContext) removeRequestFailedCouncilMember(ctx context.Context, commitDeadline time.Time, opportunity Opportunity, seat CouncilSeat, cause error) error {
+	return rc.removeCouncilMember(ctx, commitDeadline, opportunity, seat, opportunityFailureRequestFailed, cause)
 }
 
-func (rc *runContext) removeInvalidResponseCouncilMember(opportunity Opportunity, seat CouncilSeat, cause error) error {
-	return rc.removeCouncilMember(opportunity, seat, opportunityFailureAttemptsExhausted, cause)
+func (rc *runContext) removeInvalidResponseCouncilMember(ctx context.Context, commitDeadline time.Time, opportunity Opportunity, seat CouncilSeat, cause error) error {
+	return rc.removeCouncilMember(ctx, commitDeadline, opportunity, seat, opportunityFailureAttemptsExhausted, cause)
 }
 
-func (rc *runContext) removeCouncilMember(opportunity Opportunity, seat CouncilSeat, reason string, cause error) error {
+func (rc *runContext) removeCouncilMember(ctx context.Context, commitDeadline time.Time, opportunity Opportunity, seat CouncilSeat, reason string, cause error) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return rc.failCouncilOpportunityLocked(ctx, commitDeadline, opportunity, seat, reason, cause)
+}
+
+func (rc *runContext) failCouncilOpportunityLocked(ctx context.Context, commitDeadline time.Time, opportunity Opportunity, seat CouncilSeat, reason string, cause error) error {
 	memberID := seat.MemberID
 	details := map[string]any{
 		"member_id": memberID,
@@ -211,14 +236,23 @@ func (rc *runContext) removeCouncilMember(opportunity Opportunity, seat CouncilS
 		details["error_class"] = string(class)
 		rc.providerErrorClass = string(class)
 	}
-	if err := rc.failOpportunity(opportunity, reason, cause.Error(), details); err != nil {
-		return err
+	if err := rc.failOpportunityLocked(ctx, commitDeadline, opportunity, reason, cause.Error(), details); err != nil {
+		if !errors.Is(err, errTurnDeadlineExceeded) {
+			return err
+		}
+		deadlineErr := rc.directCouncilDeadlineError(opportunity, seat)
+		if deadlineFailureErr := rc.failOpportunityLocked(ctx, time.Time{}, opportunity, opportunityFailureDeadline, deadlineErr.Error(), details); deadlineFailureErr != nil {
+			return errors.Join(err, deadlineFailureErr)
+		}
 	}
-	rc.signalRoleAPIs()
 	return nil
 }
 
-func (rc *runContext) findCouncilSeat(memberID string) (CouncilSeat, bool) {
+func (rc *runContext) directCouncilDeadlineError(opportunity Opportunity, seat CouncilSeat) error {
+	return fmt.Errorf("council member %s opportunity %s timed out: %w", seat.MemberID, opportunity.ID, errTurnDeadlineExceeded)
+}
+
+func (rc *runContext) findCouncilSeatLocked(memberID string) (CouncilSeat, bool) {
 	for _, seat := range rc.council {
 		if seat.MemberID == memberID {
 			return seat, true
@@ -312,22 +346,20 @@ func (rc *runContext) councilView(seat CouncilSeat, opportunity Opportunity) map
 			"role":          opportunity.Role,
 			"phase":         opportunity.Phase,
 			"objective":     opportunity.Objective,
-			"allowed_tools": opportunity.AllowedTools,
+			"allowed_tools": append([]string(nil), opportunity.AllowedTools...),
 			"may_pass":      opportunity.MayPass,
 		},
 		"record": map[string]any{
-			"evidence":           rc.listVisibleEvidence(),
-			"openings":           mapList(caseObj["openings"]),
-			"arguments":          mapList(caseObj["arguments"]),
-			"rebuttals":          mapList(caseObj["rebuttals"]),
-			"surrebuttals":       mapList(caseObj["surrebuttals"]),
-			"closings":           mapList(caseObj["closings"]),
-			"submitted_evidence": mapList(caseObj["submitted_evidence"]),
-			"exhibits":           rc.attorneyExhibits(),
-			"technical_reports":  mapList(caseObj["technical_reports"]),
-			"prior_council_votes": mapList(
-				caseObj["council_votes"],
-			),
+			"evidence":            rc.listVisibleEvidence(),
+			"openings":            cloneJSONLikeMapList(mapList(caseObj["openings"])),
+			"arguments":           cloneJSONLikeMapList(mapList(caseObj["arguments"])),
+			"rebuttals":           cloneJSONLikeMapList(mapList(caseObj["rebuttals"])),
+			"surrebuttals":        cloneJSONLikeMapList(mapList(caseObj["surrebuttals"])),
+			"closings":            cloneJSONLikeMapList(mapList(caseObj["closings"])),
+			"submitted_evidence":  cloneJSONLikeMapList(mapList(caseObj["submitted_evidence"])),
+			"exhibits":            rc.attorneyExhibits(),
+			"technical_reports":   cloneJSONLikeMapList(mapList(caseObj["technical_reports"])),
+			"prior_council_votes": cloneJSONLikeMapList(mapList(caseObj["council_votes"])),
 		},
 	}
 }
@@ -359,6 +391,10 @@ func (rc *runContext) renderExhibits(items []map[string]any) string {
 }
 
 func (rc *runContext) renderExhibitBodies(items []map[string]any) string {
+	return renderExhibitBodies(items, rc.fileByID)
+}
+
+func renderExhibitBodies(items []map[string]any, fileByID map[string]CaseFile) string {
 	if len(items) == 0 {
 		return "(none)"
 	}
@@ -369,7 +405,7 @@ func (rc *runContext) renderExhibitBodies(items []map[string]any) string {
 		if label == "" {
 			label = evidenceID
 		}
-		file, ok := rc.fileByID[evidenceID]
+		file, ok := fileByID[evidenceID]
 		if !ok {
 			lines = append(lines, fmt.Sprintf("[%s] %s\n(unavailable file)", mapString(item["role"]), label))
 			continue
@@ -383,7 +419,7 @@ func (rc *runContext) renderExhibitBodies(items []map[string]any) string {
 	return strings.Join(lines, "\n\n")
 }
 
-func (rc *runContext) renderExhibitIndex(items []map[string]any) string {
+func renderExhibitIndex(items []map[string]any, fileByID map[string]CaseFile) string {
 	if len(items) == 0 {
 		return "(none)"
 	}
@@ -394,7 +430,7 @@ func (rc *runContext) renderExhibitIndex(items []map[string]any) string {
 		phase := mapString(item["phase"])
 		role := mapString(item["role"])
 		name := evidenceID
-		if file, ok := rc.fileByID[evidenceID]; ok && strings.TrimSpace(file.Name) != "" {
+		if file, ok := fileByID[evidenceID]; ok && strings.TrimSpace(file.Name) != "" {
 			name = file.Name
 		}
 		if label == "" {

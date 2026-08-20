@@ -1,8 +1,10 @@
 package proceeding
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 )
 
 const (
@@ -13,7 +15,7 @@ const (
 	opportunityFailureAgentOutputLimit  = "agent_output_limit_exceeded"
 )
 
-func (rc *runContext) failOpportunity(opportunity Opportunity, reason string, message string, details map[string]any) error {
+func (rc *runContext) failOpportunityLocked(ctx context.Context, commitDeadline time.Time, opportunity Opportunity, reason string, message string, details map[string]any) error {
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		return fmt.Errorf("opportunity failure reason is required")
@@ -37,19 +39,30 @@ func (rc *runContext) failOpportunity(opportunity Opportunity, reason string, me
 		payload["member_id"] = memberID
 	}
 	for key, value := range details {
-		if strings.TrimSpace(key) != "" && value != nil {
-			payload[key] = value
+		key = strings.TrimSpace(key)
+		if key == "" || value == nil || payload[key] != nil {
+			continue
 		}
+		payload[key] = value
 	}
-	stepResp, err := rc.stepForCertificate(opportunity, "fail_opportunity", "system", payload)
+	stepResp, replayAction, err := rc.evaluateTurnStepLocked(ctx, commitDeadline, opportunity, "fail_opportunity", "system", payload)
 	if err != nil {
 		return err
 	}
 	if ok, _ := stepResp["ok"].(bool); !ok {
 		return fmt.Errorf("fail_opportunity rejected: %s", mapString(stepResp["error"]))
 	}
-	rc.state = mapAny(stepResp["state"])
-	if err := rc.recordEvent("opportunity_failed", opportunity.Role, opportunity.Phase, payload); err != nil {
+	nextState, _, err := acceptedStepState(stepResp, opportunity.StateVersion)
+	if err != nil {
+		return err
+	}
+	if err := turnStepError(ctx, commitDeadline, nil); err != nil {
+		return err
+	}
+	rc.state = nextState
+	rc.certificateActions = append(rc.certificateActions, replayAction)
+	rc.signalRoleAPIsLocked()
+	if err := rc.recordEventLocked("opportunity_failed", opportunity.Role, opportunity.Phase, payload); err != nil {
 		return err
 	}
 	if opportunity.Role == "council" {
@@ -62,19 +75,32 @@ func (rc *runContext) failOpportunity(opportunity Opportunity, reason string, me
 		if class := mapString(payload["error_class"]); class != "" {
 			eventPayload["error_class"] = class
 		}
-		if err := rc.recordEvent("council_member_removed", "system", opportunity.Phase, eventPayload); err != nil {
+		if err := rc.recordEventLocked("council_member_removed", "system", opportunity.Phase, eventPayload); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (rc *runContext) signalRoleAPIs() {
+func (rc *runContext) signalRoleAPIsLocked() {
 	if rc.lawyerAPI != nil {
-		rc.lawyerAPI.signalChanged()
+		rc.lawyerAPI.signalChangedLocked()
 	}
 	if rc.councilAPI != nil {
-		rc.councilAPI.signalChanged()
+		rc.councilAPI.signalChangedLocked()
+	}
+}
+
+func (rc *runContext) setRoleAPIsTerminalLocked(reason string) {
+	rc.terminal = true
+	rc.terminalReason = strings.TrimSpace(reason)
+	if rc.lawyerAPI != nil {
+		rc.lawyerAPI.active = nil
+		rc.lawyerAPI.signalChangedLocked()
+	}
+	if rc.councilAPI != nil {
+		rc.councilAPI.active = nil
+		rc.councilAPI.signalChangedLocked()
 	}
 }
 
@@ -112,7 +138,7 @@ func caseFailure(state map[string]any) map[string]any {
 	if len(raw) == 0 {
 		return raw
 	}
-	out := cloneMap(raw)
+	out := cloneJSONLikeMap(raw)
 	if out["type"] == nil && out["failure_type"] != nil {
 		out["type"] = out["failure_type"]
 		delete(out, "failure_type")

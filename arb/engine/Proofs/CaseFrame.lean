@@ -240,10 +240,17 @@ theorem initializeCase_establishes_caseFrame
                 · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
                     hDuplicate] at hInit
                   cases hInit
-                · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
-                    hDuplicate, stateWithCase] at hInit
-                  cases hInit
-                  simp [caseFrameMatches, councilMemberIds]
+                · cases hCatalog : validateEvidenceCatalog req.state.evidence_catalog with
+                  | error err =>
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog] at hInit
+                      cases hInit
+                  | ok okv =>
+                      cases okv
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog, stateWithCase] at hInit
+                      cases hInit
+                      simp [caseFrameMatches, councilMemberIds]
 
 theorem continueDeliberation_preserves_caseFrame_for
     (s t : ArbitrationState)

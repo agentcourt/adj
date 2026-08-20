@@ -1,4 +1,5 @@
 import Proofs.OpportunityAgreement
+import Proofs.RecordIntegrity
 
 namespace ArbProofs
 
@@ -32,6 +33,31 @@ inductive AuthorityConformingReplay : ArbitrationState → List CourtAction → 
       (remaining : AuthorityConformingReplay t rest) :
       AuthorityConformingReplay s (action :: rest)
 
+/--
+`MeritsOfferChronology` is an inductive predicate over the source states of a
+successful action replay.  Each `cons` constructor requires proof that the
+current merits offers use only the catalog and submissions present before the
+action executes.  Its tail premise repeats the condition from the state
+produced by the accepted action.
+-/
+inductive MeritsOfferChronology : ArbitrationState → List CourtAction → Prop where
+  | nil (s : ArbitrationState) : MeritsOfferChronology s []
+  | cons
+      {s t : ArbitrationState}
+      {action : CourtAction}
+      {rest : List CourtAction}
+      (prior_record : MeritsOffersUsePriorRecord s action)
+      (accepted : step { state := s, action := action } = .ok t)
+      (remaining : MeritsOfferChronology t rest) :
+      MeritsOfferChronology s (action :: rest)
+
+def InitializedMeritsOfferChronology
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction) : Prop :=
+  ∃ start,
+    initializeCase req = .ok start ∧
+      MeritsOfferChronology start actions
+
 theorem replaySteps_success_authorityConforming
     (start target : ArbitrationState)
     (actions : List CourtAction)
@@ -52,6 +78,27 @@ theorem replaySteps_success_authorityConforming
             ⟨opportunity, hNext, hAuthority, hOperation⟩
           exact AuthorityConformingReplay.cons
             opportunity hNext hAuthority hOperation hStep (ih next hReplay)
+
+theorem replaySteps_success_meritsOfferChronology
+    (start target : ArbitrationState)
+    (actions : List CourtAction)
+    (hReplay : replaySteps start actions = .ok target) :
+    MeritsOfferChronology start actions := by
+  induction actions generalizing start with
+  | nil =>
+      exact MeritsOfferChronology.nil start
+  | cons action rest ih =>
+      simp [replaySteps] at hReplay
+      cases hStep : step { state := start, action := action } with
+      | error err =>
+          rw [hStep] at hReplay
+          contradiction
+      | ok next =>
+          rw [hStep] at hReplay
+          exact MeritsOfferChronology.cons
+            (step_ok_meritsOffersUsePriorRecord start next action hStep)
+            hStep
+            (ih next hReplay)
 
 def checkReplayCertificate
     (req : InitializeCaseRequest)
@@ -268,6 +315,17 @@ theorem replayInitialized_success_authorityConforming
     ⟨start, hInit, hSteps⟩
   exact ⟨start, hInit,
     replaySteps_success_authorityConforming start target actions hSteps⟩
+
+theorem replayInitialized_success_meritsOfferChronology
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction)
+    (target : ArbitrationState)
+    (hReplay : replayInitialized req actions = .ok target) :
+    InitializedMeritsOfferChronology req actions := by
+  rcases replayInitialized_success_components req actions target hReplay with
+    ⟨start, hInit, hSteps⟩
+  exact ⟨start, hInit,
+    replaySteps_success_meritsOfferChronology start target actions hSteps⟩
 
 theorem replayInitialized_success_stepPath
     (req : InitializeCaseRequest)

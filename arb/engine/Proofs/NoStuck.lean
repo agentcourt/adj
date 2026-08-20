@@ -851,14 +851,21 @@ theorem initializeCase_establishes_pristineCouncilState
                 · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
                     hDuplicate] at hInit
                   cases hInit
-                · simp [stateWithCase, hPolicy, hProposition, hEvidence, hEmpty, hLength,
-                    hInvalid, hDuplicate] at hInit
-                  cases hInit
-                  refine ⟨rfl, rfl, ?_⟩
-                  intro member hMem
-                  simp at hMem
-                  rcases hMem with ⟨source, hSourceMem, rfl⟩
-                  simp [memberIsSeated]
+                · cases hCatalog : validateEvidenceCatalog req.state.evidence_catalog with
+                  | error err =>
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog] at hInit
+                      cases hInit
+                  | ok okv =>
+                      cases okv
+                      simp [stateWithCase, hPolicy, hProposition, hEvidence, hEmpty,
+                        hLength, hInvalid, hDuplicate, hCatalog] at hInit
+                      cases hInit
+                      refine ⟨rfl, rfl, ?_⟩
+                      intro member hMem
+                      simp at hMem
+                      rcases hMem with ⟨source, hSourceMem, rfl⟩
+                      simp [memberIsSeated]
 
 theorem step_record_opening_statement_preserves_pristineCouncilState
     (s t : ArbitrationState)

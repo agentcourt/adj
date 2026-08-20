@@ -27,7 +27,7 @@ The case command samples and checks the council before it starts the HTTP listen
 
 An AAR case begins with a complaint.  The complaint contains one proposition, usually written under a `# Proposition` heading.  The plaintiff lawyer tries to demonstrate that proposition, and the defendant lawyer tests the proof, identifies gaps, develops contrary evidence when available, and argues that the proposition has not been demonstrated.
 
-The record contains lawyer filings, admitted evidence, technical reports, and council votes.  Initial case files enter the record when the case starts.  Lawyers may also submit evidence during arguments, rebuttals, and surrebuttals.  Openings and closings may read evidence but may not submit new evidence.
+The record contains lawyer filings, admitted evidence, technical reports, and council votes.  Initial case files enter the record when the case starts, and the engine receives their evidence identifiers, sizes, and canonical SHA-256 commitments.  Lawyers may also submit evidence during arguments, rebuttals, and surrebuttals.  Each filing may offer items from the initial catalog or from submissions already in the record.  Openings and closings may read evidence but may not submit new evidence.
 
 The case proceeds through lawyer phases and then deliberation.  The lawyer phases are openings, arguments, rebuttals, surrebuttals, and closings.  The final council phase asks council members to vote `demonstrated` or `not_demonstrated` and explain their vote.  A configured vote threshold determines the final resolution.
 
@@ -69,7 +69,7 @@ The direct Go build is:
 go build -o .bin/aar ./runtime/cmd/aar
 ```
 
-The Go runtime tests run independently of the Lean proof build.  They exercise the command, proceeding, Lean-client, and complaint packages.  Run them from `arb/`:
+The Go runtime tests do not build the Lean proof tree.  The real-engine cases require a current `.bin/aarengine`; `make test` builds that binary before running the tests.  After `make aarengine`, the tests may also run directly from `arb/`:
 
 ```bash
 go test -count=1 ./runtime/...
@@ -109,9 +109,9 @@ On success, `aar complain` prints the output path.
 
 ## Initial Evidence
 
-When `aar case` starts without `--file`, the case runner scans the complaint directory for initial case files.  It skips the complaint file, a situation file, `README.md`, editor backup files ending in `~`, signing evidence, and directories.  Text-like files such as `.txt`, `.md`, `.pem`, and `.b64` enter the record as readable text evidence; other file types enter as byte-bearing evidence.
+When `aar case` starts without `--file`, the case runner scans the complaint directory for initial case files.  It identifies the configured complaint by file identity and skips it, a situation file, `README.md`, editor backup files ending in `~`, signing evidence, and directories.  Every selected source must be a regular file; a symbolic link to a regular file is accepted.  Before Lean initializes the case, the runtime copies each selected file into the evidence store and verifies the copy.  The runtime constructs the case's file view and immutable evidence catalog from that stored snapshot.  Files ending in `.txt`, `.md`, `.pem`, or `.b64` enter that view as readable text; other file types enter as byte-bearing evidence.
 
-Use `--file` to provide explicit initial evidence.  The flag may be repeated.  Supplying any `--file` value replaces automatic complaint-directory scanning, so list every initial evidence file that belongs in the starting packet.
+Use `--file` to provide explicit initial evidence.  The flag may be repeated.  Supplying any `--file` value replaces automatic complaint-directory scanning, so list every initial evidence file that belongs in the starting packet.  Explicit selection requires a regular source but includes the complaint when the caller names it.
 
 ```bash
 .bin/aar case \
@@ -176,6 +176,7 @@ Important flags:
 | `--timeout-seconds` | Council LLM timeout override for direct council. |
 | `--council-request-attempts` | Provider attempts per direct council request, from 1 through 4. |
 | `--lawyer-timeout-seconds` | Lawyer turn timeout override. |
+| `--engine-timeout-seconds` | Lean engine call timeout override. |
 | `--max-response-bytes` | Parsed response byte limit override. |
 | `--invalid-attempt-limit` | Invalid tool-call attempt limit override. |
 | `--engine` | Lean engine binary. |
@@ -242,6 +243,10 @@ curl -sS -X POST "$BASE/do" \
 
 Lawyer tools include `case_status`, `get_case`, `send_work_notes`, `list_evidence`, `stat_evidence`, `read_evidence_range`, `submit_evidence`, `begin_evidence_upload`, `write_evidence_chunk`, `commit_evidence_upload`, and `submit_decision`.  Evidence submission and upload tools are available during arguments, rebuttals, and surrebuttals.  The legal filing actions passed through `submit_decision` are `record_opening_statement`, `submit_argument`, `submit_rebuttal`, `submit_surrebuttal`, `deliver_closing_statement`, and `pass_phase_opportunity` when that pass action is allowed.  Observer tools include `case_status`, `get_case`, `get_turn`, `list_events`, `list_evidence`, `stat_evidence`, and `read_evidence_range`.  `get_turn` reports the current role, phase, deadline, and remaining attempts when a lawyer turn is active.
 
+Successful Lawyer and Council evidence range reads create `evidence_read` events.  Observer range reads do not create events.  A storage, integrity, publication, engine, or event-write error during an active participant operation returns `runtime_failure`, preserves the attempt count, and ends that turn and case run.
+
+The Lawyer and Council `/do` request formats accept `call_id` but do not use it to deduplicate a mutation or recover a prior response.  A caller cannot resolve a lost mutation response by resending the same `call_id`.  Mutation idempotency remains future work.
+
 ## Council API
 
 The Council API is available when a case starts with `--council-backend councilapi`.  Calls go to `/councilapi/v1` and include `case_id` and `member_id`.  A council member uses `GET /councilapi/v1/wait` or `GET /councilapi/v1/get` to receive its deliberation opportunity, reads the record through evidence tools, and submits one vote through `POST /councilapi/v1/do`.
@@ -252,9 +257,9 @@ The `POST /councilapi/v1/fail` endpoint lets a supervising process report counci
 
 ## `aar verify-certificate`
 
-`aar verify-certificate` checks a completed packet's replay certificate.  The command reads `certificate.json`, replays its initialization request and accepted public actions through the configured Lean engine, and compares the replayed final state to the certificate's claimed final-state hash.  It also reads `state.json` from the same packet and requires that file to match the certificate hash.
+`aar verify-certificate` checks a completed packet's replay certificate.  The command reads `certificate.json`, replays its initialization request and accepted public actions through the configured Lean engine, and compares the replayed final state to the certificate's claimed final-state hash.  It applies the configured engine timeout separately to initialization and each recorded action.  It also reads `state.json` from the same packet and requires that file to match the certificate hash.
 
-The certificate contains the engine-visible transition record.  `initialize_request` contains the exact initial state, proposition, and council roster sent to `initialize_case`.  `actions` contains the public actions the engine accepted, in order, with `action_type`, `actor_role`, `authority`, and `payload`.  The authority records the opportunity id, expected state version, role, phase, and scheduled council-member id checked for that transition.  `claimed_final_state_sha256` is the SHA-256 hash of the compact JSON encoding of `claimed_final_state`.
+The certificate contains the engine-visible transition record.  `initialize_request` contains the exact initial state, proposition, council roster, and initial evidence commitments sent to `initialize_case`.  `actions` contains the public actions the engine accepted, in order, with `action_type`, `actor_role`, `authority`, and `payload`; submitted-evidence payloads include their byte commitment and complete parent lineage when applicable.  Catalog, submission, and parent SHA-256 commitments contain exactly 64 lowercase hexadecimal characters, while the optional lineage members must be JSON strings when present.  The authority records the opportunity id, expected state version, role, phase, and scheduled council-member id checked for that transition, while `claimed_final_state_sha256` hashes the compact JSON encoding of `claimed_final_state`.
 
 The name "certificate" overstates what this file is.  It is a package of the run's input, its accepted-action record, and its claimed final state, with hashes tying the package to the packet.  It carries no signature and no endorsement.  The word is borrowed from complexity theory, where a certificate is a witness that makes a claim checkable without search; here the check is a full re-execution of every engine transition, and it saves work only because the recorded actions remove any search and the model calls are not repeated.  A passing verification shows that the claimed outcome follows from the recorded history under the engine's rules.  It does not show that the recorded history is what actually happened: any internally legal history yields a passing package.  Establishing that the record is genuine requires attested execution or records held by the participants themselves.
 
@@ -281,14 +286,15 @@ Important flags:
 | `--certificate` | Certificate path override. |
 | `--state` | Final state path override. |
 | `--engine` | Lean engine binary. |
+| `--engine-timeout-seconds` | Maximum time for each Lean initialization or action call.  Default: 30 seconds. |
 
-Successful verification prints a JSON object with `status: "ok"`, the case id, the run id when present, the accepted action count, and the final-state hash.  A certificate hash mismatch, packet-state mismatch, rejected replay action, or replayed final-state mismatch exits with an error.  The command does not inspect lawyer work notes, logs, or evidence bytes; it checks the engine-visible state transition sequence recorded in the certificate.
+Successful verification prints a JSON object with `status: "ok"`, the case id, the run id when present, the accepted action count, and the final-state hash.  A certificate hash mismatch, packet-state mismatch, rejected replay action, or replayed final-state mismatch exits with an error.  The executable transitions check exact action authority, filing-time evidence references, canonical commitments, submission lineage, exhibit sizes, and report byte limits.  The Lean certificate theorems imply replay-time offer chronology and final-state `RecordIntegrity` from an accepted replay; the command does not execute `RecordIntegrity` as a separate predicate.  The command does not rehash `evidence-store/` or inspect lawyer work notes and logs.
 
 `aar verify-certificate` performs this check explicitly after the case ends.  The case command writes the certificate but does not verify it before returning.  A later check can specify alternate certificate, state, or engine paths through command flags.
 
 ## Output Packet
 
-Every completed or failed case writes a run packet under its output directory.  The exact file set depends on how far the case progressed.  These files constitute the main record:
+Every completed or failed case writes a run packet under its output directory.  The directory may be absent or empty when the command starts.  The command creates a missing directory and rejects a file or nonempty directory without changing its contents.  It holds an exclusive `.aar-output-claim` file until it publishes the initial case manifest, so concurrent starters cannot accept the same directory.  An abrupt process exit may leave that claim, which makes the directory nonempty on a later attempt.  The exact file set depends on how far the case progressed.  These files constitute the main record:
 
 | File | Contents |
 | --- | --- |
@@ -327,7 +333,7 @@ The default policy has five council members, a preponderance evidence standard, 
 
 Policy validation rejects a zero council size, a zero decision threshold, a threshold above the council size, and any threshold that is not a strict majority.  The strict-majority rule prevents one vote distribution from satisfying both substantive outcomes.  The engine enforces rules that change the legal state, including phase order, filing limits, vote thresholds, deliberation rounds, and admitted-material counts.  Go enforces transport limits and byte-transfer budgets before material reaches the engine.
 
-The default runtime allows 900 seconds per lawyer turn, 240 seconds per direct council model call, four provider attempts per request, a 128 KiB parsed response, three invalid attempts per opportunity, and 4096 council output tokens.  A request specification may set its own output-token limit; otherwise the runtime uses the 4096-token value.  `aar case` flags override the lawyer deadline, council timeout, provider attempts, response byte limit, and invalid-attempt limit.
+The default runtime allows 900 seconds per lawyer turn, 240 seconds per direct council model call, 30 seconds per Lean engine call, four provider attempts per request, a 128 KiB non-content request or response budget, three invalid attempts per opportunity, and 4096 council output tokens.  Lawyer `/do` adds enough request-body allowance for direct evidence at the policy limit after base64 encoding, while Council `/do` request bodies retain the configured byte limit.  A request specification may set its own output-token limit; otherwise the runtime uses the 4096-token value.  `aar case` flags override the lawyer deadline, council timeout, engine timeout, provider attempts, response byte limit, and invalid-attempt limit.
 
 A lawyer failure fails the case.  Examples include deadline expiration and exhausting invalid attempts.  A council member failure dismisses that member, records the failure, and lets the case continue under council rules.
 
@@ -379,7 +385,7 @@ Case-packet construction can run without starting a case or calling a model.  It
 
 ## Troubleshooting
 
-If `aar case` fails before reporting its listener address, inspect the JSON error summary and stderr diagnostic.  Common causes are an invalid complaint or policy, an unreadable pool or persona, missing `OPENAI_API_KEY` or `OPENROUTER_API_KEY`, a failed council availability check, and an unavailable Lean engine.  The process creates the output directory before council sampling, so an early failure may leave a partial directory.
+If `aar case` fails before reporting its listener address, inspect the JSON error summary and stderr diagnostic.  Common causes are an invalid complaint or policy, an unreadable pool or persona, missing `OPENAI_API_KEY` or `OPENROUTER_API_KEY`, a failed council availability check, and an unavailable Lean engine.  The process creates or accepts an empty output directory and writes the initial case manifest before council sampling, so a later initialization failure may leave a partial directory.
 
 If the case remains on one lawyer phase, query `/lawyerapi/v1/status` and `/lawyerapi/v1/get` for each lawyer role.  The response identifies the active role, opportunity, deadline, and remaining attempts.  A case waits until the assigned client makes a final filing or the lawyer deadline expires.
 
@@ -387,6 +393,6 @@ If a lawyer fails by deadline or invalid attempts, inspect `events.ndjson`, `wor
 
 If an external council client fails, inspect `events.ndjson` for `council_member_removed` and related opportunity events.  The supervising client can report a current member failure through `/councilapi/v1/fail`.  The remaining members continue under the configured council rules.
 
-Use a distinct output directory for each invocation.  Reusing a directory can mix files from different cases because `aar case` writes its packet in place.  A partial directory after a process-level error records only the files written before that error.
+Each invocation requires an absent or empty output directory.  A process-level error may leave a partial directory, which can be preserved for diagnosis or moved before a retry uses the original path.  An abrupt exit during initial case-manifest publication can leave `.aar-output-claim` as the only file.  Starting against any such nonempty directory fails before writing another record.
 
 If certificate verification fails, read the reported check before inspecting other artifacts.  Hash mismatches indicate disagreement within the packet, while an engine rejection identifies the numbered accepted action that failed replay.  An alternate engine path can determine whether the failure follows from using a different engine build.

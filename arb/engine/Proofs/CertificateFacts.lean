@@ -1,5 +1,6 @@
 import Proofs.DecisionSummary
 import Proofs.DecisionRuleFacts
+import Proofs.RecordIntegrity
 
 namespace ArbProofs
 
@@ -13,8 +14,14 @@ structure ClosedCertificateFacts
     ∃ start,
       initializeCase req = .ok start ∧
         AuthorityConformingReplay start actions
+  merits_offer_chronology :
+    InitializedMeritsOfferChronology req actions
   reachable :
     Reachable claimed
+  record_integrity :
+    RecordIntegrity claimed
+  evidence_catalog_fixed :
+    claimed.evidence_catalog = req.state.evidence_catalog
   length_bound :
     ∃ start,
       initializeCase req = .ok start ∧
@@ -64,8 +71,14 @@ structure FailedCertificateFacts
     ∃ start,
       initializeCase req = .ok start ∧
         AuthorityConformingReplay start actions
+  merits_offer_chronology :
+    InitializedMeritsOfferChronology req actions
   reachable :
     Reachable claimed
+  record_integrity :
+    RecordIntegrity claimed
+  evidence_catalog_fixed :
+    claimed.evidence_catalog = req.state.evidence_catalog
   length_bound :
     ∃ start,
       initializeCase req = .ok start ∧
@@ -90,6 +103,40 @@ def TerminalCertificateFacts
     (claimed : ArbitrationState) : Prop :=
   ClosedCertificateFacts req actions claimed ∨
     FailedCertificateFacts req actions claimed
+
+theorem checkReplayCertificate_ok_meritsOfferChronology
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction)
+    (claimed : ArbitrationState)
+    (hCheck : checkReplayCertificate req actions claimed = .ok ()) :
+    InitializedMeritsOfferChronology req actions := by
+  exact replayInitialized_success_meritsOfferChronology req actions claimed
+    ((checkReplayCertificate_ok_iff req actions claimed).1 hCheck)
+
+theorem checkReplayCertificate_ok_recordIntegrity
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction)
+    (claimed : ArbitrationState)
+    (hCheck : checkReplayCertificate req actions claimed = .ok ()) :
+    RecordIntegrity claimed ∧
+      claimed.evidence_catalog = req.state.evidence_catalog := by
+  constructor
+  · exact reachable_recordIntegrity claimed
+      (checkReplayCertificate_ok_reachable req actions claimed hCheck)
+  · have hReplay : replayInitialized req actions = .ok claimed :=
+      (checkReplayCertificate_ok_iff req actions claimed).1 hCheck
+    rcases replayInitialized_success_components req actions claimed hReplay with
+      ⟨start, hInit, hSteps⟩
+    exact initialized_run_preserves_evidenceCatalog req start claimed hInit
+      (replaySteps_success_stepReachableFrom start claimed actions hSteps)
+
+theorem checkReplayCertificate_ok_evidenceCatalog_fixed
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction)
+    (claimed : ArbitrationState)
+    (hCheck : checkReplayCertificate req actions claimed = .ok ()) :
+    claimed.evidence_catalog = req.state.evidence_catalog :=
+  (checkReplayCertificate_ok_recordIntegrity req actions claimed hCheck).2
 
 theorem checkReplayCertificate_status_closed_facts
     (req : InitializeCaseRequest)
@@ -129,7 +176,14 @@ theorem checkReplayCertificate_status_closed_facts
       authority_conforming :=
         checkReplayCertificate_ok_authorityConforming
           req actions claimed hCheck
+      merits_offer_chronology :=
+        checkReplayCertificate_ok_meritsOfferChronology
+          req actions claimed hCheck
       reachable := hReachable
+      record_integrity :=
+        (checkReplayCertificate_ok_recordIntegrity req actions claimed hCheck).1
+      evidence_catalog_fixed :=
+        checkReplayCertificate_ok_evidenceCatalog_fixed req actions claimed hCheck
       length_bound :=
         checkReplayCertificate_ok_length_le_initializedBudget
           req actions claimed hCheck
@@ -163,7 +217,14 @@ theorem checkReplayCertificate_status_failed_facts
       authority_conforming :=
         checkReplayCertificate_ok_authorityConforming
           req actions claimed hCheck
+      merits_offer_chronology :=
+        checkReplayCertificate_ok_meritsOfferChronology
+          req actions claimed hCheck
       reachable := hReachable
+      record_integrity :=
+        (checkReplayCertificate_ok_recordIntegrity req actions claimed hCheck).1
+      evidence_catalog_fixed :=
+        checkReplayCertificate_ok_evidenceCatalog_fixed req actions claimed hCheck
       length_bound :=
         checkReplayCertificate_ok_length_le_initializedBudget
           req actions claimed hCheck

@@ -49,10 +49,17 @@ theorem initializeCase_establishes_councilMemberCount_eq_policySize
                 · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
                     hDuplicate] at hInit
                   cases hInit
-                · simp [stateWithCase, hPolicy, hProposition, hEvidence, hEmpty, hLength,
-                    hInvalid, hDuplicate] at hInit
-                  cases hInit
-                  simpa using hLength
+                · cases hCatalog : validateEvidenceCatalog req.state.evidence_catalog with
+                  | error err =>
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog] at hInit
+                      cases hInit
+                  | ok okv =>
+                      cases okv
+                      simp [stateWithCase, hPolicy, hProposition, hEvidence, hEmpty,
+                        hLength, hInvalid, hDuplicate, hCatalog] at hInit
+                      cases hInit
+                      simpa using hLength
             · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength] at hInit
               cases hInit
 

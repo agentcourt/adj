@@ -29,7 +29,11 @@ def read_rows(path: Path) -> list[tuple[str, str, str, str]]:
 def write_tsv(path: Path, rows: list[tuple[str, str, str, str]]) -> None:
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
-        writer.writerows(rows)
+        for row in rows:
+            fields = list(row)
+            while fields and fields[-1] == "":
+                fields.pop()
+            writer.writerow(fields)
 
 
 def escape_cell(text: str) -> str:

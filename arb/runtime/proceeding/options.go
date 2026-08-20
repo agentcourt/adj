@@ -20,6 +20,9 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	if attempts := opts.CouncilRequestAttempts; attempts != 0 && (attempts < 1 || attempts > 4) {
 		return Result{}, fmt.Errorf("council request attempts must be between 1 and 4 when set")
 	}
+	if opts.EngineCallTimeoutSeconds < 0 {
+		return Result{}, fmt.Errorf("engine call timeout must be positive when set")
+	}
 	raw, err := os.ReadFile(opts.ComplaintPath)
 	if err != nil {
 		return Result{}, fmt.Errorf("read complaint: %w", err)
@@ -81,6 +84,9 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	}
 	if opts.LawyerTimeoutSeconds > 0 {
 		runtimeLimits.LawyerTurnTimeoutSeconds = opts.LawyerTimeoutSeconds
+	}
+	if opts.EngineCallTimeoutSeconds > 0 {
+		runtimeLimits.EngineCallTimeoutSeconds = opts.EngineCallTimeoutSeconds
 	}
 	if opts.MaxResponseBytes > 0 {
 		runtimeLimits.MaxResponseBytes = opts.MaxResponseBytes

@@ -147,10 +147,18 @@ theorem initializeCase_establishes_councilIdsUnique
                             hasDuplicateStrings (req.council_members.map (·.member_id)) = true :=
                             hasDuplicateStrings_eq_true_of_not_nodup hNodup
                         simp [hDupTrue] at hDuplicate
-                  simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
-                    hDuplicate, stateWithCase] at hInit
-                  cases hInit
-                  simpa [councilIdsUnique, councilMemberIds, Function.comp_def] using hNoDupIds
+                  cases hCatalog : validateEvidenceCatalog req.state.evidence_catalog with
+                  | error err =>
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog] at hInit
+                      cases hInit
+                  | ok okv =>
+                      cases okv
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog, stateWithCase] at hInit
+                      cases hInit
+                      simpa [councilIdsUnique, councilMemberIds, Function.comp_def] using
+                        hNoDupIds
 
 theorem currentRoundVoteIntegrity_empty (c : ArbitrationCase) :
     councilVoteIntegrity { c with council_votes := [] } := by
@@ -631,12 +639,19 @@ theorem initializeCase_establishes_councilVoteIntegrity
                 · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
                     hDuplicate] at hInit
                   cases hInit
-                · simp [stateWithCase, hPolicy, hProposition, hEvidence, hEmpty, hLength,
-                    hInvalid, hDuplicate] at hInit
-                  cases hInit
-                  simp [councilVoteIntegrity, currentRoundVoteIdsDistinct,
-                    currentRoundVotesFromSeatedMembers, councilVoteRoundsBounded,
-                    currentRoundVoteIds, currentRoundVotes]
+                · cases hCatalog : validateEvidenceCatalog req.state.evidence_catalog with
+                  | error err =>
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog] at hInit
+                      cases hInit
+                  | ok okv =>
+                      cases okv
+                      simp [stateWithCase, hPolicy, hProposition, hEvidence, hEmpty,
+                        hLength, hInvalid, hDuplicate, hCatalog] at hInit
+                      cases hInit
+                      simp [councilVoteIntegrity, currentRoundVoteIdsDistinct,
+                        currentRoundVotesFromSeatedMembers, councilVoteRoundsBounded,
+                        currentRoundVoteIds, currentRoundVotes]
 
 /--
 `continueDeliberation` preserves deliberation-record integrity.
@@ -1171,10 +1186,17 @@ theorem initializeCase_establishes_nonempty_council
                 · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
                     hDuplicate] at hInit
                   cases hInit
-                · simp [stateWithCase, hPolicy, hProposition, hEvidence, hEmpty, hLength,
-                    hInvalid, hDuplicate] at hInit
-                  cases hInit
-                  simpa [List.isEmpty_iff] using hEmpty
+                · cases hCatalog : validateEvidenceCatalog req.state.evidence_catalog with
+                  | error err =>
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog] at hInit
+                      cases hInit
+                  | ok okv =>
+                      cases okv
+                      simp [stateWithCase, hPolicy, hProposition, hEvidence, hEmpty,
+                        hLength, hInvalid, hDuplicate, hCatalog] at hInit
+                      cases hInit
+                      simpa [List.isEmpty_iff] using hEmpty
 
 theorem step_preserves_nonempty_council
     (s t : ArbitrationState)

@@ -1,12 +1,15 @@
 package proceeding
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/jsmorph/adj/arb/runtime/lean"
 )
@@ -15,6 +18,8 @@ const (
 	ReplayCertificateSchemaVersion = "aar.replay-certificate.v1"
 	ReplayCertificateFileName      = "certificate.json"
 )
+
+var errTurnDeadlineExceeded = errors.New("opportunity deadline expired during engine call")
 
 type ReplayCertificate struct {
 	SchemaVersion           string                  `json:"schema_version"`
@@ -47,6 +52,7 @@ type VerifyReplayCertificateOptions struct {
 	CertificatePath string
 	StatePath       string
 	Engine          lean.Engine
+	EngineTimeout   time.Duration
 }
 
 type VerifyReplayCertificateResult struct {
@@ -73,31 +79,87 @@ func newReplayInitializeRequest(state map[string]any, proposition string, counci
 	}, nil
 }
 
-func (rc *runContext) stepForCertificate(opportunity Opportunity, actionType string, actorRole string, payload map[string]any) (map[string]any, error) {
+func (rc *runContext) evaluateStep(ctx context.Context, opportunity Opportunity, actionType string, actorRole string, payload map[string]any) (map[string]any, ReplayAction, error) {
 	if payload == nil {
 		payload = map[string]any{}
 	}
+	engineTimeout := rc.cfg.Runtime.EngineCallTimeout()
+	if engineTimeout <= 0 {
+		return nil, ReplayAction{}, fmt.Errorf("runtime.engine_call_timeout_seconds must be positive")
+	}
 	authority, err := authorityForOpportunity(rc.state, opportunity)
 	if err != nil {
-		return nil, err
+		return nil, ReplayAction{}, err
 	}
-	stepResp, err := rc.cfg.Engine.Step(rc.state, actionType, actorRole, authority, payload)
+	payloadCopy, err := cloneMapJSON(payload)
 	if err != nil {
-		return nil, err
+		return nil, ReplayAction{}, fmt.Errorf("clone certificate action payload: %w", err)
 	}
-	if ok, _ := stepResp["ok"].(bool); ok {
-		payloadCopy, err := cloneMapJSON(payload)
-		if err != nil {
-			return nil, fmt.Errorf("clone certificate action payload: %w", err)
+	stepCtx, cancel := context.WithTimeout(ctx, engineTimeout)
+	defer cancel()
+	stepResp, err := rc.cfg.Engine.Step(stepCtx, rc.state, actionType, actorRole, authority, payload)
+	if err != nil {
+		return nil, ReplayAction{}, err
+	}
+	return stepResp, ReplayAction{
+		ActionType: actionType,
+		ActorRole:  actorRole,
+		Authority:  authority,
+		Payload:    payloadCopy,
+	}, nil
+}
+
+func turnStepContext(caseCtx context.Context, turnDeadline time.Time, engineTimeout time.Duration) (context.Context, context.CancelFunc) {
+	if engineTimeout <= 0 {
+		return context.WithCancel(caseCtx)
+	}
+	engineDeadline := time.Now().Add(engineTimeout)
+	if turnDeadline.IsZero() || engineDeadline.Before(turnDeadline) {
+		return context.WithDeadlineCause(caseCtx, engineDeadline, context.DeadlineExceeded)
+	}
+	return context.WithDeadlineCause(caseCtx, turnDeadline, errTurnDeadlineExceeded)
+}
+
+func turnStepError(caseCtx context.Context, turnDeadline time.Time, stepErr error) error {
+	if cause := context.Cause(caseCtx); cause != nil {
+		if stepErr == nil || !errors.Is(stepErr, cause) {
+			return errors.Join(cause, stepErr)
 		}
-		rc.certificateActions = append(rc.certificateActions, ReplayAction{
-			ActionType: actionType,
-			ActorRole:  actorRole,
-			Authority:  authority,
-			Payload:    payloadCopy,
-		})
+		return stepErr
 	}
-	return stepResp, nil
+	if !turnDeadline.IsZero() && !time.Now().Before(turnDeadline) {
+		if stepErr == nil || !errors.Is(stepErr, errTurnDeadlineExceeded) {
+			return errors.Join(errTurnDeadlineExceeded, stepErr)
+		}
+		return stepErr
+	}
+	return stepErr
+}
+
+func turnEngineStepError(caseCtx context.Context, stepCtx context.Context, turnDeadline time.Time, stepErr error) error {
+	if cause := context.Cause(caseCtx); cause != nil {
+		if stepErr == nil || !errors.Is(stepErr, cause) {
+			return errors.Join(cause, stepErr)
+		}
+		return stepErr
+	}
+	if cause := context.Cause(stepCtx); cause != nil {
+		if stepErr == nil || !errors.Is(stepErr, cause) {
+			return errors.Join(cause, stepErr)
+		}
+		return stepErr
+	}
+	return turnStepError(caseCtx, turnDeadline, stepErr)
+}
+
+func (rc *runContext) evaluateTurnStepLocked(caseCtx context.Context, turnDeadline time.Time, opportunity Opportunity, actionType string, actorRole string, payload map[string]any) (map[string]any, ReplayAction, error) {
+	stepCtx, cancel := turnStepContext(caseCtx, turnDeadline, rc.cfg.Runtime.EngineCallTimeout())
+	defer cancel()
+	stepResp, replayAction, err := rc.evaluateStep(stepCtx, opportunity, actionType, actorRole, payload)
+	if err := turnEngineStepError(caseCtx, stepCtx, turnDeadline, err); err != nil {
+		return nil, ReplayAction{}, err
+	}
+	return stepResp, replayAction, nil
 }
 
 func authorityForOpportunity(state map[string]any, opportunity Opportunity) (OpportunityAuthority, error) {
@@ -154,15 +216,15 @@ func validateOpportunityAuthority(authority OpportunityAuthority) error {
 	return nil
 }
 
-func writeReplayCertificate(cfg Config, result Result, rc *runContext) error {
-	cert, err := rc.replayCertificate(result.FinalState)
+func writeReplayCertificate(cfg Config, result Result, initialize ReplayInitializeRequest, actions []ReplayAction) error {
+	cert, err := replayCertificate(cfg, initialize, actions, result.FinalState)
 	if err != nil {
 		return err
 	}
 	return writeJSONFile(filepath.Join(cfg.OutputDir, ReplayCertificateFileName), cert)
 }
 
-func (rc *runContext) replayCertificate(finalState map[string]any) (ReplayCertificate, error) {
+func replayCertificate(cfg Config, initialize ReplayInitializeRequest, actions []ReplayAction, finalState map[string]any) (ReplayCertificate, error) {
 	finalStateCopy, err := cloneMapJSON(finalState)
 	if err != nil {
 		return ReplayCertificate{}, fmt.Errorf("clone certificate final state: %w", err)
@@ -171,22 +233,21 @@ func (rc *runContext) replayCertificate(finalState map[string]any) (ReplayCertif
 	if err != nil {
 		return ReplayCertificate{}, fmt.Errorf("hash certificate final state: %w", err)
 	}
-	actions := make([]ReplayAction, len(rc.certificateActions))
-	copy(actions, rc.certificateActions)
+	actions = append([]ReplayAction(nil), actions...)
 	return ReplayCertificate{
 		SchemaVersion:           ReplayCertificateSchemaVersion,
 		Procedure:               "aar",
-		Engine:                  append([]string(nil), rc.cfg.Engine.Command...),
-		CaseID:                  rc.cfg.CaseID,
-		RunID:                   rc.cfg.RunID,
-		InitializeRequest:       rc.certificateInit,
+		Engine:                  append([]string(nil), cfg.Engine.Command...),
+		CaseID:                  cfg.CaseID,
+		RunID:                   cfg.RunID,
+		InitializeRequest:       initialize,
 		Actions:                 actions,
 		ClaimedFinalState:       finalStateCopy,
 		ClaimedFinalStateSHA256: finalStateHash,
 	}, nil
 }
 
-func VerifyReplayCertificate(opts VerifyReplayCertificateOptions) (VerifyReplayCertificateResult, error) {
+func VerifyReplayCertificate(ctx context.Context, opts VerifyReplayCertificateOptions) (VerifyReplayCertificateResult, error) {
 	if opts.CertificatePath == "" {
 		return VerifyReplayCertificateResult{}, fmt.Errorf("certificate path is required")
 	}
@@ -195,6 +256,9 @@ func VerifyReplayCertificate(opts VerifyReplayCertificateOptions) (VerifyReplayC
 	}
 	if len(opts.Engine.Command) == 0 {
 		return VerifyReplayCertificateResult{}, fmt.Errorf("lean engine command is required")
+	}
+	if opts.EngineTimeout <= 0 {
+		return VerifyReplayCertificateResult{}, fmt.Errorf("engine timeout must be positive")
 	}
 	var cert ReplayCertificate
 	if err := readJSON(opts.CertificatePath, &cert); err != nil {
@@ -233,7 +297,7 @@ func VerifyReplayCertificate(opts VerifyReplayCertificateOptions) (VerifyReplayC
 	if packetHash != cert.ClaimedFinalStateSHA256 {
 		return VerifyReplayCertificateResult{}, fmt.Errorf("packet final state mismatch: state.json hash %s, certificate %s", packetHash, cert.ClaimedFinalStateSHA256)
 	}
-	replayedState, err := replayCertificateActions(opts.Engine, cert)
+	replayedState, err := replayCertificateActions(ctx, opts.Engine, opts.EngineTimeout, cert)
 	if err != nil {
 		return VerifyReplayCertificateResult{}, err
 	}
@@ -253,8 +317,10 @@ func VerifyReplayCertificate(opts VerifyReplayCertificateOptions) (VerifyReplayC
 	}, nil
 }
 
-func replayCertificateActions(engine lean.Engine, cert ReplayCertificate) (map[string]any, error) {
-	initResp, err := engine.InitializeCase(cert.InitializeRequest.State, cert.InitializeRequest.Proposition, cert.InitializeRequest.CouncilMembers)
+func replayCertificateActions(ctx context.Context, engine lean.Engine, engineTimeout time.Duration, cert ReplayCertificate) (map[string]any, error) {
+	initCtx, cancel := context.WithTimeout(ctx, engineTimeout)
+	initResp, err := engine.InitializeCase(initCtx, cert.InitializeRequest.State, cert.InitializeRequest.Proposition, cert.InitializeRequest.CouncilMembers)
+	cancel()
 	if err != nil {
 		return nil, fmt.Errorf("initialize_case failed: %w", err)
 	}
@@ -289,7 +355,9 @@ func replayCertificateActions(engine lean.Engine, cert ReplayCertificate) (map[s
 		if action.Authority.Role == "council" && actionUsesCouncilMember(action.ActionType) && mapString(payload["member_id"]) != action.Authority.MemberID {
 			return nil, fmt.Errorf("certificate action %d (%s) payload member_id %q does not match authority member_id %q", i+1, action.ActionType, mapString(payload["member_id"]), action.Authority.MemberID)
 		}
-		stepResp, err := engine.Step(state, action.ActionType, action.ActorRole, action.Authority, payload)
+		stepCtx, cancel := context.WithTimeout(ctx, engineTimeout)
+		stepResp, err := engine.Step(stepCtx, state, action.ActionType, action.ActorRole, action.Authority, payload)
+		cancel()
 		if err != nil {
 			return nil, fmt.Errorf("certificate action %d (%s) failed: %w", i+1, action.ActionType, err)
 		}

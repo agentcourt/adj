@@ -16,7 +16,11 @@ import (
 	"github.com/jsmorph/adj/common/persona"
 )
 
-func loadCaseFiles(dir string) ([]CaseFile, error) {
+func loadCaseFiles(dir string, complaintPath string) ([]CaseFile, error) {
+	complaintInfo, err := os.Stat(complaintPath)
+	if err != nil {
+		return nil, fmt.Errorf("stat complaint: %w", err)
+	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("read case dir: %w", err)
@@ -30,7 +34,15 @@ func loadCaseFiles(dir string) ([]CaseFile, error) {
 		if skipCaseFile(name) {
 			continue
 		}
-		file, err := loadCaseFile(filepath.Join(dir, name), name)
+		path := filepath.Join(dir, name)
+		info, err := os.Stat(path)
+		if err != nil {
+			return nil, fmt.Errorf("stat case file %s: %w", name, err)
+		}
+		if os.SameFile(complaintInfo, info) {
+			continue
+		}
+		file, err := loadCaseFile(path, name)
 		if err != nil {
 			return nil, err
 		}
@@ -76,8 +88,8 @@ func loadCaseFile(path string, name string) (CaseFile, error) {
 	if err != nil {
 		return CaseFile{}, fmt.Errorf("stat case file %s: %w", name, err)
 	}
-	if info.IsDir() {
-		return CaseFile{}, fmt.Errorf("case file %s is a directory", name)
+	if !info.Mode().IsRegular() {
+		return CaseFile{}, fmt.Errorf("case file %s is not a regular file", name)
 	}
 	file := CaseFile{
 		EvidenceID:   name,
@@ -86,13 +98,6 @@ func loadCaseFile(path string, name string) (CaseFile, error) {
 		MimeType:     mimeType,
 		TextReadable: readable,
 		SizeBytes:    int(info.Size()),
-	}
-	if readable {
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			return CaseFile{}, fmt.Errorf("read case file %s: %w", name, err)
-		}
-		file.Text = string(raw)
 	}
 	return file, nil
 }
@@ -172,9 +177,12 @@ func sampleCouncil(path string, baseDir string, count int) ([]CouncilSeat, error
 	return out, nil
 }
 
-func councilSeatMaps(council []CouncilSeat) []map[string]any {
+func councilSeatMaps(council []CouncilSeat) ([]map[string]any, error) {
 	out := make([]map[string]any, 0, len(council))
 	for _, seat := range council {
+		if _, err := councilSeatRequestSpecMap(seat); err != nil {
+			return nil, err
+		}
 		out = append(out, map[string]any{
 			"member_id":              seat.MemberID,
 			"model":                  seat.Model,
@@ -185,10 +193,10 @@ func councilSeatMaps(council []CouncilSeat) []map[string]any {
 			"failure_message":        "",
 		})
 	}
-	return out
+	return out, nil
 }
 
-func councilSeatRoster(council []CouncilSeat, caseMembers []map[string]any) []map[string]any {
+func councilSeatRoster(council []CouncilSeat, caseMembers []map[string]any) ([]map[string]any, error) {
 	statusByID := map[string]string{}
 	failureByID := map[string]map[string]any{}
 	for _, member := range caseMembers {
@@ -222,7 +230,11 @@ func councilSeatRoster(council []CouncilSeat, caseMembers []map[string]any) []ma
 				}
 			}
 		}
-		if requestSpec := councilSeatRequestSpecMap(seat); len(requestSpec) > 0 {
+		requestSpec, err := councilSeatRequestSpecMap(seat)
+		if err != nil {
+			return nil, err
+		}
+		if len(requestSpec) > 0 {
 			entry["request_spec"] = requestSpec
 			if provider, _ := requestSpec["provider"].(map[string]any); len(provider) > 0 {
 				entry["provider"] = provider
@@ -233,20 +245,22 @@ func councilSeatRoster(council []CouncilSeat, caseMembers []map[string]any) []ma
 		}
 		out = append(out, entry)
 	}
-	return out
+	return out, nil
 }
 
-func councilSeatRequestSpecMap(seat CouncilSeat) map[string]any {
-	if seat.RequestSpec != nil {
-		raw, err := json.Marshal(seat.RequestSpec)
-		if err == nil {
-			var out map[string]any
-			if json.Unmarshal(raw, &out) == nil {
-				return out
-			}
-		}
+func councilSeatRequestSpecMap(seat CouncilSeat) (map[string]any, error) {
+	if seat.RequestSpec == nil {
+		return nil, nil
 	}
-	return nil
+	raw, err := json.Marshal(seat.RequestSpec)
+	if err != nil {
+		return nil, fmt.Errorf("marshal council member %s request spec: %w", seat.MemberID, err)
+	}
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, fmt.Errorf("unmarshal council member %s request spec: %w", seat.MemberID, err)
+	}
+	return out, nil
 }
 
 func caseFileMetas(files []CaseFile) []CaseFileMeta {
@@ -370,6 +384,18 @@ func mapString(value any) string {
 	return strings.TrimSpace(fmt.Sprintf("%v", value))
 }
 
+func optionalStringParam(params map[string]any, key string) (string, error) {
+	value, ok := params[key]
+	if !ok {
+		return "", nil
+	}
+	s, ok := value.(string)
+	if !ok {
+		return "", fmt.Errorf("%s must be a string", key)
+	}
+	return strings.TrimSpace(s), nil
+}
+
 func requiredIntParam(params map[string]any, key string) (int, error) {
 	value, ok := params[key]
 	if !ok || value == nil {
@@ -425,6 +451,55 @@ func cloneMap(in map[string]any) map[string]any {
 		out[key] = value
 	}
 	return out
+}
+
+func cloneJSONLikeMap(in map[string]any) map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]any, len(in))
+	for key, value := range in {
+		out[key] = cloneJSONLikeValue(value)
+	}
+	return out
+}
+
+func cloneJSONLikeMapList(in []map[string]any) []map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := make([]map[string]any, len(in))
+	for i, value := range in {
+		out[i] = cloneJSONLikeMap(value)
+	}
+	return out
+}
+
+func cloneJSONLikeValue(value any) any {
+	switch value := value.(type) {
+	case map[string]any:
+		return cloneJSONLikeMap(value)
+	case []map[string]any:
+		return cloneJSONLikeMapList(value)
+	case []any:
+		out := make([]any, len(value))
+		for i, item := range value {
+			out[i] = cloneJSONLikeValue(item)
+		}
+		return out
+	case map[string]string:
+		out := make(map[string]string, len(value))
+		for key, item := range value {
+			out[key] = item
+		}
+		return out
+	case []string:
+		return append([]string(nil), value...)
+	case []byte:
+		return append([]byte(nil), value...)
+	default:
+		return value
+	}
 }
 
 func withTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {

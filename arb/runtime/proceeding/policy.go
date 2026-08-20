@@ -10,6 +10,8 @@ import (
 
 const DefaultCouncilBackend = "direct"
 
+const MaxRuntimeTimeoutSeconds = int64((1<<63 - 1) / int64(time.Second))
+
 func DefaultPolicy() Policy {
 	return Policy{
 		CouncilSize:                        5,
@@ -44,6 +46,7 @@ func DefaultRuntimeLimits() RuntimeLimits {
 		CouncilLLMTimeoutSeconds: 240,
 		CouncilRequestAttempts:   4,
 		LawyerTurnTimeoutSeconds: 900,
+		EngineCallTimeoutSeconds: 30,
 		MaxResponseBytes:         128 * 1024,
 		InvalidAttemptLimit:      3,
 		CouncilMaxOutputTokens:   4096,
@@ -157,10 +160,18 @@ func ValidateRuntimeLimits(limits RuntimeLimits) error {
 	switch {
 	case limits.CouncilLLMTimeoutSeconds <= 0:
 		return fmt.Errorf("runtime.council_llm_timeout_seconds must be positive")
+	case int64(limits.CouncilLLMTimeoutSeconds) > MaxRuntimeTimeoutSeconds:
+		return fmt.Errorf("runtime.council_llm_timeout_seconds must not exceed %d", MaxRuntimeTimeoutSeconds)
 	case limits.CouncilRequestAttempts < 1 || limits.CouncilRequestAttempts > 4:
 		return fmt.Errorf("runtime.council_request_attempts must be between 1 and 4")
 	case limits.LawyerTurnTimeoutSeconds <= 0:
 		return fmt.Errorf("runtime.lawyer_turn_timeout_seconds must be positive")
+	case int64(limits.LawyerTurnTimeoutSeconds) > MaxRuntimeTimeoutSeconds:
+		return fmt.Errorf("runtime.lawyer_turn_timeout_seconds must not exceed %d", MaxRuntimeTimeoutSeconds)
+	case limits.EngineCallTimeoutSeconds <= 0:
+		return fmt.Errorf("runtime.engine_call_timeout_seconds must be positive")
+	case int64(limits.EngineCallTimeoutSeconds) > MaxRuntimeTimeoutSeconds:
+		return fmt.Errorf("runtime.engine_call_timeout_seconds must not exceed %d", MaxRuntimeTimeoutSeconds)
 	case limits.MaxResponseBytes <= 0:
 		return fmt.Errorf("runtime.max_response_bytes must be positive")
 	case limits.InvalidAttemptLimit <= 0:
@@ -186,6 +197,10 @@ func (limits RuntimeLimits) CouncilRequestTimeout() time.Duration {
 
 func (limits RuntimeLimits) LawyerTurnTimeout() time.Duration {
 	return time.Duration(limits.LawyerTurnTimeoutSeconds) * time.Second
+}
+
+func (limits RuntimeLimits) EngineCallTimeout() time.Duration {
+	return time.Duration(limits.EngineCallTimeoutSeconds) * time.Second
 }
 
 func (policy Policy) StateMap() map[string]any {

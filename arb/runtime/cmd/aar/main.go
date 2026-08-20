@@ -37,7 +37,7 @@ func dispatch(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 	case "validate":
 		return runValidate(args[1:], stdout, stderr)
 	case "verify-certificate":
-		return runVerifyCertificate(args[1:], stdout, stderr)
+		return runVerifyCertificate(ctx, args[1:], stdout, stderr)
 	case "help", "-h", "--help":
 		if len(args) == 1 {
 			return printRootUsage(stdout)
@@ -52,7 +52,7 @@ func dispatch(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 		case "validate":
 			return runValidate([]string{"-h"}, stdout, stderr)
 		case "verify-certificate":
-			return runVerifyCertificate([]string{"-h"}, stdout, stderr)
+			return runVerifyCertificate(ctx, []string{"-h"}, stdout, stderr)
 		default:
 			return errors.Join(fmt.Errorf("unknown help topic %q", args[1]), printRootUsage(stderr))
 		}

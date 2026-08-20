@@ -21,6 +21,17 @@ func TestRunRejectsInvalidCouncilRequestAttempts(t *testing.T) {
 	}
 }
 
+func TestRunRejectsNegativeEngineCallTimeout(t *testing.T) {
+	_, err := Run(context.Background(), Options{
+		ComplaintPath:            "complaint.md",
+		OutputDir:                "out",
+		EngineCallTimeoutSeconds: -1,
+	})
+	if err == nil || !strings.Contains(err.Error(), "engine call timeout must be positive when set") {
+		t.Fatalf("Run error = %v, want engine call timeout validation error", err)
+	}
+}
+
 func TestResolveExplicitCaseFilesExpandsGlob(t *testing.T) {
 	dir := t.TempDir()
 	first := filepath.Join(dir, "a.txt")

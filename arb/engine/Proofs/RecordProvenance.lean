@@ -7,26 +7,26 @@ namespace ArbProofs
 This file begins Stage 5 of the verification plan: record provenance and
 monotonicity.
 
-The aggregate-limit proofs already establish that the record does not grow past
-the configured caps.  That is only part of the story.  A skeptical reader
-should also be able to ask two direct questions.
+The aggregate-limit proofs establish that offered evidence references and
+technical reports do not grow past the configured caps.  The provenance proof
+answers two further questions about those lists.
 
-First: where did each admitted exhibit or technical report come from?
+First: which filing produced each offered evidence reference or technical
+report?
 
-Second: once an item enters the record, can a later public step rewrite or
-delete it?
+Second: once a reference or report enters its list, can a later public step
+rewrite or delete it?
 
-The engine stores enough information to answer both questions.  Each admitted
-item records its `phase` and `role`, and the executable step functions add
-supplemental materials in only one place: `recordMeritsSubmission`.  The
-theorems below turn those implementation facts into two global statements.
+Each reference and report records its `phase` and `role`.  The executable step
+functions add both kinds of supplemental material through
+`recordMeritsSubmission`.  The theorems below establish two global statements.
 
-`recordProvenance` says that every admitted item in a reachable state has one
-of the allowed phase-role origins.
+`recordProvenance` says that every offered evidence reference and technical
+report in a reachable state has an allowed phase-role origin.
 
 `materialsExtend` says that a later state can differ from an earlier state only
-by appending more admitted items.  A successful step may append new items, or
-it may leave both lists unchanged.  It does not rewrite prior entries.
+by appending references and reports.  A successful step may append new items,
+or it may leave both lists unchanged.  It does not rewrite prior entries.
 -/
 
 def materialOriginAllowed (phase role : String) : Prop :=
@@ -50,7 +50,7 @@ def materialsExtend (s t : ArbitrationState) : Prop :=
       t.case.technical_reports = s.case.technical_reports ++ reports
 
 /--
-The two allowed material origins are exactly the two filing phases that admit
+The allowed material origins cover the three filing phases that accept
 supplemental materials.
 -/
 theorem materialOriginAllowed_of_arguments
@@ -80,36 +80,22 @@ theorem parseOfferedEvidenceEntry_phase
   unfold parseOfferedEvidenceEntry at hParse
   cases hFileId : getString entry "evidence_id" with
   | error err =>
-      rw [hFileId] at hParse
+      simp only [hFileId] at hParse
       cases hParse
   | ok rawFileId =>
-      rw [hFileId] at hParse
-      have hParse' :
-          (if trimString rawFileId = "" then
-              (Except.error "offered_evidence entry requires evidence_id" : Except String OfferedEvidence)
-            else
-              Except.ok
-                { phase := phase
-                  role := role
-                  evidence_id := trimString rawFileId
-                  label := getOptionalString entry "label" }) = .ok item := by
-        simpa [Bind.bind, Except.bind] using hParse
+      simp only [hFileId, Bind.bind, Except.bind, Pure.pure, Except.pure] at hParse
       by_cases hEmpty : trimString rawFileId = ""
-      · have : False := by
-          have hBad :
-              (Except.error "offered_evidence entry requires evidence_id" : Except String OfferedEvidence) = .ok item := by
-            simp [hEmpty] at hParse'
-          cases hBad
-        contradiction
-      · have hOk :
-            (Except.ok
-              { phase := phase
-                role := role
-                evidence_id := trimString rawFileId
-                label := getOptionalString entry "label" } : Except String OfferedEvidence) = .ok item := by
-          simpa [hEmpty] using hParse'
-        cases hOk
-        rfl
+      · rw [if_pos hEmpty] at hParse
+        cases hParse
+      · rw [if_neg hEmpty] at hParse
+        cases hLabel : getOptionalString entry "label" with
+        | error err =>
+            simp only [hLabel] at hParse
+            cases hParse
+        | ok label =>
+            simp only [hLabel] at hParse
+            cases hParse
+            rfl
 
 theorem parseOfferedEvidenceEntries_all_phase
     (entries : List Lean.Json)
@@ -288,7 +274,8 @@ theorem append_preserves_membership_property
   · exact hys item hRight
 
 /--
-The initialized case starts with an empty admitted-material record.
+The initialized case starts with empty offered-evidence and technical-report
+lists.
 -/
 theorem initializeCase_establishes_recordProvenance
     (req : InitializeCaseRequest)
@@ -321,14 +308,21 @@ theorem initializeCase_establishes_recordProvenance
                 · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
                     hDuplicate] at hInit
                   cases hInit
-                · simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
-                    hDuplicate, Pure.pure] at hInit
-                  cases hInit
-                  simp [recordProvenance, stateWithCase]
+                · cases hCatalog : validateEvidenceCatalog req.state.evidence_catalog with
+                  | error err =>
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog] at hInit
+                      cases hInit
+                  | ok okv =>
+                      cases okv
+                      simp [hPolicy, hProposition, hEvidence, hEmpty, hLength, hInvalid,
+                        hDuplicate, hCatalog, Pure.pure] at hInit
+                      cases hInit
+                      simp [recordProvenance, stateWithCase]
 
 /--
-If a replacement case keeps the admitted-material lists unchanged, it preserves
-record provenance.
+If a replacement case keeps the offered-evidence and technical-report lists
+unchanged, it preserves record provenance.
 -/
 theorem stateWithCase_preserves_recordProvenance
     (s : ArbitrationState)
@@ -340,7 +334,7 @@ theorem stateWithCase_preserves_recordProvenance
   simpa [recordProvenance, stateWithCase, hOffered, hReports] using hProv
 
 /--
-Appending newly admitted materials preserves record provenance when the new
+Appending supplemental materials preserves record provenance when the new
 items have allowed origins.
 -/
 theorem appendSupplementalMaterials_preserves_recordProvenance
@@ -376,8 +370,8 @@ theorem materialsExtend_refl (s : ArbitrationState) : materialsExtend s s := by
   refine ⟨[], [], ?_, ?_⟩ <;> simp
 
 /--
-If one step extends the admitted-material lists, and the next step extends them
-again, the composed run still extends them by appending a larger suffix.
+If one step extends the supplemental-material lists, and the next step extends
+them again, the composed run still extends them by appending a larger suffix.
 -/
 theorem materialsExtend_trans
     (s t u : ArbitrationState)
@@ -397,8 +391,8 @@ theorem materialsExtend_trans
       _ = s.case.technical_reports ++ (reportsST ++ reportsTU) := by simp [List.append_assoc]
 
 /--
-If a replacement case keeps the admitted-material lists unchanged, the new
-state extends the old one by an empty suffix.
+If a replacement case keeps the supplemental-material lists unchanged, the
+new state extends the old one by an empty suffix.
 -/
 theorem stateWithCase_extends_materials
     (s : ArbitrationState)
@@ -409,8 +403,8 @@ theorem stateWithCase_extends_materials
   refine ⟨[], [], ?_, ?_⟩ <;> simp [stateWithCase, hOffered, hReports]
 
 /--
-Appending admitted materials extends the old record by exactly those appended
-suffixes.
+Appending supplemental materials extends the old lists by exactly those
+appended suffixes.
 -/
 theorem appendSupplementalMaterials_extends_materials
     (s : ArbitrationState)
@@ -425,8 +419,8 @@ theorem appendSupplementalMaterials_extends_materials
   · simp [stateWithCase, appendSupplementalMaterials, hReports]
 
 /--
-`continueDeliberation` never rewrites the admitted-material lists.  It changes
-only phase, status, resolution, votes, or the deliberation round.
+`continueDeliberation` never rewrites the supplemental-material lists.  It
+changes only phase, status, resolution, votes, or the deliberation round.
 -/
 theorem continueDeliberation_preserves_recordProvenance_for
     (s t : ArbitrationState)
@@ -460,8 +454,8 @@ theorem continueDeliberation_preserves_recordProvenance_for
     exact stateWithCase_preserves_recordProvenance s _ hOffered hReports hProv
 
 /--
-`continueDeliberation` also preserves the admitted-material lists by extension
-with an empty suffix.
+`continueDeliberation` also preserves the supplemental-material lists by
+extension with an empty suffix.
 -/
 theorem continueDeliberation_extends_materials_for
     (s t : ArbitrationState)
@@ -1043,8 +1037,8 @@ theorem step_preserves_recordProvenance
                     · simp [stepCore] at hStep
 
 /--
-Every successful public step extends the admitted-material lists by appending a
-suffix or leaves them unchanged.
+Every successful public step extends the supplemental-material lists by
+appending a suffix or leaves them unchanged.
 -/
 theorem step_extends_materials
     (s t : ArbitrationState)
@@ -1088,7 +1082,7 @@ theorem reachable_recordProvenance
         (stepCore_ok_of_step_ok s t action hStep)
 
 /--
-Along any successful public run, the admitted-material lists change only by
+Along any successful public run, the supplemental-material lists change only by
 appending suffixes.
 -/
 theorem stepReachableFrom_materialsExtend

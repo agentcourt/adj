@@ -75,7 +75,7 @@ Submission and offering serve different functions.  `submit_evidence` or chunked
 
 Evidence and analysis are different materials.  The source document, image, page capture, transcript, API response, or media file belongs in evidence when it supports a factual point.  The lawyer's search ledger, extraction notes, OCR explanation, hash comparison, source-chain analysis, or inferential synthesis belongs in a technical report or filing text.  A technical report can make source evidence intelligible, but it cannot replace the source when the source can be preserved.
 
-Preservation includes provenance.  A complete source submission names the URL, canonical identifier, publisher or author when known, retrieval time, retrieval method, MIME type or file type, and relationship to any parent source or derived extraction.  When exact custody affects weight, counsel includes SHA-256 or other hash information and compares it to the AAR evidence metadata when available.
+Preservation includes provenance.  A complete source submission names the URL, canonical identifier, publisher or author when known, retrieval time, retrieval method, MIME type or file type, and relationship to any parent source or derived extraction.  For a derived item, counsel supplies the parent's `evidence_id` and a derivation method; AAR resolves and records the parent's committed SHA-256.  When exact custody affects weight, counsel compares the submitted item's SHA-256 and size with the AAR evidence metadata.
 
 Binary or hard-to-read evidence often needs a faithful companion.  If the source is a scan, screenshot, image, video, audio file, archive, spreadsheet, or PDF with difficult text, counsel preserves the source artifact and submits or reports the extraction the council needs.  OCR, transcripts, page text, frame notes, metadata tables, archive listings, and image observations identify their source evidence and method so the council can separate the artifact from the interpretation.
 
@@ -97,7 +97,7 @@ Absence of evidence requires care.  A failed search may support an inference whe
 
 Technical reports are attorney work product submitted as part of a filing when the phase permits them.  They document work that the council needs to understand a source or a search result: extraction, verification, source-chain reconstruction, metadata comparison, hash calculation, OCR, transcript preparation, archive inspection, API sampling, or a search ledger.  They identify inputs by `evidence_id` when possible, state the method, give the result, and describe limits or errors that affect weight.
 
-A report must be short enough for the council to use.  It omits long source material when the source is available as evidence.  It gives the result instead of burying it under tool logs.  The filing can cite the report for the method and conclusion, while the evidence provides the record basis.
+A report must fit the policy's UTF-8 byte limits for its title and summary.  It omits long source material when the source is available as evidence and states the result without reproducing tool logs.  The filing can cite the report for its method and conclusion, while the evidence supplies the record basis.
 
 Reports are strongest when they distinguish observation from inference.  "OCR of PX-2 reads the timestamp as 2025-05-31 14:03 UTC" is an observation about an extraction.  "That timestamp places the post after the deadline" is an inference that belongs in the argument, even if the report supplies the extraction that supports it.
 

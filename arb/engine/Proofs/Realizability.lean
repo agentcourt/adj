@@ -149,7 +149,7 @@ theorem getOptionalString_councilVoteJson_rationale
         , ("vote", Lean.Json.str vote)
         , ("rationale", Lean.Json.str rationale)
         ])
-      "rationale" = trimString rationale := by
+      "rationale" = .ok (trimString rationale) := by
   rfl
 
 theorem validatePolicy_ok_implies_textLimitsPositive
@@ -474,8 +474,9 @@ theorem recordOpeningStatement_success
     nextOpportunity, nextOpportunityForPhase,
     partyAuthority, authorityForOpportunity, hStatus, stepCore, openingAction,
     hPhase, hNextRole, hOpportunityPrefix, role, hRole,
-    getString_textPayload, trimString_x, hText, Bind.bind, Except.bind,
-    Except.pure, Pure.pure]
+    getString_textPayload, trimString_x, hText, requireNoSupplementalMaterials,
+    getOptionalArray_textPayload_offered, getOptionalArray_textPayload_reports,
+    Bind.bind, Except.bind, Except.pure, Pure.pure]
 
 theorem submitArgument_success
     (s : ArbitrationState)
@@ -534,6 +535,8 @@ theorem submitArgument_success
     recordMeritsSubmission, hPhase, hNextRole, hOpportunityPrefix,
     role, hRole, getString_meritsPayload, trimString_x, hText,
     parseOfferedEvidence_meritsPayload, parseTechnicalReports_meritsPayload,
+    validateOfferedEvidenceBatch, offeredEvidenceBatchValid,
+    validateTechnicalReportBatch, technicalReportBatchValid,
     requireCountWithinLimit, hOfferedNotOver, hReportsNotOver,
     appendSupplementalMaterials, Bind.bind, Except.bind,
     Except.pure, Pure.pure]

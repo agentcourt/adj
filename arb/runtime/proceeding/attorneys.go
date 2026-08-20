@@ -2,8 +2,6 @@ package proceeding
 
 import "fmt"
 
-const defaultRemoteSessionCwd = "/home/user"
-
 func attorneyRunInfos(_ Config, _ string) ([]AttorneyRunInfo, error) {
 	return []AttorneyRunInfo{
 		{Role: "plaintiff", Interface: "lawyerapi"},

@@ -11,11 +11,11 @@ import (
 	"github.com/jsmorph/adj/arb/runtime/spec"
 )
 
-func (rc *runContext) recordEvent(eventType string, role string, phase string, payload map[string]any) error {
-	return rc.recordEventAtTurn(rc.turn, eventType, role, phase, payload)
+func (rc *runContext) recordEventLocked(eventType string, role string, phase string, payload map[string]any) error {
+	return rc.recordEventAtTurnLocked(rc.turn, eventType, role, phase, payload)
 }
 
-func (rc *runContext) recordEventAtTurn(turn int, eventType string, role string, phase string, payload map[string]any) error {
+func (rc *runContext) recordEventAtTurnLocked(turn int, eventType string, role string, phase string, payload map[string]any) error {
 	event := Event{
 		Timestamp: time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00"),
 		Turn:      turn,
@@ -41,8 +41,55 @@ func (rc *runContext) recordWorkNotesAtTurn(turn int, opportunity Opportunity, c
 	return appendJSONLine(filepath.Join(rc.cfg.OutputDir, "work-notes.ndjson"), note)
 }
 
-func writeEvidence(cfg Config, result Result, rc *runContext) error {
-	if err := exportAttorneyWorkProduct(cfg.OutputDir, rc.workProductDirs); err != nil {
+type finalOutputSnapshot struct {
+	evidence           []EvidenceMeta
+	fileByID           map[string]CaseFile
+	workProductDirs    map[string]string
+	certificateInit    ReplayInitializeRequest
+	certificateActions []ReplayAction
+}
+
+func (rc *runContext) finalOutputSnapshotLocked() (finalOutputSnapshot, error) {
+	initialState, err := cloneMapJSON(rc.certificateInit.State)
+	if err != nil {
+		return finalOutputSnapshot{}, fmt.Errorf("clone final output certificate initial state: %w", err)
+	}
+	councilMembers, err := cloneMapListJSON(rc.certificateInit.CouncilMembers)
+	if err != nil {
+		return finalOutputSnapshot{}, fmt.Errorf("clone final output certificate council members: %w", err)
+	}
+	actions := make([]ReplayAction, len(rc.certificateActions))
+	for i, action := range rc.certificateActions {
+		payload, err := cloneMapJSON(action.Payload)
+		if err != nil {
+			return finalOutputSnapshot{}, fmt.Errorf("clone final output certificate action %d: %w", i, err)
+		}
+		action.Payload = payload
+		actions[i] = action
+	}
+	fileByID := make(map[string]CaseFile, len(rc.fileByID))
+	for evidenceID, file := range rc.fileByID {
+		fileByID[evidenceID] = file
+	}
+	workProductDirs := make(map[string]string, len(rc.workProductDirs))
+	for role, path := range rc.workProductDirs {
+		workProductDirs[role] = path
+	}
+	return finalOutputSnapshot{
+		evidence:        append([]EvidenceMeta(nil), rc.evidence...),
+		fileByID:        fileByID,
+		workProductDirs: workProductDirs,
+		certificateInit: ReplayInitializeRequest{
+			State:          initialState,
+			Proposition:    rc.certificateInit.Proposition,
+			CouncilMembers: councilMembers,
+		},
+		certificateActions: actions,
+	}, nil
+}
+
+func writeEvidence(cfg Config, result Result, snapshot finalOutputSnapshot) error {
+	if err := exportAttorneyWorkProduct(cfg.OutputDir, snapshot.workProductDirs); err != nil {
 		return err
 	}
 	if err := os.WriteFile(filepath.Join(cfg.OutputDir, "complaint.md"), []byte(spec.ComplaintMarkdown(result.Complaint)), 0o644); err != nil {
@@ -57,22 +104,22 @@ func writeEvidence(cfg Config, result Result, rc *runContext) error {
 	if err := writeJSONFile(filepath.Join(cfg.OutputDir, "run.json"), result); err != nil {
 		return err
 	}
-	if err := rc.writeEvidenceManifest(); err != nil {
+	if err := writeJSONFileAtomic(filepath.Join(cfg.OutputDir, "evidence-manifest.json"), evidenceManifest(snapshot.evidence)); err != nil {
 		return err
 	}
 	if err := writeJSONFile(filepath.Join(cfg.OutputDir, "state.json"), result.FinalState); err != nil {
 		return err
 	}
-	if err := writeReplayCertificate(cfg, result, rc); err != nil {
+	if err := writeReplayCertificate(cfg, result, snapshot.certificateInit, snapshot.certificateActions); err != nil {
 		return err
 	}
 	if err := writeJSONFile(filepath.Join(cfg.OutputDir, "council.json"), result.Council); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(cfg.OutputDir, "transcript.md"), []byte(renderTranscript(result, rc)), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(cfg.OutputDir, "transcript.md"), []byte(renderTranscript(result, snapshot.fileByID)), 0o644); err != nil {
 		return fmt.Errorf("write transcript: %w", err)
 	}
-	if err := os.WriteFile(filepath.Join(cfg.OutputDir, "digest.md"), []byte(renderDigest(result, rc)), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(cfg.OutputDir, "digest.md"), []byte(renderDigest(result, snapshot.fileByID)), 0o644); err != nil {
 		return fmt.Errorf("write digest: %w", err)
 	}
 	return nil
@@ -111,22 +158,22 @@ func exportAttorneyWorkProduct(outputDir string, workProductDirs map[string]stri
 	return nil
 }
 
-func renderTranscript(result Result, rc *runContext) string {
+func renderTranscript(result Result, fileByID map[string]CaseFile) string {
 	caseObj := mapAny(result.FinalState["case"])
 	var b strings.Builder
 	b.WriteString("# Arbitration Transcript\n\n")
 	appendComplaintSection(&b, result)
 	appendCouncilSection(&b, result, true)
 	b.WriteString("## Proceeding\n\n")
-	appendTranscriptPhase(&b, "Openings", "openings", mapList(caseObj["openings"]), caseObj, rc)
-	appendTranscriptPhase(&b, "Arguments", "arguments", mapList(caseObj["arguments"]), caseObj, rc)
-	appendTranscriptPhase(&b, "Rebuttals", "rebuttals", mapList(caseObj["rebuttals"]), caseObj, rc)
-	appendTranscriptPhase(&b, "Surrebuttals", "surrebuttals", mapList(caseObj["surrebuttals"]), caseObj, rc)
-	appendTranscriptPhase(&b, "Closings", "closings", mapList(caseObj["closings"]), caseObj, rc)
+	appendTranscriptPhase(&b, "Openings", "openings", mapList(caseObj["openings"]), caseObj, fileByID)
+	appendTranscriptPhase(&b, "Arguments", "arguments", mapList(caseObj["arguments"]), caseObj, fileByID)
+	appendTranscriptPhase(&b, "Rebuttals", "rebuttals", mapList(caseObj["rebuttals"]), caseObj, fileByID)
+	appendTranscriptPhase(&b, "Surrebuttals", "surrebuttals", mapList(caseObj["surrebuttals"]), caseObj, fileByID)
+	appendTranscriptPhase(&b, "Closings", "closings", mapList(caseObj["closings"]), caseObj, fileByID)
 	b.WriteString("## Council Deliberation\n\n")
 	b.WriteString(renderVoteRounds(mapList(caseObj["council_votes"])))
 	b.WriteString("\n\n## Exhibits\n\n")
-	b.WriteString(rc.renderExhibitBodies(mapList(caseObj["offered_evidence"])))
+	b.WriteString(renderExhibitBodies(mapList(caseObj["offered_evidence"]), fileByID))
 	b.WriteString("\n\n## Submitted Evidence\n\n")
 	b.WriteString(renderSubmittedEvidence(mapList(caseObj["submitted_evidence"])))
 	b.WriteString("\n\n## Technical Reports\n\n")
@@ -137,7 +184,7 @@ func renderTranscript(result Result, rc *runContext) string {
 	return b.String()
 }
 
-func renderDigest(result Result, rc *runContext) string {
+func renderDigest(result Result, fileByID map[string]CaseFile) string {
 	caseObj := mapAny(result.FinalState["case"])
 	var b strings.Builder
 	b.WriteString("# Arbitration Digest\n\n")
@@ -153,7 +200,7 @@ func renderDigest(result Result, rc *runContext) string {
 	appendFilingSection(&b, "Surrebuttals", mapList(caseObj["surrebuttals"]))
 	appendFilingSection(&b, "Closings", mapList(caseObj["closings"]))
 	b.WriteString("## Exhibits\n\n")
-	b.WriteString(rc.renderExhibitIndex(mapList(caseObj["offered_evidence"])))
+	b.WriteString(renderExhibitIndex(mapList(caseObj["offered_evidence"]), fileByID))
 	b.WriteString("\n\n## Submitted Evidence\n\n")
 	b.WriteString(renderSubmittedEvidence(mapList(caseObj["submitted_evidence"])))
 	b.WriteString("\n\n## Technical Reports\n\n")
@@ -190,7 +237,7 @@ func appendCouncilSection(b *strings.Builder, result Result, includePersona bool
 	}
 }
 
-func appendTranscriptPhase(b *strings.Builder, title string, phase string, items []map[string]any, caseObj map[string]any, rc *runContext) {
+func appendTranscriptPhase(b *strings.Builder, title string, phase string, items []map[string]any, caseObj map[string]any, fileByID map[string]CaseFile) {
 	if len(items) == 0 {
 		return
 	}
@@ -207,7 +254,7 @@ func appendTranscriptPhase(b *strings.Builder, title string, phase string, items
 		exhibits := filterEvidence(mapList(caseObj["offered_evidence"]), phase, role)
 		if len(exhibits) > 0 {
 			b.WriteString("Exhibits offered:\n")
-			b.WriteString(renderInlineExhibitIndex(exhibits, rc.fileByID))
+			b.WriteString(renderInlineExhibitIndex(exhibits, fileByID))
 			b.WriteString("\n\n")
 		}
 		reports := filterEvidence(mapList(caseObj["technical_reports"]), phase, role)

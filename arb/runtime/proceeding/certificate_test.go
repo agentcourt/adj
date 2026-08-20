@@ -1,13 +1,30 @@
 package proceeding
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jsmorph/adj/arb/runtime/lean"
 )
+
+func (rc *runContext) stepForCertificate(opportunity Opportunity, actionType string, actorRole string, payload map[string]any) (map[string]any, error) {
+	stepResp, action, err := rc.evaluateStep(context.Background(), opportunity, actionType, actorRole, payload)
+	if err != nil {
+		return nil, err
+	}
+	if ok, _ := stepResp["ok"].(bool); ok {
+		if _, _, err := acceptedStepState(stepResp, opportunity.StateVersion); err != nil {
+			return nil, err
+		}
+		rc.certificateActions = append(rc.certificateActions, action)
+	}
+	return stepResp, nil
+}
 
 func TestVerifyReplayCertificateAcceptsMatchingPacket(t *testing.T) {
 	dir := t.TempDir()
@@ -49,10 +66,11 @@ func TestVerifyReplayCertificateAcceptsMatchingPacket(t *testing.T) {
 	if err := writeJSONFile(statePath, finalState); err != nil {
 		t.Fatalf("write state: %v", err)
 	}
-	result, err := VerifyReplayCertificate(VerifyReplayCertificateOptions{
+	result, err := VerifyReplayCertificate(context.Background(), VerifyReplayCertificateOptions{
 		CertificatePath: certPath,
 		StatePath:       statePath,
 		Engine:          lean.New([]string{enginePath}),
+		EngineTimeout:   time.Second,
 	})
 	if err != nil {
 		t.Fatalf("verify certificate: %v", err)
@@ -96,10 +114,11 @@ func TestVerifyReplayCertificateRejectsPacketStateMismatch(t *testing.T) {
 	if err := writeJSONFile(statePath, map[string]any{"case": map[string]any{"phase": "closed", "resolution": "not_demonstrated"}}); err != nil {
 		t.Fatalf("write state: %v", err)
 	}
-	_, err = VerifyReplayCertificate(VerifyReplayCertificateOptions{
+	_, err = VerifyReplayCertificate(context.Background(), VerifyReplayCertificateOptions{
 		CertificatePath: certPath,
 		StatePath:       statePath,
 		Engine:          lean.New([]string{enginePath}),
+		EngineTimeout:   time.Second,
 	})
 	if err == nil || !strings.Contains(err.Error(), "packet final state mismatch") {
 		t.Fatalf("error = %v, want packet final state mismatch", err)
@@ -120,10 +139,11 @@ func TestVerifyReplayCertificateRejectsClaimHashMismatch(t *testing.T) {
 	if err := writeJSONFile(statePath, finalState); err != nil {
 		t.Fatalf("write state: %v", err)
 	}
-	_, err := VerifyReplayCertificate(VerifyReplayCertificateOptions{
+	_, err := VerifyReplayCertificate(context.Background(), VerifyReplayCertificateOptions{
 		CertificatePath: certPath,
 		StatePath:       statePath,
 		Engine:          lean.New([]string{enginePath}),
+		EngineTimeout:   time.Second,
 	})
 	if err == nil || !strings.Contains(err.Error(), "certificate final state hash mismatch") {
 		t.Fatalf("error = %v, want certificate final state hash mismatch", err)
@@ -144,10 +164,11 @@ func TestVerifyReplayCertificateRejectsMissingAction(t *testing.T) {
 	if err := writeJSONFile(statePath, finalState); err != nil {
 		t.Fatalf("write state: %v", err)
 	}
-	_, err := VerifyReplayCertificate(VerifyReplayCertificateOptions{
+	_, err := VerifyReplayCertificate(context.Background(), VerifyReplayCertificateOptions{
 		CertificatePath: certPath,
 		StatePath:       statePath,
 		Engine:          lean.New([]string{enginePath}),
+		EngineTimeout:   time.Second,
 	})
 	if err == nil || !strings.Contains(err.Error(), "replayed final state mismatch") {
 		t.Fatalf("error = %v, want replayed final state mismatch", err)
@@ -173,10 +194,11 @@ func TestVerifyReplayCertificateRejectsReplayAction(t *testing.T) {
 	if err := writeJSONFile(statePath, finalState); err != nil {
 		t.Fatalf("write state: %v", err)
 	}
-	_, err := VerifyReplayCertificate(VerifyReplayCertificateOptions{
+	_, err := VerifyReplayCertificate(context.Background(), VerifyReplayCertificateOptions{
 		CertificatePath: certPath,
 		StatePath:       statePath,
 		Engine:          lean.New([]string{enginePath}),
+		EngineTimeout:   time.Second,
 	})
 	if err == nil || !strings.Contains(err.Error(), "certificate action 1 (reject_action) rejected") {
 		t.Fatalf("error = %v, want rejected replay action", err)
@@ -197,10 +219,11 @@ func TestVerifyReplayCertificateRejectsAlteredPayload(t *testing.T) {
 	if err := writeJSONFile(statePath, finalState); err != nil {
 		t.Fatalf("write state: %v", err)
 	}
-	_, err := VerifyReplayCertificate(VerifyReplayCertificateOptions{
+	_, err := VerifyReplayCertificate(context.Background(), VerifyReplayCertificateOptions{
 		CertificatePath: certPath,
 		StatePath:       statePath,
 		Engine:          lean.New([]string{enginePath}),
+		EngineTimeout:   time.Second,
 	})
 	if err == nil || !strings.Contains(err.Error(), "replayed final state mismatch") {
 		t.Fatalf("error = %v, want replayed final state mismatch", err)
@@ -221,10 +244,11 @@ func TestVerifyReplayCertificateRejectsTamperedAuthority(t *testing.T) {
 	if err := writeJSONFile(statePath, finalState); err != nil {
 		t.Fatalf("write state: %v", err)
 	}
-	_, err := VerifyReplayCertificate(VerifyReplayCertificateOptions{
+	_, err := VerifyReplayCertificate(context.Background(), VerifyReplayCertificateOptions{
 		CertificatePath: certPath,
 		StatePath:       statePath,
 		Engine:          lean.New([]string{enginePath}),
+		EngineTimeout:   time.Second,
 	})
 	if err == nil || !strings.Contains(err.Error(), "authority rejected for test") {
 		t.Fatalf("error = %v, want authority rejection", err)
@@ -256,10 +280,11 @@ func TestVerifyReplayCertificateRejectsWrongCouncilMember(t *testing.T) {
 	if err := writeJSONFile(statePath, finalState); err != nil {
 		t.Fatalf("write state: %v", err)
 	}
-	_, err := VerifyReplayCertificate(VerifyReplayCertificateOptions{
+	_, err := VerifyReplayCertificate(context.Background(), VerifyReplayCertificateOptions{
 		CertificatePath: certPath,
 		StatePath:       statePath,
 		Engine:          lean.New([]string{enginePath}),
+		EngineTimeout:   time.Second,
 	})
 	if err == nil || !strings.Contains(err.Error(), "wrong council member") {
 		t.Fatalf("error = %v, want wrong council member rejection", err)
@@ -280,13 +305,57 @@ func TestVerifyReplayCertificateValidatesAuthorityFields(t *testing.T) {
 	if err := writeJSONFile(statePath, finalState); err != nil {
 		t.Fatalf("write state: %v", err)
 	}
-	_, err := VerifyReplayCertificate(VerifyReplayCertificateOptions{
+	_, err := VerifyReplayCertificate(context.Background(), VerifyReplayCertificateOptions{
 		CertificatePath: certPath,
 		StatePath:       statePath,
 		Engine:          lean.New([]string{enginePath}),
+		EngineTimeout:   time.Second,
 	})
 	if err == nil || !strings.Contains(err.Error(), "phase is required") {
 		t.Fatalf("error = %v, want missing authority phase", err)
+	}
+}
+
+func TestVerifyReplayCertificateRequiresEngineTimeout(t *testing.T) {
+	_, err := VerifyReplayCertificate(context.Background(), VerifyReplayCertificateOptions{
+		CertificatePath: "certificate.json",
+		StatePath:       "state.json",
+		Engine:          lean.New([]string{"engine"}),
+	})
+	if err == nil || !strings.Contains(err.Error(), "engine timeout must be positive") {
+		t.Fatalf("error = %v, want positive engine timeout", err)
+	}
+}
+
+func TestVerifyReplayCertificateHonorsEngineTimeout(t *testing.T) {
+	dir := t.TempDir()
+	enginePath := filepath.Join(dir, "engine.sh")
+	if err := os.WriteFile(enginePath, []byte("#!/bin/sh\nsleep 10\n"), 0o755); err != nil {
+		t.Fatalf("write engine script: %v", err)
+	}
+	finalState := certificateTestFinalState()
+	cert := certificateTestCertificate(t, enginePath, finalState)
+	certPath := filepath.Join(dir, ReplayCertificateFileName)
+	statePath := filepath.Join(dir, "state.json")
+	if err := writeJSONFile(certPath, cert); err != nil {
+		t.Fatalf("write certificate: %v", err)
+	}
+	if err := writeJSONFile(statePath, finalState); err != nil {
+		t.Fatalf("write state: %v", err)
+	}
+
+	started := time.Now()
+	_, err := VerifyReplayCertificate(context.Background(), VerifyReplayCertificateOptions{
+		CertificatePath: certPath,
+		StatePath:       statePath,
+		Engine:          lean.New([]string{enginePath}),
+		EngineTimeout:   20 * time.Millisecond,
+	})
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v, want context deadline exceeded", err)
+	}
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("certificate replay returned after %s, want at most 1s", elapsed)
 	}
 }
 
@@ -297,7 +366,8 @@ func TestStepForCertificateRecordsAcceptedStepsOnly(t *testing.T) {
 request=$(cat)
 case "$request" in
   *reject_me*) printf '%s\n' '{"ok":false,"error":"rejected"}' ;;
-  *) printf '%s\n' '{"ok":true,"state":{"case":{"phase":"openings"},"state_version":1}}' ;;
+  *malformed_accept*) printf '%s\n' '{"ok":true,"state":{"case":{"phase":"openings"}}}' ;;
+  *) printf '%s\n' '{"ok":true,"state":{"case":{"phase":"openings"},"state_version":2}}' ;;
 esac
 `
 	if err := os.WriteFile(enginePath, []byte(script), 0o755); err != nil {
@@ -305,7 +375,8 @@ esac
 	}
 	rc := &runContext{
 		cfg: Config{
-			Engine: lean.New([]string{enginePath}),
+			Engine:  lean.New([]string{enginePath}),
+			Runtime: DefaultRuntimeLimits(),
 		},
 		state: map[string]any{"case": map[string]any{"phase": "openings"}, "state_version": 1},
 	}
@@ -318,6 +389,9 @@ esac
 	mapAny(payload["nested"])["value"] = "mutated"
 	if _, err := rc.stepForCertificate(opportunity, "reject_me", "plaintiff", map[string]any{}); err != nil {
 		t.Fatalf("rejected step transport: %v", err)
+	}
+	if _, err := rc.stepForCertificate(opportunity, "malformed_accept", "plaintiff", map[string]any{}); err == nil || !strings.Contains(err.Error(), "state_version") {
+		t.Fatalf("malformed accepted step error = %v, want state_version", err)
 	}
 	if len(rc.certificateActions) != 1 {
 		t.Fatalf("recorded actions = %d, want 1", len(rc.certificateActions))
@@ -349,7 +423,7 @@ esac
 		t.Fatalf("write engine script: %v", err)
 	}
 	rc := &runContext{
-		cfg:   Config{Engine: lean.New([]string{enginePath})},
+		cfg:   Config{Engine: lean.New([]string{enginePath}), Runtime: DefaultRuntimeLimits()},
 		state: map[string]any{"case": map[string]any{"phase": "arguments"}, "state_version": 1},
 	}
 	opportunity := Opportunity{ID: "arguments:plaintiff", StateVersion: 1, Role: "plaintiff", Phase: "arguments"}
@@ -374,6 +448,7 @@ esac
 
 func TestStepForCertificateRejectsStaleOpportunity(t *testing.T) {
 	rc := &runContext{
+		cfg:   Config{Runtime: DefaultRuntimeLimits()},
 		state: map[string]any{"case": map[string]any{"phase": "arguments"}, "state_version": 2},
 	}
 	opportunity := Opportunity{ID: "arguments:plaintiff", StateVersion: 1, Role: "plaintiff", Phase: "arguments"}
@@ -387,7 +462,7 @@ func TestStepForCertificateRejectsStaleOpportunity(t *testing.T) {
 }
 
 func TestStepForCertificateRequiresCurrentStateVersion(t *testing.T) {
-	rc := &runContext{state: map[string]any{"case": map[string]any{"phase": "openings"}}}
+	rc := &runContext{cfg: Config{Runtime: DefaultRuntimeLimits()}, state: map[string]any{"case": map[string]any{"phase": "openings"}}}
 	opportunity := Opportunity{ID: "openings:plaintiff", Role: "plaintiff", Phase: "openings"}
 	_, err := rc.stepForCertificate(opportunity, "record_opening_statement", "plaintiff", map[string]any{"text": "Opening."})
 	if err == nil || !strings.Contains(err.Error(), "state_version is required") {
@@ -404,7 +479,7 @@ printf '%s\n' '{"ok":true,"terminal":false,"state_version":7,"opportunity":{"opp
 	if err := os.WriteFile(enginePath, []byte(script), 0o755); err != nil {
 		t.Fatalf("write engine script: %v", err)
 	}
-	opportunity, terminal, _, err := nextOpportunity(lean.New([]string{enginePath}), map[string]any{"state_version": 7})
+	opportunity, terminal, _, err := nextOpportunity(context.Background(), lean.New([]string{enginePath}), time.Second, map[string]any{"state_version": 7})
 	if err != nil {
 		t.Fatalf("next opportunity: %v", err)
 	}
@@ -425,9 +500,41 @@ printf '%s\n' '{"ok":true,"terminal":false,"opportunity":{"opportunity_id":"open
 	if err := os.WriteFile(enginePath, []byte(script), 0o755); err != nil {
 		t.Fatalf("write engine script: %v", err)
 	}
-	_, _, _, err := nextOpportunity(lean.New([]string{enginePath}), map[string]any{"state_version": 1})
+	_, _, _, err := nextOpportunity(context.Background(), lean.New([]string{enginePath}), time.Second, map[string]any{"state_version": 1})
 	if err == nil || !strings.Contains(err.Error(), "state_version is required") {
 		t.Fatalf("error = %v, want required state_version", err)
+	}
+}
+
+func TestNextOpportunityHonorsTimeout(t *testing.T) {
+	dir := t.TempDir()
+	enginePath := filepath.Join(dir, "engine.sh")
+	script := `#!/bin/sh
+sleep 10
+`
+	if err := os.WriteFile(enginePath, []byte(script), 0o755); err != nil {
+		t.Fatalf("write engine script: %v", err)
+	}
+	started := time.Now()
+	_, _, _, err := nextOpportunity(context.Background(), lean.New([]string{enginePath}), 20*time.Millisecond, map[string]any{"state_version": 1})
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v, want context deadline exceeded", err)
+	}
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("next opportunity returned after %s, want at most 1s", elapsed)
+	}
+}
+
+func TestTurnEngineStepErrorPreservesEarlierEngineTimeout(t *testing.T) {
+	caseCtx := context.Background()
+	stepCtx, cancel := context.WithCancelCause(caseCtx)
+	cancel(context.DeadlineExceeded)
+	err := turnEngineStepError(caseCtx, stepCtx, time.Now().Add(-time.Second), errors.New("process cleanup finished late"))
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v, want engine deadline", err)
+	}
+	if errors.Is(err, errTurnDeadlineExceeded) {
+		t.Fatalf("error = %v, engine deadline became turn deadline", err)
 	}
 }
 
