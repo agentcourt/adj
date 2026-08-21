@@ -1,0 +1,23 @@
+# Official source record
+
+## Market-specified resolution source
+
+The Polymarket rule specifies no government docket, agency, publisher, or single official source. The exact source rule is:
+
+> The resolution source will be a consensus of credible reporting.
+
+## Official public-record materials identified during minimal case setup
+
+This packet is for an open-record/search-enabled run. I did not build a closed-record evidence packet. The public record identified during setup indicates that U.S. District Judge Kenneth M. Karas of the Southern District of New York unsealed a one-page note in connection with the Nicholas Tartaglione criminal case, after a New York Times request.
+
+Local source capture of the court PDF/order is not included. The available captured public reporting says:
+
+- BBC reported that Judge Karas ordered release of the document, that the note was accompanied by a May 2021 letter submitted by former Tartaglione lawyer John A. Wieder, and that Karas wrote that public access to the note promotes accountability and public confidence in the administration of justice.
+- Reuters reported that Karas released the note, treated it as a judicial document subject to public access, found no legal reason to keep it sealed, and did not vouch for authenticity or assess chain of custody.
+- NPR reported that District Judge Kenneth Karas unsealed the one-page note Wednesday in response to a legal petition from The New York Times.
+
+## Official-source limitations
+
+- The source rule does not require an official release. It permits a qualifying note to be made public officially, by leak, or by other disclosure.
+- The local packet does not contain the SDNY docket entry, order, or note image as a primary court PDF. Attorneys in the open-record run should search for those documents.
+- Public reporting preserved here states that the court unsealed the note but did not authenticate it as Epstein's writing or decide intent.

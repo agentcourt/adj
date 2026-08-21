@@ -1,0 +1,18 @@
+Case source: preserved condition text for this experiment.
+
+No market URL or Polymarket market identifier was provided in the prompt. No broader factual research is included in this packet.
+
+Market/rule text preserved for the case:
+
+"Polymarket launched an official token before January 1st, 2027 (00:00 PST). The token must be fungible, officially released by Polymarket, and communicated publicly through official Polymarket channels. NFT launches, promotional offerings, tokenized point systems, or token launches in collaboration with other projects and communities do not count as official tokens launched by Polymarket here."
+
+Time window:
+- Deadline: January 1, 2027 at 00:00 PST.
+- Condition can be demonstrated before the deadline if a qualifying token launch has already occurred.
+- A negative final determination is premature before the deadline passes unless the arbitration is framed only as an as-of-record-date inquiry.
+
+Resolution-condition elements preserved from the prompt:
+1. Token must be fungible.
+2. Token must be officially released by Polymarket.
+3. Release must be communicated publicly through official Polymarket channels.
+4. Exclusions: NFT launches, promotional offerings, tokenized point systems, and token launches in collaboration with other projects or communities.

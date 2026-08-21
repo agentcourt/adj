@@ -1,0 +1,61 @@
+{
+  "accepting_order_timestamp": "2024-09-18T17:54:22Z",
+  "accepting_orders": false,
+  "active": true,
+  "archived": false,
+  "closed": true,
+  "condition_id": "0xab66a7d5745fc4da8a30a67665ee1de894b740644e643a6c6ec39b17212e4df5",
+  "description": "This market will resolve to \"Yes\" if Israel commences a military offensive intended to establish control over any portion of Lebanon between September 17, 2024 and September 30, 2024, 11:59 PM ET. Otherwise, this market will resolve to \"No\".\n\nThe resolution source for this market will be will be official confirmation by Lebanon, Israel, the United Nations, or any permanent member of the UN Security Council, however a consensus of credible reporting will also be used.",
+  "enable_order_book": false,
+  "end_date_iso": "2024-09-30T00:00:00Z",
+  "fpmm": "",
+  "game_start_time": null,
+  "icon": "https://polymarket-upload.s3.us-east-2.amazonaws.com/lebanon+israel+flag.png",
+  "image": "https://polymarket-upload.s3.us-east-2.amazonaws.com/lebanon+israel+flag.png",
+  "is_50_50_outcome": false,
+  "maker_base_fee": 0,
+  "market_slug": "will-israel-invade-lebanon-in-september",
+  "minimum_order_size": 5,
+  "minimum_tick_size": 0.001,
+  "neg_risk": false,
+  "neg_risk_market_id": "",
+  "neg_risk_request_id": "",
+  "notifications_enabled": true,
+  "question": "Will Israel invade Lebanon in September?",
+  "question_id": "0xcd6525a5baf0a854f99991accce84f95925bab4b17869b24e365e154658e6937",
+  "rewards": {
+    "max_spread": 3.5,
+    "min_size": 100,
+    "rates": [
+      {
+        "asset_address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+        "rewards_daily_rate": 100
+      }
+    ]
+  },
+  "seconds_delay": 0,
+  "tags": [
+    "Politics",
+    "war",
+    "Middle East",
+    "Israel",
+    "Hezbollah",
+    "Lebanon",
+    "Geopolitics"
+  ],
+  "taker_base_fee": 0,
+  "tokens": [
+    {
+      "outcome": "Yes",
+      "price": 0,
+      "token_id": "82217519770356329016575074180915423709787654078325574175371380456084152665514",
+      "winner": false
+    },
+    {
+      "outcome": "No",
+      "price": 1,
+      "token_id": "103074846952659555203136280159144707438311771841831295577819182690870662076232",
+      "winner": true
+    }
+  ]
+}

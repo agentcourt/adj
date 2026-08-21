@@ -1,0 +1,11 @@
+Known record gaps at setup:
+
+1. The UMA ancillary data, proposal transaction records, and final voting record have not been captured locally.
+
+2. The exact rationale submitted with each Yes proposal has not been captured locally.
+
+3. The reported Polymarket Discord clarification has not been captured from a primary Discord message. It is present only through secondary reporting in this directory.
+
+4. The Ukrainian government announcement was identified, but OpenClaw web_fetch hit a Radware captcha page when fetching the Cabinet of Ministers URL. The input packet therefore does not yet contain a direct Ukrainian government excerpt.
+
+5. This packet includes excerpts copied from OpenClaw fetch results, not downloaded source archives. If the case becomes a standing regression example, replace these excerpts with stable source captures where possible.

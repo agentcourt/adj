@@ -1,0 +1,15 @@
+# Primary evidence
+
+The preserved primary evidence in this preliminary packet is the Polymarket market page itself.
+
+Preserved market-page facts:
+- Market title: Russia x Ukraine ceasefire by May 31, 2026?
+- Deadline: May 31, 2026, 11:59 PM ET.
+- Qualifying condition: an official ceasefire agreement, defined as a publicly announced and mutually agreed halt in military engagement between Russia and Ukraine.
+- Scope limitation: only ceasefires constituting a general pause in the conflict qualify.
+- Exclusions: informal agreements, humanitarian pauses, energy-infrastructure-only ceasefires, Black Sea-only agreements, and similar limited agreements do not qualify.
+- Political-framework clause: a peace deal or political framework qualifies only if it includes a publicly announced and mutually agreed halt in military engagement, effective on a specific date.
+- Resolution history in captured page text: Outcome proposed Yes; disputed; outcome proposed Yes; no dispute; final outcome Yes.
+
+Raw capture:
+- source-captures/polymarket-russia-ukraine-ceasefire-by-may-31-2026.html

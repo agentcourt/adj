@@ -1,0 +1,118 @@
+# Official and source-rule record
+
+This file separates official/source-rule records from ordinary secondary reporting. The market rule allowed official confirmation by Lebanon, Israel, the United Nations, or any permanent member of the UN Security Council, while also allowing a consensus of credible reporting.
+
+## Polymarket official records
+
+See `market-page.txt` for exact rule text, identifiers, and final/dispute-state text.
+
+Key captures:
+
+- `source-captures/polymarket-gamma-event.json`
+- `source-captures/polymarket-clob-condition.json`
+- `source-captures/polymarket.com__event__will-israel-invade-lebanon-in-september__will-israel-invade-lebanon-in-september.body.extracted.txt`
+
+## United States Department of State — 30 September 2024
+
+URL:
+https://2021-2025.state.gov/briefings/department-press-briefing-september-30-2024/
+
+Saved captures:
+
+- `source-captures/2021-2025.state.gov__briefings__department-press-briefing-september-30-2024.body`
+- `source-captures/2021-2025.state.gov__briefings__department-press-briefing-september-30-2024.body.extracted.txt`
+- `source-captures/2021-2025.state.gov__briefings__department-press-briefing-september-30-2024.headers.txt`
+
+Relevant excerpt:
+
+> QUESTION: So they haven’t told you anything about what’s going on?
+>
+> MR MILLER: They have been – we have been in conversations. They have been informing us about a number of operations. I know I’ve seen reports about ground operations. We’ve had some conversations with them about that. They have at this time told us that those are limited operations focused on Hizballah infrastructure near the border, but we’re in continuous conversations with them about it.
+
+Additional excerpt:
+
+> Israel has a right to defend itself against those attacks. That includes in targeting terrorist infrastructure inside Lebanon.
+
+Record significance: the United States is a permanent member of the UN Security Council and the briefing occurred on September 30, 2024, within the market window. It is strong source-rule evidence that Israel had told the United States it was conducting limited operations focused on Hezbollah infrastructure near the border. It is weaker on the exact `intended to establish control` language.
+
+## Israel / IDF statement record
+
+Direct X page URL:
+https://x.com/IDF/status/1840890054819864776
+
+Saved direct X captures:
+
+- `source-captures/x.com__IDF__status__1840890054819864776.body`
+- `source-captures/x.com__IDF__status__1840890054819864776.body.extracted.txt`
+- `source-captures/x.com__IDF__status__1840890054819864776.headers.txt`
+
+Direct X extraction from this environment produced only an error page, but Brave search and multiple captured news reports quote the IDF statement consistently:
+
+> In accordance with the decision of the political echelon, a few hours ago, the IDF began limited, localized, and targeted ground raids based on precise intelligence against Hezbollah terrorist targets and infrastructure in southern Lebanon. These targets are located in villages close to the border and pose an immediate threat to Israeli communities in northern Israel.
+
+Captured reports preserving this quotation include CBS, NBC, Al Jazeera, and BBC records listed in `secondary-reporting.txt` and `source-captures/`. Search-result snippets also identified the original X post.
+
+Record significance: the quoted IDF statement is strong evidence that Israel announced ground raids in southern Lebanon. It characterizes the raids as limited, localized, targeted, and directed at Hezbollah targets and infrastructure in villages close to the border.
+
+## UNIFIL — 1 October 2024
+
+URL:
+https://unifil.unmissions.org/en/press-releases/unifil-statement-1-october-2024
+
+Saved captures:
+
+- `source-captures/unifil.unmissions.org__en__press-releases__unifil-statement-1-october-2024.body`
+- `source-captures/unifil.unmissions.org__en__press-releases__unifil-statement-1-october-2024.body.extracted.txt`
+- `source-captures/unifil.unmissions.org__en__press-releases__unifil-statement-1-october-2024.headers.txt`
+
+Relevant excerpt:
+
+> Yesterday, the IDF notified UNIFIL of their intention to undertake limited ground incursions into Lebanon.
+>
+> Despite this dangerous development, peacekeepers remain in position. We are regularly adjusting our posture and activities, and we have contingency plans ready to activate if absolutely necessary.
+>
+> Any crossing into Lebanon is in violation of Lebanese sovereignty and territorial integrity, and a violation of resolution 1701. We urge all actors to step back from such escalatory acts, which will only lead to more violence and more bloodshed.
+
+Record significance: UNIFIL confirms that on September 30 the IDF notified UNIFIL of an intention to undertake limited ground incursions into Lebanon. It does not by itself say that the crossing had already occurred before the September 30, 11:59 PM ET deadline.
+
+## UNIFIL — 6 October 2024
+
+URL:
+https://unifil.unmissions.org/en/press-releases/unifil-statement-6-october-2024
+
+Saved captures:
+
+- `source-captures/unifil.unmissions.org__en__press-releases__unifil-statement-6-october-2024.body`
+- `source-captures/unifil.unmissions.org__en__press-releases__unifil-statement-6-october-2024.body.extracted.txt`
+- `source-captures/unifil.unmissions.org__en__press-releases__unifil-statement-6-october-2024.headers.txt`
+
+Relevant excerpt:
+
+> UNIFIL is deeply concerned by recent activities by the IDF immediately adjacent to the Mission’s position 6-52, southeast of Marun ar Ras (Sector West), inside Lebanese territory. The IDF has been repeatedly informed of this ongoing situation through regular channels.
+
+Record significance: this is later official UN evidence that IDF activity occurred inside Lebanese territory. Because it is dated October 6, it cannot alone establish the timing element for the September 30 deadline, but it helps characterize the nature of the operation soon after the deadline.
+
+## UNIFIL — 13 October 2024
+
+URL:
+https://unifil.unmissions.org/en/press-releases/unifil-statement-13-october-2024
+
+Saved captures:
+
+- `source-captures/unifil.unmissions.org__en__press-releases__unifil-statement-13-october-2024.body`
+- `source-captures/unifil.unmissions.org__en__press-releases__unifil-statement-13-october-2024.body.extracted.txt`
+- `source-captures/unifil.unmissions.org__en__press-releases__unifil-statement-13-october-2024.headers.txt`
+
+Relevant excerpt:
+
+> Early this morning, peacekeepers at a UN position in Ramyah observed three platoons of IDF soldiers crossing the Blue Line into Lebanon.
+>
+> At around 4:30 a.m., while peacekeepers were in shelters, two IDF Merkava tanks destroyed the position’s main gate and forcibly entered the position.
+
+Record significance: this later UN record confirms IDF crossings and entry into a UN position, but it is outside the market window and should not be used as direct proof of the September 30 timing element.
+
+## United Nations press site access failure
+
+A generic UN page fetch returned a `Page Not Found` / 404 response. That failed URL was not used as evidence. UNIFIL-specific pages above replaced it.
+
+`press.un.org/en/2024/sc15850.doc.htm` returned a client challenge from this environment and did not provide useful extracted text. The packet therefore relies on the working UNIFIL source pages rather than the challenged UN press page.

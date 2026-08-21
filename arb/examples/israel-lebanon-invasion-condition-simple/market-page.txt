@@ -1,0 +1,75 @@
+# Official market-page and API record
+
+## Links
+
+Canonical Polymarket event page:
+https://polymarket.com/event/will-israel-invade-lebanon-in-september
+
+Observed nested market URL:
+https://polymarket.com/event/will-israel-invade-lebanon-in-september/will-israel-invade-lebanon-in-september
+
+Gamma API endpoint:
+https://gamma-api.polymarket.com/events?slug=will-israel-invade-lebanon-in-september
+
+## Question
+
+`Will Israel invade Lebanon in September?`
+
+## Exact rule text
+
+Polymarket page/API text:
+
+> This market will resolve to "Yes" if Israel commences a military offensive intended to establish control over any portion of Lebanon between September 17, 2024 and September 30, 2024, 11:59 PM ET. Otherwise, this market will resolve to "No".
+>
+> The resolution source for this market will be will be official confirmation by Lebanon, Israel, the United Nations, or any permanent member of the UN Security Council, however a consensus of credible reporting will also be used.
+
+The duplicated `will be will be` appears in the official text.
+
+## Captured market metadata
+
+From `source-captures/polymarket.com__event__will-israel-invade-lebanon-in-september__will-israel-invade-lebanon-in-september.body.extracted.txt`:
+
+- Question: `Will Israel invade Lebanon in September?`
+- Category: `Geopolitics · Lebanon`
+- Displayed volume: `$13,817,736`
+- Displayed end date: `Sep 30, 2024`
+- Market opened: `Sep 18, 2024, 1:56 PM ET`
+- Resolver display: `0x6A9D22261...`
+- Dispute/final-state text: `Outcome proposed: Yes`; `Disputed`; `Outcome proposed: No`; `Disputed`; `Final outcome: No`.
+
+From `source-captures/polymarket-gamma-event.json`:
+
+- Event id: `12681`
+- Event slug/ticker: `will-israel-invade-lebanon-in-september`
+- Title: `Will Israel invade Lebanon in September?`
+- Market id: `507417`
+- Condition id: `0xab66a7d5745fc4da8a30a67665ee1de894b740644e643a6c6ec39b17212e4df5`
+- Outcomes: `["Yes", "No"]`
+- Outcome prices after resolution: `["0", "1"]`
+- Volume: `13817736.165943`
+- Closed: `true`
+- Created at: `2024-09-18T17:52:25.57365Z`
+- Updated at: `2024-10-09T00:32:53.365871Z`
+
+From `source-captures/polymarket-clob-condition.json`:
+
+- Question id: `0xcd6525a5baf0a854f99991accce84f95925bab4b17869b24e365e154658e6937`
+- Token `Yes`: price `0`, winner `false`
+- Token `No`: price `1`, winner `true`
+- Tags: `Politics`, `war`, `Middle East`, `Israel`, `Hezbollah`, `Lebanon`, `Geopolitics`
+
+## Raw captures saved
+
+- `source-captures/polymarket.com__event__will-israel-invade-lebanon-in-september.body`
+- `source-captures/polymarket.com__event__will-israel-invade-lebanon-in-september.body.extracted.txt`
+- `source-captures/polymarket.com__event__will-israel-invade-lebanon-in-september.headers.txt`
+- `source-captures/polymarket.com__event__will-israel-invade-lebanon-in-september__will-israel-invade-lebanon-in-september.body`
+- `source-captures/polymarket.com__event__will-israel-invade-lebanon-in-september__will-israel-invade-lebanon-in-september.body.extracted.txt`
+- `source-captures/polymarket.com__event__will-israel-invade-lebanon-in-september__will-israel-invade-lebanon-in-september.headers.txt`
+- `source-captures/gamma-api.polymarket.com__events_q_slug=will-israel-invade-lebanon-in-september.body`
+- `source-captures/gamma-api.polymarket.com__events_q_slug=will-israel-invade-lebanon-in-september.body.extracted.txt`
+- `source-captures/gamma-api.polymarket.com__events_q_slug=will-israel-invade-lebanon-in-september.headers.txt`
+- `source-captures/polymarket-gamma-event.json`
+- `source-captures/clob-condition.body`
+- `source-captures/clob-condition.headers.txt`
+- `source-captures/polymarket-clob-condition.json`

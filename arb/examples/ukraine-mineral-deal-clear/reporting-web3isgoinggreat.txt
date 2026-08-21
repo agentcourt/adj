@@ -1,0 +1,14 @@
+Source: Web3 is Going Great
+Title: Polymarket suffers governance attack as whale manipulates Ukraine bet resolution; refuses refunds
+URL: https://www.web3isgoinggreat.com/?id=polymarket-governance-attack
+Publication date shown by fetched page: 2025-03-27.
+Fetched by OpenClaw web_fetch on 2026-04-30.
+
+Relevant extracted text:
+Bets on the Polymarket platform where the outcome is not clear are resolved using an oracle system called UMA, or Universal Market Access. Holders of the UMA token participate in a vote to determine the outcome of challenged market resolutions.
+
+Recently, $7 million was spent in a Polymarket market over whether Ukraine would agree to Trump's proposed mineral deal. Though no mutual agreement was reached, the market resolved to "yes". When it was challenged, a large holder of the UMA token cast a substantial number of yes votes to sway the outcome of the resolution, leaving the outcome in place.
+
+Although Polymarket acknowledged that "This market resolved against the expectations of our users and our clarification" (referring to a Polymarket clarification that the resolution was too early as no mutual agreement was reached), they also refused to issue any refunds, writing that "this wasn't a market failure". "This is an unprecedented situation, and we have been in war rooms all day internally and with the UMA team to make sure this won't happen again. This is not a part of the future we want to build," the team member added.
+
+The entry links to CoinTelegraph and The Block coverage of the same event.

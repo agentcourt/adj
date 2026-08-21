@@ -1,0 +1,21 @@
+HTTP/2 200
+content-type: text/html; charset=UTF-8
+set-cookie: fly_device=desktop; path=/; domain=.cbsnews.com
+cache-control: max-age=14400, public
+core-api-cache-key: [redacted-public-cache-key]
+x-xss-protection: 1; mode=block
+content-encoding: gzip
+last-modified: Fri, 01 May 2026 14:45:56 GMT
+x-content-type-options: nosniff
+link: <https://assets1.cbsnewsstatic.com>; rel="preconnect", <https://assets2.cbsnewsstatic.com>; rel="preconnect", <https://assets3.cbsnewsstatic.com>; rel="preconnect", </fly/bundles/cbsnewscontent/fonts/ProximaNova-Regular/ProximaNova-Regular.woff2>; rel="preload"; as="font"; crossorigin, </fly/bundles/cbsnewscontent/fonts/ProximaNova-Bold/ProximaNova-Bold.woff2>; rel="preload"; as="font"; crossorigin, </fly/bundles/cbsnewscontent/fonts/PublicoHeadline-Bold/PublicoHeadline-Bold.woff2>; rel="preload"; as="font"; crossorigin, </fly/bundles/cbsnewscontent/fonts/PublicoHeadline-Black/PublicoHeadline-Black.woff2>; rel="preload"; as="font"; crossorigin, </fly/bundles/cbsnewscontent/fonts/PublicoText/PublicoText.woff2>; rel="preload"; as="font"; crossorigin, </fly/bundles/cbsnewscontent/css/articleV2.min.css?v=86e4b6cd8f31cbf83a216c5040fb7a97>; rel="preload"; as="style", </fly/bundles/cbsnewscontent/fonts/TTNorms/TTNormsProSerif_TTNormsProSerif_normal_normal_400.woff2>; rel="preload"; as="font"; crossorigin, </fly/bundles/cbsnewscontent/fonts/TTNorms/TTNormsProSerif_TTNormsProSerif_italic_normal_400.woff2>; rel="preload"; as="font"; crossorigin, </fly/bundles/cbsnewscontent/fonts/TTNorms/TTNormsProSerif_TTNormsProSerif_normal_normal_700.woff2>; rel="preload"; as="font"; crossorigin, </fly/bundles/cbsnewscontent/fonts/TTNorms/TTNormsProNormal_normal_normal.woff2>; rel="preload"; as="font"; crossorigin, </fly/bundles/cbsnewscontent/fonts/TTNorms/TTNormsProNormItalic_italic_normal.woff2>; rel="preload"; as="font"; crossorigin, </fly/bundles/cbsnewscontent/fonts/TTNorms/TTNormsProBold_normal_normal.woff2>; rel="preload"; as="font"; crossorigin, </fly/bundles/cbsnewscontent/css/responsiveV2.min.css?v=86e4b6cd8f31cbf83a216c5040fb7a97>; rel="preload"; as="style", <https://www.cbsnews.com/fly/bundles/cbsnewscore/js-build/main.js?v=86e4b6cd8f31cbf83a216c5040fb7a97>; rel="preload"; as="script", <https://www.cbsnews.com/fly/bundles/cbsnewscore/js-build/main.responsive.js?v=86e4b6cd8f31cbf83a216c5040fb7a97>; rel="preload"; as="script", <https://vidtech.cbsinteractive.com>; rel="preconnect"
+via: 1.1 varnish, 1.1 varnish
+x-device: desktop
+x-edge-forwarded-proto: https
+accept-ranges: bytes
+age: 3223
+date: Fri, 01 May 2026 15:39:40 GMT
+vary: Accept-Encoding, X-Geo-Country, X-Geo-GDPR, X-Device, X-Edge-Forwarded-Proto,Origin, X-Device, X-Edge-Forwarded-Proto,Origin
+set-cookie: fly_device=desktop; expires=Fri, 01 May 2026 15:44:40 GMT; path=/; domain=.cbsnews.com
+set-cookie: fly_geo={"countryCode": "US", "region": "TX", "dma": "635", "connection": { "type": "cable"}}; expires=Fri, 01 May 2026 15:44:40 GMT; path=/; domain=.cbsnews.com
+fastly-restarts: 0
+content-length: 210592

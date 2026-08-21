@@ -1,0 +1,104 @@
+# Official and primary source record
+
+This file separates official/primary records from secondary reporting.
+
+## Polymarket official records
+
+Official page:
+https://polymarket.com/event/will-zelenskyy-wear-a-suit-before-july
+
+Observed nested market URL:
+https://polymarket.com/event/will-zelenskyy-wear-a-suit-before-july/will-zelenskyy-wear-a-suit-before-july?tid=1752016288940
+
+Official API endpoint used:
+https://gamma-api.polymarket.com/events/slug/will-zelenskyy-wear-a-suit-before-july
+
+Raw captures saved:
+
+- `source-captures/polymarket-page.html`
+- `source-captures/gamma-event.json`
+- `source-captures/polymarket-image.jpg`
+- `source-captures/polymarket-icon.jpg`
+
+The official Polymarket record supplies the exact question, rule text, time window, source rule, market identifiers, volume, and final/dispute state. See `market-page.txt` for exact excerpts.
+
+## NATO official photo record
+
+Official NATO photo gallery:
+https://www.nato.int/en/multimedia/multimedia/photos/2025/06/25/meeting-between-the-secretary-general-the-president-of-ukraine-and-leaders-of-e5-countries
+
+Raw capture saved:
+
+- `source-captures/nato-e5-photo-gallery.html`
+
+Representative official NATO image saved:
+
+- `source-captures/nato-20250625-e5-0003-1200.jpg`
+
+Representative image URL:
+https://s7g10.scene7.com/is/image/ncia/20250625_summit-bilat-sg-ukr-e5_0003
+
+Gallery excerpt captured by `web_fetch`:
+
+> Keir Starmer (Prime Minister, United Kingdom), Giorgia Meloni (Prime Minister, Italy), Volodymyr Zelenskyy (President, Ukraine), NATO Secretary General Mark Rutte, Emmanuel Macron (President, France), Donald Tusk (Prime Minister, Poland) and Friedrich Merz (Chancellor of Germany)
+>
+> Assets details
+>
+> - Creation date 25 June 2025
+> - Location The Hague, The Netherlands
+> - Resolution 5442 x 3628 PX
+> - Aspect ratio 16:9
+> - File format JPEG
+
+The same gallery lists additional JPEG images from the same meeting with creation date 25 June 2025, location The Hague, and resolutions including 5403 x 3602, 5425 x 3617, 5158 x 3439, and 6000 x 4000 pixels.
+
+NATO transcript corroborating Zelenskyy's presence at the summit:
+https://www.nato.int/en/news-and-events/events/transcripts/2025/06/25/closing-press-conference-sg
+
+Excerpt:
+
+> My dear friend, Volodymyr Zelensky, is here in The Hague with us at the NATO Summit, along with his team.
+
+## President of Ukraine official pages
+
+The following official `president.gov.ua` pages initially returned Akamai `Access Denied` to `web_fetch` and direct `curl`, but rendered successfully in the managed real Chrome browser on 2026-05-01:
+
+- https://www.president.gov.ua/en/news/volodimir-zelenskij-skoordinuvav-z-markom-ryutte-kroki-v-mez-98601
+- https://www.president.gov.ua/en/news/u-gaazi-volodimir-zelenskij-proviv-zustrich-iz-donaldom-tram-98653
+- https://www.president.gov.ua/en/news/volodimir-zelenskij-proviv-zustrich-iz-liderami-nimechchini-98657
+
+Detailed extracted text and image observations are recorded in `official-ukrainian-pages.txt`.
+
+Raw/rendered captures saved:
+
+- `source-captures/president-gov-rutte-2025-06-24.html`
+- `source-captures/president-gov-rutte-2025-06-24.json`
+- `source-captures/president-gov-rutte-2025-06-24.txt`
+- `source-captures/president-gov-rutte-2025-06-24.png`
+- `source-captures/president-gov-rutte-2025-06-24.pdf`
+- `source-captures/president-gov-trump-2025-06-25.html`
+- `source-captures/president-gov-trump-2025-06-25.json`
+- `source-captures/president-gov-trump-2025-06-25.txt`
+- `source-captures/president-gov-trump-2025-06-25.png`
+- `source-captures/president-gov-trump-2025-06-25.pdf`
+- `source-captures/president-gov-e5-2025-06-25.html`
+- `source-captures/president-gov-e5-2025-06-25.json`
+- `source-captures/president-gov-e5-2025-06-25.txt`
+- `source-captures/president-gov-e5-2025-06-25.png`
+- `source-captures/president-gov-e5-2025-06-25.pdf`
+- `source-captures/president-gov-official-visit-504837-rendered.png`
+
+Extracted official-page dates and subjects:
+
+- `24 June 2025 - 17:07`: `Volodymyr Zelenskyy and Mark Rutte Coordinate Steps Within NATO Summit`.
+- `25 June 2025 - 19:02`: `In The Hague, Volodymyr Zelenskyy Met with Donald Trump`.
+- `25 June 2025 - 19:53`: `Volodymyr Zelenskyy Holds a Meeting with the Leaders of Germany, France, the United Kingdom, Italy, Poland, and the NATO Secretary General`.
+- Embedded gallery: `Official Visit of the President of Ukraine to the Kingdom of the Netherlands`, dated `24 June 2025 - 14:22`.
+
+The official Ukrainian pages corroborate Zelenskyy's presence at The Hague/NATO-summit events inside the market window and provide official rendered images. The screenshots show dark clothing; one embedded-gallery rendered image shows a black jacket or blazer-like top. These pages do not characterize the outfit as a `suit`.
+
+## Limits of official-source evidence
+
+The official NATO and Ukrainian-government records prove photographs exist within the market window and identify the events, dates, locations, and participants. They do not themselves characterize Zelenskyy's outfit as a `suit`.
+
+The official Polymarket record states the market condition and final state. It does not define `suit`.

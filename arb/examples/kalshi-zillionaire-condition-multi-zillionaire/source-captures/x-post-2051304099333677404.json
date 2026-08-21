@@ -1,0 +1,55 @@
+{
+  "data": {
+    "text": "Made a cool $579 last night on a crazy disputed Kalshi Mentions Market. \n\nThe strike was \"Zillionaire\" and Bernie Sanders said, \"multi-zillionaire\" in his speech.\n\nMany traders thought it would resolve to No, because in the past Kalshi has ruled that \"multibillionaire\" does not https://t.co/0GX3JKMyNs",
+    "created_at": "2026-05-04T14:13:03.000Z",
+    "id": "2051304099333677404",
+    "conversation_id": "2051304099333677404",
+    "attachments": {
+      "media_keys": [
+        "3_2051298868059348992"
+      ]
+    },
+    "entities": {
+      "urls": [
+        {
+          "start": 279,
+          "end": 302,
+          "url": "https://t.co/0GX3JKMyNs",
+          "expanded_url": "https://x.com/itschucksauce/status/2051304099333677404/photo/1",
+          "display_url": "pic.x.com/0GX3JKMyNs",
+          "media_key": "3_2051298868059348992"
+        }
+      ]
+    },
+    "public_metrics": {
+      "retweet_count": 0,
+      "reply_count": 0,
+      "like_count": 1,
+      "quote_count": 0,
+      "bookmark_count": 0,
+      "impression_count": 21
+    },
+    "author_id": "2049228073992589312",
+    "edit_history_tweet_ids": [
+      "2051304099333677404"
+    ]
+  },
+  "includes": {
+    "media": [
+      {
+        "type": "photo",
+        "url": "https://pbs.twimg.com/media/HHetc8bWoAAAYfz.jpg",
+        "height": 1078,
+        "width": 1404,
+        "media_key": "3_2051298868059348992"
+      }
+    ],
+    "users": [
+      {
+        "id": "2049228073992589312",
+        "name": "ChuckSauce",
+        "username": "itschucksauce"
+      }
+    ]
+  }
+}

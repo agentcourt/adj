@@ -1,0 +1,36 @@
+# Primary evidence
+
+Updated: 2026-05-18T21:34:58Z
+
+The preserved primary evidence includes the Polymarket market page and official or official-adjacent source captures for the Russia-Ukraine May 9-May 11 arrangement.
+
+## Preserved market-page facts
+
+- Market title: Russia x Ukraine ceasefire by May 31, 2026?
+- Deadline: May 31, 2026, 11:59 PM ET.
+- Qualifying condition: an official ceasefire agreement, defined as a publicly announced and mutually agreed halt in military engagement between Russia and Ukraine.
+- Scope limitation: only ceasefires constituting a general pause in the conflict qualify.
+- Exclusions: informal agreements, humanitarian pauses, energy-infrastructure-only ceasefires, Black Sea-only agreements, and similar limited agreements do not qualify.
+- Political-framework clause: a peace deal or political framework qualifies only if it includes a publicly announced and mutually agreed halt in military engagement, effective on a specific date.
+- Resolution history in captured page text: Outcome proposed Yes; disputed; outcome proposed Yes; no dispute; final outcome Yes.
+
+Raw capture:
+- `market-page.txt`
+
+## Official or official-adjacent captures
+
+- `source-captures/kremlin-79702-ushakov-ceasefire-prisoner-exchange.md`
+- `source-captures/ukrinform-zelensky-decree-red-square.md`
+
+## Credible-media captures and analytical reporting
+
+- `source-captures/reuters-may8-trump-announces-three-day-ceasefire.md`
+- `source-captures/reuters-may8-confirm-agreed-ceasefire.md`
+- `source-captures/guardian-may8-confirm-three-day-ceasefire.md`
+- `source-captures/npr-may9-trump-says-agreed.md`
+- `source-captures/cbc-may8-russia-ukraine-agree-three-day-ceasefire.md`
+- `source-captures/isw-may8-campaign-assessment-ceasefire.md`
+
+## Evidentiary caution
+
+The Polymarket page-context statements are platform assertions and should not be treated as independent proof of official mutuality, theater-wide scope, implementation, or credible-reporting reliability. The arbitration proposition tests the factual condition independently of platform/governance correctness.

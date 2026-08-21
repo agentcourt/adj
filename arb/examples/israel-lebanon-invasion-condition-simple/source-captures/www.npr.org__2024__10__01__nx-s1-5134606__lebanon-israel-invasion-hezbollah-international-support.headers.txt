@@ -1,0 +1,25 @@
+HTTP/2 200
+access-control-allow-credentials: true
+access-control-allow-origin: *
+content-type: text/html;charset=UTF-8
+referrer-policy: no-referrer-when-downgrade
+server: nginx
+x-cache-npr: MISS
+x-content-type-options: nosniff
+x-npr-trace-id: renfpr5kyVF
+x-served-by: pod-www-render-nginx-c4954556-vfhh4
+x-xss-protection: 1; mode=block
+x-akamai-transformed: 9 - 0 pmb=mRUM,1
+vary: Accept-Encoding
+content-encoding: gzip
+cache-control: no-cache
+expires: Fri, 01 May 2026 15:39:39 GMT
+date: Fri, 01 May 2026 15:39:39 GMT
+content-length: 21116
+server-timing: cdn-cache; desc=REVALIDATE
+server-timing: edge; dur=129
+server-timing: origin; dur=612
+set-cookie: bm_ss=ab8e18ef4e; Secure; SameSite=None; Domain=.npr.org; Path=/; HttpOnly; Max-Age=3600
+set-cookie: bm_s=YAAQqCXAFz4b1d2dAQAAXBIy5AV7yz2A7d7RP+gItsopnVfkKjF6znGqKJuhjjGFiyzaYXUio8J8mDrhidCTUpktWS9FkPREQRRRxs4/+CBGcJGwORI4J/Gdy+mLZZs95soHtsBeO4L0C6y4slfwhwRYvOlUnBI5koLOXXCUTnMc9qC1L5RMYzRWu05fcYb7pIPl2vFskjR6eGYhG24yon+gkOH2CdFM5OCPUiK1U2ZZ7Nxb4uSskWVsbaS5ENlMR7wG8FkSbz8FvChRBMmMGmOGqxwOzuoWxm7L6Wbg7tVjrVsbheamuCfGL5P/QZukoe2JGMS5kkw9ZGsqV2sFGnw77d68yPBJ0RgJjEkaDZqmewneu6PVBnGpDdXzixrSBIRL4ZOAJ3Uz0SL7yTSSs/Jwb5OBzH4QblUkm0/GE+ft6INTU9nopkZWTzN4+dIdAc5rXeBGgDeEumQ1RwWeOVquZQni/+ttYQdfOLFKqQXPVSYRPrEi88xjWG6Z61CF0pcy7/q765uH+1PlXgms8TU7DE+eAAdI0+02Xyb6hZ3hx9VvsXo+apI=; Domain=.npr.org; Path=/; Expires=Mon, 01 Jun 2026 15:39:39 GMT; Max-Age=2678400; Secure; HttpOnly
+set-cookie: bm_so=A9D2C0E3D445894FD6AE179033AC069D98453009EF2304E23C8A3BA178815E52~YAAQqCXAFz8b1d2dAQAAXBIy5AeBTSp15rSzSPP6XpdkfF6STGNSdm77L3pVDxBawdRmQaYXz0HJty7dIAfpKfAvd7TFJPxMDi3J1SCLVh9n2luYtvfbOnyp0obTRlLlsiciRNPrNAEoDSdKEMWVB9r/9BGCePtidHOZsSeKta2OCVJrV5Rnt3/hGBxJVp0bTgqdwHArLLyBGBToJ9XklJM3tW+NG076O0zbD8hegpPeFBMQ2X/c4hUZ4l0lMjHrhJ6M/Ra2KAg0kaJKhB7M+n6N0Uqyc3iSAFltfIo5OKC26l+c8IMDmgUKGJDOBBwZSzB5SXNkFVhA1hXQByG3taak3MyQ4Cvr+sV24qsj3sm0Q3aGJDXwxBvSIXvMdTwzPlIeLc50O/8G5S0CQVhZC4dRo124OztE2UIjQANoux8RWTd+QdTjYLZNCGrWqOQ66qtxJ7fo0UYa18N8sg==; Domain=.npr.org; Path=/; Expires=Sat, 02 May 2026 15:39:39 GMT; Max-Age=86400; Secure
+server-timing: ak_p; desc="1777649979175_398468520_622835080_73990_16036_21_35_15";dur=1

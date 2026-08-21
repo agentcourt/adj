@@ -1,0 +1,20 @@
+Capture URL: https://polymarket.com/event/epstein-suicide-note-released-by
+Captured at UTC: 2026-05-12T22:37:21Z
+Page title: Epstein suicide note released by...?
+Visible dispute-state terms found in page HTML: Outcome proposed: Yes, Disputed, Outcome proposed: No, Final review
+
+Official event description:
+This market will resolve to “Yes” if any message or note written by Jeffrey Epstein, intended as a suicide note, is made publicly available by the listed date, 11:59 PM ET. Otherwise, this market will resolve to “No”.
+
+A qualifying note must be credibly reported to have been written by Jeffrey Epstein and have been intended to be a suicide note, final message, or equivalent communication.
+
+A qualifying message or note may be made widely available to the public by any means, regardless of whether it is released officially, leaked, or otherwise disclosed.
+
+The resolution source will be a consensus of credible reporting.
+
+Markets:
+- Epstein suicide note released by May 8? | slug=epstein-suicide-note-released-by-may-8 | id=2128535 | conditionId=0x5e5482b1e2afa7bed0b9a0c3c8ad33a83dd6cc6d649666cdf1977be64c42c82a | groupItemTitle=May 8 | endDateIso=2026-05-31 | umaResolutionStatus=disputed | umaResolutionStatuses=["proposed", "disputed", "proposed", "disputed", "proposed", "disputed"] | outcomes=["Yes", "No"] | outcomePrices=["0.0005", "0.9995"] | active=True | closed=False | acceptingOrders=True
+- Epstein suicide note released by May 31? | slug=epstein-suicide-note-released-by-may-31 | id=2128536 | conditionId=0x6bf3aa7d5186804e967e1e4737c896778f688e6dafdd0a1b659a4a07bf27d663 | groupItemTitle=May 31 | endDateIso=2026-05-31 | umaResolutionStatus=None | umaResolutionStatuses=[] | outcomes=["Yes", "No"] | outcomePrices=["0.145", "0.855"] | active=True | closed=False | acceptingOrders=True
+
+Polymarket event context description, captured as page/API metadata, not treated as independent evidence:
+A U.S. District Judge in New York unsealed a purported suicide note attributed to Jeffrey Epstein on May 7, 2026, following a New York Times petition amid litigation with his former cellmate Nicholas Tartaglione, who claimed to have found it after Epstein's July 2019 jail suicide attempt. Handwriting experts confirmed it matches Epstein's script from documents post-death, yet major outlets describe it as unverified and undated, lacking Department of Justice authentication. Trader consensus prices low Yes probabilities for release by May 31—reflecting doubts over credible reporting of intent as a suicide note per market rules—despite $13 million volume and disputes. No hearings or DOJ actions are scheduled before resolution.

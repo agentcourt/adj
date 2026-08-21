@@ -1,0 +1,67 @@
+# Primary and near-primary evidence map
+
+This is a minimal open-record source map, not a closed-record exhibit packet.
+
+## Reuters
+
+URL: https://www.reuters.com/world/us/new-york-judge-releases-purported-epstein-suicide-note-2026-05-07/
+
+Captured excerpt:
+
+> May 6 (Reuters) - A federal judge on Wednesday released a document described as a suicide note purportedly written by the late Jeffrey Epstein and including the line: "It is a treat to be able to choose one’s time to say goodbye."
+>
+> The handwritten note was said to have been found by his former jail cellmate, convicted murderer and ex‑police officer Nicholas Tartaglione. U.S. District Judge Kenneth Karas, who oversaw the Tartaglione case, released the note after a request by The New York Times, which reported its existence last week.
+>
+> The judge found no legal reason to keep it under seal. But nor did he vouch for the note's authenticity, nor assess its chain of custody.
+
+Reuters also quoted the note text as released in the court file:
+
+> "They investigated me for month - Found NOTHING!!! So 15 year old charges resulted,” the note says, according to an image of it released in the court file. "It is a treat to be able to choose ones time to say goodbye. Watcha want me to do - Burst out cryin!! NO FUN - NOT WORTH IT!!"
+
+## NPR
+
+URL: https://www.npr.org/2026/05/07/nx-s1-5814808/jeffrey-epstein-suicide-note
+
+Captured excerpt:
+
+> District Judge Kenneth Karas unsealed the one-page note Wednesday in response to a legal petition from the New York Times, which reported on its existence last week.
+>
+> NPR has not independently verified the authenticity of the note. The five sentences on a sheet of lined paper read in part: "It is a treat to be able to choose one's time to say goodbye. Watcha want me to do — Bust out cryin!! NO FUN — NOT WORTH IT!!"
+
+NPR also reported a material authentication limitation:
+
+> The Department of Justice told NPR over email on Thursday that the note has not yet been authenticated, adding, "this is the first time DOJ is seeing it as well."
+
+## BBC
+
+URL: https://www.bbc.com/news/articles/cd7pd0rqwreo
+
+Captured excerpt:
+
+> A US judge has ordered the release of a document purported to be a suicide note written by convicted sex offender Jeffrey Epstein a month before his death.
+>
+> A copy of the handwritten note unsealed on Wednesday mentions a months-long investigation that "found nothing", and says "it is a treat to be able to choose one's time to say goodbye".
+>
+> The BBC has not verified that the note was written by Epstein, and US authorities have not commented.
+
+BBC also reported:
+
+> The note amounts to only seven lines of text, leaving uncertainty over its purported meaning.
+
+## Guardian
+
+URL: https://www.theguardian.com/us-news/2026/may/06/jeffrey-epstein-alleged-suicide-note
+
+Captured excerpt:
+
+> A federal judge unsealed an alleged suicide note written by Jeffrey Epstein on Wednesday, the first time the document has been made public.
+>
+> Epstein’s cellmate at the Metropolitan Correctional Center in New York City, Nicholas Tartaglione, said he found the note after Epstein unsuccessfully attempted suicide in July 2019, weeks before he was eventually found dead in his jail cell.
+>
+> The Guardian has not verified whether the letter was written by Epstein. The justice department did not immediately return the Guardian’s request for comment.
+
+## Notes for advocates
+
+The strongest pro-demonstrated path is that multiple credible outlets reported public release before May 8, described the document as a purported/alleged suicide note, quoted language about choosing one's time to say goodbye, and identified a federal judge/court-file release.
+
+The strongest not-demonstrated path is that those same outlets used hedging language, reported lack of independent verification or official authentication, and left uncertainty about whether the note was intended as a suicide note rather than another communication later characterized as one.

@@ -1,0 +1,22 @@
+HTTP/2 401
+server: CloudFront
+date: Fri, 01 May 2026 15:37:07 GMT
+content-type: text/html;charset=utf-8
+content-length: 771
+x-datadome: protected
+accept-ch: Sec-CH-UA,Sec-CH-UA-Mobile,Sec-CH-UA-Platform,Sec-CH-UA-Arch,Sec-CH-UA-Full-Version-List,Sec-CH-UA-Model,Sec-CH-Device-Memory
+charset: utf-8
+cache-control: max-age=0, private, no-cache, no-store, must-revalidate
+pragma: no-cache
+access-control-allow-credentials: true
+access-control-expose-headers: x-dd-b, x-set-cookie
+access-control-allow-origin: *
+x-datadome-cid: AHrlqAAAAAMA68uEVNcF0cEAGDc2Hg==
+x-dd-b: 1
+set-cookie: datadome=5QczivBEBALTm2L_m2IbFFIYDSbyuhsadjKMTOqdaJh2BUUOe3WRiy25vqtQ7gIAsS5t4CQSSjz4M4Xdae7JqIrD52Qsu99heEHimDQ7LPd5WgP8cFfBa8E4Vt6VoHOh; Max-Age=31536000; Domain=.reuters.com; Path=/; Secure; SameSite=Lax
+x-cache: LambdaGeneratedResponse from cloudfront
+via: 1.1 280c9d4266c690eca29338d5796c8f9c.cloudfront.net (CloudFront)
+x-amz-cf-pop: IAH50-P2
+x-amz-cf-id: i9WNAEdWWphGjWElcCHywusB5mf14PdsNoPBXdBhHDTNbYHvxmiPfw==
+content-security-policy: frame-ancestors 'self'; report-uri https://reuters.report-uri.com/r/t/csp/enforce; report-to report-uri
+report-to: {"endpoints":[{"url":"https://reuters.report-uri.com/a/t/g"}],"group":"report-uri","include_subdomains":true,"max_age":31536000}

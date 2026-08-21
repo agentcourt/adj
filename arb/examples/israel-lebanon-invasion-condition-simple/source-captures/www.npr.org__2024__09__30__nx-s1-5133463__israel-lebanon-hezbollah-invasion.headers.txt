@@ -1,0 +1,24 @@
+HTTP/2 200
+access-control-allow-credentials: true
+access-control-allow-origin: *
+content-type: text/html;charset=UTF-8
+referrer-policy: no-referrer-when-downgrade
+server: nginx
+x-cache-npr: MISS
+x-content-type-options: nosniff
+x-npr-trace-id: renu96FHfqy
+x-served-by: pod-www-render-nginx-c4954556-cdjwg
+x-xss-protection: 1; mode=block
+x-akamai-transformed: 9 - 0 pmb=mRUM,1
+vary: Accept-Encoding
+content-encoding: gzip
+cache-control: no-cache
+expires: Fri, 01 May 2026 15:39:39 GMT
+date: Fri, 01 May 2026 15:39:39 GMT
+content-length: 23793
+server-timing: cdn-cache; desc=HIT
+server-timing: edge; dur=1
+set-cookie: bm_ss=ab8e18ef4e; Secure; SameSite=None; Domain=.npr.org; Path=/; HttpOnly; Max-Age=3600
+set-cookie: bm_s=YAAQqCXAF6cZ1d2dAQAAxA4y5AUJDijQN1fScMX0xvDArW+T+F1y8RkZitNmB+5EBy3OZ7m2+u4aPNiOPcS8Ymsgp6ltgbGhaSACp1z09qdWmr3TeFqINkWMpQQQGczK9matC+Q7vFGeD4EW9TMnU7x/s6dEcFpLHSt9Y4BISPtrqX3MiCH40IlPSCI6tEb2M8msC81doxx1+LJLby9DQzUFzXnMDgW2i8TYESLAa5kTe01iHpZ4P0xSQs2ZGJTrnVAfC0CgO6YGq0m6Chm0MAsJeE6tbYiaTmilxTm0KhxNJ0NQiX/z+pm5w4mAcpdO6XBso+GFY99EXalXFsawzhTkZQnaPQ5l5b1lURTqkX/XV+ZuFx7MsNsnYj9vkgvl5zsfXDYtoK8kJGy+p19nkCfVWqbbxBOXjOApAAgDPyFgS88q72m8duOEckmBKfQ5IctHfSf0Re19jE9ouYKHE2LAWjZUKrxd7rz8ePiq0Fce0zi4UEbdCFtU8cQb3CjYVTxvgatfeoevwSLT8Y/q/xLWNILvqx04OJ9ulRj2dHr7aOo//Zbnu8g=; Domain=.npr.org; Path=/; Expires=Mon, 01 Jun 2026 15:39:39 GMT; Max-Age=2678400; Secure; HttpOnly
+set-cookie: bm_so=4C26745E673E0C7267BC35D4CF62C39F9BDE5DC9BDD64884CBF734BE8F44A2C6~YAAQqCXAF6gZ1d2dAQAAxA4y5AfhpDqhM/1mesEp5I78JeRK+m6Kmqm1tSRNddgFGXdodOXLtAVInJa+ZqyyznNOq5CnSneB0dSApnTQVR25csaNfoD0jOsHx7NqP3Zsm7evt51tlr3x9yCMoJLh8XKBekrMo3pT2rw4M1ylgVb925RMHBqsalbLxRtYdzuL5ITzmGPrYwIMuuFzntrOAHGKW9ReZq601XR/aYsxZL8FPi1ZLcNag+EwuSlrevz5UDiETJhLsvtgmHpHYX7xO3Za+/n80OOqGssdVTJF0bhGyqvgR/4wIvLFEMBbatATxBvA5zInF+68VBCz+gVMJLbZNfVtX+bqyuqyxu4IiO0OVUwD+t4muplSkbwv9Bl9tDVd68v4HXyT/abHXxpJTRk+CGKgn+h03G/lwiOM7sdbw+dc/O41bdB/rEuCYcX8bkXiK0bMFAKBGkAXKQ==; Domain=.npr.org; Path=/; Expires=Sat, 02 May 2026 15:39:39 GMT; Max-Age=86400; Secure
+server-timing: ak_p; desc="1777649979014_398468520_622834115_102_17897_20_31_15";dur=1

@@ -1,0 +1,21 @@
+# Unresolved record gaps and limitations
+
+1. Separate UMA vote records have not been captured. The official Polymarket page/API shows repeated `proposed` and `disputed` statuses and final `No`, but this packet does not contain UMA ballot records, voter lists, committed/revealed vote payloads, or oracle explanations.
+
+2. The official NATO source proves the photograph, date, location, and identity. It does not itself state that the outfit was a `suit`.
+
+3. The official Polymarket rule does not define `suit`. The central issue is therefore semantic classification of visible clothing plus the market's `consensus of credible reporting` source rule.
+
+4. The President of Ukraine official pages were inaccessible to `web_fetch` and direct `curl`, but were captured through the managed real Chrome browser. The packet includes rendered screenshots, PDFs, HTML, DOM text, and image observations. Direct original JPEG byte downloads from `president.gov.ua/storage/...` still returned `Access Denied`, so `source-captures/president-gov-official-visit-504837-rendered.png` is a browser-rendered screenshot of the official image, not the original JPEG bytes.
+
+5. The packet includes a representative NATO image from 25 June 2025. It has not exhaustively downloaded every NATO, Reuters, AP, Getty, BBC, or social-media photo/video from the period.
+
+6. The saved representative image is an official NATO image and therefore strong authenticity evidence, but no independent forensic image-authentication analysis was performed.
+
+7. Some secondary reports differ on dates or volume. Polymarket official page/API controls the market question, window, identifiers, and final state. Decrypt's `March 22` wording conflicts with the official `May 22` wording and should not be used for the proposition.
+
+8. The packet records Protos's statement that Polymarket Intel called the arrival video `President Zelenskyy in a suit last night`, but the X post itself has not been separately captured.
+
+9. This case directory is prepared for a closed-record or search-enabled arbitration input, but `arbitrate.sh` will regenerate `complaint.md` from `situation.md` if run. If the generated complaint needs richer context, update `situation.md` before running.
+
+10. No arbitration runs have been started for this case.

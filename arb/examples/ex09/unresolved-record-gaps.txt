@@ -1,0 +1,9 @@
+# Unresolved record gaps
+
+1. The packet does not contain the original Clavicular livestream clip, VOD, transcript, or representative statement that allegedly triggered the Yes proposal.
+2. The packet does not contain the Polymarket clarification Forbes refers to when it says the “platform clarification” said No.
+3. The packet does not contain UMA proposer, disputer, or voter records beyond Polymarket's API status fields.
+4. The exact meaning of “credible” is not defined beyond the rule's example excluding jokes.
+5. The Gamma API event endDate field is 2026-12-31T00:00:00Z, while the rule text says December 31, 2026, 11:59 PM ET. The arbitration proposition follows the rule text.
+6. Located secondary reporting conflicts in emphasis: Forbes describes a streamer who told his audience he had gotten a girl pregnant, while Times of India says no statement from Clavicular confirmed a pregnancy and no video confirmed it. The original source material is necessary for a closed-record conclusion.
+7. The market closed before the stated December 31, 2026 deadline. The packet records the final Yes state but does not evaluate whether early resolution was procedurally proper, because the arbitration proposition is the factual condition only.

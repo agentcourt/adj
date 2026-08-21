@@ -1,0 +1,66 @@
+# Market page record
+
+Official event URL: https://polymarket.com/event/iran-closes-its-airspace-by
+Official May 24 market URL: https://polymarket.com/event/iran-closes-its-airspace-by/iran-closes-its-airspace-by-may-24
+Captured API file: source-captures/polymarket-gamma-event.json
+Captured May 24 API file: source-captures/polymarket-gamma-market-may-24.json
+Captured event page file: source-captures/polymarket-page-and-api-extract.txt
+Captured May 24 page file or error: source-captures/polymarket-gamma-market-may-24.json
+Capture time: 2026-05-24T01:44:04Z
+
+## Event
+
+- event id: 438327
+- ticker/slug: iran-closes-its-airspace-by / iran-closes-its-airspace-by
+- title: Iran closes its airspace by...?
+- event createdAt: 2026-05-01T16:11:36.585944Z
+- event creationDate: 2026-05-01T18:22:49.431549Z
+- event startDate: 2026-05-01T18:22:49.431559Z
+- event endDate: 2026-05-31T00:00:00Z
+- event active: True
+- event closed: False
+- event volume at capture: 34658537.51144401
+
+## May 24 market
+
+- market id: 2241873
+- slug: iran-closes-its-airspace-by-may-24
+- question: Iran closes its airspace by May 24?
+- groupItemTitle: May 24
+- conditionId: 0x4ba348328e4d4ddee9e6734c9a369b2e8138611651f9f6dc8f59dea51df6c734
+- questionID: 0x30ebd10971cc044380ce6495e791828e9e0291fbb48550ca8be42149e1982791
+- createdAt: 2026-05-12T15:03:45.641355Z
+- startDate: 2026-05-12T15:08:30.267422Z
+- endDate: 2026-05-24T00:00:00Z
+- endDateIso: 2026-05-24
+- active: True
+- closed: False
+- acceptingOrders: True
+- umaResolutionStatus: disputed
+- umaResolutionStatuses: ["proposed", "disputed", "proposed", "disputed"]
+- outcomes: ["Yes", "No"]
+- outcomePrices: ["0.157", "0.843"]
+- lastTradePrice: 0.16
+- bestBid/bestAsk: 0.15 / 0.164
+- updatedAt: 2026-05-24T01:35:13.748834Z
+- volume at capture: 8289170.735521075
+
+## Rule text
+
+This market will resolve to “Yes” if Iran initiates a major closure of its airspace, that is not solely due to weather conditions, by the listed date, 11:59 PM ET. Otherwise, this market will resolve to “No”.
+
+A “major closure” is defined as a broad closure, cancellation, or suspension of commercial flights transiting, arriving in, and departing from Iranian airspace or a major Iranian Airspace region. A qualifying closure must apply generally to flights across Iran or a major Iranian airspace region. Limited cancellations, delays, or other partial closures will not qualify. Limited exceptions to a broad closure, however, will not disqualify such a closure from counting (e.g. exceptions for certain flights pre-approved by the Iranian Civil Aviation Authority may be permitted). 
+
+Any non-weather complete suspension of commercial arrivals and departures affecting at least two of the following airports will qualify: Imam Khomeini International Airport (IKA), Mehrabad Airport (THR), Mashhad International Airport (MHD), Shiraz International Airport (SYZ), or Isfahan International Airport (IFN).
+
+Qualifying previous examples include the January 2026 total closure of Iranian airspace except to international flights with express governmental permission (https://www.reuters.com/world/middle-east/iran-shuts-airspace-most-flights-flightradar24-says-2026-01-14/) and the April 2024 closure of Iran’s western airspace (https://www.reuters.com/world/middle-east/iranian-airports-cancel-flights-until-monday-morning-2024-04-14/). Non-qualifying examples include the January 27, 2026 partial closure of Iranian airspace around the Strait of Hormuz (https://www.aa.com.tr/en/middle-east/iran-issues-airspace-notice-for-military-drills-near-strait-of-hormuz/3812508) and the January 25 - April 25, 2026 VFR (Visual Flight Rules) flights suspension which did not broadly close commercial aviation in a qualifying region (https://www.intellinews.com/iran-suspends-general-aviation-and-vfr-flights-in-new-airspace-directive-421997/).
+
+Warnings, No-Fly-Zones, or other flight restrictions imposed by airlines or countries other than Iran will not be sufficient for a “Yes” resolution.
+
+Airspace closures which occur solely due to weather conditions will not qualify.
+
+The primary resolution sources for this market will be official information from Iranian aviation authorities and a consensus of credible reporting.
+
+## Notes for arbitration
+
+The proposition tracks the rule text, not the platform-resolution question. The operative elements are: (1) Iran initiated the closure; (2) the closure was not solely weather-related; (3) the closure occurred by May 24, 2026, 11:59 PM ET; (4) the closure was a major closure, defined by the rule as a broad closure, cancellation, or suspension of commercial flights transiting, arriving in, and departing from Iranian airspace or a major Iranian airspace region; or a non-weather complete suspension of commercial arrivals and departures affecting at least two listed airports; and (5) the primary sources are official information from Iranian aviation authorities and a consensus of credible reporting.

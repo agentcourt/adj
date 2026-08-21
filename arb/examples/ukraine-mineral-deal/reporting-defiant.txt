@@ -1,0 +1,28 @@
+Source: The Defiant
+Title: Polymarket's $7M Ukraine Mineral Deal Debacle Traced to Oracle Whale
+URL: https://thedefiant.io/news/defi/polymarket-s-usd7m-ukraine-mineral-deal-debacle-traced-to-oracle-whale
+Publication date shown by search result: 2025-03-27.
+Fetched by OpenClaw web_fetch on 2026-04-30.
+
+Relevant extracted text:
+The premature resolution of a market on a Trump/Ukraine minerals deal leaves bettors high and dry, and shows a flaw in Polymarket's oracle system.
+
+Polymarket will not reimburse bettors after a prediction market was resolved early with an inaccurate result.
+
+The market about whether Ukraine would agree to a deal with the Trump Administration for rare earth minerals was supposed to resolve either when a deal was reached or by March 31, whichever came sooner. Instead, it appears that a whale with as much as five million governance tokens for the UMA oracle used by Polymarket was able to force through a premature "Yes" resolution that such a deal had been made.
+
+That brought a backlash from bettors and industry watchers, particularly after Polymarket announced on Discord, "Unfortunately, because this wasn't a market failure, we are not able to issue refunds."
+
+Calling the outcome an "unprecedented situation," Polymarket said it was working closely with UMA to make sure the situation cannot happen again.
+
+"This is not a part of the future we want to build," Polymarket said. "We will build up systems, monitoring, and more to make sure this doesn't repeat itself."
+
+More than $7 million in bets had been made on the prediction market when it closed.
+
+According to an X post by threat researcher Vladimir S., a single UMA whale with three accounts containing five million tokens was able to cast 25% of the votes to resolve the market in favor of Yes.
+
+However, he added that a Polymarket user claimed that it was the usual validators and that a clarification statement from Polymarket that it was too early to resolve the market came too late to influence the vote.
+
+That led AI security protocol Veritas Protocol to comment, "Whether it's a timing issue or a deliberate attack, 25% of votes coming from just three accounts is a red flag."
+
+Promising to build more precise rules and a "more defined and timely clarification system," Polymarket said, "We're committed to building the future of prediction markets, which requires building resilient systems in which everyone can trust."

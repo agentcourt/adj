@@ -1,0 +1,307 @@
+                                         NEWMENTION
+
+Scope: These rules shall apply to this contract.
+
+Underlying: The Underlying for this Contract is words used by <entity> <time period>.
+Revisions to the Underlying made after Expiration will not be accounted for in determining the
+Expiration Value.
+
+Source Agency: The Source Agencies are <source>.
+
+Type: The type of Contract is an Event Contract.
+
+Issuance: After the initial Contract, Contract iterations will be listed on an as-needed basis at
+the discretion of the Exchange and corresponding to the risk management needs of Members.
+
+<entity>: <entity> refers to the speaker, writer, performer, or communicator specified by the
+Exchange. This may include (but is not limited to): a specific named individual, multiple
+individuals specified using AND/OR logic, an individual identified by position or title, a group,
+band, team or collective entity, a specified member or members of a group, an organization,
+company, or institutional entity, or any combination of the aforementioned.
+
+When <entity> is defined by a position or title, the Contract tracks whoever holds that position
+during <time period>, even if the individual holding the position changes. When <entity> is a
+specific named individual, the identity remains consistent throughout. Name changes (e.g.,
+stage names, married names) do not create a new entity. When <entity> is a group or
+organization and the Contract does not specify particular members, any official
+communication or statement by any member or designated spokesperson counts. When using
+AND logic, all specified entities must independently say <word> during <time period>. When
+using OR logic, at least one of the specified entities must say <word> during <time period>.
+The Exchange may specify additional conditions such as “at least X members of” a group or
+“the majority of” a group.
+
+<source>: <source> refers to a Source Agency or ordered collection of Source Agencies
+specified by the Exchange at the time of Contract listing, which will be incorporated into the
+Source Agency hierarchy above and used to determine the occurrence of the Underlying.
+<source> may refer to a singular agency, multiple agencies, an agency by distinguishing
+characteristics, by category or type (e.g., “official government statistical body,” “primary wire
+service”), or any combination thereof. When multiple agencies are specified, they may be
+applied in the hierarchical order designated by the Exchange if so specified, with the highest-
+ranked available and responsive agency taking precedence for purposes of determining the
+Expiration Value. A lower-ranked agency shall only be consulted if all higher-ranked agencies
+are unavailable, unresponsive, have not reported on the Underlying by the Expiration time, or
+if the Exchange, in its sole discretion, determines that a higher-ranked agency’s reporting is
+incomplete, erroneous, or otherwise insufficient to determine the Expiration Value. If <source>
+designates multiple agencies without specifying a hierarchical order, the Exchange shall
+resolve any conflict between reporting agencies at its sole discretion.
+
+<word>: <word> refers to the particular word or phrase potentially to be mentioned by
+<entity>. It may refer to a word being said a minimum number of times. It may also refer to
+one of multiple words/phrases, any of which are acceptable (e.g., “Doge/Dogecoin”).
+<time period>: <time period> refers to a specific range of time, event or discrete date and
+time specified by the Exchange. This may be defined by, but is not limited to: a specific event
+or context (e.g., “during the State of the Union address”), exact dates or times, relative time
+markers (e.g., “before July 1, 2027,” “in Q1 2026”), event-based periods (e.g., “during any
+campaign rally in October 2026,” “during the awards ceremony”), and broader intervals (e.g.,
+“Q1–Q2 2027,” “January–March 2026”).
+
+Unless stated otherwise, “Between” is inclusive of both endpoints, while “before” and “after”
+exclude the specified date. <time period> may also refer to “Any” or “None”, to multiple dates
+(even if non-consecutive), or to a singular and discrete date or time.
+
+When <time period> refers to a specific event (such as an address, speech, performance, or
+broadcast), the Exchange may specify what is included, including whether it includes both live
+and pre-recorded segments (including whether advertisements are included). Where a
+timezone is not specified, ET is assumed.
+
+
+Payout Criterion: The Payout Criterion for the Contract encompasses the Expiration Values that
+<word> is said by <entity> <time period>.
+
+
+The word must appear as a distinct, standalone unit, not buried inside another word. Plural
+and possessive noun forms count. Other grammatical changes (tense, conjugation, derivation)
+do not. If <word> appears separated from other words by a space or hyphen or in a
+compound form with a space or hyphen, it counts. If <word> is fused into a single
+unhyphenated word, it does not count.
+
+If <time period> refers to an event and that event is cancelled, and the market contains a
+strike stating “Event does not qualify/occur”, such a strike shall resolve “Yes” and all others
+“No”. If <time period> refers to an event and that event is cancelled but such strikes are NOT
+listed, the Contracts will resolve to the last fair price determined at the discretion of the
+Exchange. If the event is postponed, and such a postponement is announced by the end of the
+following calendar day to be rescheduled to a time within 14 calendar days, the markets shall
+remain open. If the event captured in <time period> is a live-stream or broadcast, the
+Exchange may keep the market open for 24 hours for the release of an official recording.
+Further granular details on conditions for these Contracts is available below.
+
+Additional clarification(s):
+
+     Possessive noun forms of <word>, plurals, and possessive plural noun forms are
+     INCLUDED:
+          <word> is “Immigrant” → “Immigrants” counts
+          <word> is “Egg” → “eggs’ shells” counts
+          <word> is “Russia” → “Russia’s” counts, “Russian” does not
+     If <word> exists only in adjective form, no plural form exists:
+          <word> is “Economic” → “Economics” does not count (“Economic” is an adjective
+          for which “Economics” is not a plural)
+     Plural nouns occurring within proper nouns and noun phrases are included:
+          <word> is “Cat” → “Cats the musical” counts
+    Grammatical variations beyond plurals/possessives are NOT included:
+         <word> is “Immigrant” → “Immigration” does NOT count
+         <word> is “Run” → “Running” or “Ran” do NOT count
+    When <word> specifies a plural form, the singular does NOT count:
+         <word> is “Veterans” → “Veteran” does NOT count
+    Words that are spelled the same as the plural form of <word> (if such exists) but are
+    themselves not a plural noun are included:
+         <word> is “Wind” → “Winds up the clock” counts
+         <word> is “Border” → “The United States has strong borders” counts
+    Open compounds (words separated by spaces) count:
+         <word> is “fire” → “fire station” counts
+         <word> is “couch” → “couch potato” counts
+    Hyphenated compounds (words connected by hyphens) count:
+         <word> is “Palestine” → “pro-Palestine” counts
+         <word> is “fat” → “non-fat” counts
+    Closed compounds (single word, no spaces/hyphens) do not count:
+         <word> is “fire” → “wildfire” does not count
+         <word> is “fire” → “firefighter” does not count
+    Multi-word <word> in larger constructions: When <word> is a multi-word phrase
+    appearing within a hyphenated construction, it counts only if <word> appears as a
+    complete, unmodified element:
+         <word> is “New York” → “New York-based” counts (complete element)
+    Portmanteaus (words blended from two words where parts of each are combined) are
+    NOT included unless the portmanteau clearly contains <word> as a distinct, unaltered
+    element:
+         <word> is “MAGA” → “MAGA-nificent” counts (MAGA appears as distinct element)
+         <word> is “magnificent” → “MAGA-nificent” does NOT count (portmanteau blend)
+
+Dictionary determination: Both the Merriam-Webster Dictionary (available online) AND the
+Oxford English Dictionary shall be used to determine compound type and/or conventional
+spelling patterns. Inclusion in either dictionary as an open or hyphenated compound shall
+satisfy the Payout Criterion. If neither provides clarity (or the word is not included),
+determination is based on whether written as single unit (closed/doesn’t count) vs. spaces or
+hyphens (open or hyphenated/counts) and/or context and previous usage.
+
+PHONETIC EQUIVALENCIES
+
+    Homophones (same sound, different spelling) do not count:
+        <word> is “write” → “right” does not count
+    Homonyms and homographs (same spelling) COUNT regardless of meaning or
+    pronunciation:
+        <word> is “bass” → both “bass guitar” and “bass fishing” count
+    Proper and common nouns are treated identically:
+        <word> is “Apple” → both “Apple Inc.” and “apple” (fruit) count
+        <word> is “Will” → both “Will Smith” and “I will go” count
+    Minor unintentional mispronunciations COUNT if context makes intent clear:
+        <word> is “Mamdani” → “Mandani” counts
+    Severe mispronunciations that make <word> unrecognizable do NOT count.
+    Trademarked spellings do not count, even when pronounced identically, unless the word
+itself is the same:
+      <word> is “lift” → “Lyft” (pronounced “lift”) does not count
+      <word> is “uber” → “Uber” counts
+Words with non-standard transliteration to English count within reason, provided they are
+phonetically equivalent:
+      <word> is “Zelensky” → any of “Zelenski,” “Zelenskii,” “Zelensky,” or “Zelenskiy”
+      count if pronounced equivalently
+Contractions do not count for their constituent words unless otherwise explicitly specified
+by the Exchange:
+      <word> is “not” → “won’t,” “can’t,” “don’t,” “isn’t” do not count
+Numbers spoken as words COUNT, when spoken exactly (not part of a larger number):
+      <word> is “five” → saying “five” or reading “$5” aloud as “five dollars” counts,
+      saying “five hundred” does NOT count
+      <word> is “410” → “four hundred ten”, “four one zero” or “four ten” counts
+Ordinals COUNT when <word> is written numerically OR a phrase that includes a
+number:
+      <word> is “January 6” → “January 6th” counts
+      <word> is “3” (written numerically) → “3rd” (spoken as “third”) counts
+      <word> is “Eight War” → “8 Wars” and “Eighth War” will count
+Cardinal and ordinal number words are distinct:
+      <word> is “one” → “first” does NOT count
+      <word> is “first” → “one” does NOT count
+Acronyms and abbreviations count when pronunciation or letter-by-letter spelling
+matches <word>:
+      <word> is “NASA” → “NASA” (pronounced “NAH-suh”) counts
+      <word> is “NASA” → “N-A-S-A” (spelled out) counts
+Acronyms and abbreviations count as <word> when pronounced as the full word:
+      <word> is “Doctor” → “Dr.” (pronounced “Doctor”) counts
+Expanded forms of acronyms do NOT count:
+      <word> is “AI” → “artificial intelligence” does not count
+Words in foreign languages do NOT count unless they are perfect cognates with an
+English word:
+      <word> is “fire” → “fuego” (Spanish) does NOT count
+English words within foreign sentences count:
+      <word> is “policy” → “Nuestra policy es clara” counts
+<word> in organization/company names counts:
+      <word> is “Securities” → “Bank of America Securities” counts
+Words in URLs, emails, handles, and hashtags (exclusive of domain structure, email
+provider or symbols) are treated as compounds when spoken as complete words, with the
+type of compound subject to aforementioned rules:
+      <word> is “fire” → “firestation.com” pronounced “fire station dot com” counts
+      <word> is “fire” → “wildfire.com” pronounced “wildfire dot com” does NOT count
+      <word> is “apple” → “apple.com” pronounced “apple dot com” does count
+      When presented in URL, email, handle, or hashtag form, <word> shall be treated as
+      a compound, not a multi-word word
+Sung, rapped, or poetic words COUNT if phonetically recognizable:
+      <word> is “money” → “moneyyy” (extended in rap) counts
+      Extreme distortion making <word> unrecognizable does NOT count.
+Phonetic alphabet spelling (“Foxtrot India Romeo Echo” for “FIRE”) does NOT count.
+CANCELLATIONS AND DELAYS
+
+   The Exchange may list an “Event does not qualify/occur” strike for any Contract. If listed,
+   such a strike refers to the structural conditions of the market, and is NOT adjudicated as a
+   <word> needing to be said by or validated by having been said by <entity>. If listed, this
+   strike resolves to “Yes” whenever the event fails to occur or qualify under the Payout
+   Criterion, or any other circumstance prevents normal resolution.
+   If no such strike is listed, and <time period> refers to a specific event, the following rules
+   apply if the event is cancelled, postponed, rescheduled, or materially altered (including
+   being closed to press) such that no video is released within one calendar day of the
+   original start time of the event:
+         If the event is cancelled, the Contract will resolve to the last fair price determined in
+         the sole discretion of the Exchange.
+         If the event is postponed or rescheduled, the outcome depends on whether a new
+         date is publicly announced within one calendar day (i.e. if the event was scheduled
+         to begin on Monday, any time up to 11:59PM on Tuesday falls within this period) of
+         the originally scheduled start time:
+               If no new date is announced within one calendar day, the Contract will resolve
+               to the last fair price determined in the sole discretion of the Exchange.
+               If a new date is announced within one calendar day, the outcome depends on
+               when the rescheduled event is set to occur:
+                     If the rescheduled date falls within fourteen (14) calendar days of the
+                     originally scheduled date, the Contract shall remain open and <word>
+                     stated during the rescheduled event will count.
+                           The fourteen-day window begins at 12:00 AM ET on the originally
+                           scheduled date and ends at 11:59 PM ET fourteen days later, unless
+                           an alternate timezone is explicitly specified.
+                           Example: <time period> is “during the State of the Union on January
+                           15, 2026” rescheduled to January 20, 2026 → words spoken during
+                           the rescheduled address count.
+                     If the rescheduled date falls more than fourteen (14) calendar days after
+                     the originally scheduled date, the Contract will resolve to the last fair price
+                     determined in the sole discretion of the Exchange.
+         Any Contract that cannot be resolved through the Source Agency hierarchy will
+         instead be settled at the Last Fair Price. The Exchange will disclose the methodology
+         used to determine the Last Fair Price (e.g., Last Traded Price, Time-Weighted
+         Average Price) at the time of Issuance.
+         If an event begins but is interrupted, abbreviated, or ends prematurely, words
+         stated by <entity> during the portion of the event that did occur will count and the
+         market will otherwise resolve.
+   If the event occurs within the fourteen-day window but the venue, format, or medium
+   changes (e.g., moved to a different location, changed from in-person to virtual (with the
+   exception of being closed to press)), words stated during the event will count.
+   Special condition: Across both cases, whether an “Event does not qualify/occur” strike is
+   listed or not, if the event specified as or in <time period> is a live-stream or broadcast (or
+   relayed as such) but the live stream/broadcast does not occur, the Exchange will instead
+   use an officially released recording as the Underlying, and may delay resolution by up to
+   one calendar day to allow for the release of such a recording.
+          If partial snippets are released, Contracts on words that do not appear will be
+          resolved to last fair price, and Contracts on those that do will be resolved to “Yes”.
+          If no recording is released, the relevant outcomes triggered by the
+          presence/absence of an “Event does not qualify/occur” strike shall occur as outlined
+          above.
+
+TECHNICAL DETAILS (UNLESS OTHERWISE SPECIFIED)
+
+     When <time period> refers to a specific event, pre-recorded content broadcast,
+     streamed, or published as part of that event is included if presented as part of the official
+     presentation.
+          Example: <time period> is “during the concert” with pre-recorded video interlude
+          where entity speaks → words from interlude count
+          Example: <time period> is “during the television appearance” with pre-taped
+          segment aired during broadcast → words from segment count
+     Behind-the-scenes content, rehearsals, sound checks, and unofficial recordings are NOT
+     included unless officially broadcast or published as part of <time period>.
+     Subtitles and captions that display <word> on screen but are not spoken aloud by
+     <entity> do NOT count.
+     Sign language interpretation or usage by entity does NOT count as saying <word> unless
+     the Contract explicitly specifies that sign language counts.
+     Text that entity displays on screen (presentation slides, teleprompter visible to audience,
+     signatures) does NOT count unless entity reads it aloud.
+     Content generated by AI, deepfakes, or synthetic voice technology impersonating entity
+     does NOT count unless the synthetic content is officially commissioned, authorized, or
+     published by entity, OR the Contract explicitly specifies that AI-generated content counts.
+     If <word> is muted due to technical failure or censorship it shall not count unless
+     corroborating contextual evidence (including surrounding speech, or an official
+     uncensored recording or transcript) confirms that <entity> specifically uttered <word>
+     during the muted period.
+
+Minimum Tick: The Minimum Tick size for the Contract shall be $0.01.
+
+Position Accountability Level: The Position Accountability Level for the Contract shall be
+$25,000 per strike, per Member.
+
+Last Trading Date: The Last Trading Date of the Contract will be the Expiration Date. The Last
+Trading Time will be the Expiration time.
+
+Settlement Date: The Settlement Date of the Contract shall be no later than the day after the
+Expiration Date, unless the Market Outcome is under review pursuant to Rule 7.1.
+
+Expiration Date: When <time period> refers to a specific event: The latest Expiration Date of
+the Contract shall be fourteen (14) calendar days after the originally scheduled date of the
+event. If the event occurs within the fourteen-day window, expiration will be moved to an
+earlier date and time in accordance with Rule 7.2. When <time period> is defined by specific
+dates: The latest Expiration Date of the Contract shall be two weeks after the end of <time
+period>. If an event described in the Payout Criterion occurs and a consensus has been
+reached on all terms, then expiration will be moved to an earlier date and time in accordance
+with Rule 7.2.
+Expiration time: The Expiration time of the Contract shall be 10:00 AM ET.
+
+Settlement Value: The Settlement Value for this Contract is $1.00.
+
+Expiration Value: The Expiration Value is the value of the Underlying as documented by the
+Source Agency on the Expiration Date at the Expiration time.
+
+Contingencies: Before Settlement, Kalshi may, at its sole discretion, initiate the Market
+Outcome Review Process pursuant to Rule 7.1 of the Rulebook. If an Expiration Value cannot
+be determined on the Expiration Date, Kalshi has the right to determine payouts pursuant to
+Rule 7.1 in the Rulebook.
+

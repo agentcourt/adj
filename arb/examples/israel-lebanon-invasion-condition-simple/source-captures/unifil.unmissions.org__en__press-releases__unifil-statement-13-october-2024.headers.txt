@@ -1,0 +1,28 @@
+HTTP/2 200
+content-type: text/html; charset=UTF-8
+date: Fri, 01 May 2026 15:38:16 GMT
+accept-ranges: bytes
+cache-tags: MISS
+cache-control: max-age=900, public
+x-drupal-dynamic-cache: MISS
+content-language: en
+x-content-type-options: nosniff
+x-frame-options: SAMEORIGIN
+expires: Sun, 19 Nov 1978 05:00:00 GMT
+last-modified: Fri, 01 May 2026 15:38:15 GMT
+etag: W/"1777649895"
+x-generator: Drupal 11 (https://www.drupal.org)
+content-security-policy: default-src 'self' https://platform.twitter.com; script-src 'self' https://cdn.jsdelivr.net https://www.google-analytics.com 'unsafe-inline' 'unsafe-eval' https://fareharbor.com https://*.infogram.com https://static.addtoany.com unpkg.com www.unpkg.com *.jquery.com *.jsdelivr.net *.un.org npmcdn.com *.google-analytics.com *.twitter.com *.twimg.com *.facebook.net *.addtoany.com *.instagram.com *.tiktok.com *.tiktokcdn.com mindkit.ai mindkit.com mc.yandex.ru *.googletagmanager.com *.googleadservices.com *.doubleclick.net *.sojern.com *.youtube.com *.flickr.com https://cdnjs.cloudflare.com https://cdn.knightlab.com; style-src 'self' *.un.org https://fonts.gstatic.com https://fonts.googleapis.com https://cdn.jsdelivr.net https://maxcdn.bootstrapcdn.com 'unsafe-inline' *.twitter.com *.twimg.com *.addtoany.com *.tiktokcdn.com *.mdirector.com static.mdirector.com cdn.un.org unpkg.com www.unpkg.com *.googleapis.com *.jsdelivr.net *.bootstrapcdn.com *.rawgit.com https://cdnjs.cloudflare.com https://cdn.knightlab.com; img-src 'self' data: *.un.org *.google-analytics.com *.doubleclick.net *.google.com *.twimg.com *.twitter.com *.addtoany.com *.ibytedtos.com mindkit.com *.entermediadb.net public.flourish.studio *.googletagmanager.com *.googleadservices.com i0.wp.com cdn.jsdelivr.net *.sojern.com match.adsrvr.org ib.adnxs.com *.wfp.org *.unocha.org *.unicef.org *.staticflickr.com mc.yandex.com mc.yandex.ru https://cdnjs.cloudflare.com https://cdn.knightlab.com *.constantcontact.com; media-src 'self' *.un.org *.fao.org *.libsyn.com news.un.org *.cdnapisec.kaltura.com *.prismic.io *.unmultimedia.org; frame-src 'self' *.flickr.com *.flickrembed.com *.youtube.com *.un.org toolkit.un75.online *.knightlab.com *.twitch.tv *.twitter.com *.facebook.com forms.office.com *.brightcove.com *.addtoany.com *.arcgis.com *.brightcove.net *.soundcloud.com *.google.com *.vimeo.com *.youtube-nocookie.com *.libcal.com *.studios.ms *.azurewebsites.net *.instagram.com *.tiktok.com cn.un75.online actnow.bot *.libanswers.com *.powerbi.com *.kaltura.com *.mdirector.com summitdialogues.org *.doubleclick.net fareharbor.com flo.uri.sh embed.ted.com interactive-events.vercel.app *.spotify.com *.vercel.app *.sdg4education2030.org asksource.info *.infogram.com datawrapper.dwcdn.net momento360.com direkt-klient.ifragasatt.se www.googletagmanager.com mc.yandex.com oict-psgd-ett-oaj-prod-suite.azurewebsites.net *.trello.com https://trello.com *.canva.com *.sibforms.com https://training.itcilo.org https://*.tableau.com *.list-manage.com *.adobe.com *.live.com *.fliphtml5.com https://*.genially.com/; child-src *.youtube.com *.brightcove.com *.brightcove.net *.cdnapisec.kaltura.com summitdialogues.org; font-src 'self' *.un.org https://fonts.gstatic.com https://fonts.googleapis.com https://cdn.jsdelivr.net https://maxcdn.bootstrapcdn.com *.tiktokcdn.com data: *.gstatic.com *.jsdelivr.net *.bootstrapcdn.com; connect-src 'self' news.un.org *.ibytedtos.com actnow.ai.chat *.doubleclick.net *.libchat.com *.aworld.io *.facebook.com *.un.org direkt.ifragasatt.se analytics.google.com api.direkt.ifragasatt.se *.flickr.com www.google.com mc.yandex.com https://cdnjs.cloudflare.com *.google-analytics.com; report-uri /report-csp-violation
+x-xss-protection: 1; mode=block
+x-permitted-cross-domain-policies: none
+x-drupal-cache: MISS
+content-encoding: gzip
+x-varnish: 29297620
+via: 1.1 cache-operator-varnish-7fd595946c-c5vk9 (Varnish/7.6), 1.1 23359298cbb245c9b8a3a6289fd7f548.cloudfront.net (CloudFront)
+vary: Accept-Encoding,Cookie
+x-cache: Hit from cloudfront
+x-amz-cf-pop: IAH50-P5
+x-amz-cf-id: AMcgtAIItfJFDNMz4VVunLEaHnngUkpA2vsejs2JfEutinkAjedhNQ==
+age: 87
+referrer-policy: strict-origin-when-cross-origin
+strict-transport-security: max-age=31536000

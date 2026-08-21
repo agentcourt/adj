@@ -1,0 +1,12 @@
+# Unresolved record gaps
+
+This directory is ready for an open-record/search-enabled first-pass arbitration, not for a clean closed-record packet-only arbitration.
+
+Material gaps before a closed-record run:
+- official Russian source text for the May 9–11 arrangement;
+- official Ukrainian source text for the May 9–11 arrangement;
+- White House or U.S. official statement announcing or describing the arrangement;
+- full credible-media article captures, not search snippets;
+- evidence about whether hostilities paused generally or continued materially during the May 9–11 period;
+- evidence about whether prisoner-exchange or humanitarian framing narrows the arrangement under the market exclusions;
+- if relevant, any UMA proposal/dispute transaction record or Polymarket comments explaining the dispute.

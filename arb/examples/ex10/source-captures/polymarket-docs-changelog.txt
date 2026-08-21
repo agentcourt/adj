@@ -1,0 +1,554 @@
+Source capture converted from HTML for publication. Original capture filename: polymarket-docs-changelog.txt.
+
+Polymarket Changelog - Polymarket Documentation 
+
+Skip to main content 
+
+New API users should migrate to deposit wallets. Read the migration guide . 
+
+Polymarket Documentation home page 
+
+English 
+
+Search... 
+
+⌘ K 
+
+Changelog 
+
+Get Help 
+
+Main Site 
+
+Main Site 
+
+Search... 
+
+Navigation 
+
+Polymarket Changelog 
+
+Documentation 
+
+API Reference 
+
+Getting Started 
+
+Overview 
+
+Polymarket 101 
+
+Quickstart 
+
+Core Concepts 
+
+Markets & Events 
+
+Prices & Orderbook 
+
+Positions & Tokens 
+
+Polymarket USD 
+
+Order Lifecycle 
+
+Resolution 
+
+Market Data 
+
+Overview 
+
+Fetching Markets 
+
+Trading 
+
+Overview 
+
+Quickstart 
+
+Orderbook 
+
+Orders 
+
+Client Reference 
+
+Fees 
+
+Gasless Transactions 
+
+Negative Risk Markets 
+
+Matching Engine Restarts 
+
+CTF Tokens 
+
+WebSocket 
+
+Bridge 
+
+Market Makers 
+
+Overview 
+
+Getting Started 
+
+Maker Rebates Program 
+
+Liquidity Rewards 
+
+Operations 
+
+Builder Program 
+
+Builder Program 
+
+Builder Code 
+
+Builder Fees 
+
+Tiers 
+
+Resources 
+
+Referral Program 
+
+Contracts 
+
+Data Resources 
+
+Error Codes 
+
+On this page 
+
+Apr 28, 2026 
+
+Apr 21, 2026 
+
+Apr 17, 2026 
+
+Apr 13, 2026 
+
+Apr 10, 2026 
+
+Apr 9, 2026 
+
+Mar 31, 2026 
+
+Mar 30, 2026 
+
+Mar 17, 2026 
+
+Mar 1, 2026 
+
+Feb 12, 2026 
+
+Feb 11, 2026 
+
+Jan 28, 2026 
+
+Jan 16, 2026 
+
+Jan 16, 2026 
+
+Jan 6, 2026 
+
+Jan 5, 2026 
+
+Sept 24, 2025 
+
+September 15, 2025 
+
+August 26, 2025 
+
+August 21, 2025 
+
+July 23, 2025 
+
+June 3, 2025 
+
+June 3, 2025 
+
+May 28, 2025 
+
+May 28, 2025 
+
+May 15, 2025 
+
+Polymarket Changelog 
+
+Copy page 
+
+Welcome to the Polymarket Changelog. Here you will find any important changes to Polymarket, including but not limited to CLOB, API, UI and Mobile Applications. 
+
+Copy page 
+
+Documentation Index 
+
+Fetch the complete documentation index at: https://docs.polymarket.com/llms.txt 
+
+Use this file to discover all available pages before exploring further. 
+
+​ 
+
+Apr 28, 2026 
+
+CLOB V2 is live on production 
+
+Polymarket’s CLOB V2 upgrade is live on https://clob.polymarket.com . 
+Production URL unchanged : V2 now runs on the standard CLOB host. New integrations should use https://clob.polymarket.com . 
+
+No V1 compatibility : Legacy V1 SDKs and V1-signed orders are no longer supported on production. 
+
+Open orders wiped : Resting orders from before the cutover did not migrate and must be re-created with V2 signing. 
+
+Migration guide : See Migrating to CLOB V2 for the SDK, raw order signing, pUSD, and builder attribution changes. 
+
+​ 
+
+Apr 21, 2026 
+
+Relayer API: POST /submit returns immediately without transactionHash 
+
+Faster POST /submit responses : The Relayer’s POST /submit endpoint now returns immediately with just { transactionID, state: "STATE_NEW" } . The transactionHash field has been removed from the submit response to improve performance. 
+
+How to get the hash : Poll GET /transaction with the returned transactionID to retrieve the onchain transactionHash once the transaction has been broadcast. 
+
+​ 
+
+Apr 17, 2026 
+
+CLOB V2: upgrades go live April 28 at ~11:00 UTC, with ~1 hour of downtime 
+
+Polymarket is shipping a coordinated upgrade: new Exchange contracts, a rewritten CLOB backend, and a new collateral token (pUSD) . Exchange upgrades go live April 28, 2026 at ~11:00 UTC with ~1 hour of downtime. All integrations must migrate to the V2 SDK before the cutover — there will be no backward compatibility after go-live. Full walkthrough: Migrating to CLOB V2 . Follow Discord , Telegram, and status.polymarket.com for the exact start time. Historical pre-cutover note: before go-live, integrations could test against https://clob-v2.polymarket.com . As of April 28, V2 runs on https://clob.polymarket.com . What’s changing 
+New Exchange contracts (CTF Exchange V2 + Neg Risk CTF Exchange V2) 
+
+pUSD replaces USDC.e as the collateral token (standard ERC-20 on Polygon, backed by USDC, backing enforced onchain) 
+
+Order struct: nonce , feeRateBps , taker removed — timestamp (ms), metadata , builder added 
+
+Fees are now set at match time — no more feeRateBps on orders 
+
+Builder attribution is native via builderCode on orders (no more builder-signing-sdk ) 
+
+EIP-712 Exchange domain version bumps from "1" to "2" (ClobAuth stays at "1" ) 
+What you need to do 
+Install the V2 SDK — @polymarket/clob-client-v2 or py-clob-client-v2 — and remove the legacy clob-client / py-clob-client packages 
+
+Update constructor from positional args to options object; rename chainId → chain 
+
+Remove feeRateBps , nonce , and taker from your order creation code 
+
+If you’re a builder, copy your code from Settings → Builder and attach it to orders 
+
+If you sign orders without the SDK, update the verifyingContract and the signed Order fields — see For API users 
+
+Plan for all open orders to be wiped at cutover 
+During the window: Trading will be paused for ~1 hour on April 28 starting around 11:00 UTC. The SDK’s hot-swap mechanism will auto-refresh the client when V2 goes live — no manual action needed if you’re on the latest SDK. 
+
+​ 
+
+Apr 13, 2026 
+
+Bridge API: added support link for bridging issues 
+
+Support contact : Added a link to our Bridge API provider’s support (Fun.xyz) for failed, stuck, or compliance-held bridge transactions. See Deposit Status . 
+
+​ 
+
+Apr 10, 2026 
+
+New keyset pagination endpoints for markets and events 
+
+New endpoints : Added GET /markets/keyset and GET /events/keyset for cursor-based pagination, replacing offset-based GET /markets and GET /events . 
+
+How it works : These use an opaque after_cursor / next_cursor token instead of offset , providing stable and efficient paging through large result sets. Same filters, same response shape per item — the only differences are the wrapper response ( { "markets": [...], "next_cursor": "..." } ) and the rejection of offset . 
+
+Migration : The existing GET /markets and GET /events endpoints remain available but will be deprecated in a future release. New integrations should use the keyset variants. 
+
+​ 
+
+Apr 9, 2026 
+
+GET /markets: closed defaults to false 
+
+closed default change : The closed query parameter on GET /markets now defaults to false . Closed markets are excluded from results unless you explicitly pass closed=true . 
+
+​ 
+
+Mar 31, 2026 
+
+REST API Fee Fields Update 
+
+Fee calculation source : Fees should now be calculated using the feeSchedule object within a market. 
+
+​ 
+
+Mar 30, 2026 
+
+Fee Structure V2 
+
+New fee categories : Fees now apply to Crypto, Sports, Finance, Politics, Economics, Culture, Weather, Tech, Mentions, and Other / General markets with updated rates per category. Geopolitical and world events markets remain fee-free. 
+
+Updated documentation : Fees and Maker Rebates Program . 
+
+​ 
+
+Mar 17, 2026 
+
+March Madness: $2M+ in Liquidity Rewards 
+
+March Madness Liquidity Rewards : Adding $2M+ in liquidity rewards to both live and pregame markets. 
+
+How it works : Liquidity rewards are payments for placing competitive bids. Rewards are paid out based on the size of your orders, how close they are to the midpoint, and how consistently they are quoted relative to other liquidity providers. Orders must be active on the book for a minimum of 3.5 seconds to be eligible. 
+Daily reward rates for markets (subject to change): 48 hours before GameStartTime: 
+$7.5k for full game ML market 
+
+$500 for 5 other markets (most recently created full game spread, most recently created full game total, 1st half ML, most recently created 1st half spread, most recently created 1st half total) 
+From game live to game completion (note: rewards are expressed in daily rates): 
+$60k for full game ML 
+
+$4k for most recently created full game spread and most recently created full game total 
+From game live to halftime (note: rewards are expressed in daily rates): 
+$8k for 1st half ML, most recently created 1st half spread, most recently created 1st half total 
+
+Markets : Browse March Madness markets 
+
+More details : Liquidity Rewards documentation 
+
+​ 
+
+Mar 1, 2026 
+
+Taker Fees & Maker Rebates: All Crypto Markets 
+
+Crypto market fees expansion : Starting March 6, 2026, taker fees and maker rebates extend to all crypto markets including 1H, 4H, daily, and weekly. The same fee structure as existing crypto markets applies. Only new markets created after March 6 are affected. 
+
+Updated documentation : Fees and Maker Rebates Program updated to reflect all crypto market coverage. 
+
+​ 
+
+Feb 12, 2026 
+
+5-Minute Crypto Markets 
+
+5-minute crypto markets : Launched with taker fees enabled. Fees follow the same curve as 15-minute crypto markets, peaking at 1.56% at 50% probability. 
+
+Maker Rebates : Liquidity providers earn daily USDC rebates funded by taker fees, same as 15-minute crypto markets. 
+
+​ 
+
+Feb 11, 2026 
+
+Taker Fees & Maker Rebates: NCAAB and Serie A 
+
+Sports market fees : Taker fees to be enabled on NCAAB (college basketball) and Serie A markets on February 18, 2026. 
+
+Per-market rebate calculation : Rebates are now calculated per market, makers only compete with other makers in the same market. 
+
+Updated documentation : Maker Rebates Program updated with sports fee tables and parameters. 
+
+​ 
+
+Jan 28, 2026 
+
+Bridge API: Withdrawal Endpoint 
+
+Withdrawal Endpoint : New /withdraw endpoint to bridge USDC.e from Polymarket to any supported chain and token. 
+
+Multi-chain withdrawals : Withdraw to EVM chains (Ethereum, Arbitrum, Base, etc.), Solana, and Bitcoin. 
+
+Updated documentation : Bridge API docs updated to reflect deposit and withdrawal functionality. 
+
+​ 
+
+Jan 16, 2026 
+
+Docs Update: RTDS documentation 
+
+RTDS docs updated to reflect RTDS supports comments and crypto prices only. 
+
+Removed legacy CLOB references and clob_auth from RTDS docs. 
+
+​ 
+
+Jan 16, 2026 
+
+Docs Update: Maker Rebates Program 
+
+Maker Rebates Program : Updated funding schedule with distribution method (volume-weighted vs fee-curve weighted). 
+
+Fee-curve weighted rebates : Documented fee-equivalent formula and rebate calculation. 
+
+FAQ : Clarified how rebates are calculated during fee-curve weighted periods. 
+
+​ 
+
+Jan 6, 2026 
+
+New API Features 
+
+Releases : Daily Releases timing 
+
+HeartBeats API : HeartBeats endpoint for monitoring connection status and canceling orders 
+
+Post Only Orders : Orders that are rejected if they would immediately match against an existing order 
+
+​ 
+
+Jan 5, 2026 
+
+Taker Fees & Maker Rebates 
+
+Taker Fees : Enabled on 15-minute crypto markets. Fees vary by price and peak at 1.56% at 50% probability. 
+
+Maker Rebates : Daily USDC rebates paid to liquidity providers, funded by taker fees. 
+
+​ 
+
+Sept 24, 2025 
+
+Polymarket Real-Time Data Socket (RTDS) official release 
+
+Crypto Price Feeds : Access real-time cryptocurrency prices from two sources (Binance & Chainlink) 
+
+Comment Streaming : Real-time updates for comment events including new comments, replies, and reactions 
+
+Dynamic Subscriptions : Add, remove, and modify subscriptions without reconnecting 
+
+TypeScript Client : Official TypeScript client available at real-time-data-client For complete documentation, see Market Data . 
+
+​ 
+
+September 15, 2025 
+
+WSS price_change event update 
+
+There has been a significant change to the structure of the price change message. This update will be applied at 11PM UTC September 15, 2025. We apologize for the short notice 
+Please see the Market Channel for details. 
+
+​ 
+
+August 26, 2025 
+
+Updated /trades and /activity endpoints 
+
+Reduced maximum values for query parameters on Data-API /trades and /activity: 
+limit : 500 
+
+offset : 1,000 
+
+​ 
+
+August 21, 2025 
+
+Batch Orders Increase 
+
+The batch orders limit has been increased from 5 -> 15. Read more about the batch orders functionality here . 
+
+​ 
+
+July 23, 2025 
+
+Get Book(s) update 
+
+We’re adding new fields to the get-book and get-books CLOB endpoints to include key market metadata that previously required separate queries. 
+min_order_size 
+type: string 
+
+description: Minimum price increment. 
+
+neg_risk 
+type: boolean 
+
+description: Boolean indicating whether the market is neg_risk. 
+
+tick_size 
+type: string 
+
+description: Minimum price increment. 
+
+​ 
+
+June 3, 2025 
+
+New Batch Orders Endpoint 
+
+We’re excited to roll out a highly requested feature: order batching . With this new endpoint, users can now submit up to five trades in a single request. To help you get started, we’ve included sample code demonstrating how to use it. Please see Create Orders for more details. 
+
+​ 
+
+June 3, 2025 
+
+Change to /data/trades 
+
+We’re adding a new side field to the MakerOrder portion of the trade object. This field will indicate whether the maker order is a buy or sell , helping to clarify trade events where the maker side was previously ambiguous. For more details, refer to the MakerOrder object on the Orders page. 
+
+​ 
+
+May 28, 2025 
+
+Websocket Changes 
+
+The 100 token subscription limit has been removed for the Markets channel. You can now subscribe to as many token IDs as needed for your use case. 
+
+New Subscribe Field initial_dump 
+Optional field to indicate whether you want to receive the initial order book state when subscribing to a token or list of tokens. 
+
+default: true 
+
+​ 
+
+May 28, 2025 
+
+New FAK Order Type 
+
+We’re excited to introduce a new order type soon to be available to all users: Fill and Kill (FAK). FAK orders behave similarly to the well-known Fill or Kill (FOK) orders, but with a key difference: 
+FAK will fill as many shares as possible immediately at your specified price, and any remaining unfilled portion will be canceled. 
+
+Unlike FOK, which requires the entire order to fill instantly or be canceled, FAK is more flexible and aims to capture partial fills if possible. 
+
+​ 
+
+May 15, 2025 
+
+Increased API Rate Limits 
+
+All API users will enjoy increased rate limits for the CLOB endpoints. 
+CLOB - /books (website) (300req - 10s / Throttle requests over the maximum configured rate) 
+
+CLOB - /books (50 req - 10s / Throttle requests over the maximum configured rate) 
+
+CLOB - /price (100req - 10s / Throttle requests over the maximum configured rate) 
+
+CLOB markets/0x (50req / 10s - Throttle requests over the maximum configured rate) 
+
+CLOB POST /order - 500 every 10s (50/s) - (BURST) - Throttle requests over the maximum configured rate 
+
+CLOB POST /order - 3000 every 10 minutes (5/s) - Throttle requests over the maximum configured rate 
+
+CLOB DELETE /order - 500 every 10s (50/s) - (BURST) - Throttle requests over the maximum configured rate 
+
+DELETE /order - 3000 every 10 minutes (5/s) - Throttle requests over the maximum configured rate 
+
+Was this page helpful? 
+
+Yes No 
+
+⌘ I 
+
+Polymarket Documentation home page 
+x linkedin github discord 
+
+Explore 
+Builder Program Market Makers Referral Program 
+
+Polymarket 
+Accuracy Activity Press Careers 
+
+Help and security 
+Availability Help Center Status 
+
+Legal 
+Privacy Policy Terms of Service 
+
+Powered by This documentation is built and hosted on Mintlify, a developer documentation platform

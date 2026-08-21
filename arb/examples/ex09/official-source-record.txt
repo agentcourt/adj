@@ -1,0 +1,24 @@
+# Official source record
+
+## Polymarket source
+
+- Market URL: https://polymarket.com/event/clavicular-pregnancy-in-2026
+- Gamma API URL: https://gamma-api.polymarket.com/events?slug=clavicular-pregnancy-in-2026
+- Raw captures: source-captures/polymarket-page.txt and source-captures/polymarket-gamma-event.json
+
+The Polymarket rule says the resolution source is “statements from Clavicular or his representatives,” with a definitive consensus of credible media reporting allowed as a possible source.
+
+## Clavicular or representative statements
+
+No primary statement from Clavicular or a representative has been preserved in this packet as a local source capture.
+
+The secondary reporting located during packet preparation describes two different categories of statement:
+
+1. Reported livestream remarks about wanting children or proposing a “pregnancy contest,” including “I must have children. I must get children today” and “I will be a dad in the next few months, guys. I am telling you.” Those remarks may show intent or shock-content performance, but they do not by themselves identify an existing partner pregnancy.
+2. Viral claims that he had gotten a girlfriend pregnant after meeting her recently. The located fact-check reporting says those claims lacked proof and were not confirmed by Clavicular.
+
+Because this is an open-record run, attorneys may search for the original stream, clips, X posts, Kick/VOD material, representative statements, and any later clarification. A later closed-record packet should preserve the primary video or statement relied on by either side.
+
+## UMA / oracle source
+
+The packet preserves the Polymarket page and Gamma API fields showing two proposed/disputed sequences and final/resolved Yes state. It does not preserve UMA DVM transaction-level voting records or proposer/disputer records.

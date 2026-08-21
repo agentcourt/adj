@@ -1,0 +1,30 @@
+This proposition will resolve to “demonstrated” if Iran and the United
+States agree to a permanent peace deal by the specified date, 11:59 PM
+ET. Otherwise, this proposition will resolve to “not_demonstrated”.
+
+A permanent peace deal refers to any agreement which explicitly
+indicates that military hostilities between the United States and Iran
+have ended or will permanently cease, or uses equivalent language
+clearly signaling a lasting end to military hostilities between the
+United States and Iran. Agreements that are explicitly temporary or
+which do not include a definitive agreement to end military
+hostilities between the US and Iran on a lasting basis (e.g. a
+temporary extension of the two-week ceasefire agreement announced on
+April 7, 2026), will not qualify.
+
+A qualifying agreement will be considered to have been established if
+either of the following conditions are met:
+
+- The United States and Iran each sign or formally adopt a written
+  agreement (e.g. a treaty or multi-point agreement) which meets the
+  above criteria.
+
+- Both the governments of the United States and Iran provide clear
+  public confirmation that a qualifying agreement has been
+  definitively established. Negotiations, statements of progress, or
+  other statements which do not constitute a definitive announcement
+  that a qualifying agreement has been reached will not count.
+
+The primary resolution source for this market will be official
+information from the governments of the United States and Iran;
+however, a consensus of credible reporting may also be used.

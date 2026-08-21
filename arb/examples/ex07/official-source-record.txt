@@ -1,0 +1,30 @@
+# Official source record
+
+Updated: 2026-05-18T21:34:58Z
+
+The market rule identifies two official-source paths:
+- official announcements from both Russia and Ukraine; or
+- a wide consensus of credible media reporting stating that an official ceasefire agreement between Russia and Ukraine has been reached.
+
+## Preserved official or official-adjacent materials
+
+### Russia: Kremlin / Yury Ushakov
+
+Source capture: `source-captures/kremlin-79702-ushakov-ceasefire-prisoner-exchange.md`
+URL: http://en.kremlin.ru/events/president/news/79702
+
+The President of Russia website published Yury Ushakov's comment: "On the instructions from President of Russia Vladimir Putin, I confirm that the Russian side considers acceptable the initiative just proposed by US President Donald Trump concerning a ceasefire between Russia and Ukraine for the purpose of conducting a prisoner exchange." It states that the relevant understanding was reached through telephone contacts with the U.S. administration and that the key agreement was a May 9-May 11 exchange of 1,000 prisoners from each side during the ceasefire period.
+
+### Ukraine: Presidential decree through Ukrinform and inaccessible official URL
+
+Source capture: `source-captures/ukrinform-zelensky-decree-red-square.md`
+Official decree URL identified: https://www.president.gov.ua/documents/3742026-59389
+
+Direct web access to the official Ukrainian presidential decree returned 403 in this environment. Ukrinform, Ukraine's national news agency, reported that Decree No. 374/2026 of May 8 was published on the president's official website. The reported decree authorized the May 9 parade in Moscow and excluded Red Square from Ukrainian weapons targeting plans for the duration of the parade. Ukrinform also reported that Trump had stated a three-day ceasefire would be introduced from May 9 to May 11 and that Ukraine had received Russia's agreement to a 1,000-for-1,000 prisoner exchange.
+
+## Unresolved official-source questions
+
+- The Ukrainian presidential decree, as captured through Ukrinform, is limited to Red Square targeting during the parade. It does not by itself state a theater-wide halt in military engagement.
+- Reuters, Guardian, NPR, CBC, and ISW report that Zelenskyy confirmed the ceasefire and/or that a ceasefire regime must be established on May 9, 10, and 11. Those reports are preserved in `source-captures/` but the underlying Telegram/X post is not independently captured here.
+- The Russian official text frames the ceasefire as concerning a prisoner exchange and Victory Day timing. That framing may matter under the market exclusion for humanitarian pauses and limited agreements.
+- The preserved public record includes repeated reports of alleged ceasefire violations and continued hostilities around related unilateral ceasefires. Whether that defeats the rule language is a merits question for the arbitrations.

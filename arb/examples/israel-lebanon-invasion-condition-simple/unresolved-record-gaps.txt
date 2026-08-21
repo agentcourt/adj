@@ -1,0 +1,23 @@
+# Unresolved record gaps and limitations
+
+1. The packet does not contain UMA ballot records, voter lists, committed/revealed vote payloads, or oracle explanations. It records the Polymarket page's dispute sequence and final state only to preserve context.
+
+2. The packet arbitrates the factual condition, not whether the final Polymarket outcome was correct and not whether UMA governance was legitimate.
+
+3. The central unresolved factual/legal ambiguity is the rule phrase `intended to establish control over any portion of Lebanon`. The record strongly supports Israeli ground operations or incursions by the deadline. It is less direct on intent to establish control, as opposed to limited raids, infrastructure destruction, border threat removal, or a temporary security operation.
+
+4. Direct X extraction for the IDF status returned an error page from this environment. The packet preserves the IDF statement through consistent quotations in captured CBS/AP, NBC, BBC, Al Jazeera, and search-result records, but it does not contain a clean original X-rendered capture.
+
+5. The direct Reuters page returned a JavaScript/ad-blocker extraction page. Reuters text was preserved through a U.S. News syndicated copy retrieved by `web_fetch`; direct raw body capture from this environment timed out or returned no body. The extracted Reuters-syndicated text is saved as `source-captures/web_fetch-usnews-reuters-syndication-20260501.txt`.
+
+6. A generic United Nations URL fetch returned a 404 Page Not Found response and was not used as evidence. Working UNIFIL pages replaced that failed source. A separate UN press page returned a client challenge and did not provide useful text.
+
+7. UNIFIL's October 1 statement confirms that on September 30 the IDF notified UNIFIL of an intention to undertake limited ground incursions. It does not itself confirm that UNIFIL observed a September 30 crossing before the deadline.
+
+8. UNIFIL's October 6 and October 13 statements confirm later IDF activity or crossings inside Lebanon, but they are outside the September 30 deadline and should not be used as direct proof of the deadline element.
+
+9. The packet has not captured official Lebanese-government documents from September 30 or October 1 beyond reporting quotations. If a closed-record run turns on official Lebanese confirmation, that gap should be backfilled.
+
+10. The packet does not include maps, military geolocation exhibits, or a timeline showing the precise border-crossing time relative to Eastern Time. The available record strongly suggests activity by the deadline, but a more exact minute-by-minute timeline would strengthen a closed-record run.
+
+11. No arbitration runs have been started for this case.

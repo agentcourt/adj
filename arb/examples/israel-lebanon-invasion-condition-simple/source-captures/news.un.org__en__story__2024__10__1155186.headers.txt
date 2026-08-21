@@ -1,0 +1,25 @@
+HTTP/2 200
+content-type: text/html; charset=UTF-8
+expires: Sun, 19 Nov 1978 05:00:00 GMT
+cache-control: max-age=86400, public, s-maxage=2764800, stale-if-error=300, stale-while-revalidate=300
+referrer-policy: no-referrer-when-downgrade
+x-content-type-options: nosniff
+etag: W/"1777650035"
+x-lagoon: amazeeio-un1>ingress-nginx>news-un-org-en-aio-main:nginx>nginx-6499c497db-7zlxl
+fastly-drupal-html: YES
+strict-transport-security: max-age=31536000
+x-frame-options: SAMEORIGIN
+from-origin: same
+content-language: en
+last-modified: Fri, 01 May 2026 15:40:35 GMT
+content-encoding: gzip
+content-security-policy: report-uri /en/report-csp-violation
+fastly-request-id: a4fad30dab694cb550a7d812
+server-timing: MISS, fastly;desc="Edge time";dur=78
+accept-ranges: bytes
+age: 0
+date: Fri, 01 May 2026 15:47:02 GMT
+vary: Cookie, Accept-Encoding
+fastly-request-id: a4fad30dab694cb550a7d812
+server-timing: MISS-CLUSTER, fastly;desc="Edge time";dur=111
+content-length: 21848

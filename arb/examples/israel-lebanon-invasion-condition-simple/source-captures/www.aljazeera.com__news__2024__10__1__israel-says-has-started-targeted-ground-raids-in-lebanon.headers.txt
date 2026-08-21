@@ -1,0 +1,15 @@
+HTTP/2 200
+server: nginx
+content-type: text/html; charset=utf-8
+x-content-type-options: nosniff
+x-frame-options: SAMEORIGIN
+x-xss-protection: 1; mode=block
+etag: W/"31cb5-DZKnUBTRIUwNLUZqMIbdZKI6mYM"
+content-encoding: gzip
+x-rq: dfw5 0 10 9980
+accept-ranges: bytes
+cache-control: max-age=86400, must-revalidate
+content-length: 55103
+date: Fri, 01 May 2026 15:39:42 GMT
+vary: Accept-Encoding
+strict-transport-security: max-age=15768000

@@ -1,0 +1,7 @@
+Known gaps after the 2026-05-03 open-record run:
+- The real Polymarket market URL and market identifier remain absent.
+- The packet still lacks a pre-run official Polymarket market-page/API capture for the prediction-market question itself.
+- The official Polymarket documentation pages were preserved after the run, based on attorney-discovered evidence. A closed-record replay should use these captures or better archival captures from the start.
+- Server-dated headers, immutable archive captures, and exact page publication/change histories were not preserved.
+- The pUSD evidence is strong for a Polymarket-controlled ERC-20 collateral-token rollout, but a later adjudicator could distinguish "official token launch" from "technical collateral token introduced as part of CLOB V2." That semantic issue drove the main defense theory and two council dissents.
+- The deadline remains in the future relative to setup date. The demonstrated result rested on pUSD as an already qualifying launch, not on the absence of future events.

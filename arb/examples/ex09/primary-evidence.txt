@@ -1,0 +1,21 @@
+# Primary evidence
+
+## Preserved primary/platform evidence
+
+- Polymarket market page: https://polymarket.com/event/clavicular-pregnancy-in-2026
+- Polymarket Gamma API event record: https://gamma-api.polymarket.com/events?slug=clavicular-pregnancy-in-2026
+- Captured files: source-captures/polymarket-page.txt; source-captures/polymarket-gamma-event.json; source-captures/polymarket-market-image.jpg
+
+The official market rule requires a credible announcement by Clavicular that he and a partner are expecting a baby through pregnancy during the specified window.
+
+## Potential primary-source leads not locally preserved
+
+- Clavicular's Kick page or VODs: https://kick.com/clavicular/videos, referenced by Hindustan Times.
+- Domahhhh's April 30 X thread about the oracle dispute: https://x.com/domahhhh/status/2049886900513657218, referenced by Forbes.
+- JexTrade's April 29 X post about a large No buy, referenced by Forbes.
+- @holy_moses7 posts claiming the market had been “confirmed to resolve as ‘No’ two days ago,” referenced by Forbes.
+- The viral Kick Champ post that Times of India says claimed Clavicular was “expecting his first child with a girlfriend he met 10 days ago.” The exact source URL was not captured.
+
+## Preliminary source assessment
+
+The preserved primary evidence proves the contract wording and the platform's final Yes state. It does not itself prove that a qualifying credible announcement occurred. The fact question remains dependent on locating and evaluating the underlying statement, clip, representative statement, or credible-media consensus.

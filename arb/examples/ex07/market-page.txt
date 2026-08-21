@@ -1,0 +1,54 @@
+# Market page record
+
+Market URL: https://polymarket.com/event/russia-x-ukraine-ceasefire-by-may-31-2026
+
+Market title: Russia x Ukraine ceasefire by May 31, 2026?
+
+Captured page text from web_fetch on 2026-05-11:
+
+"This market will resolve to \"Yes\" if there is an official ceasefire agreement, defined as a publicly announced and mutually agreed halt in military engagement, between Russia and Ukraine by May 31, 2026, 11:59 PM ET.
+
+If the agreement is officially reached before the resolution date, this market will resolve to \"Yes,\" regardless of whether the ceasefire officially starts afterward.
+
+Only ceasefires which constitute a general pause in the conflict will qualify. Ceasefires which only apply to energy infrastructure, the Black Sea, or other similar agreements will not qualify.
+
+Any form of informal agreement will not be considered an official ceasefire. Humanitarian pauses will not count toward the resolution of this market.
+
+A peace deal or political framework will qualify if it includes a publicly announced and mutually agreed halt in military engagement, effective on a specific date. Frameworks or agreements that outline terms for a future peace but do not include an explicit, dated commitment to stop fighting will not count.
+
+This market's resolution will be based on official announcements from both Russia and Ukraine; however, a wide consensus of credible media reporting stating an official ceasefire agreement between Russia and Ukraine has been reached will suffice.
+Outcome proposed: Yes
+
+Disputed
+
+Outcome proposed: Yes
+
+No dispute
+
+Final outcome: Yes"
+
+Sanitized page capture: market-page.txt
+
+Notes:
+- Purpose note: the arbitrations were intended to litigate the resolution condition independently of the dispute process and platform assertions made during that dispute.
+- The arbitration proposition tests the factual condition behind the final Yes resolution.
+- It does not ask whether Polymarket, UMA, or any resolver acted correctly.
+
+Additional context block visible on the market page, checked 2026-05-11. This is Polymarket page context/assertion, not independent evidence that the proposition is true:
+
+"Updated May 8
+
+A mutual agreement to halt military engagement between Russia and Ukraine has been publicly announced and confirmed by a consensus of credible reporting.
+
+We’re aware of the dispute on this market. If a clarification is to be issued, it will be at 4:00 PM ET on May 8. If no statement is issued at that time, then there will be no clarification by the Polymarket team. The orderbook will be cleared at 4:00 PM ET, regardless of whether a clarification is made.
+
+This market's language has been updated for clarity."
+
+Structured market-context paragraph from Polymarket page metadata, checked 2026-05-11. This is platform-generated context, not primary evidence:
+
+"President Trump's May 8 announcement of a U.S.-brokered three-day ceasefire between Russia and Ukraine, effective May 9–11 to mark Russia's Victory Day and facilitate a 2,000-prisoner swap, has driven trader consensus to 100% "Yes," as both Moscow and Kyiv publicly affirmed the mutual halt in military engagement—meeting Polymarket criteria for a general pause ahead of the May 31 deadline. This rare de-escalation follows February's Geneva trilateral talks and April reports of nearing a broader deal, signaling diplomatic momentum amid stalled frontline advances. Though temporary, official commitments outweigh prior short truces like Easter's. Realistic disruptions—mutual violation claims, abrupt escalations, or resolution disputes—remain possible but deemed improbable by traders risking real money."
+
+Structured metadata extract: polymarket-next-data-extract.json in the repository/source-captures, where present.
+
+
+Caution: these page-context statements should not be treated as proof of official mutuality, theater-wide scope, implementation, or credible-reporting reliability. They are after-the-fact platform assertions/context. The completed arbitration runs did not consider them and should not have considered them, because the experiment adjudicated the resolution condition independently of the dispute record.

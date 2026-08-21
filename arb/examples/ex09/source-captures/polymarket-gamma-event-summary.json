@@ -1,0 +1,50 @@
+{
+  "capture": {
+    "captured_at_utc": "2026-05-14T18:41:46Z",
+    "url": "https://gamma-api.polymarket.com/events?slug=clavicular-pregnancy-in-2026",
+    "final_url": "https://gamma-api.polymarket.com/events?slug=clavicular-pregnancy-in-2026"
+  },
+  "event": {
+    "id": "400878",
+    "ticker": "clavicular-pregnancy-in-2026",
+    "slug": "clavicular-pregnancy-in-2026",
+    "title": "Clavicular pregnancy in 2026?",
+    "description": "This market will resolve to \"Yes\" if Clavicular announces that he and a partner are expecting a baby through pregnancy between market creation and December 31, 2026, 11:59 PM ET. Otherwise, this market will resolve to \"No\".\n\nOnly credible announcements will qualify. Pregnancy announcements that are not credible, for example jokes, will not suffice. This market will resolve based on the date of announcement, regardless of when the child is born.  \n\nThe resolution source will be statements from Clavicular or his representatives; however, a definitive consensus of credible media reporting may be considered.",
+    "resolutionSource": "",
+    "creationDate": "2026-04-20T22:47:28.569518Z",
+    "startDate": "2026-04-20T22:47:28.569523Z",
+    "endDate": "2026-12-31T00:00:00Z",
+    "createdAt": "2026-04-20T22:28:47.730186Z",
+    "updatedAt": "2026-05-14T18:36:23.955537Z",
+    "active": true,
+    "closed": true,
+    "closedTime": "2026-05-01T00:33:40Z",
+    "automaticallyResolved": true,
+    "volume": 13934862.960998023,
+    "openInterest": 5749723.168803
+  },
+  "market": {
+    "id": "2037907",
+    "question": "Clavicular pregnancy in 2026?",
+    "conditionId": "0x6747bae2269c348786d0c0c0f4286ac006f13f16325d4dcbab954b46de029f19",
+    "questionID": "0x24b6bade3cce1deaee8a6381420b7fb88b0f409b447747471b0245061d986280",
+    "description": "This market will resolve to \"Yes\" if Clavicular announces that he and a partner are expecting a baby through pregnancy between market creation and December 31, 2026, 11:59 PM ET. Otherwise, this market will resolve to \"No\".\n\nOnly credible announcements will qualify. Pregnancy announcements that are not credible, for example jokes, will not suffice. This market will resolve based on the date of announcement, regardless of when the child is born.  \n\nThe resolution source will be statements from Clavicular or his representatives; however, a definitive consensus of credible media reporting may be considered.",
+    "outcomes": "[\"Yes\", \"No\"]",
+    "outcomePrices": "[\"1\", \"0\"]",
+    "createdAt": "2026-04-20T22:28:48.129526Z",
+    "startDate": "2026-04-20T22:41:29.998973Z",
+    "endDate": "2026-12-31T00:00:00Z",
+    "closed": true,
+    "closedTime": "2026-05-01 00:33:40+00",
+    "umaEndDate": "2026-05-01T00:33:40Z",
+    "umaResolutionStatus": "resolved",
+    "umaResolutionStatuses": "[\"proposed\", \"disputed\", \"proposed\", \"disputed\"]",
+    "lastTradePrice": 0.999,
+    "bestBid": 0.998,
+    "bestAsk": 0.999,
+    "volume": "13934862.960998023",
+    "volumeNum": 13934862.960998023,
+    "resolvedBy": "0x65070BE91477460D8A7AeEb94ef92fe056C2f2A7"
+  },
+  "note": "This is a reduced public-provenance summary of the Gamma API capture. Unneeded account/profile/trader fields and page-application state were not copied."
+}

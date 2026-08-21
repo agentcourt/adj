@@ -1,0 +1,8 @@
+# Unresolved record gaps
+
+- The May 24 market is captured as disputed in the Gamma API, but the packet does not yet preserve the UMA proposal texts or dispute rationales.
+- The packet does not yet identify the event or report that caused the Yes proposal/dispute cycle.
+- The packet does not yet preserve Iranian aviation authority records, NOTAMs, airport operations records, or contemporaneous credible reporting about the May 24 cutoff.
+- The packet does not yet resolve whether observed flight cancellations or route changes, if any, were initiated by Iran rather than airlines or foreign governments.
+- The packet does not yet resolve whether any closure was broad enough to qualify under the market rule, rather than a limited, regional, airline-specific, foreign, military-drill, or weather-related restriction.
+- The packet does not yet resolve exact timing in ET relative to May 24, 2026, 11:59 PM ET.

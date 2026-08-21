@@ -1,0 +1,140 @@
+# Official President of Ukraine pages
+
+The official Ukrainian President pages initially returned Akamai `Access Denied` to `web_fetch` and direct `curl`, but rendered successfully in the managed real Chrome browser on 2026-05-01. Text below was extracted from the rendered DOM. Screenshots, PDFs, HTML, DOM-extraction JSON, and text captures are saved under `source-captures/`.
+
+## Volodymyr Zelenskyy and Mark Rutte Coordinate Steps Within NATO Summit
+
+URL:
+https://www.president.gov.ua/en/news/volodimir-zelenskij-skoordinuvav-z-markom-ryutte-kroki-v-mez-98601
+
+Saved captures:
+
+- `source-captures/president-gov-rutte-2025-06-24.html`
+- `source-captures/president-gov-rutte-2025-06-24.json`
+- `source-captures/president-gov-rutte-2025-06-24.txt`
+- `source-captures/president-gov-rutte-2025-06-24.png`
+- `source-captures/president-gov-rutte-2025-06-24.pdf`
+
+Extracted text:
+
+> Volodymyr Zelenskyy and Mark Rutte Coordinate Steps Within NATO Summit
+>
+> 24 June 2025 - 17:07
+>
+> In The Hague, President of Ukraine Volodymyr Zelenskyy met with NATO Secretary General Mark Rutte.
+>
+> The Head of State thanked him for the invitation to the NATO Summit. It is a clear signal that Ukraine remains among the priorities on the Alliance’s agenda.
+>
+> Mark Rutte emphasized that this year’s event is building on the 2024 NATO Summit in Washington, where a decision was made that Ukraine's path to the Alliance is irreversible.
+>
+> “The decisions of last year’s Washington Summit were very important, and it is crucial that this course remains unchanged,” said Volodymyr Zelenskyy.
+>
+> The President noted that Ukraine expects the NATO Summit’s final declaration to include signals of continued support for Ukrainians in their fight against Russian aggression.
+>
+> The leaders coordinated steps within the framework of the Summit and discussed their shared expectations for its outcome.
+>
+> Volodymyr Zelenskyy emphasized that the Russian Federation continues its missile and drone terror against civilian infrastructure and civilians. Therefore, one of the main focuses of the discussion was strengthening air defense and supporting the development of domestic defense production by NATO member states.
+>
+> In addition, the discussion covered access for partners – members of NATO to weapons procurement.
+
+Image observation from the full-page screenshot:
+
+> Volodymyr Zelenskyy is visible in the main photo. He is wearing a dark short-sleeved shirt/top and dark trousers. No tie is visible. Dark shoes appear visible. No jacket is visible.
+
+## In The Hague, Volodymyr Zelenskyy Met with Donald Trump
+
+URL:
+https://www.president.gov.ua/en/news/u-gaazi-volodimir-zelenskij-proviv-zustrich-iz-donaldom-tram-98653
+
+Saved captures:
+
+- `source-captures/president-gov-trump-2025-06-25.html`
+- `source-captures/president-gov-trump-2025-06-25.json`
+- `source-captures/president-gov-trump-2025-06-25.txt`
+- `source-captures/president-gov-trump-2025-06-25.png`
+- `source-captures/president-gov-trump-2025-06-25.pdf`
+
+Extracted text:
+
+> In The Hague, Volodymyr Zelenskyy Met with Donald Trump
+>
+> 25 June 2025 - 19:02
+>
+> On the sidelines of the NATO Summit in The Hague, President of Ukraine Volodymyr Zelenskyy held a meeting with President of the United States Donald Trump.
+>
+> Volodymyr Zelenskyy commended Donald Trump’s leadership in the effort to end Russia’s war against Ukraine with a just and lasting peace. The Ukrainian leader stressed that Ukraine supports the U.S. position on a ceasefire, but Russia is taking no steps in this direction and continues its aggression.
+>
+> The President of Ukraine spoke about two rounds of negotiations with Russian representatives in Istanbul, the only outcome of which was the exchange of prisoners and the return of the bodies of fallen warriors. Volodymyr Zelenskyy emphasized that, in doing so, Russia also handed over the bodies of its own servicemembers – some even with their passports.
+>
+> The Ukrainian leader informed the U.S. President about the situation on the frontline and the increasing number of massive Russian strikes targeting civilians and civilian infrastructure.
+>
+> Volodymyr Zelenskyy and Donald Trump discussed practical steps to strengthen the Ukrainian army with appropriate capabilities and to protect Ukrainian lives. In particular, the reinforcement of Ukraine’s air defense was addressed. It was agreed to continue this dialogue with the involvement of European partners.
+>
+> In addition, the Presidents of Ukraine and the United States discussed prospects for cooperation on the joint production of weapons and electronic warfare systems.
+>
+> The two leaders also focused on the situation involving Iran. Volodymyr Zelenskyy noted that restricting Iran’s ability to collaborate with other regimes would not only promote security in the Middle East but also contribute to achieving peace for Ukraine.
+
+Image observation from the full-page screenshot:
+
+> Zelenskyy is visible seated in the main photo with Donald Trump. He is wearing a dark short-sleeved shirt/top and dark trousers. No tie is visible. Dark shoes appear visible. No jacket is visible.
+
+## Volodymyr Zelenskyy Holds a Meeting with the Leaders of Germany, France, the United Kingdom, Italy, Poland, and the NATO Secretary General
+
+URL:
+https://www.president.gov.ua/en/news/volodimir-zelenskij-proviv-zustrich-iz-liderami-nimechchini-98657
+
+Saved captures:
+
+- `source-captures/president-gov-e5-2025-06-25.html`
+- `source-captures/president-gov-e5-2025-06-25.json`
+- `source-captures/president-gov-e5-2025-06-25.txt`
+- `source-captures/president-gov-e5-2025-06-25.png`
+- `source-captures/president-gov-e5-2025-06-25.pdf`
+
+Extracted text:
+
+> Volodymyr Zelenskyy Holds a Meeting with the Leaders of Germany, France, the United Kingdom, Italy, Poland, and the NATO Secretary General
+>
+> 25 June 2025 - 19:53
+>
+> As part of the NATO Summit in The Hague, President of Ukraine Volodymyr Zelenskyy held a meeting with the leaders of the E5 group of countries (Germany, France, the United Kingdom, Italy, Poland) and NATO Secretary General Mark Rutte.
+>
+> The parties discussed in detail the importance of strengthening Ukraine’s air shield amid the increasing number of strikes Russia is carrying out against civilians. The main focus was on air defense systems and interceptors for Iranian “Shahed” drones.
+>
+> Volodymyr Zelenskyy shared that Russia is intensifying its offensive operations and shows no willingness to end the war. That is why pressure on the Russian Federation must be increased, primarily targeting the energy and banking sectors, the shadow fleet, and implementing secondary sanctions.
+>
+> The President emphasized the importance of Ukraine’s ability to rely on the Alliance and NATO Member States.
+>
+> “Thank you for your great support of our nation, our warriors – truly heroic people. Air defense, training missions with jets, and new aid packages – we are grateful for all of these,” the Head of State said.
+>
+> Mark Rutte noted that this Summit sent a clear message: NATO’s commitments to Ukraine remain, and this is enshrined in the Summit’s declaration.
+>
+> “You can count on us now and in the future, so that you can defend yourself, that you are stronger at the negotiating table, that you can deter aggression in the future, and on your irreversible path into NATO,” the Secretary General of the Alliance stressed.
+>
+> Mark Rutte reminded that the E5 countries and other partners have already announced significant support, including air defense systems, tanks, infantry fighting vehicles, artillery systems, drones, and ammunition. In addition, the Alliance has over 70 projects aimed at building the future strength and security sector of Ukraine, which is making Ukraine’s path to NATO irreversible.
+
+Image observation from the full-page screenshot:
+
+> Zelenskyy is visible in the meeting/group images, though small. He appears to be wearing a dark short-sleeved shirt/top and dark trousers. No tie is visible. Shoes are not clearly distinguishable. No jacket is clearly visible.
+
+## Embedded official visit gallery
+
+The official President of Ukraine pages also embed a photo-gallery block titled:
+
+> Official Visit of the President of Ukraine to the Kingdom of the Netherlands
+>
+> 24 June 2025 - 14:22
+
+The rendered pages expose multiple official image URLs for that gallery. A representative rendered image capture is saved as:
+
+- `source-captures/president-gov-official-visit-504837-rendered.png`
+
+The direct JPEG URL rendered in Chrome but returned `Access Denied` to direct `curl`, so the saved file is a browser-rendered screenshot of the image rather than the original JPEG bytes.
+
+Image observation of `president-gov-official-visit-504837-rendered.png`:
+
+> Volodymyr Zelenskyy is seated on the right side of the table. His visible outfit is dark/black: a black jacket or blazer-like top is visible, a dark/black shirt appears visible underneath, no tie is visible, and trousers/shoes are not visible due to the table/chair.
+
+## Evidentiary effect
+
+These official Ukrainian pages corroborate that Zelenskyy was in The Hague at NATO-summit events on 24 and 25 June 2025 and provide official rendered images from the relevant time window. They do not use the word `suit` to characterize his clothing. The screenshots and image observations are therefore primary evidence of appearance, date, and setting, but they do not by themselves resolve the semantic `suit` question.

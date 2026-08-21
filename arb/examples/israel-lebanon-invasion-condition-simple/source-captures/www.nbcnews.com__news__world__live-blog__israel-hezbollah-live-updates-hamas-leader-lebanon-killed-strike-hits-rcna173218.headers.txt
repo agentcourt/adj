@@ -1,0 +1,17 @@
+HTTP/2 200
+content-type: text/html
+server: nginx
+x-backend-server: green-libra-54f9484595-wnjwq
+x-akamai-transformed: 9 - 0 pmb=mRUM,2
+vary: Accept-Encoding
+content-encoding: gzip
+date: Fri, 01 May 2026 15:39:41 GMT
+set-cookie: ng_geolocation=US; path=/; domain=.nbcnews.com; secure; SameSite=None
+server-timing: cdn-cache; desc=HIT
+server-timing: edge; dur=1
+strict-transport-security: max-age=2628000 ; preload
+content-security-policy: upgrade-insecure-requests;
+content-security-policy: frame-ancestors 'self' https://*.nbcnews.com https://*.today.com https://*.msnbc.com https://*.telemundo.com https://*.nbcnewstools.net https://*.eonline.com https://*.cnbc.com;
+akamai-grn: 0.d125c017.1777649980.103d921e
+set-cookie: akaas_NBCNews=1778513980~rv=6~id=61c54478e1241d2a2ba89ad0aec4cbf7~rn=; path=/; Expires=Mon, 11 May 2026 15:39:40 GMT; Secure; SameSite=None
+server-timing: ak_p; desc="1777649980414_398468561_272470558_71_12312_28_62_15";dur=1

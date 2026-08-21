@@ -1,0 +1,32 @@
+Primary evidence
+
+1. Official Kalshi market record
+   - Market page: https://kalshi.com/markets/kxberniemention/bernie-says/kxberniemention-26may03
+   - Zillion contract ticker: KXBERNIEMENTION-26MAY03-ZILL
+   - Strike / word: Zillion / Zillionaire
+   - Result at API capture: yes
+   - Status at API capture: finalized
+   - Local captures: source-captures/kalshi-event.json, source-captures/kalshi-zill_market.json, source-captures/kalshi-markets.json
+
+2. Official Kalshi MENTION contract terms
+   - URL: https://kalshi-public-docs.s3.amazonaws.com/contract_terms/MENTION.pdf
+   - Local PDF: source-captures/MENTION.pdf
+   - Local extracted text: source-captures/MENTION.txt
+   - Combined file: kalshi-zillionaire-rules-full.txt
+
+3. X post by @itschucksauce, 2026-05-04T14:13:03Z, id 2051304099333677404.
+   URL: https://x.com/itschucksauce/status/2051304099333677404
+   Text excerpt: "Made a cool $579 last night on a crazy disputed Kalshi Mentions Market. The strike was "Zillionaire" and Bernie Sanders said, "multi-zillionaire" in his speech. Many traders thought it would resolve to No, because in the past Kalshi has ruled that "multibillionaire" does not ..."
+   Local X API capture: source-captures/x-post-2051304099333677404.json
+   Local screenshot capture: source-captures/x-post-2051304099333677404-photo.jpg
+
+4. Screenshot attached to the X post.
+   Visible text extracted by image analysis:
+   - Market title: What will Bernie say during his Detroit rally?
+   - Contract / mention displayed: Zillion / Zillionaire
+   - Status: Trading paused
+   - Settlement status: Outcome pending
+   - Volume: approximately $912,768
+   - Open interest: approximately $647,637
+
+The arbitration proposition for the multi-zillionaire variant assumes the disputed utterance occurred, so this packet does not require proving the speech transcript before adjudicating the rule-interpretation question.

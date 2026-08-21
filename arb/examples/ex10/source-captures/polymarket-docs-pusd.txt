@@ -1,0 +1,271 @@
+Source capture converted from HTML for publication. Original capture filename: polymarket-docs-pusd.txt.
+
+Polymarket USD - Polymarket Documentation 
+
+Skip to main content 
+
+New API users should migrate to deposit wallets. Read the migration guide . 
+
+Polymarket Documentation home page 
+
+English 
+
+Search... 
+
+⌘ K 
+
+Changelog 
+
+Get Help 
+
+Main Site 
+
+Main Site 
+
+Search... 
+
+Navigation 
+
+Core Concepts 
+
+Polymarket USD 
+
+Documentation 
+
+API Reference 
+
+Getting Started 
+
+Overview 
+
+Polymarket 101 
+
+Quickstart 
+
+Core Concepts 
+
+Markets & Events 
+
+Prices & Orderbook 
+
+Positions & Tokens 
+
+Polymarket USD 
+
+Order Lifecycle 
+
+Resolution 
+
+Market Data 
+
+Overview 
+
+Fetching Markets 
+
+Trading 
+
+Overview 
+
+Quickstart 
+
+Orderbook 
+
+Orders 
+
+Client Reference 
+
+Fees 
+
+Gasless Transactions 
+
+Negative Risk Markets 
+
+Matching Engine Restarts 
+
+CTF Tokens 
+
+WebSocket 
+
+Bridge 
+
+Market Makers 
+
+Overview 
+
+Getting Started 
+
+Maker Rebates Program 
+
+Liquidity Rewards 
+
+Operations 
+
+Builder Program 
+
+Builder Program 
+
+Builder Code 
+
+Builder Fees 
+
+Tiers 
+
+Resources 
+
+Referral Program 
+
+Contracts 
+
+Data Resources 
+
+Error Codes 
+
+On this page 
+
+Why pUSD 
+
+Key facts 
+
+Wrapping — USDC.e → pUSD 
+
+Example 
+
+Unwrapping — pUSD → USDC.e 
+
+Next steps 
+
+Core Concepts 
+
+Polymarket USD 
+
+Copy page 
+
+pUSD — the collateral token used for all trading on Polymarket 
+
+Copy page 
+
+Documentation Index 
+
+Fetch the complete documentation index at: https://docs.polymarket.com/llms.txt 
+
+Use this file to discover all available pages before exploring further. 
+pUSD (Polymarket USD) is the collateral token used for all trading on Polymarket. It’s a standard ERC-20 token on Polygon, backed by USDC. The smart contract — which enables the withdrawal functionality — enforces the backing. No algorithmic peg, no fractional reserve. 
+
+Day to day, nothing changes. You load funds, see a balance, trade, and
+withdraw. pUSD is the technical settlement layer underneath the same
+experience you’re used to. 
+
+​ 
+
+Why pUSD 
+The protocol settles all trading activity in native USDC, providing a more capital efficient, scalable, and institutionally aligned settlement standard as the platform continues to grow. pUSD is a standard ERC-20 wrapper that represents a USDC claim. Wrapping and unwrapping are enforced onchain by the CollateralOnramp and CollateralOfframp contracts. 
+
+​ 
+
+Key facts 
+
+Token standard 
+ERC-20 
+
+Network 
+Polygon mainnet 
+
+Decimals 
+6 
+
+Backing 
+USDC (enforced onchain) 
+
+Transferable 
+Yes — standard ERC-20 
+
+pUSD is designed to function within Polymarket. There are no current plans to list it on external exchanges. See the Contracts page for all collateral-related contract addresses. 
+
+​ 
+
+Wrapping — USDC.e → pUSD 
+Use the CollateralOnramp to wrap USDC.e into pUSD. 
+
+function wrap ( address _asset , address _to , uint256 _amount ) external 
+
+Parameters 
+_asset — address of the asset being wrapped. Must be USDC.e. 
+
+_to — recipient of the minted pUSD. Does not have to be msg.sender . 
+
+_amount — amount to wrap, in USDC.e base units (6 decimals). 
+Requirements 
+The caller must first approve the CollateralOnramp contract (not the pUSD token) to spend USDC.e. 
+
+Reverts with OnlyUnpaused() if the admin has paused USDC.e. 
+
+​ 
+
+Example 
+
+TypeScript 
+
+Python 
+
+import { createWalletClient , createPublicClient , http , parseAbi , parseUnits , } from "viem" ; import { polygon } from "viem/chains" ; import { privateKeyToAccount } from "viem/accounts" ; const account = privateKeyToAccount ( process . env . PRIVATE_KEY as `0x ${ string } ` ); const walletClient = createWalletClient ({ account , chain: polygon , transport: http () }); const publicClient = createPublicClient ({ chain: polygon , transport: http () }); const ONRAMP = "0x93070a847efEf7F70739046A929D47a521F5B8ee" as const ; const USDCE = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174" as const ; // USDC.e on Polygon const amount = parseUnits ( "100" , 6 ); // 100 USDC.e // 1. Approve the Onramp to spend your USDC.e const approveHash = await walletClient . writeContract ({ address: USDCE , abi: parseAbi ([ "function approve(address spender, uint256 amount) returns (bool)" ]), functionName: "approve" , args: [ ONRAMP , amount ], }); await publicClient . waitForTransactionReceipt ({ hash: approveHash }); // 2. Wrap USDC.e → pUSD const wrapHash = await walletClient . writeContract ({ address: ONRAMP , abi: parseAbi ([ "function wrap(address _asset, address _to, uint256 _amount)" ]), functionName: "wrap" , args: [ USDCE , account . address , amount ], }); await publicClient . waitForTransactionReceipt ({ hash: wrapHash }); 
+
+​ 
+
+Unwrapping — pUSD → USDC.e 
+Use the CollateralOfframp to unwrap pUSD back into USDC.e. 
+
+function unwrap ( address _asset , address _to , uint256 _amount ) external 
+
+Parameters 
+_asset — asset you want to receive. Must be USDC.e. 
+
+_to — recipient of the underlying asset. 
+
+_amount — amount of pUSD to unwrap (6 decimals). 
+Requirements 
+The caller must first approve the CollateralOfframp contract to spend their pUSD. 
+
+Same pause gate as the Onramp. 
+
+​ 
+
+Next steps 
+
+Contracts 
+
+All Polymarket contract addresses and audits 
+
+Bridge 
+
+Deposit from other chains — auto-wraps to pUSD 
+
+Was this page helpful? 
+
+Yes No 
+
+Positions & Tokens 
+
+Previous 
+
+Order Lifecycle 
+
+Next 
+
+⌘ I 
+
+Polymarket Documentation home page 
+x linkedin github discord 
+
+Explore 
+Builder Program Market Makers Referral Program 
+
+Polymarket 
+Accuracy Activity Press Careers 
+
+Help and security 
+Availability Help Center Status 
+
+Legal 
+Privacy Policy Terms of Service 
+
+Powered by This documentation is built and hosted on Mintlify, a developer documentation platform

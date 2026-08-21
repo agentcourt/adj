@@ -1,0 +1,107 @@
+# Primary evidence
+
+## Direct proposition
+
+Volodymyr Zelenskyy was photographed or videotaped wearing a suit between May 22 and June 30, 2025 ET.
+
+## Official market condition
+
+The official Polymarket rule text requires all of the following for a `Yes` condition:
+
+1. Volodymyr Zelenskyy was photographed or videotaped.
+2. He was wearing a suit.
+3. The image or video was taken between May 22 and June 30, 2025 ET.
+4. The image or video was released within that timeframe.
+5. The image or video was authentic, not AI-generated or edited.
+6. The resolution source was a consensus of credible reporting.
+
+Exact Polymarket text:
+
+> This market will resolve to "Yes" if Volodymyr Zelenskyy is is photographed or videotaped wearing a suit between May 22 and June 30, 2025 ET. Otherwise, this market will resolve to "No".
+>
+> For this market to resolve to "Yes" the images or video must be taken and released within this market's timeframe. The images or video must be authentic, not the result of artificial intelligence or video editing.
+>
+> The resolution source will be a consensus of credible reporting.
+
+## Official photo evidence
+
+NATO official gallery:
+https://www.nato.int/en/multimedia/multimedia/photos/2025/06/25/meeting-between-the-secretary-general-the-president-of-ukraine-and-leaders-of-e5-countries
+
+Representative image URL:
+https://s7g10.scene7.com/is/image/ncia/20250625_summit-bilat-sg-ukr-e5_0003
+
+Local copy:
+`source-captures/nato-20250625-e5-0003-1200.jpg`
+
+NATO gallery metadata identifies the image subject as including Volodymyr Zelenskyy, gives creation date `25 June 2025`, and gives location `The Hague, The Netherlands`.
+
+OpenClaw image observation of the local NATO image:
+
+> Volodymyr Zelenskyy is wearing an all-black visible outfit: a black jacket and black trousers that appear to match, a black shirt underneath, no visible tie, and black shoes.
+
+This observation is not a source authority on whether the outfit legally or semantically counts as a `suit`; it records what is visible in the saved official image.
+
+## Official Ukrainian President page evidence
+
+Rendered official pages:
+
+- https://www.president.gov.ua/en/news/volodimir-zelenskij-skoordinuvav-z-markom-ryutte-kroki-v-mez-98601
+- https://www.president.gov.ua/en/news/u-gaazi-volodimir-zelenskij-proviv-zustrich-iz-donaldom-tram-98653
+- https://www.president.gov.ua/en/news/volodimir-zelenskij-proviv-zustrich-iz-liderami-nimechchini-98657
+
+Local record:
+`official-ukrainian-pages.txt`
+
+Local captures:
+
+- `source-captures/president-gov-rutte-2025-06-24.png`
+- `source-captures/president-gov-trump-2025-06-25.png`
+- `source-captures/president-gov-e5-2025-06-25.png`
+- `source-captures/president-gov-official-visit-504837-rendered.png`
+
+Extracted dates and subjects include `24 June 2025 - 17:07`, `25 June 2025 - 19:02`, and `25 June 2025 - 19:53` for The Hague/NATO-summit meetings involving Volodymyr Zelenskyy. An embedded official visit gallery is dated `24 June 2025 - 14:22`.
+
+OpenClaw image observation of the three full-page screenshots:
+
+> Zelenskyy is visible in each page's imagery wearing dark clothing. The main page images show a dark short-sleeved shirt/top and dark trousers, with no tie and no jacket visible in those main images.
+
+OpenClaw image observation of `source-captures/president-gov-official-visit-504837-rendered.png`:
+
+> Volodymyr Zelenskyy is seated on the right side of the table. His visible outfit is dark/black: a black jacket or blazer-like top is visible, a dark/black shirt appears visible underneath, no tie is visible, and trousers/shoes are not visible due to the table/chair.
+
+The official Ukrainian pages corroborate identity, date, location, and official publication within the relevant period. They do not themselves use the word `suit` for the outfit.
+
+## Evidence satisfying non-semantic elements
+
+Photographed/videotaped:
+
+- Satisfied by official NATO JPEG gallery, saved representative official NATO image, and rendered official Ukrainian President pages.
+
+Identity:
+
+- NATO gallery caption names Volodymyr Zelenskyy as one of the people shown.
+- Ukrainian President pages identify Zelenskyy in the relevant The Hague/NATO-summit meetings.
+
+Timing:
+
+- NATO gallery creation date is 25 June 2025.
+- Ukrainian President rendered pages are dated 24 and 25 June 2025.
+- 24 and 25 June 2025 fall between May 22 and June 30, 2025 ET.
+
+Release within timeframe:
+
+- The official NATO gallery page is dated 25 June 2025 and exposes the image as a NATO multimedia asset.
+- The official Ukrainian President pages and embedded gallery are dated 24 and 25 June 2025.
+
+Authenticity:
+
+- NATO official publication supplies primary support that the representative image is authentic.
+- Ukrainian President official publication supplies primary support that the rendered-page images are authentic official-publication images.
+- The packet has not independently forensically authenticated the JPEGs or screenshots.
+
+Suit characterization:
+
+- The official NATO page does not use the word `suit` for the outfit.
+- The visible clothing is black jacket plus black trousers that appear to match, black shirt, no visible tie, and black shoes.
+- Secondary reporting supplies both the `suit` characterization and the contrary `not a conventional suit` interpretation. See `secondary-reporting.txt`.

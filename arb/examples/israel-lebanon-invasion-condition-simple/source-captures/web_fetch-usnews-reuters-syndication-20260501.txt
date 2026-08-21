@@ -1,0 +1,24 @@
+URL: https://www.usnews.com/news/world/articles/2024-09-30/israel-has-told-us-ground-operations-against-hezbollah-are-limited-state-dept-says
+Fetch method: OpenClaw web_fetch, 2026-05-01. Direct curl/raw body capture from this environment timed out or returned no body; this file preserves the extracted Reuters-syndicated text returned by web_fetch.
+
+Title: Israel Has Told US Ground Operations Against Hezbollah Are Limited, State Dept Says
+
+By Humeyra Pamuk
+WASHINGTON (Reuters) - Israel has told the United States it is conducting limited ground operations focused on Hezbollah infrastructure in Lebanon near the border with Israel, the State Department said on Monday.
+
+"This is what they have informed us that they are currently conducting, which are limited operations targeting Hezbollah infrastructure near the border," State Department spokesperson Matthew Miller told reporters.
+
+Asked to confirm they were limited ground operations, he said: "That is our understanding."
+
+Indications grew on Monday that Israel was on the verge of sending ground troops into Lebanon, two weeks into an assault on the Iranian-backed Hezbollah militia that culminated in the assassination of its leader, Sayyed Hassan Nasrallah.
+
+A U.S. official who spoke on condition of anonymity told Reuters the positioning of Israeli troops suggested a ground incursion could be imminent.
+
+After two weeks of intensive airstrikes and a string of assassinations of Hezbollah commanders, Israel has suggested ever more strongly that a land invasion is looming.
+
+The Israeli attacks on militant targets in Lebanon are part of a conflict stretching from the Palestinian territories of Gaza and the occupied West Bank to Iranian-backed groups in Yemen and Iraq. The escalation has raised fears that the United States and Iran will be sucked into the conflict.
+
+Miller said that the United States continues to support a ceasefire between Israel and Hezbollah but added that military pressure can at times enable diplomacy. He cautioned that military pressure can also lead to miscalculation and unintended consequences.
+
+(Reporting by Humeyra Pamuk, Simon Lewis and Daphne Psaledakis; Editing by Jonathan Oatis and Howard Goller)
+Copyright 2024 Thomson Reuters.

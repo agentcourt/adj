@@ -1,0 +1,87 @@
+# Polymarket market record
+
+Captured for case preparation on 2026-05-12.
+
+## Real market link
+
+Canonical event page:
+https://polymarket.com/event/epstein-suicide-note-released-by
+
+Polymarket Gamma API endpoints captured under `etc/source-captures/`:
+
+- `etc/source-captures/gamma-event-slug.json` — https://gamma-api.polymarket.com/events/slug/epstein-suicide-note-released-by
+- `etc/source-captures/gamma-events-query.json` — https://gamma-api.polymarket.com/events?slug=epstein-suicide-note-released-by
+- `etc/source-captures/gamma-market-may-8.json` — https://gamma-api.polymarket.com/markets?slug=epstein-suicide-note-released-by-may-8
+- `etc/source-captures/gamma-market-may-31.json` — https://gamma-api.polymarket.com/markets?slug=epstein-suicide-note-released-by-may-31
+- `etc/source-captures/polymarket-next-data-relevant.json` — sanitized relevant `__NEXT_DATA__` extract.
+- `etc/source-captures/polymarket-page-and-api-extract.txt` — page/API text extract.
+- `etc/source-captures/polymarket-page-and-api-extract.txt` — sanitized relevant HTML extract. Full page HTML was not retained because the page includes unnecessary discussion/profile data.
+
+## Event metadata from Polymarket Gamma API
+
+- Event id: `435920`
+- Ticker/slug: `epstein-suicide-note-released-by`
+- Title: `Epstein suicide note released by...?`
+- Start date: `2026-04-30T23:14:22.609296Z`
+- Creation date: `2026-04-30T23:14:22.60929Z`
+- Event end date: `2026-05-31T00:00:00Z`
+- Active: `true`
+- Closed: `false`
+- Archived: `false`
+- Restricted: `true`
+- Captured volume: about `13373621.098375008`
+- Captured open interest: about `8163953.4680470005`
+- Event metadata context captured by Polymarket on 2026-05-12 stated that a U.S. District Judge in New York unsealed a purported suicide note attributed to Jeffrey Epstein on May 7, 2026, but also described authenticity and intent doubts. This platform context is preserved as market metadata, not as independent proof of the proposition.
+
+## Exact official market rule text
+
+The Polymarket page and Gamma API expose this description:
+
+> This market will resolve to “Yes” if any message or note written by Jeffrey Epstein, intended as a suicide note, is made publicly available by the listed date, 11:59 PM ET. Otherwise, this market will resolve to “No”.
+>
+> A qualifying note must be credibly reported to have been written by Jeffrey Epstein and have been intended to be a suicide note, final message, or equivalent communication.
+>
+> A qualifying message or note may be made widely available to the public by any means, regardless of whether it is released officially, leaked, or otherwise disclosed.
+>
+> The resolution source will be a consensus of credible reporting.
+
+## Market at issue for this arbitration
+
+Primary disputed market:
+
+- Market id: `2128535`
+- Question: `Epstein suicide note released by May 8?`
+- Slug: `epstein-suicide-note-released-by-may-8`
+- Condition id: `0x5e5482b1e2afa7bed0b9a0c3c8ad33a83dd6cc6d649666cdf1977be64c42c82a`
+- Question id: `0x5ca4d636407564494e9149eb951896ff88923cef8d24c137707e4cff84b4d878`
+- Group item title: `May 8`
+- Outcomes: `["Yes", "No"]`
+- Captured outcome prices: `["0.0005", "0.9995"]`
+- Active: `true`
+- Closed: `false`
+- Accepting orders: `true`
+- UMA resolution status in API: `disputed`
+- UMA resolution-status history in API: `["proposed", "disputed", "proposed", "disputed", "proposed", "disputed"]`
+- Page-visible status captured from HTML/readable extraction: `Outcome proposed: Yes`; `Disputed`; `Outcome proposed: No`; `Disputed`; `Final review`.
+
+The API field `endDateIso` is `2026-05-31` because the event contains both May 8 and May 31 grouped markets. For the May 8 market, the listed date in the market question and group item is May 8. The arbitration proposition therefore uses May 8, 2026, 11:59 PM ET.
+
+## Other grouped market preserved for context
+
+Secondary grouped market, not the disputed condition tested here:
+
+- Market id: `2128536`
+- Question: `Epstein suicide note released by May 31?`
+- Slug: `epstein-suicide-note-released-by-may-31`
+- Condition id: `0x6bf3aa7d5186804e967e1e4737c896778f688e6dafdd0a1b659a4a07bf27d663`
+- Group item title: `May 31`
+- Outcomes: `["Yes", "No"]`
+- Captured outcome prices: `["0.145", "0.855"]`
+- Active: `true`
+- Closed: `false`
+- Accepting orders: `true`
+- UMA resolution-status history in API: `[]`
+
+## Arbitration framing
+
+The arbitration does not ask whether Polymarket, UMA, or any market participant was correct. It asks the factual condition directly: whether the qualifying note/message had been publicly available by the May 8 listed deadline under the rule words.

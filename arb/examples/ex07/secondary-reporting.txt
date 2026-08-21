@@ -1,0 +1,29 @@
+# Secondary reporting
+
+Updated: 2026-05-18T21:34:58Z
+
+This packet is still designed for open-record/search-enabled arbitration, but it now preserves excerpts from several credible reports and an ISW assessment.
+
+## Main affirmative leads
+
+- Reuters reported that Russia and Ukraine confirmed a U.S.-brokered three-day ceasefire running May 9-May 11, with a suspension of all kinetic activity and a 1,000-for-1,000 prisoner exchange.
+- Guardian reported that the ceasefire and prisoner swap were confirmed by both sides and quoted Zelenskyy as saying that a ceasefire regime must be established on May 9, 10, and 11.
+- NPR reported that Zelenskyy and Kremlin aide Yury Ushakov both confirmed Trump's requested three-day ceasefire and prisoner exchange.
+- CBC republished Reuters reporting that both sides confirmed the agreement.
+- ISW assessed that Ukraine and Russia agreed to a three-day ceasefire from May 9 to 11 for the May 9 Victory Day parade and a prisoner-of-war exchange.
+
+## Main defense leads
+
+- Several sources frame the arrangement as tied to Victory Day, Red Square/parade security, and prisoner exchange.
+- Reuters, NPR, CBC, and ISW report continued accusations of violations or ongoing retaliatory activity around the ceasefire period.
+- The Russian official source describes the initiative as "concerning a ceasefire between Russia and Ukraine for the purpose of conducting a prisoner exchange." This may support an argument that the arrangement is closer to a humanitarian pause than a general conflict pause.
+- The Ukrainian decree captured through Ukrinform is geographically narrow as to Red Square targeting during the parade, though other reporting states Zelenskyy confirmed the broader ceasefire arrangement.
+
+## Preserved reporting files
+
+- `source-captures/reuters-may8-trump-announces-three-day-ceasefire.md`
+- `source-captures/reuters-may8-confirm-agreed-ceasefire.md`
+- `source-captures/guardian-may8-confirm-three-day-ceasefire.md`
+- `source-captures/npr-may9-trump-says-agreed.md`
+- `source-captures/cbc-may8-russia-ukraine-agree-three-day-ceasefire.md`
+- `source-captures/isw-may8-campaign-assessment-ceasefire.md`

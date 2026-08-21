@@ -1,0 +1,11 @@
+# Primary evidence
+
+This open-record variant intentionally does not pre-build a merits evidence packet. The preserved primary material at run start consists of the Polymarket market rule/API/page captures in source-captures/.
+
+Attorneys should discover and submit public evidence before relying on it. Priority evidence categories:
+
+- official Iranian Civil Aviation Organization / Civil Aviation Authority announcements;
+- NOTAM or aviation authority notices, if publicly accessible and attributable;
+- airport-level arrivals/departures suspension records for IKA, THR, MHD, SYZ, or IFN;
+- credible reporting that distinguishes a broad commercial-airspace closure from airline-specific avoidance, foreign restrictions, warnings, weather, limited cancellations, or narrow regional/military-drill restrictions;
+- flight-tracking observations, only with clear explanation of what they prove and what they do not prove.

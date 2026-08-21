@@ -1,0 +1,4511 @@
+Source capture converted from HTML for publication. Original capture filename: polygonscan-pusd-token.txt.
+
+Polymarket: pUSD Token | Address: 0xC011a7E1...342E82DFB | PolygonScan 
+
+POL Price: $0.095234 (-2.20%) 
+
+Gas: 143.363 Gwei 
+
+/ 
+
+Light 
+
+Dim 
+
+Dark 
+
+Polygon Mainnet 
+
+Amoy Testnet 
+
+Sign In 
+
+Home 
+
+Blockchain 
+Transactions 
+
+Pending Transactions 
+
+Contract Internal Transactions 
+
+Plasma Deposit Transactions 
+
+AA Transactions Beta 
+
+EIP-7702 Authorizations Beta 
+
+View Blocks 
+
+Forked Blocks (Reorgs) 
+
+Top Accounts 
+
+Verified Contracts 
+
+Tokens 
+Top Tokens (ERC-20) 
+
+Token Transfers (ERC-20) 
+
+Token Flow Visualizer Beta 
+
+NFTs 
+Top NFTs 
+
+Top Mints 
+
+Latest Trades 
+
+Latest Transfers 
+
+Latest Mints 
+
+Resources 
+Charts & Stats 
+
+Top Statistics 
+
+Directory 
+
+Developers 
+API Plans 
+
+API Documentation 
+
+Code Reader Beta 
+
+Verify Contract 
+
+Similar Contract Search 
+
+Contract Diff Checker 
+
+Vyper Online Compiler 
+
+Bytecode to Opcode 
+
+Broadcast Transaction 
+
+More 
+
+Tools & Services 
+
+Discover more of PolygonScan's tools and services in one place. 
+
+Tools 
+
+Input Data Decoder Beta 
+
+Input Data Encoder Beta 
+
+Unit Converter 
+
+CSV Export 
+
+Account Balance Checker 
+
+Explore 
+
+Gas Tracker 
+
+Node Tracker 
+
+Label Cloud 
+
+Domain Name Lookup 
+
+Services 
+
+Token Approvals Beta 
+
+Verified Signature 
+
+Input Data Messages (IDM) 
+
+Advanced Filter Beta 
+
+Explorers 
+Polygon Mainnet 
+
+Amoy Testnet 
+
+Site Settings 
+
+Appearance 
+Light 
+
+Dim 
+
+Dark 
+
+| 
+
+Sign In 
+
+Contract 
+
+0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB 
+
+Gaming 
+
+Sponsored 
+
+Bc.Game 
+
+The Best Crypto Casino, 2000+ Slots, 200+ Token. Claim 1000,000 Matic 
+
+Daily free Spin 50000 Matic ,760% Deposit Bonus, 20%Rakeback, And Get 1000000 Matic free bonus on BC.Game 
+
+Сoins.game 
+
+Everyday giveaways up to 100 000 MATIC, Lucky Spins. Spin now! 
+
+Deposit BONUS 300% and Cashbacks. without verification! 
+
+Kings.Game 
+
+500% Bonus, 7000+ Slots&Live, VIP Club, Crypto Deposits, Fast Withdrawals! Play Now! 
+
+Welcome Bonus 500% + 500FS, VIP Club, Rakeback up to 30%, Daily Wheel 9.99 BTC. 
+
+Polymarket: pUSD Token 
+
+Polymarket 
+
+Token Contract 
+
+API 
+
+Token Approvals Beta 
+Check Previous Balance 
+
+Update Name Tag or Label 
+
+Remove Name Tag 
+
+Report/Flag Address 
+
+Overview 
+
+POL Balance 
+
+0 POL 
+
+POL Value 
+$0.00 
+
+Token Holdings 
+
+$1,033.32 (13 Tokens) 
+
+Could not find any matches! 
+
+ERC-20 Tokens (13) 
+
+Polymarket U... (pUSD) 
+
+1,171.449865 pUSD 
+
+$0.00 
+
+USD Coin (Po... (USDC.e) 
+
+850.974752 USDC.e 
+
+$850.86 
+
+@0.9999 
+
+USD Coin (USDC) 
+
+182.485209 USDC 
+
+$182.46 
+
+@0.9999 
+
+ERC-20: $chi... (CHIMPO) 
+
+25 CHIMPO 
+
+ERC-20: Fede... (FOFIN) 
+
+25 FOFIN 
+
+ERC-20: HoUr... (HDDII) 
+
+3 HDDII 
+
+ERC-20: Liie... ($LFI) 
+
+25 $LFI 
+
+ERC-20: Meta... (MEFIN) 
+
+25 MEFIN 
+
+ERC-20: poly... (PMAB) 
+
+1,000 PMAB 
+
+ERC-20: Stra... (SCR) 
+
+25 SCR 
+
+ERC-20: Terr... ( TERRAS... ) 
+
+25 TERRASTATIONS 
+
+ERC-20: Unis... (UNFIN) 
+
+25 UNFIN 
+
+View All Holdings 
+
+More Info 
+
+Private Name Tags 
+
+Add 
+
+Contract Creator 
+
+Polymarket: Deployer 1 | 33 days ago 
+
+Token Tracker 
+
+Polymarket USD (pUSD) 
+
+Multichain Info 
+
+$1,033.32 (Multichain Portfolio) 
+
+No addresses found 
+
+Ad 
+
+Transactions 
+
+Internal Transactions 
+
+Token Transfers (ERC-20) 
+
+Other Transactions 
+
+Contract 
+
+Events 
+
+Analytics 
+
+Assets 
+
+Cards New 
+
+Info 
+
+Advanced Filter Toggle Dropdown 
+Filter by Tx Type: 
+
+Tx 
+
+Internal Tx 
+
+ERC-20 
+
+Latest 25 from a total of 325,413 transactions (+ 4 Pending ) 
+
+Download Page Data 
+
+View Completed Txns 
+
+View Pending Txns 
+
+View Failed Txns 
+
+View Outgoing Txns 
+
+View Incoming Txns 
+
+View Contract Creation 
+
+Transaction Hash 
+
+Method 
+
+Block 
+
+From 
+
+To 
+
+0xc93dc777a7bad45aa85b7df21bb119b858c9469ef3eff9e3968517582cf8c633 
+- 
+- 
+(pending) 
+2026-05-03 23:31:27 
+3 secs ago 
+1777851087 
+
+0xba259789...4dB9aA80f 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+(Pending) 
+(Pending) 
+
+0xb0505c2a68b2ccd9c3c21f918c047d0dc999f68600cd7615754083cd51a0c74b 
+- 
+- 
+(pending) 
+2026-05-03 23:31:27 
+3 secs ago 
+1777851087 
+
+0xba259789...4dB9aA80f 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+(Pending) 
+(Pending) 
+
+0x475f9a088d4d4cc262dac6cefd2a4c98e3761928df2a6852fc565591c59bca56 
+- 
+- 
+(pending) 
+2026-05-03 23:31:27 
+3 secs ago 
+1777851087 
+
+0xba259789...4dB9aA80f 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+(Pending) 
+(Pending) 
+
+0xf67353d7f02bffdb8e80ea9ccd5cc6fdddf99eb16516d4dd6b85d11e93f1a0d3 
+- 
+- 
+(pending) 
+2026-05-03 23:31:27 
+3 secs ago 
+1777851087 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+(Pending) 
+(Pending) 
+
+0x6af5abf83ed8db796ea5734fa97751e321255c7cafc042b6ef5ed511f61a51ba 
+
+Transfer 
+Transfer 
+86365517 
+2026-05-03 23:31:18 
+12 secs ago 
+1777851078 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00935702 
+323 . 49273563 
+
+0xb3689e91318e90fc9021dbea66cead79829fefa578e7c87e0bf0e6c07e232639 
+
+Transfer 
+Transfer 
+86365517 
+2026-05-03 23:31:18 
+12 secs ago 
+1777851078 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 0097337 
+336 . 51535151 
+
+0x3e738a61064a2817e5f58d3dea902d0aaf2c543cec675ff9e39ad09419de33c6 
+
+Transfer 
+Transfer 
+86365516 
+2026-05-03 23:31:16 
+14 secs ago 
+1777851076 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00695264 
+240 . 36810822 
+
+0x10cc7c2f06dbbe66e20a0757f2a8c8302380cbaebd631965b8efd3f9327bb07f 
+
+Transfer 
+Transfer 
+86365515 
+2026-05-03 23:31:14 
+16 secs ago 
+1777851074 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00496617 
+171 . 69150587 
+
+0x740535aef3f8f9d10d2503bcaeca1a3d085b7a4f43eb840a4bde0786ab3eaeec 
+
+Transfer 
+Transfer 
+86365501 
+2026-05-03 23:30:46 
+44 secs ago 
+1777851046 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 01234204 
+426 . 69131034 
+
+0x2d8b5422b5bc505e4d01df79fc98ff94f6e9ae4d816d31efdfea19299476ebc5 
+
+Transfer 
+Transfer 
+86365500 
+2026-05-03 23:30:44 
+46 secs ago 
+1777851044 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 01234204 
+426 . 69131034 
+
+0xa2f70b65ac5c062b6c1a5a661fe095690872225a85aebf4b2dff339b21e62b9c 
+
+Approve 
+Approve 
+86365499 
+2026-05-03 23:30:42 
+48 secs ago 
+1777851042 
+
+0x3D6c96d1...f60820F33 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00769706 
+150 . 66286218 
+
+0x59987dd7db1d5615d44d344d96769776718d7e1bb553d7b77ab90f21be8b7b85 
+
+Transfer 
+Transfer 
+86365499 
+2026-05-03 23:30:42 
+48 secs ago 
+1777851042 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 01161139 
+401 . 43118477 
+
+0x367244272a2ea56fc5f9fa4c3ac728663f46862c5d8aea49064ecd96516f6fe3 
+
+Transfer 
+Transfer 
+86365498 
+2026-05-03 23:30:40 
+50 secs ago 
+1777851040 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00829385 
+286 . 73656055 
+
+0x4aa1bc8ecd367d45752d0aebda3cd01c1bed50f1facaa28177d5bd144c49b8e4 
+
+Transfer 
+Transfer 
+86365497 
+2026-05-03 23:30:38 
+52 secs ago 
+1777851038 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00592418 
+204 . 81182896 
+
+0x78acd22a087e5edae7998fe83f9cf41c44f3d27470ab50acd878564278531fc4 
+
+Approve 
+Approve 
+86365495 
+2026-05-03 23:30:34 
+56 secs ago 
+1777851034 
+
+0x3D6c96d1...f60820F33 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00819947 
+160 . 34647196 
+
+0xd535f39926ea50b345ceea79a64a89098a35534bac551138e657edd3fd31421e 
+
+Approve 
+Approve 
+86365490 
+2026-05-03 23:30:24 
+1 min ago 
+1777851024 
+
+0xc0ce486D...a088B202d 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00659597 
+128 . 98878242 
+
+0x98c35e350acf7950fc076e9db8ff8d81463870cfb7d67beeb9971b09576add3c 
+
+Approve 
+Approve 
+86365490 
+2026-05-03 23:30:24 
+1 min ago 
+1777851024 
+
+0x3D6c96d1...f60820F33 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00874178 
+171 . 1123462 
+
+0xdfa6f7d861d30acf9bb71da9fae9bc439cf5bdaf842f83cd4e6f2c4c78fca500 
+
+Transfer 
+Transfer 
+86365490 
+2026-05-03 23:30:24 
+1 min ago 
+1777851024 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00916666 
+316 . 91145418 
+
+0x84e13bcbd4ada7a61a3a446ba8d3fae01a0cd36fb1b4187d051a52b378225420 
+
+Approve 
+Approve 
+86365489 
+2026-05-03 23:30:22 
+1 min ago 
+1777851022 
+
+0x585fb6c1...975f47E92 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00454727 
+135 . 17469571 
+
+0x0760d6c3e21a9c1f3bb0b7cde5b9621d9ebde3e9dbca7748812744abcbf1555e 
+
+Transfer 
+Transfer 
+86365489 
+2026-05-03 23:30:22 
+1 min ago 
+1777851022 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00916666 
+316 . 91145418 
+
+0x74f8eca0e084e972cb838470077146466f9c71ecdf1f02009222e459024da92d 
+
+Transfer From 
+Transfer From 
+86365488 
+2026-05-03 23:30:20 
+1 min ago 
+1777851020 
+
+0xc1dE1386...5b5063520 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00622751 
+150 . 14747775 
+
+0xc25708d5f20cf6f87b5675772d073ce54942fc49e0c13168805d8e7a3a7be118 
+
+Transfer 
+Transfer 
+86365488 
+2026-05-03 23:30:20 
+1 min ago 
+1777851020 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00862399 
+298 . 15029609 
+
+0x7fd7dabd7637dafc54a00283ef64d62da09246dd1ae565751f7c6bd1ca200974 
+
+Transfer 
+Transfer 
+86365487 
+2026-05-03 23:30:18 
+1 min ago 
+1777851018 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00615999 
+212 . 96449721 
+
+0x04c105f0642029db940ad8c351bdb0528a097da22c46eca22339c13af2ef9d51 
+
+Transfer 
+Transfer 
+86365486 
+2026-05-03 23:30:16 
+1 min ago 
+1777851016 
+
+0x42B727E4...803192A32 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00439999 
+152 . 11749801 
+
+0x7a267bdd09855dd86b109d468d8be12fdb98b65793096777c944839879791516 
+
+Approve 
+Approve 
+86365484 
+2026-05-03 23:30:12 
+1 min ago 
+1777851012 
+
+0x8225328d...CA7436CEc 
+
+IN 
+
+Polymarket: pUSD Token 
+
+$0.00 0 POL 
+0 . 00467486 
+137 . 35057104 
+
+View all transactions 
+
+Latest 3 internal transactions 
+
+Download Page Data 
+
+Parent Transaction Hash 
+Block 
+
+From 
+
+To 
+
+0xd2dcddcdaaea46ce218ae7980876211de96d24e7ce828cc8609ab05b63825700 
+
+86334560 
+2026-05-03 6:19:24 
+17 hrs ago 
+1777789164 
+
+0xd3a5bD2B...FE271fB72 
+
+Polymarket: pUSD Token 
+
+0 POL $0.00 
+
+0x0173d4d5438ed9f3a82eb359e25f12153f2f6a4f6532dbbb43da71787b23cb46 
+
+86333925 
+2026-05-03 5:58:14 
+17 hrs ago 
+1777787894 
+
+0xd3a5bD2B...FE271fB72 
+
+Polymarket: pUSD Token 
+
+0 POL $0.00 
+
+0xb182b902a72189a6b11d24b0f313439f899d2ef81a166489124c140eabb64841 
+
+84902320 
+2026-03-31 2:37:57 
+33 days ago 
+1774924677 
+
+0x071d26cf...CB2EA0021 
+
+Contract Creation 
+0 POL $0.00 
+
+Cross Chain Transactions 
+
+Cross-Chain Transactions 
+
+Loading... 
+
+Loading 
+
+Code 
+
+Read Contract as Proxy 
+
+Write Contract as Proxy 
+
+Minimal Proxy Contract for 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f 
+
+Contract Name: 
+
+CollateralToken 
+
+Compiler Version 
+
+v0.8.34+commit.80d5c536 
+
+Optimization Enabled: 
+
+Yes with 1000000 runs 
+
+Other Settings: 
+
+prague EvmVersion 
+
+Contract Source Code (Solidity Standard Json-Input format) 
+
+Decompile Bytecode Similar Contracts 
+
+File 1 of 11 : CollateralToken.sol 
+Outline 
+contract CollateralToken is 
+
+- function initialize(address _owner) 
+
+- function name() 
+
+- function symbol() 
+
+- function decimals() 
+
+- function mint(address _to, uint256 _a ... 
+
+- function burn(uint256 _amount) 
+
+- function wrap(address _asset, address ... 
+
+- function unwrap(address _asset, addre ... 
+
+- function addMinter(address _minter) 
+
+- function removeMinter(address _minter ... 
+
+- function addWrapper(address _wrapper) 
+
+- function removeWrapper(address _wrapp ... 
+
+- function _givePermit2InfiniteAllowanc ... 
+
+- function _authorizeUpgrade(address ne ... 
+
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
+
+import { OwnableRoles } from "@solady/src/auth/OwnableRoles.sol";
+import { ERC20 } from "@solady/src/tokens/ERC20.sol";
+import { Initializable } from "@solady/src/utils/Initializable.sol";
+import { SafeTransferLib } from "@solady/src/utils/SafeTransferLib.sol";
+import { UUPSUpgradeable } from "@solady/src/utils/UUPSUpgradeable.sol";
+
+import { CollateralErrors } from "./abstract/CollateralErrors.sol";
+import { ICollateralToken } from "./interfaces/ICollateralToken.sol";
+import { ICollateralTokenCallbacks } from "./interfaces/ICollateralTokenCallbacks.sol";
+
+abstract contract CollateralTokenEvents {
+ /// @notice Emitted when an asset is wrapped into collateral
+ /// @param caller Address that initiated the wrap
+ /// @param asset The underlying asset address
+ /// @param to Recipient of the minted collateral
+ /// @param amount Amount of collateral minted
+ event Wrapped(address indexed caller, address indexed asset, address indexed to, uint256 amount);
+
+ /// @notice Emitted when collateral is unwrapped to an asset
+ /// @param caller Address that initiated the unwrap
+ /// @param asset The underlying asset address
+ /// @param to Recipient of the unwrapped asset
+ /// @param amount Amount of collateral burned
+ event Unwrapped(address indexed caller, address indexed asset, address indexed to, uint256 amount);
+}
+
+/// @title CollateralToken
+/// @author Polymarket
+/// @notice ROLE_0: Minter/Burner
+/// @notice ROLE_1: Wrapper/Unwrapper
+contract CollateralToken is
+ UUPSUpgradeable,
+ Initializable,
+ ERC20,
+ OwnableRoles,
+ CollateralErrors,
+ CollateralTokenEvents,
+ ICollateralToken
+{
+ using SafeTransferLib for address;
+
+ /*--------------------------------------------------------------
+ STATE
+ --------------------------------------------------------------*/
+
+ /// @notice Address of the native USDC token
+ address public immutable USDC;
+
+ /// @notice Address of the bridged USDC.e token
+ address public immutable USDCE;
+
+ /// @notice Address of the vault holding underlying assets
+ address public immutable VAULT;
+
+ /*--------------------------------------------------------------
+ CONSTANTS
+ --------------------------------------------------------------*/
+
+ /// @dev Role flag for mint/burn privileges
+ uint256 internal constant MINTER_ROLE = _ROLE_0;
+
+ /// @dev Role flag for wrap/unwrap privileges
+ uint256 internal constant WRAPPER_ROLE = _ROLE_1;
+
+ /*--------------------------------------------------------------
+ MODIFIERS
+ --------------------------------------------------------------*/
+
+ /// @dev Reverts if the asset is not USDC or USDC.e
+ modifier onlyValidAsset(address _asset) {
+ require(_asset == USDC || _asset == USDCE, InvalidAsset());
+ _;
+ }
+
+ /*--------------------------------------------------------------
+ CONSTRUCTOR
+ --------------------------------------------------------------*/
+
+ /// @notice Deploys the CollateralToken implementation
+ /// @param _usdc Address of the native USDC token
+ /// @param _usdce Address of the bridged USDC.e token
+ /// @param _vault Address of the vault for underlying assets
+ constructor(address _usdc, address _usdce, address _vault) {
+ USDC = _usdc;
+ USDCE = _usdce;
+ VAULT = _vault;
+
+ _disableInitializers();
+ }
+
+ /*--------------------------------------------------------------
+ INITIALIZE
+ --------------------------------------------------------------*/
+
+ /// @notice Initializes the contract with the given owner.
+ /// @dev This replaces the constructor for upgradeable contracts.
+ /// @param _owner The address to set as the owner of the contract.
+ function initialize(address _owner) external initializer {
+ _initializeOwner(_owner);
+ }
+
+ /*--------------------------------------------------------------
+ VIEW
+ --------------------------------------------------------------*/
+
+ /// @notice Returns the token name
+ /// @return The token name string
+ function name() public pure override returns (string memory) {
+ return "Polymarket USD";
+ }
+
+ /// @notice Returns the token symbol
+ /// @return The token symbol string
+ function symbol() public pure override returns (string memory) {
+ return "pUSD";
+ }
+
+ /// @notice Returns the token decimal precision
+ /// @return The number of decimals (6)
+ function decimals() public pure override returns (uint8) {
+ return 6;
+ }
+
+ /*--------------------------------------------------------------
+ EXTERNAL
+ --------------------------------------------------------------*/
+
+ /// @notice Mints a new collateral token
+ /// @param _to The address to mint the collateral token to
+ /// @param _amount The amount of collateral token to mint
+ /// @dev The caller must have the MINTER_ROLE
+ function mint(address _to, uint256 _amount) external onlyRoles(MINTER_ROLE) {
+ _mint(_to, _amount);
+ }
+
+ /// @notice Burns a collateral token
+ /// @param _amount The amount of collateral token to burn
+ /// @dev The caller must have the MINTER_ROLE
+ function burn(uint256 _amount) external onlyRoles(MINTER_ROLE) {
+ _burn(msg.sender, _amount);
+ }
+
+ /// @notice Wraps a supported asset into the collateral token
+ /// @param _asset The asset to wrap
+ /// @param _to The address to wrap the asset to
+ /// @param _amount The amount of asset to wrap
+ /// @param _callbackReceiver Address to receive the callback, or address(0) to skip callback
+ /// @param _data Callback data
+ /// @notice The asset must be a supported asset
+ /// @dev The caller must have the WRAPPER_ROLE
+ /// @dev The asset must be transferred into this contract either before calling this function or
+ /// in the callback
+ function wrap(address _asset, address _to, uint256 _amount, address _callbackReceiver, bytes calldata _data)
+ external
+ onlyRoles(WRAPPER_ROLE)
+ onlyValidAsset(_asset)
+ {
+ // mint
+ _mint(_to, _amount);
+
+ // callback (skip if address(0))
+ if (_callbackReceiver != address(0)) {
+ ICollateralTokenCallbacks(_callbackReceiver).wrapCallback(_asset, _to, _amount, _data);
+ }
+
+ // transfer asset to the vault
+ _asset.safeTransfer(VAULT, _amount);
+
+ emit Wrapped(msg.sender, _asset, _to, _amount);
+ }
+
+ /// @notice Unwraps a supported asset from the collateral token
+ /// @param _asset The asset to unwrap
+ /// @param _to The address to unwrap the asset to
+ /// @param _amount The amount of asset to unwrap
+ /// @param _callbackReceiver Address to receive the callback, or address(0) to skip callback
+ /// @param _data Callback data
+ /// @notice The asset must be a supported asset
+ /// @dev The caller must have the WRAPPER_ROLE
+ /// @dev The asset must be transferred into this contract either before calling this function or
+ /// in the callback
+ function unwrap(address _asset, address _to, uint256 _amount, address _callbackReceiver, bytes calldata _data)
+ external
+ onlyRoles(WRAPPER_ROLE)
+ onlyValidAsset(_asset)
+ {
+ // transfer asset from the vault
+ _asset.safeTransferFrom(VAULT, _to, _amount);
+
+ // callback (skip if address(0))
+ if (_callbackReceiver != address(0)) {
+ ICollateralTokenCallbacks(_callbackReceiver).unwrapCallback(_asset, _to, _amount, _data);
+ }
+
+ // burn
+ _burn(address(this), _amount);
+
+ emit Unwrapped(msg.sender, _asset, _to, _amount);
+ }
+
+ /*--------------------------------------------------------------
+ ROLE MANAGEMENT
+ --------------------------------------------------------------*/
+
+ /// @notice Grants minter role to an address
+ /// @param _minter Address to grant minter role
+ function addMinter(address _minter) external onlyOwner {
+ _grantRoles(_minter, MINTER_ROLE);
+ }
+
+ /// @notice Revokes minter role from an address
+ /// @param _minter Address to revoke minter role from
+ function removeMinter(address _minter) external onlyOwner {
+ _removeRoles(_minter, MINTER_ROLE);
+ }
+
+ /// @notice Grants wrapper role to an address
+ /// @param _wrapper Address to grant wrapper role
+ function addWrapper(address _wrapper) external onlyOwner {
+ _grantRoles(_wrapper, WRAPPER_ROLE);
+ }
+
+ /// @notice Revokes wrapper role from an address
+ /// @param _wrapper Address to revoke wrapper role from
+ function removeWrapper(address _wrapper) external onlyOwner {
+ _removeRoles(_wrapper, WRAPPER_ROLE);
+ }
+
+ /*--------------------------------------------------------------
+ SOLADY OVERRIDES
+ --------------------------------------------------------------*/
+
+ /// @dev Disables Permit2 infinite allowance
+ /// @return Always returns false
+ function _givePermit2InfiniteAllowance() internal pure override returns (bool) {
+ return false;
+ }
+
+ /*--------------------------------------------------------------
+ UUPS UPGRADE AUTHORIZATION
+ --------------------------------------------------------------*/
+
+ /// @dev Authorizes an upgrade to a new implementation.
+ /// @dev Only the owner can authorize upgrades.
+ /// @param newImplementation The address of the new implementation contract.
+ function _authorizeUpgrade(address newImplementation) internal override onlyOwner { }
+} 
+
+File 2 of 11 : OwnableRoles.sol 
+Outline 
+- function _setRoles(address user, uint ... 
+
+- function _updateRoles(address user, u ... 
+
+- function _grantRoles(address user, ui ... 
+
+- function _removeRoles(address user, u ... 
+
+- function _checkRoles(uint256 roles) 
+
+- function _checkOwnerOrRoles(uint256 r ... 
+
+- function _checkRolesOrOwner(uint256 r ... 
+
+- function _rolesFromOrdinals(uint8[] m ... 
+
+- function _ordinalsFromRoles(uint256 r ... 
+
+- function grantRoles(address user, uin ... 
+
+- function revokeRoles(address user, ui ... 
+
+- function renounceRoles(uint256 roles) 
+
+- function rolesOf(address user) 
+
+- function hasAnyRole(address user, uin ... 
+
+- function hasAllRoles(address user, ui ... 
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+import {Ownable} from "./Ownable.sol";
+
+/// @notice Simple single owner and multiroles authorization mixin.
+/// @author Solady (https://github.com/vectorized/solady/blob/main/src/auth/OwnableRoles.sol)
+///
+/// @dev Note:
+/// This implementation does NOT auto-initialize the owner to `msg.sender`.
+/// You MUST call the `_initializeOwner` in the constructor / initializer.
+///
+/// While the ownable portion follows
+/// [EIP-173](https://eips.ethereum.org/EIPS/eip-173) for compatibility,
+/// the nomenclature for the 2-step ownership handover may be unique to this codebase.
+abstract contract OwnableRoles is Ownable {
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* EVENTS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The `user`'s roles is updated to `roles`.
+ /// Each bit of `roles` represents whether the role is set.
+ event RolesUpdated(address indexed user, uint256 indexed roles);
+
+ /// @dev `keccak256(bytes("RolesUpdated(address,uint256)"))`.
+ uint256 private constant _ROLES_UPDATED_EVENT_SIGNATURE =
+ 0x715ad5ce61fc9595c7b415289d59cf203f23a94fa06f04af7e489a0a76e1fe26;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* STORAGE */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The role slot of `user` is given by:
+ /// ```
+ /// mstore(0x00, or(shl(96, user), _ROLE_SLOT_SEED))
+ /// let roleSlot := keccak256(0x00, 0x20)
+ /// ```
+ /// This automatically ignores the upper bits of the `user` in case
+ /// they are not clean, as well as keep the `keccak256` under 32-bytes.
+ ///
+ /// Note: This is equivalent to `uint32(bytes4(keccak256("_OWNER_SLOT_NOT")))`.
+ uint256 private constant _ROLE_SLOT_SEED = 0x8b78c6d8;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* INTERNAL FUNCTIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Overwrite the roles directly without authorization guard.
+ function _setRoles(address user, uint256 roles) internal virtual {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x0c, _ROLE_SLOT_SEED)
+ mstore(0x00, user)
+ // Store the new value.
+ sstore(keccak256(0x0c, 0x20), roles)
+ // Emit the {RolesUpdated} event.
+ log3(0, 0, _ROLES_UPDATED_EVENT_SIGNATURE, shr(96, mload(0x0c)), roles)
+ }
+ }
+
+ /// @dev Updates the roles directly without authorization guard.
+ /// If `on` is true, each set bit of `roles` will be turned on,
+ /// otherwise, each set bit of `roles` will be turned off.
+ function _updateRoles(address user, uint256 roles, bool on) internal virtual {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x0c, _ROLE_SLOT_SEED)
+ mstore(0x00, user)
+ let roleSlot := keccak256(0x0c, 0x20)
+ // Load the current value.
+ let current := sload(roleSlot)
+ // Compute the updated roles if `on` is true.
+ let updated := or(current, roles)
+ // Compute the updated roles if `on` is false.
+ // Use `and` to compute the intersection of `current` and `roles`,
+ // `xor` it with `current` to flip the bits in the intersection.
+ if iszero(on) { updated := xor(current, and(current, roles)) }
+ // Then, store the new value.
+ sstore(roleSlot, updated)
+ // Emit the {RolesUpdated} event.
+ log3(0, 0, _ROLES_UPDATED_EVENT_SIGNATURE, shr(96, mload(0x0c)), updated)
+ }
+ }
+
+ /// @dev Grants the roles directly without authorization guard.
+ /// Each bit of `roles` represents the role to turn on.
+ function _grantRoles(address user, uint256 roles) internal virtual {
+ _updateRoles(user, roles, true);
+ }
+
+ /// @dev Removes the roles directly without authorization guard.
+ /// Each bit of `roles` represents the role to turn off.
+ function _removeRoles(address user, uint256 roles) internal virtual {
+ _updateRoles(user, roles, false);
+ }
+
+ /// @dev Throws if the sender does not have any of the `roles`.
+ function _checkRoles(uint256 roles) internal view virtual {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute the role slot.
+ mstore(0x0c, _ROLE_SLOT_SEED)
+ mstore(0x00, caller())
+ // Load the stored value, and if the `and` intersection
+ // of the value and `roles` is zero, revert.
+ if iszero(and(sload(keccak256(0x0c, 0x20)), roles)) {
+ mstore(0x00, 0x82b42900) // `Unauthorized()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+
+ /// @dev Throws if the sender is not the owner,
+ /// and does not have any of the `roles`.
+ /// Checks for ownership first, then lazily checks for roles.
+ function _checkOwnerOrRoles(uint256 roles) internal view virtual {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // If the caller is not the stored owner.
+ // Note: `_ROLE_SLOT_SEED` is equal to `_OWNER_SLOT_NOT`.
+ if iszero(eq(caller(), sload(not(_ROLE_SLOT_SEED)))) {
+ // Compute the role slot.
+ mstore(0x0c, _ROLE_SLOT_SEED)
+ mstore(0x00, caller())
+ // Load the stored value, and if the `and` intersection
+ // of the value and `roles` is zero, revert.
+ if iszero(and(sload(keccak256(0x0c, 0x20)), roles)) {
+ mstore(0x00, 0x82b42900) // `Unauthorized()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+ }
+
+ /// @dev Throws if the sender does not have any of the `roles`,
+ /// and is not the owner.
+ /// Checks for roles first, then lazily checks for ownership.
+ function _checkRolesOrOwner(uint256 roles) internal view virtual {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute the role slot.
+ mstore(0x0c, _ROLE_SLOT_SEED)
+ mstore(0x00, caller())
+ // Load the stored value, and if the `and` intersection
+ // of the value and `roles` is zero, revert.
+ if iszero(and(sload(keccak256(0x0c, 0x20)), roles)) {
+ // If the caller is not the stored owner.
+ // Note: `_ROLE_SLOT_SEED` is equal to `_OWNER_SLOT_NOT`.
+ if iszero(eq(caller(), sload(not(_ROLE_SLOT_SEED)))) {
+ mstore(0x00, 0x82b42900) // `Unauthorized()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+ }
+
+ /// @dev Convenience function to return a `roles` bitmap from an array of `ordinals`.
+ /// This is meant for frontends like Etherscan, and is therefore not fully optimized.
+ /// Not recommended to be called on-chain.
+ /// Made internal to conserve bytecode. Wrap it in a public function if needed.
+ function _rolesFromOrdinals(uint8[] memory ordinals) internal pure returns (uint256 roles) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ for { let i := shl(5, mload(ordinals)) } i { i := sub(i, 0x20) } {
+ // We don't need to mask the values of `ordinals`, as Solidity
+ // cleans dirty upper bits when storing variables into memory.
+ roles := or(shl(mload(add(ordinals, i)), 1), roles)
+ }
+ }
+ }
+
+ /// @dev Convenience function to return an array of `ordinals` from the `roles` bitmap.
+ /// This is meant for frontends like Etherscan, and is therefore not fully optimized.
+ /// Not recommended to be called on-chain.
+ /// Made internal to conserve bytecode. Wrap it in a public function if needed.
+ function _ordinalsFromRoles(uint256 roles) internal pure returns (uint8[] memory ordinals) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Grab the pointer to the free memory.
+ ordinals := mload(0x40)
+ let ptr := add(ordinals, 0x20)
+ let o := 0
+ // The absence of lookup tables, De Bruijn, etc., here is intentional for
+ // smaller bytecode, as this function is not meant to be called on-chain.
+ for { let t := roles } 1 {} {
+ mstore(ptr, o)
+ // `shr` 5 is equivalent to multiplying by 0x20.
+ // Push back into the ordinals array if the bit is set.
+ ptr := add(ptr, shl(5, and(t, 1)))
+ o := add(o, 1)
+ t := shr(o, roles)
+ if iszero(t) { break }
+ }
+ // Store the length of `ordinals`.
+ mstore(ordinals, shr(5, sub(ptr, add(ordinals, 0x20))))
+ // Allocate the memory.
+ mstore(0x40, ptr)
+ }
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* PUBLIC UPDATE FUNCTIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Allows the owner to grant `user` `roles`.
+ /// If the `user` already has a role, then it will be an no-op for the role.
+ function grantRoles(address user, uint256 roles) public payable virtual onlyOwner {
+ _grantRoles(user, roles);
+ }
+
+ /// @dev Allows the owner to remove `user` `roles`.
+ /// If the `user` does not have a role, then it will be an no-op for the role.
+ function revokeRoles(address user, uint256 roles) public payable virtual onlyOwner {
+ _removeRoles(user, roles);
+ }
+
+ /// @dev Allow the caller to remove their own roles.
+ /// If the caller does not have a role, then it will be an no-op for the role.
+ function renounceRoles(uint256 roles) public payable virtual {
+ _removeRoles(msg.sender, roles);
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* PUBLIC READ FUNCTIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Returns the roles of `user`.
+ function rolesOf(address user) public view virtual returns (uint256 roles) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute the role slot.
+ mstore(0x0c, _ROLE_SLOT_SEED)
+ mstore(0x00, user)
+ // Load the stored value.
+ roles := sload(keccak256(0x0c, 0x20))
+ }
+ }
+
+ /// @dev Returns whether `user` has any of `roles`.
+ function hasAnyRole(address user, uint256 roles) public view virtual returns (bool) {
+ return rolesOf(user) & roles != 0;
+ }
+
+ /// @dev Returns whether `user` has all of `roles`.
+ function hasAllRoles(address user, uint256 roles) public view virtual returns (bool) {
+ return rolesOf(user) & roles == roles;
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* MODIFIERS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Marks a function as only callable by an account with `roles`.
+ modifier onlyRoles(uint256 roles) virtual {
+ _checkRoles(roles);
+ _;
+ }
+
+ /// @dev Marks a function as only callable by the owner or by an account
+ /// with `roles`. Checks for ownership first, then lazily checks for roles.
+ modifier onlyOwnerOrRoles(uint256 roles) virtual {
+ _checkOwnerOrRoles(roles);
+ _;
+ }
+
+ /// @dev Marks a function as only callable by an account with `roles`
+ /// or the owner. Checks for roles first, then lazily checks for ownership.
+ modifier onlyRolesOrOwner(uint256 roles) virtual {
+ _checkRolesOrOwner(roles);
+ _;
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* ROLE CONSTANTS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ // IYKYK
+
+ uint256 internal constant _ROLE_0 = 1 << 0;
+ uint256 internal constant _ROLE_1 = 1 << 1;
+ uint256 internal constant _ROLE_2 = 1 << 2;
+ uint256 internal constant _ROLE_3 = 1 << 3;
+ uint256 internal constant _ROLE_4 = 1 << 4;
+ uint256 internal constant _ROLE_5 = 1 << 5;
+ uint256 internal constant _ROLE_6 = 1 << 6;
+ uint256 internal constant _ROLE_7 = 1 << 7;
+ uint256 internal constant _ROLE_8 = 1 << 8;
+ uint256 internal constant _ROLE_9 = 1 << 9;
+ uint256 internal constant _ROLE_10 = 1 << 10;
+ uint256 internal constant _ROLE_11 = 1 << 11;
+ uint256 internal constant _ROLE_12 = 1 << 12;
+ uint256 internal constant _ROLE_13 = 1 << 13;
+ uint256 internal constant _ROLE_14 = 1 << 14;
+ uint256 internal constant _ROLE_15 = 1 << 15;
+ uint256 internal constant _ROLE_16 = 1 << 16;
+ uint256 internal constant _ROLE_17 = 1 << 17;
+ uint256 internal constant _ROLE_18 = 1 << 18;
+ uint256 internal constant _ROLE_19 = 1 << 19;
+ uint256 internal constant _ROLE_20 = 1 << 20;
+ uint256 internal constant _ROLE_21 = 1 << 21;
+ uint256 internal constant _ROLE_22 = 1 << 22;
+ uint256 internal constant _ROLE_23 = 1 << 23;
+ uint256 internal constant _ROLE_24 = 1 << 24;
+ uint256 internal constant _ROLE_25 = 1 << 25;
+ uint256 internal constant _ROLE_26 = 1 << 26;
+ uint256 internal constant _ROLE_27 = 1 << 27;
+ uint256 internal constant _ROLE_28 = 1 << 28;
+ uint256 internal constant _ROLE_29 = 1 << 29;
+ uint256 internal constant _ROLE_30 = 1 << 30;
+ uint256 internal constant _ROLE_31 = 1 << 31;
+ uint256 internal constant _ROLE_32 = 1 << 32;
+ uint256 internal constant _ROLE_33 = 1 << 33;
+ uint256 internal constant _ROLE_34 = 1 << 34;
+ uint256 internal constant _ROLE_35 = 1 << 35;
+ uint256 internal constant _ROLE_36 = 1 << 36;
+ uint256 internal constant _ROLE_37 = 1 << 37;
+ uint256 internal constant _ROLE_38 = 1 << 38;
+ uint256 internal constant _ROLE_39 = 1 << 39;
+ uint256 internal constant _ROLE_40 = 1 << 40;
+ uint256 internal constant _ROLE_41 = 1 << 41;
+ uint256 internal constant _ROLE_42 = 1 << 42;
+ uint256 internal constant _ROLE_43 = 1 << 43;
+ uint256 internal constant _ROLE_44 = 1 << 44;
+ uint256 internal constant _ROLE_45 = 1 << 45;
+ uint256 internal constant _ROLE_46 = 1 << 46;
+ uint256 internal constant _ROLE_47 = 1 << 47;
+ uint256 internal constant _ROLE_48 = 1 << 48;
+ uint256 internal constant _ROLE_49 = 1 << 49;
+ uint256 internal constant _ROLE_50 = 1 << 50;
+ uint256 internal constant _ROLE_51 = 1 << 51;
+ uint256 internal constant _ROLE_52 = 1 << 52;
+ uint256 internal constant _ROLE_53 = 1 << 53;
+ uint256 internal constant _ROLE_54 = 1 << 54;
+ uint256 internal constant _ROLE_55 = 1 << 55;
+ uint256 internal constant _ROLE_56 = 1 << 56;
+ uint256 internal constant _ROLE_57 = 1 << 57;
+ uint256 internal constant _ROLE_58 = 1 << 58;
+ uint256 internal constant _ROLE_59 = 1 << 59;
+ uint256 internal constant _ROLE_60 = 1 << 60;
+ uint256 internal constant _ROLE_61 = 1 << 61;
+ uint256 internal constant _ROLE_62 = 1 << 62;
+ uint256 internal constant _ROLE_63 = 1 << 63;
+ uint256 internal constant _ROLE_64 = 1 << 64;
+ uint256 internal constant _ROLE_65 = 1 << 65;
+ uint256 internal constant _ROLE_66 = 1 << 66;
+ uint256 internal constant _ROLE_67 = 1 << 67;
+ uint256 internal constant _ROLE_68 = 1 << 68;
+ uint256 internal constant _ROLE_69 = 1 << 69;
+ uint256 internal constant _ROLE_70 = 1 << 70;
+ uint256 internal constant _ROLE_71 = 1 << 71;
+ uint256 internal constant _ROLE_72 = 1 << 72;
+ uint256 internal constant _ROLE_73 = 1 << 73;
+ uint256 internal constant _ROLE_74 = 1 << 74;
+ uint256 internal constant _ROLE_75 = 1 << 75;
+ uint256 internal constant _ROLE_76 = 1 << 76;
+ uint256 internal constant _ROLE_77 = 1 << 77;
+ uint256 internal constant _ROLE_78 = 1 << 78;
+ uint256 internal constant _ROLE_79 = 1 << 79;
+ uint256 internal constant _ROLE_80 = 1 << 80;
+ uint256 internal constant _ROLE_81 = 1 << 81;
+ uint256 internal constant _ROLE_82 = 1 << 82;
+ uint256 internal constant _ROLE_83 = 1 << 83;
+ uint256 internal constant _ROLE_84 = 1 << 84;
+ uint256 internal constant _ROLE_85 = 1 << 85;
+ uint256 internal constant _ROLE_86 = 1 << 86;
+ uint256 internal constant _ROLE_87 = 1 << 87;
+ uint256 internal constant _ROLE_88 = 1 << 88;
+ uint256 internal constant _ROLE_89 = 1 << 89;
+ uint256 internal constant _ROLE_90 = 1 << 90;
+ uint256 internal constant _ROLE_91 = 1 << 91;
+ uint256 internal constant _ROLE_92 = 1 << 92;
+ uint256 internal constant _ROLE_93 = 1 << 93;
+ uint256 internal constant _ROLE_94 = 1 << 94;
+ uint256 internal constant _ROLE_95 = 1 << 95;
+ uint256 internal constant _ROLE_96 = 1 << 96;
+ uint256 internal constant _ROLE_97 = 1 << 97;
+ uint256 internal constant _ROLE_98 = 1 << 98;
+ uint256 internal constant _ROLE_99 = 1 << 99;
+ uint256 internal constant _ROLE_100 = 1 << 100;
+ uint256 internal constant _ROLE_101 = 1 << 101;
+ uint256 internal constant _ROLE_102 = 1 << 102;
+ uint256 internal constant _ROLE_103 = 1 << 103;
+ uint256 internal constant _ROLE_104 = 1 << 104;
+ uint256 internal constant _ROLE_105 = 1 << 105;
+ uint256 internal constant _ROLE_106 = 1 << 106;
+ uint256 internal constant _ROLE_107 = 1 << 107;
+ uint256 internal constant _ROLE_108 = 1 << 108;
+ uint256 internal constant _ROLE_109 = 1 << 109;
+ uint256 internal constant _ROLE_110 = 1 << 110;
+ uint256 internal constant _ROLE_111 = 1 << 111;
+ uint256 internal constant _ROLE_112 = 1 << 112;
+ uint256 internal constant _ROLE_113 = 1 << 113;
+ uint256 internal constant _ROLE_114 = 1 << 114;
+ uint256 internal constant _ROLE_115 = 1 << 115;
+ uint256 internal constant _ROLE_116 = 1 << 116;
+ uint256 internal constant _ROLE_117 = 1 << 117;
+ uint256 internal constant _ROLE_118 = 1 << 118;
+ uint256 internal constant _ROLE_119 = 1 << 119;
+ uint256 internal constant _ROLE_120 = 1 << 120;
+ uint256 internal constant _ROLE_121 = 1 << 121;
+ uint256 internal constant _ROLE_122 = 1 << 122;
+ uint256 internal constant _ROLE_123 = 1 << 123;
+ uint256 internal constant _ROLE_124 = 1 << 124;
+ uint256 internal constant _ROLE_125 = 1 << 125;
+ uint256 internal constant _ROLE_126 = 1 << 126;
+ uint256 internal constant _ROLE_127 = 1 << 127;
+ uint256 internal constant _ROLE_128 = 1 << 128;
+ uint256 internal constant _ROLE_129 = 1 << 129;
+ uint256 internal constant _ROLE_130 = 1 << 130;
+ uint256 internal constant _ROLE_131 = 1 << 131;
+ uint256 internal constant _ROLE_132 = 1 << 132;
+ uint256 internal constant _ROLE_133 = 1 << 133;
+ uint256 internal constant _ROLE_134 = 1 << 134;
+ uint256 internal constant _ROLE_135 = 1 << 135;
+ uint256 internal constant _ROLE_136 = 1 << 136;
+ uint256 internal constant _ROLE_137 = 1 << 137;
+ uint256 internal constant _ROLE_138 = 1 << 138;
+ uint256 internal constant _ROLE_139 = 1 << 139;
+ uint256 internal constant _ROLE_140 = 1 << 140;
+ uint256 internal constant _ROLE_141 = 1 << 141;
+ uint256 internal constant _ROLE_142 = 1 << 142;
+ uint256 internal constant _ROLE_143 = 1 << 143;
+ uint256 internal constant _ROLE_144 = 1 << 144;
+ uint256 internal constant _ROLE_145 = 1 << 145;
+ uint256 internal constant _ROLE_146 = 1 << 146;
+ uint256 internal constant _ROLE_147 = 1 << 147;
+ uint256 internal constant _ROLE_148 = 1 << 148;
+ uint256 internal constant _ROLE_149 = 1 << 149;
+ uint256 internal constant _ROLE_150 = 1 << 150;
+ uint256 internal constant _ROLE_151 = 1 << 151;
+ uint256 internal constant _ROLE_152 = 1 << 152;
+ uint256 internal constant _ROLE_153 = 1 << 153;
+ uint256 internal constant _ROLE_154 = 1 << 154;
+ uint256 internal constant _ROLE_155 = 1 << 155;
+ uint256 internal constant _ROLE_156 = 1 << 156;
+ uint256 internal constant _ROLE_157 = 1 << 157;
+ uint256 internal constant _ROLE_158 = 1 << 158;
+ uint256 internal constant _ROLE_159 = 1 << 159;
+ uint256 internal constant _ROLE_160 = 1 << 160;
+ uint256 internal constant _ROLE_161 = 1 << 161;
+ uint256 internal constant _ROLE_162 = 1 << 162;
+ uint256 internal constant _ROLE_163 = 1 << 163;
+ uint256 internal constant _ROLE_164 = 1 << 164;
+ uint256 internal constant _ROLE_165 = 1 << 165;
+ uint256 internal constant _ROLE_166 = 1 << 166;
+ uint256 internal constant _ROLE_167 = 1 << 167;
+ uint256 internal constant _ROLE_168 = 1 << 168;
+ uint256 internal constant _ROLE_169 = 1 << 169;
+ uint256 internal constant _ROLE_170 = 1 << 170;
+ uint256 internal constant _ROLE_171 = 1 << 171;
+ uint256 internal constant _ROLE_172 = 1 << 172;
+ uint256 internal constant _ROLE_173 = 1 << 173;
+ uint256 internal constant _ROLE_174 = 1 << 174;
+ uint256 internal constant _ROLE_175 = 1 << 175;
+ uint256 internal constant _ROLE_176 = 1 << 176;
+ uint256 internal constant _ROLE_177 = 1 << 177;
+ uint256 internal constant _ROLE_178 = 1 << 178;
+ uint256 internal constant _ROLE_179 = 1 << 179;
+ uint256 internal constant _ROLE_180 = 1 << 180;
+ uint256 internal constant _ROLE_181 = 1 << 181;
+ uint256 internal constant _ROLE_182 = 1 << 182;
+ uint256 internal constant _ROLE_183 = 1 << 183;
+ uint256 internal constant _ROLE_184 = 1 << 184;
+ uint256 internal constant _ROLE_185 = 1 << 185;
+ uint256 internal constant _ROLE_186 = 1 << 186;
+ uint256 internal constant _ROLE_187 = 1 << 187;
+ uint256 internal constant _ROLE_188 = 1 << 188;
+ uint256 internal constant _ROLE_189 = 1 << 189;
+ uint256 internal constant _ROLE_190 = 1 << 190;
+ uint256 internal constant _ROLE_191 = 1 << 191;
+ uint256 internal constant _ROLE_192 = 1 << 192;
+ uint256 internal constant _ROLE_193 = 1 << 193;
+ uint256 internal constant _ROLE_194 = 1 << 194;
+ uint256 internal constant _ROLE_195 = 1 << 195;
+ uint256 internal constant _ROLE_196 = 1 << 196;
+ uint256 internal constant _ROLE_197 = 1 << 197;
+ uint256 internal constant _ROLE_198 = 1 << 198;
+ uint256 internal constant _ROLE_199 = 1 << 199;
+ uint256 internal constant _ROLE_200 = 1 << 200;
+ uint256 internal constant _ROLE_201 = 1 << 201;
+ uint256 internal constant _ROLE_202 = 1 << 202;
+ uint256 internal constant _ROLE_203 = 1 << 203;
+ uint256 internal constant _ROLE_204 = 1 << 204;
+ uint256 internal constant _ROLE_205 = 1 << 205;
+ uint256 internal constant _ROLE_206 = 1 << 206;
+ uint256 internal constant _ROLE_207 = 1 << 207;
+ uint256 internal constant _ROLE_208 = 1 << 208;
+ uint256 internal constant _ROLE_209 = 1 << 209;
+ uint256 internal constant _ROLE_210 = 1 << 210;
+ uint256 internal constant _ROLE_211 = 1 << 211;
+ uint256 internal constant _ROLE_212 = 1 << 212;
+ uint256 internal constant _ROLE_213 = 1 << 213;
+ uint256 internal constant _ROLE_214 = 1 << 214;
+ uint256 internal constant _ROLE_215 = 1 << 215;
+ uint256 internal constant _ROLE_216 = 1 << 216;
+ uint256 internal constant _ROLE_217 = 1 << 217;
+ uint256 internal constant _ROLE_218 = 1 << 218;
+ uint256 internal constant _ROLE_219 = 1 << 219;
+ uint256 internal constant _ROLE_220 = 1 << 220;
+ uint256 internal constant _ROLE_221 = 1 << 221;
+ uint256 internal constant _ROLE_222 = 1 << 222;
+ uint256 internal constant _ROLE_223 = 1 << 223;
+ uint256 internal constant _ROLE_224 = 1 << 224;
+ uint256 internal constant _ROLE_225 = 1 << 225;
+ uint256 internal constant _ROLE_226 = 1 << 226;
+ uint256 internal constant _ROLE_227 = 1 << 227;
+ uint256 internal constant _ROLE_228 = 1 << 228;
+ uint256 internal constant _ROLE_229 = 1 << 229;
+ uint256 internal constant _ROLE_230 = 1 << 230;
+ uint256 internal constant _ROLE_231 = 1 << 231;
+ uint256 internal constant _ROLE_232 = 1 << 232;
+ uint256 internal constant _ROLE_233 = 1 << 233;
+ uint256 internal constant _ROLE_234 = 1 << 234;
+ uint256 internal constant _ROLE_235 = 1 << 235;
+ uint256 internal constant _ROLE_236 = 1 << 236;
+ uint256 internal constant _ROLE_237 = 1 << 237;
+ uint256 internal constant _ROLE_238 = 1 << 238;
+ uint256 internal constant _ROLE_239 = 1 << 239;
+ uint256 internal constant _ROLE_240 = 1 << 240;
+ uint256 internal constant _ROLE_241 = 1 << 241;
+ uint256 internal constant _ROLE_242 = 1 << 242;
+ uint256 internal constant _ROLE_243 = 1 << 243;
+ uint256 internal constant _ROLE_244 = 1 << 244;
+ uint256 internal constant _ROLE_245 = 1 << 245;
+ uint256 internal constant _ROLE_246 = 1 << 246;
+ uint256 internal constant _ROLE_247 = 1 << 247;
+ uint256 internal constant _ROLE_248 = 1 << 248;
+ uint256 internal constant _ROLE_249 = 1 << 249;
+ uint256 internal constant _ROLE_250 = 1 << 250;
+ uint256 internal constant _ROLE_251 = 1 << 251;
+ uint256 internal constant _ROLE_252 = 1 << 252;
+ uint256 internal constant _ROLE_253 = 1 << 253;
+ uint256 internal constant _ROLE_254 = 1 << 254;
+ uint256 internal constant _ROLE_255 = 1 << 255;
+} 
+
+File 3 of 11 : ERC20.sol 
+Outline 
+- function name() 
+
+- function symbol() 
+
+- function decimals() 
+
+- function totalSupply() 
+
+- function balanceOf(address owner) 
+
+- function allowance(address owner, add ... 
+
+- function approve(address spender, uin ... 
+
+- function transfer(address to, uint256 ... 
+
+- function transferFrom(address from, a ... 
+
+- function _constantNameHash() 
+
+- function _versionHash() 
+
+- function _incrementNonce(address owne ... 
+
+- function nonces(address owner) 
+
+- function permit( 
+
+- function DOMAIN_SEPARATOR() 
+
+- function _mint(address to, uint256 am ... 
+
+- function _burn(address from, uint256 ... 
+
+- function _transfer(address from, addr ... 
+
+- function _spendAllowance(address owne ... 
+
+- function _approve(address owner, addr ... 
+
+- function _beforeTokenTransfer(address ... 
+
+- function _afterTokenTransfer(address ... 
+
+- function _givePermit2InfiniteAllowanc ... 
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+/// @notice Simple ERC20 + EIP-2612 implementation.
+/// @author Solady (https://github.com/vectorized/solady/blob/main/src/tokens/ERC20.sol)
+/// @author Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/tokens/ERC20.sol)
+/// @author Modified from OpenZeppelin (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol)
+///
+/// @dev Note:
+/// - The ERC20 standard allows minting and transferring to and from the zero address,
+/// minting and transferring zero tokens, as well as self-approvals.
+/// For performance, this implementation WILL NOT revert for such actions.
+/// Please add any checks with overrides if desired.
+/// - The `permit` function uses the ecrecover precompile (0x1).
+///
+/// If you are overriding:
+/// - NEVER violate the ERC20 invariant:
+/// the total sum of all balances must be equal to `totalSupply()`.
+/// - Check that the overridden function is actually used in the function you want to
+/// change the behavior of. Much of the code has been manually inlined for performance.
+abstract contract ERC20 {
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* CUSTOM ERRORS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The total supply has overflowed.
+ error TotalSupplyOverflow();
+
+ /// @dev The allowance has overflowed.
+ error AllowanceOverflow();
+
+ /// @dev The allowance has underflowed.
+ error AllowanceUnderflow();
+
+ /// @dev Insufficient balance.
+ error InsufficientBalance();
+
+ /// @dev Insufficient allowance.
+ error InsufficientAllowance();
+
+ /// @dev The permit is invalid.
+ error InvalidPermit();
+
+ /// @dev The permit has expired.
+ error PermitExpired();
+
+ /// @dev The allowance of Permit2 is fixed at infinity.
+ error Permit2AllowanceIsFixedAtInfinity();
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* EVENTS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Emitted when `amount` tokens is transferred from `from` to `to`.
+ event Transfer(address indexed from, address indexed to, uint256 amount);
+
+ /// @dev Emitted when `amount` tokens is approved by `owner` to be used by `spender`.
+ event Approval(address indexed owner, address indexed spender, uint256 amount);
+
+ /// @dev `keccak256(bytes("Transfer(address,address,uint256)"))`.
+ uint256 private constant _TRANSFER_EVENT_SIGNATURE =
+ 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef;
+
+ /// @dev `keccak256(bytes("Approval(address,address,uint256)"))`.
+ uint256 private constant _APPROVAL_EVENT_SIGNATURE =
+ 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* STORAGE */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The storage slot for the total supply.
+ uint256 private constant _TOTAL_SUPPLY_SLOT = 0x05345cdf77eb68f44c;
+
+ /// @dev The balance slot of `owner` is given by:
+ /// ```
+ /// mstore(0x0c, _BALANCE_SLOT_SEED)
+ /// mstore(0x00, owner)
+ /// let balanceSlot := keccak256(0x0c, 0x20)
+ /// ```
+ uint256 private constant _BALANCE_SLOT_SEED = 0x87a211a2;
+
+ /// @dev The allowance slot of (`owner`, `spender`) is given by:
+ /// ```
+ /// mstore(0x20, spender)
+ /// mstore(0x0c, _ALLOWANCE_SLOT_SEED)
+ /// mstore(0x00, owner)
+ /// let allowanceSlot := keccak256(0x0c, 0x34)
+ /// ```
+ uint256 private constant _ALLOWANCE_SLOT_SEED = 0x7f5e9f20;
+
+ /// @dev The nonce slot of `owner` is given by:
+ /// ```
+ /// mstore(0x0c, _NONCES_SLOT_SEED)
+ /// mstore(0x00, owner)
+ /// let nonceSlot := keccak256(0x0c, 0x20)
+ /// ```
+ uint256 private constant _NONCES_SLOT_SEED = 0x38377508;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* CONSTANTS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev `(_NONCES_SLOT_SEED << 16) | 0x1901`.
+ uint256 private constant _NONCES_SLOT_SEED_WITH_SIGNATURE_PREFIX = 0x383775081901;
+
+ /// @dev `keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")`.
+ bytes32 private constant _DOMAIN_TYPEHASH =
+ 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
+
+ /// @dev `keccak256("1")`.
+ /// If you need to use a different version, override `_versionHash`.
+ bytes32 private constant _DEFAULT_VERSION_HASH =
+ 0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6;
+
+ /// @dev `keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")`.
+ bytes32 private constant _PERMIT_TYPEHASH =
+ 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
+
+ /// @dev The canonical Permit2 address.
+ /// For signature-based allowance granting for single transaction ERC20 `transferFrom`.
+ /// Enabled by default. To disable, override `_givePermit2InfiniteAllowance()`.
+ /// [Github](https://github.com/Uniswap/permit2)
+ /// [Etherscan](https://etherscan.io/address/0x000000000022D473030F116dDEE9F6B43aC78BA3)
+ address internal constant _PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* ERC20 METADATA */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Returns the name of the token.
+ function name() public view virtual returns (string memory);
+
+ /// @dev Returns the symbol of the token.
+ function symbol() public view virtual returns (string memory);
+
+ /// @dev Returns the decimals places of the token.
+ function decimals() public view virtual returns (uint8) {
+ return 18;
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* ERC20 */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Returns the amount of tokens in existence.
+ function totalSupply() public view virtual returns (uint256 result) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ result := sload(_TOTAL_SUPPLY_SLOT)
+ }
+ }
+
+ /// @dev Returns the amount of tokens owned by `owner`.
+ function balanceOf(address owner) public view virtual returns (uint256 result) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x0c, _BALANCE_SLOT_SEED)
+ mstore(0x00, owner)
+ result := sload(keccak256(0x0c, 0x20))
+ }
+ }
+
+ /// @dev Returns the amount of tokens that `spender` can spend on behalf of `owner`.
+ function allowance(address owner, address spender)
+ public
+ view
+ virtual
+ returns (uint256 result)
+ {
+ if (_givePermit2InfiniteAllowance()) {
+ if (spender == _PERMIT2) return type(uint256).max;
+ }
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x20, spender)
+ mstore(0x0c, _ALLOWANCE_SLOT_SEED)
+ mstore(0x00, owner)
+ result := sload(keccak256(0x0c, 0x34))
+ }
+ }
+
+ /// @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
+ ///
+ /// Emits a {Approval} event.
+ function approve(address spender, uint256 amount) public virtual returns (bool) {
+ if (_givePermit2InfiniteAllowance()) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // If `spender == _PERMIT2 && amount != type(uint256).max`.
+ if iszero(or(xor(shr(96, shl(96, spender)), _PERMIT2), iszero(not(amount)))) {
+ mstore(0x00, 0x3f68539a) // `Permit2AllowanceIsFixedAtInfinity()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute the allowance slot and store the amount.
+ mstore(0x20, spender)
+ mstore(0x0c, _ALLOWANCE_SLOT_SEED)
+ mstore(0x00, caller())
+ sstore(keccak256(0x0c, 0x34), amount)
+ // Emit the {Approval} event.
+ mstore(0x00, amount)
+ log3(0x00, 0x20, _APPROVAL_EVENT_SIGNATURE, caller(), shr(96, mload(0x2c)))
+ }
+ return true;
+ }
+
+ /// @dev Transfer `amount` tokens from the caller to `to`.
+ ///
+ /// Requirements:
+ /// - `from` must at least have `amount`.
+ ///
+ /// Emits a {Transfer} event.
+ function transfer(address to, uint256 amount) public virtual returns (bool) {
+ _beforeTokenTransfer(msg.sender, to, amount);
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute the balance slot and load its value.
+ mstore(0x0c, _BALANCE_SLOT_SEED)
+ mstore(0x00, caller())
+ let fromBalanceSlot := keccak256(0x0c, 0x20)
+ let fromBalance := sload(fromBalanceSlot)
+ // Revert if insufficient balance.
+ if gt(amount, fromBalance) {
+ mstore(0x00, 0xf4d678b8) // `InsufficientBalance()`.
+ revert(0x1c, 0x04)
+ }
+ // Subtract and store the updated balance.
+ sstore(fromBalanceSlot, sub(fromBalance, amount))
+ // Compute the balance slot of `to`.
+ mstore(0x00, to)
+ let toBalanceSlot := keccak256(0x0c, 0x20)
+ // Add and store the updated balance of `to`.
+ // Will not overflow because the sum of all user balances
+ // cannot exceed the maximum uint256 value.
+ sstore(toBalanceSlot, add(sload(toBalanceSlot), amount))
+ // Emit the {Transfer} event.
+ mstore(0x20, amount)
+ log3(0x20, 0x20, _TRANSFER_EVENT_SIGNATURE, caller(), shr(96, mload(0x0c)))
+ }
+ _afterTokenTransfer(msg.sender, to, amount);
+ return true;
+ }
+
+ /// @dev Transfers `amount` tokens from `from` to `to`.
+ ///
+ /// Note: Does not update the allowance if it is the maximum uint256 value.
+ ///
+ /// Requirements:
+ /// - `from` must at least have `amount`.
+ /// - The caller must have at least `amount` of allowance to transfer the tokens of `from`.
+ ///
+ /// Emits a {Transfer} event.
+ function transferFrom(address from, address to, uint256 amount) public virtual returns (bool) {
+ _beforeTokenTransfer(from, to, amount);
+ // Code duplication is for zero-cost abstraction if possible.
+ if (_givePermit2InfiniteAllowance()) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let from_ := shl(96, from)
+ if iszero(eq(caller(), _PERMIT2)) {
+ // Compute the allowance slot and load its value.
+ mstore(0x20, caller())
+ mstore(0x0c, or(from_, _ALLOWANCE_SLOT_SEED))
+ let allowanceSlot := keccak256(0x0c, 0x34)
+ let allowance_ := sload(allowanceSlot)
+ // If the allowance is not the maximum uint256 value.
+ if not(allowance_) {
+ // Revert if the amount to be transferred exceeds the allowance.
+ if gt(amount, allowance_) {
+ mstore(0x00, 0x13be252b) // `InsufficientAllowance()`.
+ revert(0x1c, 0x04)
+ }
+ // Subtract and store the updated allowance.
+ sstore(allowanceSlot, sub(allowance_, amount))
+ }
+ }
+ // Compute the balance slot and load its value.
+ mstore(0x0c, or(from_, _BALANCE_SLOT_SEED))
+ let fromBalanceSlot := keccak256(0x0c, 0x20)
+ let fromBalance := sload(fromBalanceSlot)
+ // Revert if insufficient balance.
+ if gt(amount, fromBalance) {
+ mstore(0x00, 0xf4d678b8) // `InsufficientBalance()`.
+ revert(0x1c, 0x04)
+ }
+ // Subtract and store the updated balance.
+ sstore(fromBalanceSlot, sub(fromBalance, amount))
+ // Compute the balance slot of `to`.
+ mstore(0x00, to)
+ let toBalanceSlot := keccak256(0x0c, 0x20)
+ // Add and store the updated balance of `to`.
+ // Will not overflow because the sum of all user balances
+ // cannot exceed the maximum uint256 value.
+ sstore(toBalanceSlot, add(sload(toBalanceSlot), amount))
+ // Emit the {Transfer} event.
+ mstore(0x20, amount)
+ log3(0x20, 0x20, _TRANSFER_EVENT_SIGNATURE, shr(96, from_), shr(96, mload(0x0c)))
+ }
+ } else {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let from_ := shl(96, from)
+ // Compute the allowance slot and load its value.
+ mstore(0x20, caller())
+ mstore(0x0c, or(from_, _ALLOWANCE_SLOT_SEED))
+ let allowanceSlot := keccak256(0x0c, 0x34)
+ let allowance_ := sload(allowanceSlot)
+ // If the allowance is not the maximum uint256 value.
+ if not(allowance_) {
+ // Revert if the amount to be transferred exceeds the allowance.
+ if gt(amount, allowance_) {
+ mstore(0x00, 0x13be252b) // `InsufficientAllowance()`.
+ revert(0x1c, 0x04)
+ }
+ // Subtract and store the updated allowance.
+ sstore(allowanceSlot, sub(allowance_, amount))
+ }
+ // Compute the balance slot and load its value.
+ mstore(0x0c, or(from_, _BALANCE_SLOT_SEED))
+ let fromBalanceSlot := keccak256(0x0c, 0x20)
+ let fromBalance := sload(fromBalanceSlot)
+ // Revert if insufficient balance.
+ if gt(amount, fromBalance) {
+ mstore(0x00, 0xf4d678b8) // `InsufficientBalance()`.
+ revert(0x1c, 0x04)
+ }
+ // Subtract and store the updated balance.
+ sstore(fromBalanceSlot, sub(fromBalance, amount))
+ // Compute the balance slot of `to`.
+ mstore(0x00, to)
+ let toBalanceSlot := keccak256(0x0c, 0x20)
+ // Add and store the updated balance of `to`.
+ // Will not overflow because the sum of all user balances
+ // cannot exceed the maximum uint256 value.
+ sstore(toBalanceSlot, add(sload(toBalanceSlot), amount))
+ // Emit the {Transfer} event.
+ mstore(0x20, amount)
+ log3(0x20, 0x20, _TRANSFER_EVENT_SIGNATURE, shr(96, from_), shr(96, mload(0x0c)))
+ }
+ }
+ _afterTokenTransfer(from, to, amount);
+ return true;
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* EIP-2612 */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev For more performance, override to return the constant value
+ /// of `keccak256(bytes(name()))` if `name()` will never change.
+ function _constantNameHash() internal view virtual returns (bytes32 result) {}
+
+ /// @dev If you need a different value, override this function.
+ function _versionHash() internal view virtual returns (bytes32 result) {
+ result = _DEFAULT_VERSION_HASH;
+ }
+
+ /// @dev For inheriting contracts to increment the nonce.
+ function _incrementNonce(address owner) internal virtual {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x0c, _NONCES_SLOT_SEED)
+ mstore(0x00, owner)
+ let nonceSlot := keccak256(0x0c, 0x20)
+ sstore(nonceSlot, add(1, sload(nonceSlot)))
+ }
+ }
+
+ /// @dev Returns the current nonce for `owner`.
+ /// This value is used to compute the signature for EIP-2612 permit.
+ function nonces(address owner) public view virtual returns (uint256 result) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute the nonce slot and load its value.
+ mstore(0x0c, _NONCES_SLOT_SEED)
+ mstore(0x00, owner)
+ result := sload(keccak256(0x0c, 0x20))
+ }
+ }
+
+ /// @dev Sets `value` as the allowance of `spender` over the tokens of `owner`,
+ /// authorized by a signed approval by `owner`.
+ ///
+ /// Emits a {Approval} event.
+ function permit(
+ address owner,
+ address spender,
+ uint256 value,
+ uint256 deadline,
+ uint8 v,
+ bytes32 r,
+ bytes32 s
+ ) public virtual {
+ if (_givePermit2InfiniteAllowance()) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // If `spender == _PERMIT2 && value != type(uint256).max`.
+ if iszero(or(xor(shr(96, shl(96, spender)), _PERMIT2), iszero(not(value)))) {
+ mstore(0x00, 0x3f68539a) // `Permit2AllowanceIsFixedAtInfinity()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+ bytes32 nameHash = _constantNameHash();
+ // We simply calculate it on-the-fly to allow for cases where the `name` may change.
+ if (nameHash == bytes32(0)) nameHash = keccak256(bytes(name()));
+ bytes32 versionHash = _versionHash();
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Revert if the block timestamp is greater than `deadline`.
+ if gt(timestamp(), deadline) {
+ mstore(0x00, 0x1a15a3cc) // `PermitExpired()`.
+ revert(0x1c, 0x04)
+ }
+ let m := mload(0x40) // Grab the free memory pointer.
+ // Clean the upper 96 bits.
+ owner := shr(96, shl(96, owner))
+ spender := shr(96, shl(96, spender))
+ // Compute the nonce slot and load its value.
+ mstore(0x0e, _NONCES_SLOT_SEED_WITH_SIGNATURE_PREFIX)
+ mstore(0x00, owner)
+ let nonceSlot := keccak256(0x0c, 0x20)
+ let nonceValue := sload(nonceSlot)
+ // Prepare the domain separator.
+ mstore(m, _DOMAIN_TYPEHASH)
+ mstore(add(m, 0x20), nameHash)
+ mstore(add(m, 0x40), versionHash)
+ mstore(add(m, 0x60), chainid())
+ mstore(add(m, 0x80), address())
+ mstore(0x2e, keccak256(m, 0xa0))
+ // Prepare the struct hash.
+ mstore(m, _PERMIT_TYPEHASH)
+ mstore(add(m, 0x20), owner)
+ mstore(add(m, 0x40), spender)
+ mstore(add(m, 0x60), value)
+ mstore(add(m, 0x80), nonceValue)
+ mstore(add(m, 0xa0), deadline)
+ mstore(0x4e, keccak256(m, 0xc0))
+ // Prepare the ecrecover calldata.
+ mstore(0x00, keccak256(0x2c, 0x42))
+ mstore(0x20, and(0xff, v))
+ mstore(0x40, r)
+ mstore(0x60, s)
+ let t := staticcall(gas(), 1, 0x00, 0x80, 0x20, 0x20)
+ // If the ecrecover fails, the returndatasize will be 0x00,
+ // `owner` will be checked if it equals the hash at 0x00,
+ // which evaluates to false (i.e. 0), and we will revert.
+ // If the ecrecover succeeds, the returndatasize will be 0x20,
+ // `owner` will be compared against the returned address at 0x20.
+ if iszero(eq(mload(returndatasize()), owner)) {
+ mstore(0x00, 0xddafbaef) // `InvalidPermit()`.
+ revert(0x1c, 0x04)
+ }
+ // Increment and store the updated nonce.
+ sstore(nonceSlot, add(nonceValue, t)) // `t` is 1 if ecrecover succeeds.
+ // Compute the allowance slot and store the value.
+ // The `owner` is already at slot 0x20.
+ mstore(0x40, or(shl(160, _ALLOWANCE_SLOT_SEED), spender))
+ sstore(keccak256(0x2c, 0x34), value)
+ // Emit the {Approval} event.
+ log3(add(m, 0x60), 0x20, _APPROVAL_EVENT_SIGNATURE, owner, spender)
+ mstore(0x40, m) // Restore the free memory pointer.
+ mstore(0x60, 0) // Restore the zero pointer.
+ }
+ }
+
+ /// @dev Returns the EIP-712 domain separator for the EIP-2612 permit.
+ function DOMAIN_SEPARATOR() public view virtual returns (bytes32 result) {
+ bytes32 nameHash = _constantNameHash();
+ // We simply calculate it on-the-fly to allow for cases where the `name` may change.
+ if (nameHash == bytes32(0)) nameHash = keccak256(bytes(name()));
+ bytes32 versionHash = _versionHash();
+ /// @solidity memory-safe-assembly
+ assembly {
+ let m := mload(0x40) // Grab the free memory pointer.
+ mstore(m, _DOMAIN_TYPEHASH)
+ mstore(add(m, 0x20), nameHash)
+ mstore(add(m, 0x40), versionHash)
+ mstore(add(m, 0x60), chainid())
+ mstore(add(m, 0x80), address())
+ result := keccak256(m, 0xa0)
+ }
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* INTERNAL MINT FUNCTIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Mints `amount` tokens to `to`, increasing the total supply.
+ ///
+ /// Emits a {Transfer} event.
+ function _mint(address to, uint256 amount) internal virtual {
+ _beforeTokenTransfer(address(0), to, amount);
+ /// @solidity memory-safe-assembly
+ assembly {
+ let totalSupplyBefore := sload(_TOTAL_SUPPLY_SLOT)
+ let totalSupplyAfter := add(totalSupplyBefore, amount)
+ // Revert if the total supply overflows.
+ if lt(totalSupplyAfter, totalSupplyBefore) {
+ mstore(0x00, 0xe5cfe957) // `TotalSupplyOverflow()`.
+ revert(0x1c, 0x04)
+ }
+ // Store the updated total supply.
+ sstore(_TOTAL_SUPPLY_SLOT, totalSupplyAfter)
+ // Compute the balance slot and load its value.
+ mstore(0x0c, _BALANCE_SLOT_SEED)
+ mstore(0x00, to)
+ let toBalanceSlot := keccak256(0x0c, 0x20)
+ // Add and store the updated balance.
+ sstore(toBalanceSlot, add(sload(toBalanceSlot), amount))
+ // Emit the {Transfer} event.
+ mstore(0x20, amount)
+ log3(0x20, 0x20, _TRANSFER_EVENT_SIGNATURE, 0, shr(96, mload(0x0c)))
+ }
+ _afterTokenTransfer(address(0), to, amount);
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* INTERNAL BURN FUNCTIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Burns `amount` tokens from `from`, reducing the total supply.
+ ///
+ /// Emits a {Transfer} event.
+ function _burn(address from, uint256 amount) internal virtual {
+ _beforeTokenTransfer(from, address(0), amount);
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute the balance slot and load its value.
+ mstore(0x0c, _BALANCE_SLOT_SEED)
+ mstore(0x00, from)
+ let fromBalanceSlot := keccak256(0x0c, 0x20)
+ let fromBalance := sload(fromBalanceSlot)
+ // Revert if insufficient balance.
+ if gt(amount, fromBalance) {
+ mstore(0x00, 0xf4d678b8) // `InsufficientBalance()`.
+ revert(0x1c, 0x04)
+ }
+ // Subtract and store the updated balance.
+ sstore(fromBalanceSlot, sub(fromBalance, amount))
+ // Subtract and store the updated total supply.
+ sstore(_TOTAL_SUPPLY_SLOT, sub(sload(_TOTAL_SUPPLY_SLOT), amount))
+ // Emit the {Transfer} event.
+ mstore(0x00, amount)
+ log3(0x00, 0x20, _TRANSFER_EVENT_SIGNATURE, shr(96, shl(96, from)), 0)
+ }
+ _afterTokenTransfer(from, address(0), amount);
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* INTERNAL TRANSFER FUNCTIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Moves `amount` of tokens from `from` to `to`.
+ function _transfer(address from, address to, uint256 amount) internal virtual {
+ _beforeTokenTransfer(from, to, amount);
+ /// @solidity memory-safe-assembly
+ assembly {
+ let from_ := shl(96, from)
+ // Compute the balance slot and load its value.
+ mstore(0x0c, or(from_, _BALANCE_SLOT_SEED))
+ let fromBalanceSlot := keccak256(0x0c, 0x20)
+ let fromBalance := sload(fromBalanceSlot)
+ // Revert if insufficient balance.
+ if gt(amount, fromBalance) {
+ mstore(0x00, 0xf4d678b8) // `InsufficientBalance()`.
+ revert(0x1c, 0x04)
+ }
+ // Subtract and store the updated balance.
+ sstore(fromBalanceSlot, sub(fromBalance, amount))
+ // Compute the balance slot of `to`.
+ mstore(0x00, to)
+ let toBalanceSlot := keccak256(0x0c, 0x20)
+ // Add and store the updated balance of `to`.
+ // Will not overflow because the sum of all user balances
+ // cannot exceed the maximum uint256 value.
+ sstore(toBalanceSlot, add(sload(toBalanceSlot), amount))
+ // Emit the {Transfer} event.
+ mstore(0x20, amount)
+ log3(0x20, 0x20, _TRANSFER_EVENT_SIGNATURE, shr(96, from_), shr(96, mload(0x0c)))
+ }
+ _afterTokenTransfer(from, to, amount);
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* INTERNAL ALLOWANCE FUNCTIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Updates the allowance of `owner` for `spender` based on spent `amount`.
+ function _spendAllowance(address owner, address spender, uint256 amount) internal virtual {
+ if (_givePermit2InfiniteAllowance()) {
+ if (spender == _PERMIT2) return; // Do nothing, as allowance is infinite.
+ }
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute the allowance slot and load its value.
+ mstore(0x20, spender)
+ mstore(0x0c, _ALLOWANCE_SLOT_SEED)
+ mstore(0x00, owner)
+ let allowanceSlot := keccak256(0x0c, 0x34)
+ let allowance_ := sload(allowanceSlot)
+ // If the allowance is not the maximum uint256 value.
+ if not(allowance_) {
+ // Revert if the amount to be transferred exceeds the allowance.
+ if gt(amount, allowance_) {
+ mstore(0x00, 0x13be252b) // `InsufficientAllowance()`.
+ revert(0x1c, 0x04)
+ }
+ // Subtract and store the updated allowance.
+ sstore(allowanceSlot, sub(allowance_, amount))
+ }
+ }
+ }
+
+ /// @dev Sets `amount` as the allowance of `spender` over the tokens of `owner`.
+ ///
+ /// Emits a {Approval} event.
+ function _approve(address owner, address spender, uint256 amount) internal virtual {
+ if (_givePermit2InfiniteAllowance()) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // If `spender == _PERMIT2 && amount != type(uint256).max`.
+ if iszero(or(xor(shr(96, shl(96, spender)), _PERMIT2), iszero(not(amount)))) {
+ mstore(0x00, 0x3f68539a) // `Permit2AllowanceIsFixedAtInfinity()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+ /// @solidity memory-safe-assembly
+ assembly {
+ let owner_ := shl(96, owner)
+ // Compute the allowance slot and store the amount.
+ mstore(0x20, spender)
+ mstore(0x0c, or(owner_, _ALLOWANCE_SLOT_SEED))
+ sstore(keccak256(0x0c, 0x34), amount)
+ // Emit the {Approval} event.
+ mstore(0x00, amount)
+ log3(0x00, 0x20, _APPROVAL_EVENT_SIGNATURE, shr(96, owner_), shr(96, mload(0x2c)))
+ }
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* HOOKS TO OVERRIDE */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Hook that is called before any transfer of tokens.
+ /// This includes minting and burning.
+ function _beforeTokenTransfer(address from, address to, uint256 amount) internal virtual {}
+
+ /// @dev Hook that is called after any transfer of tokens.
+ /// This includes minting and burning.
+ function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual {}
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* PERMIT2 */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Returns whether to fix the Permit2 contract's allowance at infinity.
+ ///
+ /// This value should be kept constant after contract initialization,
+ /// or else the actual allowance values may not match with the {Approval} events.
+ /// For best performance, return a compile-time constant for zero-cost abstraction.
+ function _givePermit2InfiniteAllowance() internal view virtual returns (bool) {
+ return true;
+ }
+} 
+
+File 4 of 11 : Initializable.sol 
+Outline 
+- function _initializableSlot() 
+
+- function _checkInitializing() 
+
+- function _disableInitializers() 
+
+- function _getInitializedVersion() 
+
+- function _isInitializing() 
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+/// @notice Initializable mixin for the upgradeable contracts.
+/// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/Initializable.sol)
+/// @author Modified from OpenZeppelin (https://github.com/OpenZeppelin/openzeppelin-contracts/tree/master/contracts/proxy/utils/Initializable.sol)
+abstract contract Initializable {
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* CUSTOM ERRORS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The contract is already initialized.
+ error InvalidInitialization();
+
+ /// @dev The contract is not initializing.
+ error NotInitializing();
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* EVENTS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Triggered when the contract has been initialized.
+ event Initialized(uint64 version);
+
+ /// @dev `keccak256(bytes("Initialized(uint64)"))`.
+ bytes32 private constant _INITIALIZED_EVENT_SIGNATURE =
+ 0xc7f505b2f371ae2175ee4913f4499e1f2633a7b5936321eed1cdaeb6115181d2;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* STORAGE */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The default initializable slot is given by:
+ /// `bytes32(~uint256(uint32(bytes4(keccak256("_INITIALIZABLE_SLOT")))))`.
+ ///
+ /// Bits Layout:
+ /// - [0] `initializing`
+ /// - [1..64] `initializedVersion`
+ bytes32 private constant _INITIALIZABLE_SLOT =
+ 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffbf601132;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* CONSTRUCTOR */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ constructor() {
+ // Construction time check to ensure that `_initializableSlot()` is not
+ // overridden to zero. Will be optimized away if there is no revert.
+ require(_initializableSlot() != bytes32(0));
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* OPERATIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Override to return a non-zero custom storage slot if required.
+ function _initializableSlot() internal pure virtual returns (bytes32) {
+ return _INITIALIZABLE_SLOT;
+ }
+
+ /// @dev Guards an initializer function so that it can be invoked at most once.
+ ///
+ /// You can guard a function with `onlyInitializing` such that it can be called
+ /// through a function guarded with `initializer`.
+ ///
+ /// This is similar to `reinitializer(1)`, except that in the context of a constructor,
+ /// an `initializer` guarded function can be invoked multiple times.
+ /// This can be useful during testing and is not expected to be used in production.
+ ///
+ /// Emits an {Initialized} event.
+ modifier initializer() virtual {
+ bytes32 s = _initializableSlot();
+ /// @solidity memory-safe-assembly
+ assembly {
+ let i := sload(s)
+ // Set `initializing` to 1, `initializedVersion` to 1.
+ sstore(s, 3)
+ // If `!(initializing == 0 && initializedVersion == 0)`.
+ if i {
+ // If `!(address(this).code.length == 0 && initializedVersion == 1)`.
+ if iszero(lt(extcodesize(address()), eq(shr(1, i), 1))) {
+ mstore(0x00, 0xf92ee8a9) // `InvalidInitialization()`.
+ revert(0x1c, 0x04)
+ }
+ s := shl(shl(255, i), s) // Skip initializing if `initializing == 1`.
+ }
+ }
+ _;
+ /// @solidity memory-safe-assembly
+ assembly {
+ if s {
+ // Set `initializing` to 0, `initializedVersion` to 1.
+ sstore(s, 2)
+ // Emit the {Initialized} event.
+ mstore(0x20, 1)
+ log1(0x20, 0x20, _INITIALIZED_EVENT_SIGNATURE)
+ }
+ }
+ }
+
+ /// @dev Guards a reinitializer function so that it can be invoked at most once.
+ ///
+ /// You can guard a function with `onlyInitializing` such that it can be called
+ /// through a function guarded with `reinitializer`.
+ ///
+ /// Emits an {Initialized} event.
+ modifier reinitializer(uint64 version) virtual {
+ bytes32 s = _initializableSlot();
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Clean upper bits, and shift left by 1 to make space for the initializing bit.
+ version := shl(1, and(version, 0xffffffffffffffff))
+ let i := sload(s)
+ // If `initializing == 1 || initializedVersion >= version`.
+ if iszero(lt(and(i, 1), lt(i, version))) {
+ mstore(0x00, 0xf92ee8a9) // `InvalidInitialization()`.
+ revert(0x1c, 0x04)
+ }
+ // Set `initializing` to 1, `initializedVersion` to `version`.
+ sstore(s, or(1, version))
+ }
+ _;
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Set `initializing` to 0, `initializedVersion` to `version`.
+ sstore(s, version)
+ // Emit the {Initialized} event.
+ mstore(0x20, shr(1, version))
+ log1(0x20, 0x20, _INITIALIZED_EVENT_SIGNATURE)
+ }
+ }
+
+ /// @dev Guards a function such that it can only be called in the scope
+ /// of a function guarded with `initializer` or `reinitializer`.
+ modifier onlyInitializing() virtual {
+ _checkInitializing();
+ _;
+ }
+
+ /// @dev Reverts if the contract is not initializing.
+ function _checkInitializing() internal view virtual {
+ bytes32 s = _initializableSlot();
+ /// @solidity memory-safe-assembly
+ assembly {
+ if iszero(and(1, sload(s))) {
+ mstore(0x00, 0xd7e6bcf8) // `NotInitializing()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+
+ /// @dev Locks any future initializations by setting the initialized version to `2**64 - 1`.
+ ///
+ /// Calling this in the constructor will prevent the contract from being initialized
+ /// or reinitialized. It is recommended to use this to lock implementation contracts
+ /// that are designed to be called through proxies.
+ ///
+ /// Emits an {Initialized} event the first time it is successfully called.
+ function _disableInitializers() internal virtual {
+ bytes32 s = _initializableSlot();
+ /// @solidity memory-safe-assembly
+ assembly {
+ let i := sload(s)
+ if and(i, 1) {
+ mstore(0x00, 0xf92ee8a9) // `InvalidInitialization()`.
+ revert(0x1c, 0x04)
+ }
+ let uint64max := 0xffffffffffffffff
+ if iszero(eq(shr(1, i), uint64max)) {
+ // Set `initializing` to 0, `initializedVersion` to `2**64 - 1`.
+ sstore(s, shl(1, uint64max))
+ // Emit the {Initialized} event.
+ mstore(0x20, uint64max)
+ log1(0x20, 0x20, _INITIALIZED_EVENT_SIGNATURE)
+ }
+ }
+ }
+
+ /// @dev Returns the highest version that has been initialized.
+ function _getInitializedVersion() internal view virtual returns (uint64 version) {
+ bytes32 s = _initializableSlot();
+ /// @solidity memory-safe-assembly
+ assembly {
+ version := shr(1, sload(s))
+ }
+ }
+
+ /// @dev Returns whether the contract is currently initializing.
+ function _isInitializing() internal view virtual returns (bool result) {
+ bytes32 s = _initializableSlot();
+ /// @solidity memory-safe-assembly
+ assembly {
+ result := and(1, sload(s))
+ }
+ }
+} 
+
+File 5 of 11 : SafeTransferLib.sol 
+Outline 
+library SafeTransferLib 
+
+- function safeTransferETH(address to, ... 
+
+- function safeTransferAllETH(address t ... 
+
+- function forceSafeTransferETH(address ... 
+
+- function forceSafeTransferAllETH(addr ... 
+
+- function forceSafeTransferETH(address ... 
+
+- function forceSafeTransferAllETH(addr ... 
+
+- function trySafeTransferETH(address t ... 
+
+- function trySafeTransferAllETH(addres ... 
+
+- function safeMoveETH(address to, uint ... 
+
+- function safeTransferFrom(address tok ... 
+
+- function trySafeTransferFrom(address ... 
+
+- function safeTransferAllFrom(address ... 
+
+- function safeTransfer(address token, ... 
+
+- function safeTransferAll(address toke ... 
+
+- function safeApprove(address token, a ... 
+
+- function safeApproveWithRetry(address ... 
+
+- function balanceOf(address token, add ... 
+
+- function checkBalanceOf(address token ... 
+
+- function totalSupply(address token) 
+
+- function safeTransferFrom2(address to ... 
+
+- function permit2TransferFrom(address ... 
+
+- function permit2( 
+
+- function simplePermit2( 
+
+- function permit2Approve(address token ... 
+
+- function permit2Lockdown(address toke ... 
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+/// @notice Safe ETH and ERC20 transfer library that gracefully handles missing return values.
+/// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/SafeTransferLib.sol)
+/// @author Modified from Solmate (https://github.com/transmissions11/solmate/blob/main/src/utils/SafeTransferLib.sol)
+/// @author Permit2 operations from (https://github.com/Uniswap/permit2/blob/main/src/libraries/Permit2Lib.sol)
+///
+/// @dev Note:
+/// - For ETH transfers, please use `forceSafeTransferETH` for DoS protection.
+library SafeTransferLib {
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* CUSTOM ERRORS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The ETH transfer has failed.
+ error ETHTransferFailed();
+
+ /// @dev The ERC20 `transferFrom` has failed.
+ error TransferFromFailed();
+
+ /// @dev The ERC20 `transfer` has failed.
+ error TransferFailed();
+
+ /// @dev The ERC20 `approve` has failed.
+ error ApproveFailed();
+
+ /// @dev The ERC20 `totalSupply` query has failed.
+ error TotalSupplyQueryFailed();
+
+ /// @dev The Permit2 operation has failed.
+ error Permit2Failed();
+
+ /// @dev The Permit2 amount must be less than `2**160 - 1`.
+ error Permit2AmountOverflow();
+
+ /// @dev The Permit2 approve operation has failed.
+ error Permit2ApproveFailed();
+
+ /// @dev The Permit2 lockdown operation has failed.
+ error Permit2LockdownFailed();
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* CONSTANTS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Suggested gas stipend for contract receiving ETH that disallows any storage writes.
+ uint256 internal constant GAS_STIPEND_NO_STORAGE_WRITES = 2300;
+
+ /// @dev Suggested gas stipend for contract receiving ETH to perform a few
+ /// storage reads and writes, but low enough to prevent griefing.
+ uint256 internal constant GAS_STIPEND_NO_GRIEF = 100000;
+
+ /// @dev The unique EIP-712 domain separator for the DAI token contract.
+ bytes32 internal constant DAI_DOMAIN_SEPARATOR =
+ 0xdbb8cf42e1ecb028be3f3dbc922e1d878b963f411dc388ced501601c60f7c6f7;
+
+ /// @dev The address for the WETH9 contract on Ethereum mainnet.
+ address internal constant WETH9 = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+
+ /// @dev The canonical Permit2 address.
+ /// [Github](https://github.com/Uniswap/permit2)
+ /// [Etherscan](https://etherscan.io/address/0x000000000022D473030F116dDEE9F6B43aC78BA3)
+ address internal constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+
+ /// @dev The canonical address of the `SELFDESTRUCT` ETH mover.
+ /// See: https://gist.github.com/Vectorized/1cb8ad4cf393b1378e08f23f79bd99fa
+ /// [Etherscan](https://etherscan.io/address/0x00000000000073c48c8055bD43D1A53799176f0D)
+ address internal constant ETH_MOVER = 0x00000000000073c48c8055bD43D1A53799176f0D;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* ETH OPERATIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ // If the ETH transfer MUST succeed with a reasonable gas budget, use the force variants.
+ //
+ // The regular variants:
+ // - Forwards all remaining gas to the target.
+ // - Reverts if the target reverts.
+ // - Reverts if the current contract has insufficient balance.
+ //
+ // The force variants:
+ // - Forwards with an optional gas stipend
+ // (defaults to `GAS_STIPEND_NO_GRIEF`, which is sufficient for most cases).
+ // - If the target reverts, or if the gas stipend is exhausted,
+ // creates a temporary contract to force send the ETH via `SELFDESTRUCT`.
+ // Future compatible with `SENDALL`: https://eips.ethereum.org/EIPS/eip-4758.
+ // - Reverts if the current contract has insufficient balance.
+ //
+ // The try variants:
+ // - Forwards with a mandatory gas stipend.
+ // - Instead of reverting, returns whether the transfer succeeded.
+
+ /// @dev Sends `amount` (in wei) ETH to `to`.
+ function safeTransferETH(address to, uint256 amount) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ if iszero(call(gas(), to, amount, codesize(), 0x00, codesize(), 0x00)) {
+ mstore(0x00, 0xb12d13eb) // `ETHTransferFailed()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+
+ /// @dev Sends all the ETH in the current contract to `to`.
+ function safeTransferAllETH(address to) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Transfer all the ETH and check if it succeeded or not.
+ if iszero(call(gas(), to, selfbalance(), codesize(), 0x00, codesize(), 0x00)) {
+ mstore(0x00, 0xb12d13eb) // `ETHTransferFailed()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+
+ /// @dev Force sends `amount` (in wei) ETH to `to`, with a `gasStipend`.
+ function forceSafeTransferETH(address to, uint256 amount, uint256 gasStipend) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ if lt(selfbalance(), amount) {
+ mstore(0x00, 0xb12d13eb) // `ETHTransferFailed()`.
+ revert(0x1c, 0x04)
+ }
+ if iszero(call(gasStipend, to, amount, codesize(), 0x00, codesize(), 0x00)) {
+ mstore(0x00, to) // Store the address in scratch space.
+ mstore8(0x0b, 0x73) // Opcode `PUSH20`.
+ mstore8(0x20, 0xff) // Opcode `SELFDESTRUCT`.
+ if iszero(create(amount, 0x0b, 0x16)) { revert(codesize(), codesize()) } // For gas estimation.
+ }
+ }
+ }
+
+ /// @dev Force sends all the ETH in the current contract to `to`, with a `gasStipend`.
+ function forceSafeTransferAllETH(address to, uint256 gasStipend) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ if iszero(call(gasStipend, to, selfbalance(), codesize(), 0x00, codesize(), 0x00)) {
+ mstore(0x00, to) // Store the address in scratch space.
+ mstore8(0x0b, 0x73) // Opcode `PUSH20`.
+ mstore8(0x20, 0xff) // Opcode `SELFDESTRUCT`.
+ if iszero(create(selfbalance(), 0x0b, 0x16)) { revert(codesize(), codesize()) } // For gas estimation.
+ }
+ }
+ }
+
+ /// @dev Force sends `amount` (in wei) ETH to `to`, with `GAS_STIPEND_NO_GRIEF`.
+ function forceSafeTransferETH(address to, uint256 amount) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ if lt(selfbalance(), amount) {
+ mstore(0x00, 0xb12d13eb) // `ETHTransferFailed()`.
+ revert(0x1c, 0x04)
+ }
+ if iszero(call(GAS_STIPEND_NO_GRIEF, to, amount, codesize(), 0x00, codesize(), 0x00)) {
+ mstore(0x00, to) // Store the address in scratch space.
+ mstore8(0x0b, 0x73) // Opcode `PUSH20`.
+ mstore8(0x20, 0xff) // Opcode `SELFDESTRUCT`.
+ if iszero(create(amount, 0x0b, 0x16)) { revert(codesize(), codesize()) } // For gas estimation.
+ }
+ }
+ }
+
+ /// @dev Force sends all the ETH in the current contract to `to`, with `GAS_STIPEND_NO_GRIEF`.
+ function forceSafeTransferAllETH(address to) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // forgefmt: disable-next-item
+ if iszero(call(GAS_STIPEND_NO_GRIEF, to, selfbalance(), codesize(), 0x00, codesize(), 0x00)) {
+ mstore(0x00, to) // Store the address in scratch space.
+ mstore8(0x0b, 0x73) // Opcode `PUSH20`.
+ mstore8(0x20, 0xff) // Opcode `SELFDESTRUCT`.
+ if iszero(create(selfbalance(), 0x0b, 0x16)) { revert(codesize(), codesize()) } // For gas estimation.
+ }
+ }
+ }
+
+ /// @dev Sends `amount` (in wei) ETH to `to`, with a `gasStipend`.
+ function trySafeTransferETH(address to, uint256 amount, uint256 gasStipend)
+ internal
+ returns (bool success)
+ {
+ /// @solidity memory-safe-assembly
+ assembly {
+ success := call(gasStipend, to, amount, codesize(), 0x00, codesize(), 0x00)
+ }
+ }
+
+ /// @dev Sends all the ETH in the current contract to `to`, with a `gasStipend`.
+ function trySafeTransferAllETH(address to, uint256 gasStipend)
+ internal
+ returns (bool success)
+ {
+ /// @solidity memory-safe-assembly
+ assembly {
+ success := call(gasStipend, to, selfbalance(), codesize(), 0x00, codesize(), 0x00)
+ }
+ }
+
+ /// @dev Force transfers ETH to `to`, without triggering the fallback (if any).
+ /// This method attempts to use a separate contract to send via `SELFDESTRUCT`,
+ /// and upon failure, deploys a minimal vault to accrue the ETH.
+ function safeMoveETH(address to, uint256 amount) internal returns (address vault) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ to := shr(96, shl(96, to)) // Clean upper 96 bits.
+ for { let mover := ETH_MOVER } iszero(eq(to, address())) {} {
+ let selfBalanceBefore := selfbalance()
+ if or(lt(selfBalanceBefore, amount), eq(to, mover)) {
+ mstore(0x00, 0xb12d13eb) // `ETHTransferFailed()`.
+ revert(0x1c, 0x04)
+ }
+ if extcodesize(mover) {
+ let balanceBefore := balance(to) // Check via delta, in case `SELFDESTRUCT` is bricked.
+ mstore(0x00, to)
+ pop(call(gas(), mover, amount, 0x00, 0x20, codesize(), 0x00))
+ // If `address(to).balance >= amount + balanceBefore`, skip vault workflow.
+ if iszero(lt(balance(to), add(amount, balanceBefore))) { break }
+ // Just in case `SELFDESTRUCT` is changed to not revert and do nothing.
+ if lt(selfBalanceBefore, selfbalance()) { invalid() }
+ }
+ let m := mload(0x40)
+ // If the mover is missing or bricked, deploy a minimal vault
+ // that withdraws all ETH to `to` when being called only by `to`.
+ // forgefmt: disable-next-item
+ mstore(add(m, 0x20), 0x33146025575b600160005260206000f35b3d3d3d3d47335af1601a5760003dfd)
+ mstore(m, or(to, shl(160, 0x6035600b3d3960353df3fe73)))
+ // Compute and store the bytecode hash.
+ mstore8(0x00, 0xff) // Write the prefix.
+ mstore(0x35, keccak256(m, 0x40))
+ mstore(0x01, shl(96, address())) // Deployer.
+ mstore(0x15, 0) // Salt.
+ vault := keccak256(0x00, 0x55)
+ pop(call(gas(), vault, amount, codesize(), 0x00, codesize(), 0x00))
+ // The vault returns a single word on success. Failure reverts with empty data.
+ if iszero(returndatasize()) {
+ if iszero(create2(0, m, 0x40, 0)) { revert(codesize(), codesize()) } // For gas estimation.
+ }
+ mstore(0x40, m) // Restore the free memory pointer.
+ break
+ }
+ }
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* ERC20 OPERATIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Sends `amount` of ERC20 `token` from `from` to `to`.
+ /// Reverts upon failure.
+ ///
+ /// The `from` account must have at least `amount` approved for
+ /// the current contract to manage.
+ function safeTransferFrom(address token, address from, address to, uint256 amount) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let m := mload(0x40) // Cache the free memory pointer.
+ mstore(0x60, amount) // Store the `amount` argument.
+ mstore(0x40, to) // Store the `to` argument.
+ mstore(0x2c, shl(96, from)) // Store the `from` argument.
+ mstore(0x0c, 0x23b872dd000000000000000000000000) // `transferFrom(address,address,uint256)`.
+ let success := call(gas(), token, 0, 0x1c, 0x64, 0x00, 0x20)
+ if iszero(and(eq(mload(0x00), 1), success)) {
+ if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
+ mstore(0x00, 0x7939f424) // `TransferFromFailed()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ mstore(0x60, 0) // Restore the zero slot to zero.
+ mstore(0x40, m) // Restore the free memory pointer.
+ }
+ }
+
+ /// @dev Sends `amount` of ERC20 `token` from `from` to `to`.
+ ///
+ /// The `from` account must have at least `amount` approved for the current contract to manage.
+ function trySafeTransferFrom(address token, address from, address to, uint256 amount)
+ internal
+ returns (bool success)
+ {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let m := mload(0x40) // Cache the free memory pointer.
+ mstore(0x60, amount) // Store the `amount` argument.
+ mstore(0x40, to) // Store the `to` argument.
+ mstore(0x2c, shl(96, from)) // Store the `from` argument.
+ mstore(0x0c, 0x23b872dd000000000000000000000000) // `transferFrom(address,address,uint256)`.
+ success := call(gas(), token, 0, 0x1c, 0x64, 0x00, 0x20)
+ if iszero(and(eq(mload(0x00), 1), success)) {
+ success := lt(or(iszero(extcodesize(token)), returndatasize()), success)
+ }
+ mstore(0x60, 0) // Restore the zero slot to zero.
+ mstore(0x40, m) // Restore the free memory pointer.
+ }
+ }
+
+ /// @dev Sends all of ERC20 `token` from `from` to `to`.
+ /// Reverts upon failure.
+ ///
+ /// The `from` account must have their entire balance approved for the current contract to manage.
+ function safeTransferAllFrom(address token, address from, address to)
+ internal
+ returns (uint256 amount)
+ {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let m := mload(0x40) // Cache the free memory pointer.
+ mstore(0x40, to) // Store the `to` argument.
+ mstore(0x2c, shl(96, from)) // Store the `from` argument.
+ mstore(0x0c, 0x70a08231000000000000000000000000) // `balanceOf(address)`.
+ // Read the balance, reverting upon failure.
+ if iszero(
+ and( // The arguments of `and` are evaluated from right to left.
+ gt(returndatasize(), 0x1f), // At least 32 bytes returned.
+ staticcall(gas(), token, 0x1c, 0x24, 0x60, 0x20)
+ )
+ ) {
+ mstore(0x00, 0x7939f424) // `TransferFromFailed()`.
+ revert(0x1c, 0x04)
+ }
+ mstore(0x00, 0x23b872dd) // `transferFrom(address,address,uint256)`.
+ amount := mload(0x60) // The `amount` is already at 0x60. We'll need to return it.
+ // Perform the transfer, reverting upon failure.
+ let success := call(gas(), token, 0, 0x1c, 0x64, 0x00, 0x20)
+ if iszero(and(eq(mload(0x00), 1), success)) {
+ if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
+ mstore(0x00, 0x7939f424) // `TransferFromFailed()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ mstore(0x60, 0) // Restore the zero slot to zero.
+ mstore(0x40, m) // Restore the free memory pointer.
+ }
+ }
+
+ /// @dev Sends `amount` of ERC20 `token` from the current contract to `to`.
+ /// Reverts upon failure.
+ function safeTransfer(address token, address to, uint256 amount) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x14, to) // Store the `to` argument.
+ mstore(0x34, amount) // Store the `amount` argument.
+ mstore(0x00, 0xa9059cbb000000000000000000000000) // `transfer(address,uint256)`.
+ // Perform the transfer, reverting upon failure.
+ let success := call(gas(), token, 0, 0x10, 0x44, 0x00, 0x20)
+ if iszero(and(eq(mload(0x00), 1), success)) {
+ if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
+ mstore(0x00, 0x90b8ec18) // `TransferFailed()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ mstore(0x34, 0) // Restore the part of the free memory pointer that was overwritten.
+ }
+ }
+
+ /// @dev Sends all of ERC20 `token` from the current contract to `to`.
+ /// Reverts upon failure.
+ function safeTransferAll(address token, address to) internal returns (uint256 amount) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x00, 0x70a08231) // Store the function selector of `balanceOf(address)`.
+ mstore(0x20, address()) // Store the address of the current contract.
+ // Read the balance, reverting upon failure.
+ if iszero(
+ and( // The arguments of `and` are evaluated from right to left.
+ gt(returndatasize(), 0x1f), // At least 32 bytes returned.
+ staticcall(gas(), token, 0x1c, 0x24, 0x34, 0x20)
+ )
+ ) {
+ mstore(0x00, 0x90b8ec18) // `TransferFailed()`.
+ revert(0x1c, 0x04)
+ }
+ mstore(0x14, to) // Store the `to` argument.
+ amount := mload(0x34) // The `amount` is already at 0x34. We'll need to return it.
+ mstore(0x00, 0xa9059cbb000000000000000000000000) // `transfer(address,uint256)`.
+ // Perform the transfer, reverting upon failure.
+ let success := call(gas(), token, 0, 0x10, 0x44, 0x00, 0x20)
+ if iszero(and(eq(mload(0x00), 1), success)) {
+ if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
+ mstore(0x00, 0x90b8ec18) // `TransferFailed()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ mstore(0x34, 0) // Restore the part of the free memory pointer that was overwritten.
+ }
+ }
+
+ /// @dev Sets `amount` of ERC20 `token` for `to` to manage on behalf of the current contract.
+ /// Reverts upon failure.
+ function safeApprove(address token, address to, uint256 amount) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x14, to) // Store the `to` argument.
+ mstore(0x34, amount) // Store the `amount` argument.
+ mstore(0x00, 0x095ea7b3000000000000000000000000) // `approve(address,uint256)`.
+ let success := call(gas(), token, 0, 0x10, 0x44, 0x00, 0x20)
+ if iszero(and(eq(mload(0x00), 1), success)) {
+ if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
+ mstore(0x00, 0x3e3f8f73) // `ApproveFailed()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ mstore(0x34, 0) // Restore the part of the free memory pointer that was overwritten.
+ }
+ }
+
+ /// @dev Sets `amount` of ERC20 `token` for `to` to manage on behalf of the current contract.
+ /// If the initial attempt to approve fails, attempts to reset the approved amount to zero,
+ /// then retries the approval again (some tokens, e.g. USDT, requires this).
+ /// Reverts upon failure.
+ function safeApproveWithRetry(address token, address to, uint256 amount) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x14, to) // Store the `to` argument.
+ mstore(0x34, amount) // Store the `amount` argument.
+ mstore(0x00, 0x095ea7b3000000000000000000000000) // `approve(address,uint256)`.
+ // Perform the approval, retrying upon failure.
+ let success := call(gas(), token, 0, 0x10, 0x44, 0x00, 0x20)
+ if iszero(and(eq(mload(0x00), 1), success)) {
+ if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
+ mstore(0x34, 0) // Store 0 for the `amount`.
+ mstore(0x00, 0x095ea7b3000000000000000000000000) // `approve(address,uint256)`.
+ pop(call(gas(), token, 0, 0x10, 0x44, codesize(), 0x00)) // Reset the approval.
+ mstore(0x34, amount) // Store back the original `amount`.
+ // Retry the approval, reverting upon failure.
+ success := call(gas(), token, 0, 0x10, 0x44, 0x00, 0x20)
+ if iszero(and(eq(mload(0x00), 1), success)) {
+ // Check the `extcodesize` again just in case the token selfdestructs lol.
+ if iszero(lt(or(iszero(extcodesize(token)), returndatasize()), success)) {
+ mstore(0x00, 0x3e3f8f73) // `ApproveFailed()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+ }
+ mstore(0x34, 0) // Restore the part of the free memory pointer that was overwritten.
+ }
+ }
+
+ /// @dev Returns the amount of ERC20 `token` owned by `account`.
+ /// Returns zero if the `token` does not exist.
+ function balanceOf(address token, address account) internal view returns (uint256 amount) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x14, account) // Store the `account` argument.
+ mstore(0x00, 0x70a08231000000000000000000000000) // `balanceOf(address)`.
+ amount :=
+ mul( // The arguments of `mul` are evaluated from right to left.
+ mload(0x20),
+ and( // The arguments of `and` are evaluated from right to left.
+ gt(returndatasize(), 0x1f), // At least 32 bytes returned.
+ staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20)
+ )
+ )
+ }
+ }
+
+ /// @dev Performs a `token.balanceOf(account)` check.
+ /// `implemented` denotes whether the `token` does not implement `balanceOf`.
+ /// `amount` is zero if the `token` does not implement `balanceOf`.
+ function checkBalanceOf(address token, address account)
+ internal
+ view
+ returns (bool implemented, uint256 amount)
+ {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x14, account) // Store the `account` argument.
+ mstore(0x00, 0x70a08231000000000000000000000000) // `balanceOf(address)`.
+ implemented :=
+ and( // The arguments of `and` are evaluated from right to left.
+ gt(returndatasize(), 0x1f), // At least 32 bytes returned.
+ staticcall(gas(), token, 0x10, 0x24, 0x20, 0x20)
+ )
+ amount := mul(mload(0x20), implemented)
+ }
+ }
+
+ /// @dev Returns the total supply of the `token`.
+ /// Reverts if the token does not exist or does not implement `totalSupply()`.
+ function totalSupply(address token) internal view returns (uint256 result) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x00, 0x18160ddd) // `totalSupply()`.
+ if iszero(
+ and(gt(returndatasize(), 0x1f), staticcall(gas(), token, 0x1c, 0x04, 0x00, 0x20))
+ ) {
+ mstore(0x00, 0x54cd9435) // `TotalSupplyQueryFailed()`.
+ revert(0x1c, 0x04)
+ }
+ result := mload(0x00)
+ }
+ }
+
+ /// @dev Sends `amount` of ERC20 `token` from `from` to `to`.
+ /// If the initial attempt fails, try to use Permit2 to transfer the token.
+ /// Reverts upon failure.
+ ///
+ /// The `from` account must have at least `amount` approved for the current contract to manage.
+ function safeTransferFrom2(address token, address from, address to, uint256 amount) internal {
+ if (!trySafeTransferFrom(token, from, to, amount)) {
+ permit2TransferFrom(token, from, to, amount);
+ }
+ }
+
+ /// @dev Sends `amount` of ERC20 `token` from `from` to `to` via Permit2.
+ /// Reverts upon failure.
+ function permit2TransferFrom(address token, address from, address to, uint256 amount)
+ internal
+ {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let m := mload(0x40)
+ mstore(add(m, 0x74), shr(96, shl(96, token)))
+ mstore(add(m, 0x54), amount)
+ mstore(add(m, 0x34), to)
+ mstore(add(m, 0x20), shl(96, from))
+ // `transferFrom(address,address,uint160,address)`.
+ mstore(m, 0x36c78516000000000000000000000000)
+ let p := PERMIT2
+ let exists := eq(chainid(), 1)
+ if iszero(exists) { exists := iszero(iszero(extcodesize(p))) }
+ if iszero(
+ and(
+ call(gas(), p, 0, add(m, 0x10), 0x84, codesize(), 0x00),
+ lt(iszero(extcodesize(token)), exists) // Token has code and Permit2 exists.
+ )
+ ) {
+ mstore(0x00, 0x7939f4248757f0fd) // `TransferFromFailed()` or `Permit2AmountOverflow()`.
+ revert(add(0x18, shl(2, iszero(iszero(shr(160, amount))))), 0x04)
+ }
+ }
+ }
+
+ /// @dev Permit a user to spend a given amount of
+ /// another user's tokens via native EIP-2612 permit if possible, falling
+ /// back to Permit2 if native permit fails or is not implemented on the token.
+ function permit2(
+ address token,
+ address owner,
+ address spender,
+ uint256 amount,
+ uint256 deadline,
+ uint8 v,
+ bytes32 r,
+ bytes32 s
+ ) internal {
+ bool success;
+ /// @solidity memory-safe-assembly
+ assembly {
+ for {} shl(96, xor(token, WETH9)) {} {
+ mstore(0x00, 0x3644e515) // `DOMAIN_SEPARATOR()`.
+ if iszero(
+ and( // The arguments of `and` are evaluated from right to left.
+ lt(iszero(mload(0x00)), eq(returndatasize(), 0x20)), // Returns 1 non-zero word.
+ // Gas stipend to limit gas burn for tokens that don't refund gas when
+ // an non-existing function is called. 5K should be enough for a SLOAD.
+ staticcall(5000, token, 0x1c, 0x04, 0x00, 0x20)
+ )
+ ) { break }
+ // After here, we can be sure that token is a contract.
+ let m := mload(0x40)
+ mstore(add(m, 0x34), spender)
+ mstore(add(m, 0x20), shl(96, owner))
+ mstore(add(m, 0x74), deadline)
+ if eq(mload(0x00), DAI_DOMAIN_SEPARATOR) {
+ mstore(0x14, owner)
+ mstore(0x00, 0x7ecebe00000000000000000000000000) // `nonces(address)`.
+ mstore(
+ add(m, 0x94),
+ lt(iszero(amount), staticcall(gas(), token, 0x10, 0x24, add(m, 0x54), 0x20))
+ )
+ mstore(m, 0x8fcbaf0c000000000000000000000000) // `IDAIPermit.permit`.
+ // `nonces` is already at `add(m, 0x54)`.
+ // `amount != 0` is already stored at `add(m, 0x94)`.
+ mstore(add(m, 0xb4), and(0xff, v))
+ mstore(add(m, 0xd4), r)
+ mstore(add(m, 0xf4), s)
+ success := call(gas(), token, 0, add(m, 0x10), 0x104, codesize(), 0x00)
+ break
+ }
+ mstore(m, 0xd505accf000000000000000000000000) // `IERC20Permit.permit`.
+ mstore(add(m, 0x54), amount)
+ mstore(add(m, 0x94), and(0xff, v))
+ mstore(add(m, 0xb4), r)
+ mstore(add(m, 0xd4), s)
+ success := call(gas(), token, 0, add(m, 0x10), 0xe4, codesize(), 0x00)
+ break
+ }
+ }
+ if (!success) simplePermit2(token, owner, spender, amount, deadline, v, r, s);
+ }
+
+ /// @dev Simple permit on the Permit2 contract.
+ function simplePermit2(
+ address token,
+ address owner,
+ address spender,
+ uint256 amount,
+ uint256 deadline,
+ uint8 v,
+ bytes32 r,
+ bytes32 s
+ ) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let m := mload(0x40)
+ mstore(m, 0x927da105) // `allowance(address,address,address)`.
+ {
+ let addressMask := shr(96, not(0))
+ mstore(add(m, 0x20), and(addressMask, owner))
+ mstore(add(m, 0x40), and(addressMask, token))
+ mstore(add(m, 0x60), and(addressMask, spender))
+ mstore(add(m, 0xc0), and(addressMask, spender))
+ }
+ let p := mul(PERMIT2, iszero(shr(160, amount)))
+ if iszero(
+ and( // The arguments of `and` are evaluated from right to left.
+ gt(returndatasize(), 0x5f), // Returns 3 words: `amount`, `expiration`, `nonce`.
+ staticcall(gas(), p, add(m, 0x1c), 0x64, add(m, 0x60), 0x60)
+ )
+ ) {
+ mstore(0x00, 0x6b836e6b8757f0fd) // `Permit2Failed()` or `Permit2AmountOverflow()`.
+ revert(add(0x18, shl(2, iszero(p))), 0x04)
+ }
+ mstore(m, 0x2b67b570) // `Permit2.permit` (PermitSingle variant).
+ // `owner` is already `add(m, 0x20)`.
+ // `token` is already at `add(m, 0x40)`.
+ mstore(add(m, 0x60), amount)
+ mstore(add(m, 0x80), 0xffffffffffff) // `expiration = type(uint48).max`.
+ // `nonce` is already at `add(m, 0xa0)`.
+ // `spender` is already at `add(m, 0xc0)`.
+ mstore(add(m, 0xe0), deadline)
+ mstore(add(m, 0x100), 0x100) // `signature` offset.
+ mstore(add(m, 0x120), 0x41) // `signature` length.
+ mstore(add(m, 0x140), r)
+ mstore(add(m, 0x160), s)
+ mstore(add(m, 0x180), shl(248, v))
+ if iszero( // Revert if token does not have code, or if the call fails.
+ mul(extcodesize(token), call(gas(), p, 0, add(m, 0x1c), 0x184, codesize(), 0x00))) {
+ mstore(0x00, 0x6b836e6b) // `Permit2Failed()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+
+ /// @dev Approves `spender` to spend `amount` of `token` for `address(this)`.
+ function permit2Approve(address token, address spender, uint160 amount, uint48 expiration)
+ internal
+ {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let addressMask := shr(96, not(0))
+ let m := mload(0x40)
+ mstore(m, 0x87517c45) // `approve(address,address,uint160,uint48)`.
+ mstore(add(m, 0x20), and(addressMask, token))
+ mstore(add(m, 0x40), and(addressMask, spender))
+ mstore(add(m, 0x60), and(addressMask, amount))
+ mstore(add(m, 0x80), and(0xffffffffffff, expiration))
+ if iszero(call(gas(), PERMIT2, 0, add(m, 0x1c), 0xa0, codesize(), 0x00)) {
+ mstore(0x00, 0x324f14ae) // `Permit2ApproveFailed()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+
+ /// @dev Revokes an approval for `token` and `spender` for `address(this)`.
+ function permit2Lockdown(address token, address spender) internal {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let m := mload(0x40)
+ mstore(m, 0xcc53287f) // `Permit2.lockdown`.
+ mstore(add(m, 0x20), 0x20) // Offset of the `approvals`.
+ mstore(add(m, 0x40), 1) // `approvals.length`.
+ mstore(add(m, 0x60), shr(96, shl(96, token)))
+ mstore(add(m, 0x80), shr(96, shl(96, spender)))
+ if iszero(call(gas(), PERMIT2, 0, add(m, 0x1c), 0xa0, codesize(), 0x00)) {
+ mstore(0x00, 0x96b3de23) // `Permit2LockdownFailed()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+} 
+
+File 6 of 11 : UUPSUpgradeable.sol 
+Outline 
+- function _authorizeUpgrade(address ne ... 
+
+- function proxiableUUID() 
+
+- function upgradeToAndCall(address new ... 
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+import {CallContextChecker} from "./CallContextChecker.sol";
+
+/// @notice UUPS proxy mixin.
+/// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/UUPSUpgradeable.sol)
+/// @author Modified from OpenZeppelin
+/// (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/proxy/utils/UUPSUpgradeable.sol)
+///
+/// @dev Note:
+/// - This implementation is intended to be used with ERC1967 proxies.
+/// See: `LibClone.deployERC1967` and related functions.
+/// - This implementation is NOT compatible with legacy OpenZeppelin proxies
+/// which do not store the implementation at `_ERC1967_IMPLEMENTATION_SLOT`.
+abstract contract UUPSUpgradeable is CallContextChecker {
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* CUSTOM ERRORS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The upgrade failed.
+ error UpgradeFailed();
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* EVENTS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Emitted when the proxy's implementation is upgraded.
+ event Upgraded(address indexed implementation);
+
+ /// @dev `keccak256(bytes("Upgraded(address)"))`.
+ uint256 private constant _UPGRADED_EVENT_SIGNATURE =
+ 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* STORAGE */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The ERC-1967 storage slot for the implementation in the proxy.
+ /// `uint256(keccak256("eip1967.proxy.implementation")) - 1`.
+ bytes32 internal constant _ERC1967_IMPLEMENTATION_SLOT =
+ 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* UUPS OPERATIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Please override this function to check if `msg.sender` is authorized
+ /// to upgrade the proxy to `newImplementation`, reverting if not.
+ /// ```
+ /// function _authorizeUpgrade(address) internal override onlyOwner {}
+ /// ```
+ function _authorizeUpgrade(address newImplementation) internal virtual;
+
+ /// @dev Returns the storage slot used by the implementation,
+ /// as specified in [ERC1822](https://eips.ethereum.org/EIPS/eip-1822).
+ ///
+ /// Note: The `notDelegated` modifier prevents accidental upgrades to
+ /// an implementation that is a proxy contract.
+ function proxiableUUID() public view virtual notDelegated returns (bytes32) {
+ // This function must always return `_ERC1967_IMPLEMENTATION_SLOT` to comply with ERC1967.
+ return _ERC1967_IMPLEMENTATION_SLOT;
+ }
+
+ /// @dev Upgrades the proxy's implementation to `newImplementation`.
+ /// Emits a {Upgraded} event.
+ ///
+ /// Note: Passing in empty `data` skips the delegatecall to `newImplementation`.
+ function upgradeToAndCall(address newImplementation, bytes calldata data)
+ public
+ payable
+ virtual
+ onlyProxy
+ {
+ _authorizeUpgrade(newImplementation);
+ /// @solidity memory-safe-assembly
+ assembly {
+ newImplementation := shr(96, shl(96, newImplementation)) // Clears upper 96 bits.
+ mstore(0x00, returndatasize())
+ mstore(0x01, 0x52d1902d) // `proxiableUUID()`.
+ let s := _ERC1967_IMPLEMENTATION_SLOT
+ // Check if `newImplementation` implements `proxiableUUID` correctly.
+ if iszero(eq(mload(staticcall(gas(), newImplementation, 0x1d, 0x04, 0x01, 0x20)), s)) {
+ mstore(0x01, 0x55299b49) // `UpgradeFailed()`.
+ revert(0x1d, 0x04)
+ }
+ // Emit the {Upgraded} event.
+ log2(codesize(), 0x00, _UPGRADED_EVENT_SIGNATURE, newImplementation)
+ sstore(s, newImplementation) // Updates the implementation.
+
+ // Perform a delegatecall to `newImplementation` if `data` is non-empty.
+ if data.length {
+ // Forwards the `data` to `newImplementation` via delegatecall.
+ let m := mload(0x40)
+ calldatacopy(m, data.offset, data.length)
+ if iszero(delegatecall(gas(), newImplementation, m, data.length, codesize(), 0x00))
+ {
+ // Bubble up the revert if the call reverts.
+ returndatacopy(m, 0x00, returndatasize())
+ revert(m, returndatasize())
+ }
+ }
+ }
+ }
+} 
+
+File 7 of 11 : CollateralErrors.sol 
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
+
+/// @title CollateralErrors
+/// @author Polymarket
+/// @notice Custom errors for the collateral token system.
+abstract contract CollateralErrors {
+ /// @notice Thrown when an operation is attempted on a paused asset.
+ error OnlyUnpaused();
+ /// @notice Thrown when the asset is not a supported collateral type (USDC or USDCe).
+ error InvalidAsset();
+ /// @notice Thrown when the EIP-712 witness signature verification fails.
+ error InvalidSignature();
+ /// @notice Thrown when the signature deadline has passed.
+ error ExpiredDeadline();
+ /// @notice Thrown when the nonce does not match the sender's current nonce.
+ error InvalidNonce();
+} 
+
+File 8 of 11 : ICollateralToken.sol 
+Outline 
+interface ICollateralToken 
+
+- function mint(address _to, uint256 _a ... 
+
+- function burn(uint256 _amount) 
+
+- function wrap(address _asset, address ... 
+
+- function unwrap(address _asset, addre ... 
+
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
+
+/// @title ICollateralToken
+/// @author Polymarket
+/// @notice Interface for the Polymarket collateral token (ERC-20) that supports minting, burning,
+/// and wrapping/unwrapping underlying assets
+interface ICollateralToken {
+ /// @notice Mints collateral tokens to a recipient
+ /// @param _to The address to receive the minted tokens
+ /// @param _amount The amount of tokens to mint
+ function mint(address _to, uint256 _amount) external;
+
+ /// @notice Burns collateral tokens from the caller
+ /// @param _amount The amount of tokens to burn
+ function burn(uint256 _amount) external;
+
+ /// @notice Wraps a supported underlying asset into collateral tokens
+ /// @dev The underlying asset must be transferred into the contract before this call or during
+ /// the callback.
+ /// @param _asset The address of the underlying asset to wrap
+ /// @param _to The address to receive the minted collateral tokens
+ /// @param _amount The amount of the underlying asset to wrap
+ /// @param _callbackReceiver The address to receive a wrap callback, or address(0) to skip
+ /// @param _data Arbitrary data forwarded to the callback receiver
+ function wrap(address _asset, address _to, uint256 _amount, address _callbackReceiver, bytes calldata _data)
+ external;
+
+ /// @notice Unwraps collateral tokens back into a supported underlying asset
+ /// @dev Collateral tokens must be transferred into the contract before this call or during the
+ /// callback.
+ /// @param _asset The address of the underlying asset to receive
+ /// @param _to The address to receive the unwrapped underlying asset
+ /// @param _amount The amount of collateral tokens to unwrap
+ /// @param _callbackReceiver The address to receive an unwrap callback, or address(0) to skip
+ /// @param _data Arbitrary data forwarded to the callback receiver
+ function unwrap(address _asset, address _to, uint256 _amount, address _callbackReceiver, bytes calldata _data)
+ external;
+} 
+
+File 9 of 11 : ICollateralTokenCallbacks.sol 
+Outline 
+interface ICollateralTokenCallbacks 
+
+- function wrapCallback(address _asset, ... 
+
+- function unwrapCallback(address _asse ... 
+
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
+
+/// @title ICollateralTokenCallbacks
+/// @author Polymarket
+/// @notice Callback interface that receivers must implement to participate in CollateralToken
+/// wrap/unwrap flows.
+/// @dev The CollateralToken invokes these callbacks during wrap and unwrap operations when a
+/// non-zero callback receiver is specified.
+interface ICollateralTokenCallbacks {
+ /// @notice Called by the CollateralToken during a wrap operation before the underlying asset is
+ /// transferred to the vault.
+ /// @dev Implementations should transfer the required underlying asset into the CollateralToken
+ /// within this callback.
+ /// @param _asset The address of the underlying asset being wrapped
+ /// @param _to The address that received the minted collateral tokens
+ /// @param _amount The amount of the underlying asset being wrapped
+ /// @param _data Arbitrary data forwarded from the original wrap call
+ function wrapCallback(address _asset, address _to, uint256 _amount, bytes calldata _data) external;
+
+ /// @notice Called by the CollateralToken during an unwrap operation before collateral tokens
+ /// are burned.
+ /// @dev Implementations should transfer the required collateral tokens into the
+ /// CollateralToken within this callback.
+ /// @param _asset The address of the underlying asset being unwrapped
+ /// @param _to The address that received the unwrapped underlying asset
+ /// @param _amount The amount of collateral tokens being burned
+ /// @param _data Arbitrary data forwarded from the original unwrap call
+ function unwrapCallback(address _asset, address _to, uint256 _amount, bytes calldata _data) external;
+} 
+
+File 10 of 11 : Ownable.sol 
+Outline 
+- function _guardInitializeOwner() 
+
+- function _initializeOwner(address new ... 
+
+- function _setOwner(address newOwner) 
+
+- function _checkOwner() 
+
+- function _ownershipHandoverValidFor() 
+
+- function transferOwnership(address ne ... 
+
+- function renounceOwnership() 
+
+- function requestOwnershipHandover() 
+
+- function cancelOwnershipHandover() 
+
+- function completeOwnershipHandover(ad ... 
+
+- function owner() 
+
+- function ownershipHandoverExpiresAt(a ... 
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+/// @notice Simple single owner authorization mixin.
+/// @author Solady (https://github.com/vectorized/solady/blob/main/src/auth/Ownable.sol)
+///
+/// @dev Note:
+/// This implementation does NOT auto-initialize the owner to `msg.sender`.
+/// You MUST call the `_initializeOwner` in the constructor / initializer.
+///
+/// While the ownable portion follows
+/// [EIP-173](https://eips.ethereum.org/EIPS/eip-173) for compatibility,
+/// the nomenclature for the 2-step ownership handover may be unique to this codebase.
+abstract contract Ownable {
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* CUSTOM ERRORS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The caller is not authorized to call the function.
+ error Unauthorized();
+
+ /// @dev The `newOwner` cannot be the zero address.
+ error NewOwnerIsZeroAddress();
+
+ /// @dev The `pendingOwner` does not have a valid handover request.
+ error NoHandoverRequest();
+
+ /// @dev Cannot double-initialize.
+ error AlreadyInitialized();
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* EVENTS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The ownership is transferred from `oldOwner` to `newOwner`.
+ /// This event is intentionally kept the same as OpenZeppelin's Ownable to be
+ /// compatible with indexers and [EIP-173](https://eips.ethereum.org/EIPS/eip-173),
+ /// despite it not being as lightweight as a single argument event.
+ event OwnershipTransferred(address indexed oldOwner, address indexed newOwner);
+
+ /// @dev An ownership handover to `pendingOwner` has been requested.
+ event OwnershipHandoverRequested(address indexed pendingOwner);
+
+ /// @dev The ownership handover to `pendingOwner` has been canceled.
+ event OwnershipHandoverCanceled(address indexed pendingOwner);
+
+ /// @dev `keccak256(bytes("OwnershipTransferred(address,address)"))`.
+ uint256 private constant _OWNERSHIP_TRANSFERRED_EVENT_SIGNATURE =
+ 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0;
+
+ /// @dev `keccak256(bytes("OwnershipHandoverRequested(address)"))`.
+ uint256 private constant _OWNERSHIP_HANDOVER_REQUESTED_EVENT_SIGNATURE =
+ 0xdbf36a107da19e49527a7176a1babf963b4b0ff8cde35ee35d6cd8f1f9ac7e1d;
+
+ /// @dev `keccak256(bytes("OwnershipHandoverCanceled(address)"))`.
+ uint256 private constant _OWNERSHIP_HANDOVER_CANCELED_EVENT_SIGNATURE =
+ 0xfa7b8eab7da67f412cc9575ed43464468f9bfbae89d1675917346ca6d8fe3c92;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* STORAGE */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The owner slot is given by:
+ /// `bytes32(~uint256(uint32(bytes4(keccak256("_OWNER_SLOT_NOT")))))`.
+ /// It is intentionally chosen to be a high value
+ /// to avoid collision with lower slots.
+ /// The choice of manual storage layout is to enable compatibility
+ /// with both regular and upgradeable contracts.
+ bytes32 internal constant _OWNER_SLOT =
+ 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffff74873927;
+
+ /// The ownership handover slot of `newOwner` is given by:
+ /// ```
+ /// mstore(0x00, or(shl(96, user), _HANDOVER_SLOT_SEED))
+ /// let handoverSlot := keccak256(0x00, 0x20)
+ /// ```
+ /// It stores the expiry timestamp of the two-step ownership handover.
+ uint256 private constant _HANDOVER_SLOT_SEED = 0x389a75e1;
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* INTERNAL FUNCTIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Override to return true to make `_initializeOwner` prevent double-initialization.
+ function _guardInitializeOwner() internal pure virtual returns (bool guard) {}
+
+ /// @dev Initializes the owner directly without authorization guard.
+ /// This function must be called upon initialization,
+ /// regardless of whether the contract is upgradeable or not.
+ /// This is to enable generalization to both regular and upgradeable contracts,
+ /// and to save gas in case the initial owner is not the caller.
+ /// For performance reasons, this function will not check if there
+ /// is an existing owner.
+ function _initializeOwner(address newOwner) internal virtual {
+ if (_guardInitializeOwner()) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let ownerSlot := _OWNER_SLOT
+ if sload(ownerSlot) {
+ mstore(0x00, 0x0dc149f0) // `AlreadyInitialized()`.
+ revert(0x1c, 0x04)
+ }
+ // Clean the upper 96 bits.
+ newOwner := shr(96, shl(96, newOwner))
+ // Store the new value.
+ sstore(ownerSlot, or(newOwner, shl(255, iszero(newOwner))))
+ // Emit the {OwnershipTransferred} event.
+ log3(0, 0, _OWNERSHIP_TRANSFERRED_EVENT_SIGNATURE, 0, newOwner)
+ }
+ } else {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Clean the upper 96 bits.
+ newOwner := shr(96, shl(96, newOwner))
+ // Store the new value.
+ sstore(_OWNER_SLOT, newOwner)
+ // Emit the {OwnershipTransferred} event.
+ log3(0, 0, _OWNERSHIP_TRANSFERRED_EVENT_SIGNATURE, 0, newOwner)
+ }
+ }
+ }
+
+ /// @dev Sets the owner directly without authorization guard.
+ function _setOwner(address newOwner) internal virtual {
+ if (_guardInitializeOwner()) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let ownerSlot := _OWNER_SLOT
+ // Clean the upper 96 bits.
+ newOwner := shr(96, shl(96, newOwner))
+ // Emit the {OwnershipTransferred} event.
+ log3(0, 0, _OWNERSHIP_TRANSFERRED_EVENT_SIGNATURE, sload(ownerSlot), newOwner)
+ // Store the new value.
+ sstore(ownerSlot, or(newOwner, shl(255, iszero(newOwner))))
+ }
+ } else {
+ /// @solidity memory-safe-assembly
+ assembly {
+ let ownerSlot := _OWNER_SLOT
+ // Clean the upper 96 bits.
+ newOwner := shr(96, shl(96, newOwner))
+ // Emit the {OwnershipTransferred} event.
+ log3(0, 0, _OWNERSHIP_TRANSFERRED_EVENT_SIGNATURE, sload(ownerSlot), newOwner)
+ // Store the new value.
+ sstore(ownerSlot, newOwner)
+ }
+ }
+ }
+
+ /// @dev Throws if the sender is not the owner.
+ function _checkOwner() internal view virtual {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // If the caller is not the stored owner, revert.
+ if iszero(eq(caller(), sload(_OWNER_SLOT))) {
+ mstore(0x00, 0x82b42900) // `Unauthorized()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ }
+
+ /// @dev Returns how long a two-step ownership handover is valid for in seconds.
+ /// Override to return a different value if needed.
+ /// Made internal to conserve bytecode. Wrap it in a public function if needed.
+ function _ownershipHandoverValidFor() internal view virtual returns (uint64) {
+ return 48 * 3600;
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* PUBLIC UPDATE FUNCTIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Allows the owner to transfer the ownership to `newOwner`.
+ function transferOwnership(address newOwner) public payable virtual onlyOwner {
+ /// @solidity memory-safe-assembly
+ assembly {
+ if iszero(shl(96, newOwner)) {
+ mstore(0x00, 0x7448fbae) // `NewOwnerIsZeroAddress()`.
+ revert(0x1c, 0x04)
+ }
+ }
+ _setOwner(newOwner);
+ }
+
+ /// @dev Allows the owner to renounce their ownership.
+ function renounceOwnership() public payable virtual onlyOwner {
+ _setOwner(address(0));
+ }
+
+ /// @dev Request a two-step ownership handover to the caller.
+ /// The request will automatically expire in 48 hours (172800 seconds) by default.
+ function requestOwnershipHandover() public payable virtual {
+ unchecked {
+ uint256 expires = block.timestamp + _ownershipHandoverValidFor();
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute and set the handover slot to `expires`.
+ mstore(0x0c, _HANDOVER_SLOT_SEED)
+ mstore(0x00, caller())
+ sstore(keccak256(0x0c, 0x20), expires)
+ // Emit the {OwnershipHandoverRequested} event.
+ log2(0, 0, _OWNERSHIP_HANDOVER_REQUESTED_EVENT_SIGNATURE, caller())
+ }
+ }
+ }
+
+ /// @dev Cancels the two-step ownership handover to the caller, if any.
+ function cancelOwnershipHandover() public payable virtual {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute and set the handover slot to 0.
+ mstore(0x0c, _HANDOVER_SLOT_SEED)
+ mstore(0x00, caller())
+ sstore(keccak256(0x0c, 0x20), 0)
+ // Emit the {OwnershipHandoverCanceled} event.
+ log2(0, 0, _OWNERSHIP_HANDOVER_CANCELED_EVENT_SIGNATURE, caller())
+ }
+ }
+
+ /// @dev Allows the owner to complete the two-step ownership handover to `pendingOwner`.
+ /// Reverts if there is no existing ownership handover requested by `pendingOwner`.
+ function completeOwnershipHandover(address pendingOwner) public payable virtual onlyOwner {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute and set the handover slot to 0.
+ mstore(0x0c, _HANDOVER_SLOT_SEED)
+ mstore(0x00, pendingOwner)
+ let handoverSlot := keccak256(0x0c, 0x20)
+ // If the handover does not exist, or has expired.
+ if gt(timestamp(), sload(handoverSlot)) {
+ mstore(0x00, 0x6f5e8818) // `NoHandoverRequest()`.
+ revert(0x1c, 0x04)
+ }
+ // Set the handover slot to 0.
+ sstore(handoverSlot, 0)
+ }
+ _setOwner(pendingOwner);
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* PUBLIC READ FUNCTIONS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Returns the owner of the contract.
+ function owner() public view virtual returns (address result) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ result := sload(_OWNER_SLOT)
+ }
+ }
+
+ /// @dev Returns the expiry timestamp for the two-step ownership handover to `pendingOwner`.
+ function ownershipHandoverExpiresAt(address pendingOwner)
+ public
+ view
+ virtual
+ returns (uint256 result)
+ {
+ /// @solidity memory-safe-assembly
+ assembly {
+ // Compute the handover slot.
+ mstore(0x0c, _HANDOVER_SLOT_SEED)
+ mstore(0x00, pendingOwner)
+ // Load the handover slot.
+ result := sload(keccak256(0x0c, 0x20))
+ }
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* MODIFIERS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev Marks a function as only callable by the owner.
+ modifier onlyOwner() virtual {
+ _checkOwner();
+ _;
+ }
+} 
+
+File 11 of 11 : CallContextChecker.sol 
+Outline 
+contract CallContextChecker 
+
+- function _onEIP7702Authority() 
+
+- function _selfImplementation() 
+
+- function _onImplementation() 
+
+- function _checkOnlyEIP7702Authority() 
+
+- function _checkOnlyProxy() 
+
+- function _checkNotDelegated() 
+
+- function _revertUnauthorizedCallConte ... 
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
+
+/// @notice Call context checker mixin.
+/// @author Solady (https://github.com/vectorized/solady/blob/main/src/utils/CallContextChecker.sol)
+contract CallContextChecker {
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* CUSTOM ERRORS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev The call is from an unauthorized call context.
+ error UnauthorizedCallContext();
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* IMMUTABLES */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ /// @dev For checking if the context is a delegate call.
+ ///
+ /// Note: To enable use cases with an immutable default implementation in the bytecode,
+ /// (see: ERC6551Proxy), we don't require that the proxy address must match the
+ /// value stored in the implementation slot, which may not be initialized.
+ uint256 private immutable __self = uint256(uint160(address(this)));
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* CALL CONTEXT CHECKS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ // A proxy call can be either via a `delegatecall` to an implementation,
+ // or a 7702 call on an authority that points to a delegation.
+
+ /// @dev Returns whether the current call context is on a EIP7702 authority
+ /// (i.e. externally owned account).
+ function _onEIP7702Authority() internal view virtual returns (bool result) {
+ /// @solidity memory-safe-assembly
+ assembly {
+ extcodecopy(address(), 0x00, 0x00, 0x20)
+ // Note: Checking that it starts with hex"ef01" is the most general and futureproof.
+ // 7702 bytecode is `abi.encodePacked(hex"ef01", uint8(version), address(delegation))`.
+ result := eq(0xef01, shr(240, mload(0x00)))
+ }
+ }
+
+ /// @dev Returns the implementation of this contract.
+ function _selfImplementation() internal view virtual returns (address) {
+ return address(uint160(__self));
+ }
+
+ /// @dev Returns whether the current call context is on the implementation itself.
+ function _onImplementation() internal view virtual returns (bool) {
+ return __self == uint160(address(this));
+ }
+
+ /// @dev Requires that the current call context is performed via a EIP7702 authority.
+ function _checkOnlyEIP7702Authority() internal view virtual {
+ if (!_onEIP7702Authority()) _revertUnauthorizedCallContext();
+ }
+
+ /// @dev Requires that the current call context is performed via a proxy.
+ function _checkOnlyProxy() internal view virtual {
+ if (_onImplementation()) _revertUnauthorizedCallContext();
+ }
+
+ /// @dev Requires that the current call context is NOT performed via a proxy.
+ /// This is the opposite of `checkOnlyProxy`.
+ function _checkNotDelegated() internal view virtual {
+ if (!_onImplementation()) _revertUnauthorizedCallContext();
+ }
+
+ /// @dev Requires that the current call context is performed via a EIP7702 authority.
+ modifier onlyEIP7702Authority() virtual {
+ _checkOnlyEIP7702Authority();
+ _;
+ }
+
+ /// @dev Requires that the current call context is performed via a proxy.
+ modifier onlyProxy() virtual {
+ _checkOnlyProxy();
+ _;
+ }
+
+ /// @dev Requires that the current call context is NOT performed via a proxy.
+ /// This is the opposite of `onlyProxy`.
+ modifier notDelegated() virtual {
+ _checkNotDelegated();
+ _;
+ }
+
+ /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+ /* PRIVATE HELPERS */
+ /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+ function _revertUnauthorizedCallContext() private pure {
+ /// @solidity memory-safe-assembly
+ assembly {
+ mstore(0x00, 0x9f03a026) // `UnauthorizedCallContext()`.
+ revert(0x1c, 0x04)
+ }
+ }
+} 
+
+Settings 
+{
+ "remappings": [
+ "@solady/=lib/solady/",
+ "@forge-std/=lib/forge-std/",
+ "@ctf-exchange-v2/src/=src/",
+ "forge-std/=lib/forge-std/src/",
+ "solady/=lib/solady/src/"
+ ],
+ "optimizer": {
+ "enabled": true,
+ "runs": 1000000
+ },
+ "metadata": {
+ "useLiteralContent": false,
+ "bytecodeHash": "ipfs",
+ "appendCBOR": true
+ },
+ "outputSelection": {
+ "*": {
+ "*": [
+ "evm.bytecode",
+ "evm.deployedBytecode",
+ "devdoc",
+ "userdoc",
+ "metadata",
+ "abi"
+ ]
+ }
+ },
+ "evmVersion": "prague",
+ "viaIR": false
+} 
+
+Contract ABI 
+API 
+
+[{"inputs":[{"internalType":"address","name":"_usdc","type":"address"},{"internalType":"address","name":"_usdce","type":"address"},{"internalType":"address","name":"_vault","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"AllowanceOverflow","type":"error"},{"inputs":[],"name":"AllowanceUnderflow","type":"error"},{"inputs":[],"name":"AlreadyInitialized","type":"error"},{"inputs":[],"name":"ExpiredDeadline","type":"error"},{"inputs":[],"name":"InsufficientAllowance","type":"error"},{"inputs":[],"name":"InsufficientBalance","type":"error"},{"inputs":[],"name":"InvalidAsset","type":"error"},{"inputs":[],"name":"InvalidInitialization","type":"error"},{"inputs":[],"name":"InvalidNonce","type":"error"},{"inputs":[],"name":"InvalidPermit","type":"error"},{"inputs":[],"name":"InvalidSignature","type":"error"},{"inputs":[],"name":"NewOwnerIsZeroAddress","type":"error"},{"inputs":[],"name":"NoHandoverRequest","type":"error"},{"inputs":[],"name":"NotInitializing","type":"error"},{"inputs":[],"name":"OnlyUnpaused","type":"error"},{"inputs":[],"name":"Permit2AllowanceIsFixedAtInfinity","type":"error"},{"inputs":[],"name":"PermitExpired","type":"error"},{"inputs":[],"name":"TotalSupplyOverflow","type":"error"},{"inputs":[],"name":"Unauthorized","type":"error"},{"inputs":[],"name":"UnauthorizedCallContext","type":"error"},{"inputs":[],"name":"UpgradeFailed","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"version","type":"uint64"}],"name":"Initialized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"pendingOwner","type":"address"}],"name":"OwnershipHandoverCanceled","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"pendingOwner","type":"address"}],"name":"OwnershipHandoverRequested","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"oldOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"roles","type":"uint256"}],"name":"RolesUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"caller","type":"address"},{"indexed":true,"internalType":"address","name":"asset","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Unwrapped","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"implementation","type":"address"}],"name":"Upgraded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"caller","type":"address"},{"indexed":true,"internalType":"address","name":"asset","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Wrapped","type":"event"},{"inputs":[],"name":"DOMAIN_SEPARATOR","outputs":[{"internalType":"bytes32","name":"result","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"USDC","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"USDCE","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"VAULT","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_minter","type":"address"}],"name":"addMinter","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_wrapper","type":"address"}],"name":"addWrapper","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"result","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"result","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"burn","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"cancelOwnershipHandover","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"address","name":"pendingOwner","type":"address"}],"name":"completeOwnershipHandover","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"pure","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"roles","type":"uint256"}],"name":"grantRoles","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"roles","type":"uint256"}],"name":"hasAllRoles","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"roles","type":"uint256"}],"name":"hasAnyRole","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_owner","type":"address"}],"name":"initialize","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"mint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"pure","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"nonces","outputs":[{"internalType":"uint256","name":"result","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"result","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"pendingOwner","type":"address"}],"name":"ownershipHandoverExpiresAt","outputs":[{"internalType":"uint256","name":"result","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"uint256","name":"deadline","type":"uint256"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"permit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"proxiableUUID","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_minter","type":"address"}],"name":"removeMinter","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_wrapper","type":"address"}],"name":"removeWrapper","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"roles","type":"uint256"}],"name":"renounceRoles","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"requestOwnershipHandover","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"roles","type":"uint256"}],"name":"revokeRoles","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"rolesOf","outputs":[{"internalType":"uint256","name":"roles","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"pure","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"result","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"address","name":"_asset","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_amount","type":"uint256"},{"internalType":"address","name":"_callbackReceiver","type":"address"},{"internalType":"bytes","name":"_data","type":"bytes"}],"name":"unwrap","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newImplementation","type":"address"},{"internalType":"bytes","name":"data","type":"bytes"}],"name":"upgradeToAndCall","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"address","name":"_asset","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_amount","type":"uint256"},{"internalType":"address","name":"_callbackReceiver","type":"address"},{"internalType":"bytes","name":"_data","type":"bytes"}],"name":"wrap","outputs":[],"stateMutability":"nonpayable","type":"function"}] 
+
+Loading... 
+
+Loading 
+
+Loading... 
+
+Loading 
+
+Loading... 
+
+Loading 
+
+Loading... 
+
+Loading 
+
+Loading... 
+
+Loading 
+
+Loading... 
+
+Loading 
+
+Loading... 
+
+Loading 
+
+Latest 25 proxy upgrades 
+
+Transaction Hash 
+Block 
+
+Age 
+
+Implementation 
+Event 
+Status 
+
+Block 
+
+Transaction 
+Gas Used 
+Reward 
+
+view all blocks produced 
+
+Block 
+
+Uncle Number 
+Difficulty 
+Gas Used 
+Reward 
+
+View All Uncles 
+
+Loading... 
+
+Loading 
+
+Loading... 
+
+Loading 
+
+OVERVIEW 
+Polymarket is a prediction market platform where users trade on the outcomes of real-world events. 
+
+Loading... 
+
+Loading 
+
+Validator Index 
+Block 
+
+Amount 
+
+View All Withdrawals 
+
+Transaction Hash 
+Block 
+
+Value 
+Eth2 PubKey 
+Valid 
+
+View All Deposits 
+
+Multichain Portfolio 
+
+Tokens 
+
+NFTs 
+
+0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB 
+
+Net Worth in USD 
+
+$1,033.32 
+
+Net Worth in POL 
+
+10,850.375293 
+
+Token Allocations 
+
+USDC.E 82.34% 
+
+USDC 17.66% 
+
+Multichain Portfolio |
+ 32 Chains 
+
+Display all chains • 
+Last updated: 30 secs ago 
+
+Polygon (2) 
+
+$1,033 (100%) 
+
+Ethereum (0) 
+
+0 (0%) 
+
+BNB Chain (0) 
+
+0 (0%) 
+
+Arbitrum One (0) 
+
+0 (0%) 
+
+Optimism (0) 
+
+0 (0%) 
+
+Base (0) 
+
+0 (0%) 
+
+BTTC (0) 
+
+0 (0%) 
+
+Celo (0) 
+
+0 (0%) 
+
+Gnosis (0) 
+
+0 (0%) 
+
+Linea (0) 
+
+0 (0%) 
+
+Moonbeam (0) 
+
+0 (0%) 
+
+Moonriver (0) 
+
+0 (0%) 
+
+Avax C-Chain (0) 
+
+0 (0%) 
+
+opBNB (0) 
+
+0 (0%) 
+
+Fraxtal (0) 
+
+0 (0%) 
+
+Blast (0) 
+
+0 (0%) 
+
+Mantle (0) 
+
+0 (0%) 
+
+Taiko (0) 
+
+0 (0%) 
+
+World (0) 
+
+0 (0%) 
+
+XDC (0) 
+
+0 (0%) 
+
+Ape (0) 
+
+0 (0%) 
+
+Unichain (0) 
+
+0 (0%) 
+
+Berachain (0) 
+
+0 (0%) 
+
+MemeCore (0) 
+
+0 (0%) 
+
+Sonic (0) 
+
+0 (0%) 
+
+Abstract (0) 
+
+0 (0%) 
+
+HyperEVM (0) 
+
+0 (0%) 
+
+Katana (0) 
+
+0 (0%) 
+
+Sei (0) 
+
+0 (0%) 
+
+Monad (0) 
+
+0 (0%) 
+
+Plasma (0) 
+
+0 (0%) 
+
+Stable (0) 
+
+0 (0%) 
+
+Show 31 more chains Hide 31 chains 
+
+Chain 
+Token 
+Portfolio % 
+Price 
+Amount 
+Value 
+
+POL 
+
+USD Coin (PoS) (USDC.E) 
+
+82.34% 
+$0.999865 
+850.9748 
+$850.86 
+
+POL 
+
+USD Coin (USDC) 
+
+17.66% 
+$0.999865 
+182.4852 
+$182.46 
+
+Loading... 
+
+Loading 
+
+Loading... 
+
+Loading 
+
+Loading... 
+
+Loading 
+
+[ Download: CSV Export ] 
+
+[ Download: CSV Export ] 
+
+A contract address hosts a smart contract, which is a set of code stored on the blockchain that runs when predetermined conditions are met. Learn more about addresses in our Knowledge Base . 
+
+Address QR Code 
+
+My Address - Private Name Tag or Note 
+
+My Name Tag: 
+
+Private Name Tags (up to 35 characters) can be used for easy identification of addresses 
+
+Private Note: 
+
+A private note (up to 500 characters) can be attached to this address. 
+Please DO NOT store any passwords or private keys here. 
+
+View all Private Name Tags 
+
+Close Save Changes 
+
+Connect a Wallet 
+
+Connecting wallet for read function is optional, useful if you want to call certain functions or simply use your wallet's node. 
+
+Rabby Wallet MetaMask WalletConnect (Reown) Other Wallets 
+
+No wallet found 
+
+Connect a Wallet 
+
+Connecting wallet for read function is optional, useful if you want to call certain functions or simply use your wallet's node. 
+
+Rabby Wallet MetaMask WalletConnect (Reown) Other Wallets 
+
+No wallet found 
+
+Connect a Wallet 
+
+Connecting wallet for read function is optional, useful if you want to call certain functions or simply use your wallet's node. 
+
+Rabby Wallet MetaMask WalletConnect (Reown) Other Wallets 
+
+No wallet found 
+
+× 
+
+Before You Copy 
+
+Don't show this for 30 days 
+
+Understand, Copy Address 
+
+Transaction Private Note 
+
+Transaction Hash 
+
+Private Note Description 
+
+Please DO NOT store any passwords or private keys here. A private note (up to 100 characters) can be saved and is useful for transaction tracking. 
+
+View All Transactions Private Notes 
+
+Cancel Save changes 
+
+My Address - Private Name Tag or Note 
+
+My Name Tag: 
+
+Private Name Tags (up to 35 characters) can be used for easy identification of addresses 
+
+Private Note: 
+
+A private note (up to 500 characters) can be attached to this address. Please DO NOT store any passwords or private keys here. 
+
+View all Private Name Tags 
+
+Close Save Changes 
+
+(Twitter) 
+Back to Top 
+
+Powered by Polygon PoS Chain 
+PolygonScan is a Block Explorer and Analytics Platform for Polygon PoS Chain. 
+Add Polygon Network 
+
+Company 
+
+Brand Assets 
+
+Contact Us 
+
+Terms & Privacy 
+
+Bug Bounty 
+
+Community 
+
+API Documentation 
+
+Knowledge Base 
+
+Network Status 
+
+Products & Services 
+
+Advertise 
+
+Explorer as a Service (EaaS) 
+
+API Plans 
+
+Priority Support 
+
+Blockscan 
+
+PolygonScan © 2026 (POLY-C1) | ⛏ Built by Team Etherscan 
+
+Donations: 0x71c765...d8976f 
+
+This website uses cookies to improve your experience . By continuing to use this website, you agree to its Terms and Privacy Policy . 
+Got it!

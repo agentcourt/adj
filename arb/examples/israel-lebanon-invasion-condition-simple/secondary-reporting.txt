@@ -1,0 +1,178 @@
+# Secondary reporting record
+
+This file preserves concise excerpts from credible reporting. Official/source-rule records are separated in `official-source-record.txt`.
+
+## Reuters-syndicated U.S. News — 30 September 2024
+
+URL:
+https://www.usnews.com/news/world/articles/2024-09-30/israel-has-told-us-ground-operations-against-hezbollah-are-limited-state-dept-says
+
+Local extracted capture:
+
+- `source-captures/web_fetch-usnews-reuters-syndication-20260501.txt`
+
+Excerpt:
+
+> Israel has told the United States it is conducting limited ground operations focused on Hezbollah infrastructure in Lebanon near the border with Israel, the State Department said on Monday.
+>
+> "This is what they have informed us that they are currently conducting, which are limited operations targeting Hezbollah infrastructure near the border," State Department spokesperson Matthew Miller told reporters.
+>
+> Asked to confirm they were limited ground operations, he said: "That is our understanding."
+
+Direct Reuters page capture in this environment returned only a JavaScript/ad-blocker page. The Reuters-syndicated U.S. News extraction preserved the article text.
+
+## NBC News live blog — 1 October 2024
+
+URL:
+https://www.nbcnews.com/news/world/live-blog/israel-hezbollah-live-updates-hamas-leader-lebanon-killed-strike-hits-rcna173218
+
+Saved captures:
+
+- `source-captures/www.nbcnews.com__news__world__live-blog__israel-hezbollah-live-updates-hamas-leader-lebanon-killed-strike-hits-rcna173218.body`
+- `source-captures/www.nbcnews.com__news__world__live-blog__israel-hezbollah-live-updates-hamas-leader-lebanon-killed-strike-hits-rcna173218.body.extracted.txt`
+- `source-captures/www.nbcnews.com__news__world__live-blog__israel-hezbollah-live-updates-hamas-leader-lebanon-killed-strike-hits-rcna173218.headers.txt`
+
+Relevant extracted points:
+
+- `Israeli forces begin 'targeted' ground operation in Lebanon, IDF says`.
+- NBC reported that Israeli soldiers had started targeted ground operations inside Lebanon and that Israeli officials notified the United States the incursion would be limited in scope, scale, and duration.
+- NBC reported the operation would aim to push Hezbollah forces farther away from the Israeli border.
+- NBC preserved the IDF statement: `A few hours ago, the IDF began limited, localized, and targeted ground raids based on precise intelligence against Hezbollah terrorist targets and infrastructure in southern Lebanon`.
+
+## NBC News article — 1 October 2024
+
+URL:
+https://www.nbcnews.com/news/world/israel-lebanon-ground-invasion-rcna172913
+
+Web-fetch excerpt, preserved in session notes:
+
+> Israel’s military forces crossed the border into southern Lebanon on Monday to conduct what its military described as “limited, localized, and targeted ground raids” against the Iran-backed militant group Hezbollah. The offensive, which is aimed at pushing Hezbollah forces farther away from the Israeli border, is expected to last for days, not weeks, U.S. officials said.
+>
+> Israel informed the U.S. that the intention of the incursion into southern Lebanon is to push Hezbollah forces farther from the Israeli border and target their infrastructure, including stockpiles and weapons, according to a U.S. official, a Biden administration official and a source familiar with the planning.
+
+This article is useful because it states a control-adjacent operational objective: pushing Hezbollah forces farther from the Israeli border.
+
+## NPR — 30 September 2024
+
+URL:
+https://www.npr.org/2024/09/30/nx-s1-5133463/israel-lebanon-hezbollah-invasion
+
+Saved captures:
+
+- `source-captures/www.npr.org__2024__09__30__nx-s1-5133463__israel-lebanon-hezbollah-invasion.body`
+- `source-captures/www.npr.org__2024__09__30__nx-s1-5133463__israel-lebanon-hezbollah-invasion.body.extracted.txt`
+- `source-captures/www.npr.org__2024__09__30__nx-s1-5133463__israel-lebanon-hezbollah-invasion.headers.txt`
+
+Excerpt:
+
+> The Israeli military has launched what it called a "limited, localized" ground offensive in southern Lebanon against the Iran-backed Lebanese militant group Hezbollah.
+>
+> "These targets are located in villages close to the border and pose an immediate threat to Israeli communities in northern Israel," the Israeli military said on social media late Monday.
+>
+> It said the Israeli air force and artillery "are supporting the ground forces with precise strikes on military targets in the area."
+
+NPR also recorded the control-oriented ambiguity:
+
+> Tamir Hayman ... said Israel should think through the purpose of a ground invasion: Is it to create a permanent security buffer zone that Israel would occupy long term, with much international opposition, or only to remain temporarily to destroy Hezbollah infrastructure?
+>
+> “Are we there in order to reach a deal and then leaving? Are we there in order to stay?” Hayman said.
+
+## NPR — 1 October 2024
+
+URL:
+https://www.npr.org/2024/10/01/nx-s1-5134606/lebanon-israel-invasion-hezbollah-international-support
+
+Saved captures:
+
+- `source-captures/www.npr.org__2024__10__01__nx-s1-5134606__lebanon-israel-invasion-hezbollah-international-support.body`
+- `source-captures/www.npr.org__2024__10__01__nx-s1-5134606__lebanon-israel-invasion-hezbollah-international-support.body.extracted.txt`
+- `source-captures/www.npr.org__2024__10__01__nx-s1-5134606__lebanon-israel-invasion-hezbollah-international-support.headers.txt`
+
+Excerpt:
+
+> Lebanese politicians urgently called on the international community to pressure Israel to stop its advance into Lebanese territory on Tuesday, as Israeli troops crossed into southern Lebanon in an operation targeting Hezbollah outposts.
+>
+> And now Israel says it is running a “limited” incursion of “targeted ground raids” in southern Lebanon aimed at Hezbollah militants that pose a threat to communities in northern Israel.
+
+## CBS News / AP — 30 September 2024
+
+URL:
+https://www.cbsnews.com/news/israeli-begins-ground-operation-southern-lebanon-against-hezbollah/
+
+Saved captures:
+
+- `source-captures/www.cbsnews.com__news__israeli-begins-ground-operation-southern-lebanon-against-hezbollah.body`
+- `source-captures/www.cbsnews.com__news__israeli-begins-ground-operation-southern-lebanon-against-hezbollah.body.extracted.txt`
+- `source-captures/www.cbsnews.com__news__israeli-begins-ground-operation-southern-lebanon-against-hezbollah.headers.txt`
+
+Excerpt:
+
+> The Israeli military says it has begun a "limited, localized" ground operation against Hezbollah targets in southern Lebanon.
+>
+> In posts shared on social media, the Israeli military said it was carrying out "targeted" ground raids in villages close to the Israeli border.
+>
+> "A few hours ago, the IDF began limited, localized, and targeted ground raids based on precise intelligence against Hezbollah terrorist targets and infrastructure in southern Lebanon," the military said. "These targets are located in villages close to the border and pose an immediate threat to Israeli communities in northern Israel."
+
+CBS/AP also reported that Israel declared three small border communities to be a closed military zone and that there were no reports of direct clashes at that time.
+
+## BBC — 1 October 2024
+
+URL:
+https://www.bbc.com/news/articles/czxgyzq7z2ro
+
+Saved captures:
+
+- `source-captures/www.bbc.com__news__articles__czxgyzq7z2ro.body`
+- `source-captures/www.bbc.com__news__articles__czxgyzq7z2ro.body.extracted.txt`
+- `source-captures/www.bbc.com__news__articles__czxgyzq7z2ro.headers.txt`
+
+Excerpt:
+
+> Israel has launched a ground invasion in southern Lebanon, in what it has described as "limited, localised and targeted" raids against Hezbollah.
+>
+> Lebanese civilians are being warned not to use vehicles to travel south across the Litani river, located 20 miles north of the Israel-Lebanon border, and residents in around 25 villages have been told to evacuate and head north.
+>
+> According to the Israel Defense Forces (IDF), the operation is aimed at the Iran-backed group's "infrastructure", which it says poses "an immediate threat to Israeli communities in northern Israel".
+>
+> An Israeli senior security official told the BBC earlier that ground forces had only ventured a "very close walking distance" into Lebanon, but Hezbollah deny claims that troops are in the country.
+
+## Al Jazeera — 1 October 2024
+
+URL:
+https://www.aljazeera.com/news/2024/10/1/israel-says-has-started-targeted-ground-raids-in-lebanon
+
+Saved captures:
+
+- `source-captures/www.aljazeera.com__news__2024__10__1__israel-says-has-started-targeted-ground-raids-in-lebanon.body`
+- `source-captures/www.aljazeera.com__news__2024__10__1__israel-says-has-started-targeted-ground-raids-in-lebanon.body.extracted.txt`
+- `source-captures/www.aljazeera.com__news__2024__10__1__israel-says-has-started-targeted-ground-raids-in-lebanon.headers.txt`
+
+Excerpt:
+
+> Israeli troops have advanced into Lebanon, the military has announced in a statement, as it launches an anticipated ground offensive.
+>
+> Israel’s military reported early on Tuesday that its forces had begun “targeted ground raids” on villages in southern Lebanon.
+>
+> The incursions, backed by air strikes and artillery, began “a few hours ago” targeting Hezbollah “in villages close to the border” with Israel, according to the statement, adding that the raids were “limited, localised and targeted” against Hezbollah.
+
+Al Jazeera also reported Hezbollah's denial that Israeli forces had entered Lebanon, which is useful contrary evidence on the immediate entry question.
+
+
+## UN News — 1 October 2024
+
+URL:
+https://news.un.org/en/story/2024/10/1155186
+
+Saved captures:
+
+- `source-captures/news.un.org__en__story__2024__10__1155186.body`
+- `source-captures/news.un.org__en__story__2024__10__1155186.body.extracted.txt`
+- `source-captures/news.un.org__en__story__2024__10__1155186.headers.txt`
+
+Excerpt:
+
+> The UN Interim Force in Lebanon (UNIFIL) said that it had been informed on Monday about the Israeli military’s plans for “limited ground incursions”.
+>
+> In a statement issued in response to the escalating emergency, the UN Mission highlighted that any Israeli crossing into Lebanon would be “in violation of Lebanese sovereignty and territorial integrity, and a violation of resolution 1701”.
+
+This corroborates the direct UNIFIL October 1 source and should be treated as secondary to that direct statement.

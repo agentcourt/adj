@@ -1,0 +1,65 @@
+# Market page record
+
+Official market URL: https://polymarket.com/event/clavicular-pregnancy-in-2026
+Captured page file: source-captures/polymarket-page.txt
+Captured API file: source-captures/polymarket-gamma-event.json
+Captured market image: source-captures/polymarket-market-image.jpg
+
+## Official Polymarket page text captured by web fetch on 2026-05-14
+
+Question/title: Clavicular pregnancy in 2026?
+
+Rule text:
+
+> This market will resolve to "Yes" if Clavicular announces that he and a partner are expecting a baby through pregnancy between market creation and December 31, 2026, 11:59 PM ET. Otherwise, this market will resolve to "No".
+>
+> Only credible announcements will qualify. Pregnancy announcements that are not credible, for example jokes, will not suffice. This market will resolve based on the date of announcement, regardless of when the child is born.
+>
+> The resolution source will be statements from Clavicular or his representatives; however, a definitive consensus of credible media reporting may be considered.
+
+The rendered page capture also showed:
+
+- Outcome proposed: Yes
+- Disputed
+- Outcome proposed: Yes
+- Disputed
+- Final outcome: Yes
+
+## Gamma API fields captured on 2026-05-14
+
+Event:
+
+- event id: 400878
+- ticker/slug: clavicular-pregnancy-in-2026
+- title: Clavicular pregnancy in 2026?
+- event creationDate: 2026-04-20T22:47:28.569518Z
+- event startDate: 2026-04-20T22:47:28.569523Z
+- event endDate: 2026-12-31T00:00:00Z
+- event active: true
+- event closed: true
+- event closedTime: 2026-05-01T00:33:40Z
+- event automaticallyResolved: true
+- event volume at capture: 13,934,862.960998023
+- event openInterest at capture: 5,749,723.168803
+
+Market:
+
+- market id: 2037907
+- conditionId: 0x6747bae2269c348786d0c0c0f4286ac006f13f16325d4dcbab954b46de029f19
+- questionID: 0x24b6bade3cce1deaee8a6381420b7fb88b0f409b447747471b0245061d986280
+- market createdAt: 2026-04-20T22:28:48.129526Z
+- market startDate: 2026-04-20T22:41:29.998973Z
+- market closed: true
+- market closedTime: 2026-05-01 00:33:40+00
+- umaEndDate: 2026-05-01T00:33:40Z
+- umaResolutionStatus: resolved
+- umaResolutionStatuses: ["proposed", "disputed", "proposed", "disputed"]
+- outcomes: ["Yes", "No"]
+- outcomePrices: ["1", "0"]
+- lastTradePrice at capture: 0.999
+- bestBid/bestAsk at capture: 0.998 / 0.999
+- resolvedBy: 0x65070BE91477460D8A7AeEb94ef92fe056C2f2A7
+
+## Notes for arbitration
+
+The proposition tracks the rule text, not the platform-resolution question. The key contested terms are “announces,” “he and a partner,” “expecting a baby through pregnancy,” and “credible.” The rule excludes non-credible announcements, including jokes, and allows statements from Clavicular or representatives, with credible-media consensus as a possible secondary source.

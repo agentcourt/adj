@@ -1,0 +1,77 @@
+[
+  {
+    "bytes": 16096,
+    "captured_at_utc": "2026-05-14T18:41:44Z",
+    "content_type": "text/html; charset=utf-8",
+    "file": "polymarket-page.txt",
+    "final_url": "https://polymarket.com/event/clavicular-pregnancy-in-2026",
+    "status_code": 200,
+    "url": "https://polymarket.com/event/clavicular-pregnancy-in-2026",
+    "original_file": "polymarket-page.txt",
+    "sanitization": "raw HTML converted to text; scripts/styles/comments/SVG/page chrome removed"
+  },
+  {
+    "bytes": 19547,
+    "captured_at_utc": "2026-05-14T18:41:45Z",
+    "content_type": "text/html; charset=utf-8",
+    "file": "forbes-clavicular-bet.txt",
+    "final_url": "https://www.forbes.com/sites/digital-assets/2026/04/30/inmates-taking-the-asylum-polymarkets-16m-clavicular-bet/",
+    "status_code": 200,
+    "url": "https://www.forbes.com/sites/digital-assets/2026/04/30/inmates-taking-the-asylum-polymarkets-16m-clavicular-bet/",
+    "original_file": "forbes-clavicular-bet.txt",
+    "sanitization": "raw HTML converted to text; scripts/styles/comments/SVG/page chrome removed"
+  },
+  {
+    "bytes": 17009,
+    "captured_at_utc": "2026-05-14T18:41:45Z",
+    "content_type": "text/html",
+    "file": "timesofindia-fact-check.txt",
+    "final_url": "https://timesofindia.indiatimes.com/world/us-streamers/fact-check-is-clavicular-really-expecting-his-first-child-after-10-days-relationship-amid-viral-pregnancy-contest-rumor/articleshow/130539375.cms",
+    "status_code": 200,
+    "url": "https://timesofindia.indiatimes.com/world/us-streamers/fact-check-is-clavicular-really-expecting-his-first-child-after-10-days-relationship-amid-viral-pregnancy-contest-rumor/articleshow/130539375.cms",
+    "original_file": "timesofindia-fact-check.txt",
+    "sanitization": "raw HTML converted to text; scripts/styles/comments/SVG/page chrome removed"
+  },
+  {
+    "bytes": 8632,
+    "captured_at_utc": "2026-05-14T18:41:45Z",
+    "content_type": "text/html; charset=utf-8",
+    "file": "hindustantimes-pregnancy-contest.txt",
+    "final_url": "https://www.hindustantimes.com/world-news/us-news/claviculars-bizarre-pregnancy-contest-claim-sparks-backlash-on-social-media-i-will-be-a-dad-101776968389298.html",
+    "status_code": 200,
+    "url": "https://www.hindustantimes.com/world-news/us-news/claviculars-bizarre-pregnancy-contest-claim-sparks-backlash-on-social-media-i-will-be-a-dad-101776968389298.html",
+    "original_file": "hindustantimes-pregnancy-contest.txt",
+    "sanitization": "raw HTML converted to text; scripts/styles/comments/SVG/page chrome removed"
+  },
+  {
+    "bytes": 5317,
+    "captured_at_utc": "2026-05-14T18:41:45Z",
+    "content_type": "text/html; charset=UTF-8",
+    "file": "tribune-pregnancy-contest.txt",
+    "final_url": "https://tribune.com.pk/story/2604737/claviculars-pregnancy-contest-claim-sparks-backlash-after-controversial-live-stream-comments",
+    "status_code": 200,
+    "url": "https://tribune.com.pk/story/2604737/claviculars-pregnancy-contest-claim-sparks-backlash-after-controversial-live-stream-comments",
+    "original_file": "tribune-pregnancy-contest.txt",
+    "sanitization": "raw HTML converted to text; scripts/styles/comments/SVG/page chrome removed"
+  },
+  {
+    "bytes": 3243,
+    "captured_at_utc": "2026-05-14T18:41:46Z",
+    "content_type": "application/json",
+    "file": "polymarket-gamma-event-summary.json",
+    "final_url": "https://gamma-api.polymarket.com/events?slug=clavicular-pregnancy-in-2026",
+    "status_code": 200,
+    "url": "https://gamma-api.polymarket.com/events?slug=clavicular-pregnancy-in-2026",
+    "original_file": "polymarket-gamma-event.json",
+    "sanitization": "reduced to market, event, rule, outcome, dispute-status, and provenance fields"
+  },
+  {
+    "bytes": 53149,
+    "captured_at_utc": "2026-05-14T18:41:46Z",
+    "content_type": "image/jpeg",
+    "file": "polymarket-market-image.jpg",
+    "final_url": "https://polymarket-upload.s3.us-east-2.amazonaws.com/clavicular-expecting-in-2026-xUesVxE7VDgf.jpg",
+    "status_code": 200,
+    "url": "https://polymarket-upload.s3.us-east-2.amazonaws.com/clavicular-expecting-in-2026-xUesVxE7VDgf.jpg"
+  }
+]

@@ -1,0 +1,29 @@
+Purpose:
+Record the government-source timing available at setup. The market required official information from the governments of the United States and Ukraine. This file is not a full official-source archive. It identifies the strongest currently captured official-source point and known retrieval limits.
+
+United States government source:
+White House fact sheet
+Title: Fact Sheet: President Donald J. Trump Secures Agreement to Establish United States-Ukraine Reconstruction Investment Fund
+URL: https://www.whitehouse.gov/fact-sheets/2025/05/fact-sheet-president-donald-j-trump-secures-agreement-to-establish-united-states-ukraine-reconstruction-investment-fund/
+Fetched by OpenClaw web_fetch on 2026-04-30.
+
+Relevant extracted text:
+A FIRST-OF-ITS-KIND HISTORIC PARTNERSHIP: Under the leadership of President Donald J. Trump, the US and Ukraine entered into a historic agreement on April 30, launching a first-of-its-kind partnership for the reconstruction and long-term economic success of Ukraine.
+
+The Treasury Department and the U.S. International Development Finance Corporation (DFC) will work together with the Government of Ukraine to finalize governance and advance this important partnership.
+
+This partnership between the United States and Ukraine establishes a fund that will receive 50% of royalties, license fees, and other similar payments from natural resource projects in Ukraine.
+
+Natural resource projects will include minerals, hydrocarbons, and related infrastructure development.
+
+Relevance:
+The captured U.S. government source identifies April 30, 2025 as the date on which the United States and Ukraine entered into the agreement. That is after the market deadline of March 31, 2025, 11:59 PM ET.
+
+Ukraine government source:
+Search result located a Cabinet of Ministers of Ukraine item titled "Ukraine and the United States sign Economic Partnership Agreement and establish the Reconstruction Investment Fund" at:
+https://www.kmu.gov.ua/en/news/ukraina-i-ssha-pidpysaly-uhodu-pro-ekonomichne-partnerstvo-ta-stvorennia-investytsiinoho-fondu-vidbudovy
+
+OpenClaw web_fetch hit a Radware captcha page on 2026-04-30, so the Ukrainian government item has not yet been captured directly into this input directory.
+
+Secondary corroboration for timing:
+CSIS article, "What to Know About the Signed U.S.-Ukraine Minerals Deal", URL: https://www.csis.org/analysis/what-know-about-signed-us-ukraine-minerals-deal, fetched by OpenClaw web_fetch on 2026-04-30, states: "On Wednesday, April 30, 2025, the United States and Ukraine signed a long-awaited deal to establish a joint investment fund for the reconstruction of Ukraine."

@@ -1,0 +1,13 @@
+# Official source record
+
+This preliminary packet has not backfilled official Russian or Ukrainian government-source captures.
+
+The market rule identifies two official-source paths:
+- official announcements from both Russia and Ukraine; or
+- a wide consensus of credible media reporting stating that an official ceasefire agreement between Russia and Ukraine has been reached.
+
+Known unresolved official-source questions:
+- Which official Russian announcement, if any, stated agreement to the May 9–11 ceasefire?
+- Which official Ukrainian announcement, if any, stated agreement to the May 9–11 ceasefire?
+- Did either side characterize the arrangement as a general halt in military engagement, a limited holiday pause, a humanitarian/prisoner-exchange arrangement, or some other narrower measure?
+- Did official statements specify an effective date and scope sufficient to satisfy the market's political-framework clause?

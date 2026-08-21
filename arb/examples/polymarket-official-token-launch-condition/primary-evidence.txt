@@ -1,0 +1,16 @@
+Primary evidence preserved after the 2026-05-03 open-record arbitration:
+
+1. Official Polymarket pUSD concept page, captured at source-captures/polymarket-docs-pusd.html.
+   Material facts: pUSD is described by Polymarket as the collateral token used for all trading on Polymarket, a standard ERC-20 token on Polygon, backed by USDC, transferable, and with 6 decimals.
+
+2. Official Polymarket Contracts page, captured at source-captures/polymarket-docs-contracts.html.
+   Material facts: the page states it is the single source of truth for Polymarket contract addresses, lists all Polymarket contracts on Polygon mainnet, and identifies pUSD — CollateralToken (proxy) at 0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB.
+
+3. Official Polymarket Changelog, captured at source-captures/polymarket-docs-changelog.html.
+   Material facts: Apr 17, 2026 entry announces a coordinated upgrade including a new collateral token, pUSD, with go-live planned for Apr 28, 2026 at ~11:00 UTC. Apr 28, 2026 entry says CLOB V2 is live on production and points to the migration guide for pUSD.
+
+4. Official Polymarket V2 migration guide, captured at source-captures/polymarket-docs-v2-migration.html.
+   Material facts: says Polymarket shipped new Exchange contracts, a rewritten CLOB backend, and a new collateral token, Polymarket USD or pUSD; says CLOB V2 is live as of Apr 28, 2026; says pUSD is a standard ERC-20 backed by USDC.
+
+5. Polygonscan pUSD token page, captured at source-captures/polygonscan-pusd-token.html.
+   Material facts: page title identifies the address as Polymarket: pUSD Token; extracted page shows many recent token transactions and contract/source metadata. This corroborates production-chain existence but is secondary to Polymarket's own Contracts page for official attribution.

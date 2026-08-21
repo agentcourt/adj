@@ -1,0 +1,19 @@
+HTTP/2 200
+content-type: text/html
+date: Fri, 01 May 2026 15:37:07 GMT
+last-modified: Fri, 14 Feb 2025 03:47:03 GMT
+server: AmazonS3
+x-amz-server-side-encryption: AES256
+x-amz-version-id: ISLYpKo3KlbSrYYQ7il7ks_ZP8vK8ry5
+content-encoding: gzip
+etag: W/"f153a03840870dd3e9737c635b4a05d8"
+vary: Accept-Encoding
+via: 1.1 428aee87aa461dfe793cb7da2c53aad2.cloudfront.net (CloudFront)
+vary: Origin
+strict-transport-security: max-age=31536000; includeSubdomains; preload
+x-content-type-options: nosniff
+x-frame-options: SAMEORIGIN
+x-xss-protection: 1; mode=block
+x-cache: Miss from cloudfront
+x-amz-cf-pop: IAH50-P5
+x-amz-cf-id: qk6SclnP-zuWa5QiAQjhOQS3QC4vAUEmftP9zbxSQJeroHPk5PsJ8Q==

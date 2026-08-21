@@ -1,0 +1,53 @@
+# Secondary reporting
+
+## Forbes: Polymarket's $16M Clavicular Bet Sparks Oracle Dispute
+
+URL: https://www.forbes.com/sites/digital-assets/2026/04/30/inmates-taking-the-asylum-polymarkets-16m-clavicular-bet/
+Captured file: source-captures/forbes-clavicular-bet.txt
+
+Relevant excerpts from the readable capture:
+
+- Forbes identified the disputed market as “Clavicular pregnancy in 2026?” and reported $16.46 million in lifetime volume, roughly $4.5 million in the prior 24 hours, Yes shares at 97 cents, and UMA dispute status as of April 30.
+- Forbes summarized the dispute: “The argument is over what counts as a credible pregnancy announcement from a streamer who told his audience he had gotten a girl pregnant. The market’s own rules state that ‘pregnancy announcements that are not credible, for example jokes, will not suffice.’”
+- Forbes reported that other traders, including @holy_moses7, said the market had been “confirmed to resolve as ‘No’ two days ago,” while Yes shares rose anyway.
+- Forbes wrote: “Across the orderbook, the disagreement is binary. The market description and the platform clarification say No. The price says Yes. The oracle, after two dispute rounds, has not closed the gap.”
+- Forbes linked the Domahhhh thread at https://x.com/domahhhh/status/2049886900513657218 and described it as alleging that Polymarket's oracle had become “a disinformation engine” run by “rogue traders.”
+
+## Times of India fact check
+
+URL: https://timesofindia.indiatimes.com/world/us-streamers/fact-check-is-clavicular-really-expecting-his-first-child-after-10-days-relationship-amid-viral-pregnancy-contest-rumor/articleshow/130539375.cms
+Captured file: source-captures/timesofindia-fact-check.txt
+
+Relevant excerpts from the readable capture:
+
+- The article says the rumor claimed Clavicular was expecting his first child with a girlfriend he met 10 days earlier.
+- It says there was “no proof, no confirmed girlfriend, and no medical update.”
+- It reports that no video confirmed a pregnancy and no statement from Clavicular confirmed it.
+- It identifies a separate livestream statement: “I must have children. I must get children today. I will be a dad in the next few months, guys. I am telling you.”
+- It concludes: “Right now, the truth is that there is no confirmed pregnancy. The viral claim is false and likely came from a mix of jokes, clips taken out of context, and his own controversial content style.”
+
+## Hindustan Times
+
+URL: https://www.hindustantimes.com/world-news/us-news/claviculars-bizarre-pregnancy-contest-claim-sparks-backlash-on-social-media-i-will-be-a-dad-101776968389298.html
+Captured file: source-captures/hindustantimes-pregnancy-contest.txt
+
+Relevant excerpts from the readable capture:
+
+- Hindustan Times reported a livestream suggestion for a contest involving 500 women, structured like a beauty-pageant type contest, with the winner becoming impregnated by him.
+- It quoted Peters as saying: “I must have children. I must get children today” and “I will be a dad in the next few months, guys. I am telling you.”
+- The article treated the remarks as a controversial proposal or stunt, not as confirmation that a partner was already pregnant.
+
+## The Express Tribune
+
+URL: https://tribune.com.pk/story/2604737/claviculars-pregnancy-contest-claim-sparks-backlash-after-controversial-live-stream-comments
+Captured file: source-captures/tribune-pregnancy-contest.txt
+
+Relevant excerpts from the readable capture:
+
+- The article reported that Braden Peters, known as Clavicular, proposed a “pregnancy contest” during a livestream.
+- It reported that he said he wanted children “within the next couple months” and quoted: “I must have children. I must get children today” and “I will be a dad in the next few months, guys. I am telling you.”
+- It said Clavicular had not provided further clarification on whether the proposed contest was genuine or satirical.
+
+## Search notes
+
+A narrow X API search during packet preparation did not locate the cited Domahhhh thread text or a primary Clavicular statement. It did locate public posts discussing a “500 girl modeling competition” and a claim that he had broken down after a girlfriend was pregnant. Those posts are weak evidence unless tied back to original clips or statements.

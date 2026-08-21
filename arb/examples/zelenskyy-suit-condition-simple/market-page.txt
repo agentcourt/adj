@@ -1,0 +1,108 @@
+# Official Polymarket market record
+
+Captured for case preparation on 2026-05-01.
+
+## Real market link
+
+Canonical event page:
+https://polymarket.com/event/will-zelenskyy-wear-a-suit-before-july
+
+Observed nested market URL:
+https://polymarket.com/event/will-zelenskyy-wear-a-suit-before-july/will-zelenskyy-wear-a-suit-before-july?tid=1752016288940
+
+The canonical event page's HTML includes:
+
+- `<link rel="canonical" href="https://polymarket.com/event/will-zelenskyy-wear-a-suit-before-july" ...>`
+- `<meta property="og:url" content="https://polymarket.com/event/will-zelenskyy-wear-a-suit-before-july" ...>`
+- `<meta name="description" content="Will Zelenskyy wear a suit before July? (Resolved): View final results and past odds on The World's Largest Prediction Market™" ...>`
+
+## Official page/API captures
+
+Raw captures are saved under `source-captures/`:
+
+- `source-captures/polymarket-page.html`
+- `source-captures/gamma-event.json`
+- `source-captures/polymarket-image.jpg`
+- `source-captures/polymarket-icon.jpg`
+
+Polymarket Gamma API endpoint used:
+https://gamma-api.polymarket.com/events/slug/will-zelenskyy-wear-a-suit-before-july
+
+A secondary Gamma query at `https://gamma-api.polymarket.com/markets?slug=will-zelenskyy-wear-a-suit-before-july` returned an empty list on 2026-05-01. The event-slug endpoint returned the market record.
+
+## Market identity and metadata from Polymarket Gamma API
+
+Event:
+
+- Event id: `25044`
+- Ticker/slug: `will-zelenskyy-wear-a-suit-before-july`
+- Title: `Will Zelenskyy wear a suit before July?`
+- Start date: `2025-05-22T22:32:29.193423Z`
+- Creation date: `2025-05-22T22:32:29.193421Z`
+- End date: `2025-06-30T12:00:00Z`
+- Closed time: `2025-07-09T00:30:39Z`
+- Volume: `242231180.272023`
+- Active: `true`
+- Closed: `true`
+- Archived: `false`
+
+Market:
+
+- Market id: `546814`
+- Condition id: `0x655e5ca101c466b6293aa15e06173b78b293221803d56e35551f708cd82eb352`
+- Question id: `0x0bf7a42b24b91417c1c1976cf99d153ac046f7bffd66c934291c94ddb742b743`
+- Resolved by: `0x6A9D222616C90FcA5754cd1333cFD9b7fb6a4F74`
+- UMA end date: `2025-07-09T00:30:39Z`
+- Closed time: `2025-07-09 00:30:39+00`
+- Outcomes: `["Yes", "No"]`
+- Outcome prices: `["0", "1"]`
+- UMA resolution status: `resolved`
+- UMA resolution statuses: `["proposed", "disputed", "proposed", "disputed", "proposed", "disputed", "proposed", "disputed", "proposed", "disputed"]`
+- Last trade price: `1`
+- Best bid: `0.004`
+- Best ask: `0.005`
+
+CLOB token ids:
+
+- Yes: `103864131794756285503734468197278890131080300305704085735435172616220564121629`
+- No: `34379581789895528560281218239759280237277305372978794324822777438824410172683`
+
+## Exact official market rule text
+
+The Polymarket page and Gamma API both expose this description:
+
+> This market will resolve to "Yes" if Volodymyr Zelenskyy is is photographed or videotaped wearing a suit between May 22 and June 30, 2025 ET. Otherwise, this market will resolve to "No".
+>
+> For this market to resolve to "Yes" the images or video must be taken and released within this market's timeframe. The images or video must be authentic, not the result of artificial intelligence or video editing.
+>
+> The resolution source will be a consensus of credible reporting.
+
+The duplicated word `is is` appears in the official text.
+
+## Page-visible market context and final state
+
+The Polymarket page text captured from HTML includes:
+
+- `Polymarket`
+- `$242,231,180 Vol.`
+- `Jun 30, 2025`
+- `Rules`
+- `Market Context`
+- `Market Opened: May 22, 2025, 6:30 PM ET`
+- `Volume $242,231,180`
+- `End Date Jun 30, 2025`
+- `Market Opened May 22, 2025, 6:30 PM ET`
+- `Resolver 0x6A9D22261...`
+- `Outcome proposed: Yes`
+- `Disputed`
+- `Outcome proposed: No`
+- `Disputed`
+- `Final outcome: No`
+
+## Notes for arbitration framing
+
+The arbitration proposition should not ask whether the market's `Final outcome: No` was right. It should ask the factual condition directly:
+
+> Volodymyr Zelenskyy was photographed or videotaped wearing a suit between May 22 and June 30, 2025 ET.
+
+The official Polymarket rule does not define `suit`. The packet therefore preserves both the ordinary-language evidence that many sources called the outfit a suit and the contrary argument that the outfit was a stylized military/formal jacket and trousers rather than a conventional suit.

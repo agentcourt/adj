@@ -1,0 +1,30 @@
+Official-source record after the 2026-05-03 open-record arbitration.
+
+The run relied on official Polymarket documentation and Polygonscan corroboration discovered by the search-enabled attorney. After the run, the main cited pages were captured under source-captures/.
+
+Captured official Polymarket pages:
+- source-captures/polymarket-docs-pusd.html
+  URL: https://docs.polymarket.com/concepts/pusd
+  Key text from fetched markdown: "pUSD (Polymarket USD) is the collateral token used for all trading on Polymarket. It's a standard ERC-20 token on Polygon, backed by USDC." The page states pUSD is transferable, has 6 decimals, is backed by USDC, and links to the Contracts page.
+- source-captures/polymarket-docs-contracts.html
+  URL: https://docs.polymarket.com/resources/contracts
+  Key text from fetched markdown: "All Polymarket contracts are deployed on Polygon mainnet (Chain ID: 137). This is the single source of truth for all contract addresses used across the platform." Under Collateral Contracts, the page lists "pUSD — CollateralToken (proxy)" at 0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB.
+- source-captures/polymarket-docs-changelog.html
+  URL: https://docs.polymarket.com/changelog
+  Key text from fetched markdown: Apr 17, 2026 entry says Polymarket is shipping "new Exchange contracts, a rewritten CLOB backend, and a new collateral token (pUSD)" and that exchange upgrades go live April 28, 2026 at ~11:00 UTC. Apr 28, 2026 entry says "CLOB V2 is live on production" and points to the migration guide for pUSD.
+- source-captures/polymarket-docs-v2-migration.html
+  URL: https://docs.polymarket.com/v2-migration
+  Key text from fetched markdown: "Polymarket has shipped a coordinated upgrade of its entire trading infrastructure: new Exchange contracts, a rewritten CLOB backend, and a new collateral token (Polymarket USD, or pUSD)." It says CLOB V2 is live as of April 28, 2026 and identifies pUSD as standard ERC-20 collateral backed by USDC.
+
+Captured corroborating explorer page:
+- source-captures/polygonscan-pusd-token.html
+  URL: https://polygonscan.com/address/0xC011a7E12a19f7B1f670d46F03B03f3342E82DFB
+  Fetched page title identifies "Polymarket: pUSD Token" at the same address. The extracted page shows current transactions, a contract creation row, and Solidity source metadata for CollateralToken. Explorer evidence is corroborative. The official Polymarket Contracts page is the stronger attribution evidence.
+
+Capture manifest:
+- source-captures/capture-manifest.txt
+
+Remaining official-source limitations:
+- These captures were made after the arbitration, not before attorney filings.
+- The captured HTML files should be treated as post-run preservation of discovered evidence, not as evidence available in the original thin packet.
+- Server publication timestamps and archive snapshots remain worth adding before any closed-record run.

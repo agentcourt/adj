@@ -1,0 +1,8 @@
+# Unresolved record gaps
+
+- The packet does not include the SDNY docket PDF, the unsealing order PDF, or the released note image as a local official-court exhibit.
+- The packet does not include a full New York Times capture. Search results identify relevant NYT reporting and authentication follow-up.
+- The packet does not resolve whether the public reporting consensus was sufficient to say the note was credibly reported to have been written by Epstein.
+- The packet does not resolve whether the note was intended as a suicide note, final message, or equivalent communication, rather than later characterized that way.
+- The Polymarket grouped event has API `endDate` / `endDateIso` values tied to the May 31 grouped market/event, while the disputed market's listed date is May 8. The proposition uses May 8 because the market question and group title say May 8.
+- Polymarket dispute/final-review state is mutable. The state captured here is the 2026-05-12 page/API state.

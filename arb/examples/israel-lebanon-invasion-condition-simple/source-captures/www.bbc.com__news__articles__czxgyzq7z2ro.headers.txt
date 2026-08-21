@@ -1,0 +1,38 @@
+HTTP/2 200
+content-type: text/html; charset=utf-8
+belfrage-cache-status: MISS
+bid: joan
+brequestid: 0f35e9eedefd47468a50e7effc41d5c0
+bsig: d4e553073ba0c114c1cfcb7b09124a9b
+content-encoding: gzip
+etag: "3asjjpv1hu5u2a"
+referrer-policy: no-referrer-when-downgrade
+req-svc-chain: FASTLY,GTM,BELFRAGE,BBCX
+via: 1.1 BBC-GTM, 1.1 Belfrage, 1.1 varnish
+x-content-type-options: nosniff
+x-correlation-id: fff0b88e-528f-4f55-bde1-3e61a4f5905e
+x-frame-options: SAMEORIGIN
+origin-agent-cluster: ?0
+nel: {"report_to":"default","max_age":2592000,"include_subdomains":true,"failure_fraction":0.25}
+x-bbc-edge-cache-status: MISS
+x-bbc-origin-response-status: 200
+report-to: {"group":"default","max_age":2592000,"endpoints":[{"url":"https://default.bbc-reporting-api.app/report-endpoint","priority":1}],"include_subdomains":true}
+server: BBC-GTM
+strict-transport-security: max-age=31536000; preload
+x-robots-tag: bingbot: noarchive
+fastly-restarts: 1
+accept-ranges: bytes
+date: Fri, 01 May 2026 15:39:42 GMT
+x-fastly-cache-status: MISS-CLUSTER
+x-served-by: cache-dfw-kdfw8210100-DFW
+x-cache: MISS
+x-cache-hits: 0
+x-timer: S1777649982.276919,VS0,VE291
+x-fastly-pre-flight-cache: MISS, MISS
+x-fastly-pre-flight-cache-status: MISS-CLUSTER
+x-cache-age: 0
+x-lb-nocache: true
+cache-control: private, stale-if-error=90, stale-while-revalidate=30, max-age=0, must-revalidate
+vary: X-BBC-Edge-Scheme,bbc-mvt-1,bbc-mvt-2,bbc-mvt-3,bbc-mvt-4,bbc-mvt-5,Accept-Encoding
+alt-svc: h3=":443";ma=86400,h3-29=":443";ma=86400,h3-27=":443";ma=86400
+content-length: 57436

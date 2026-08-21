@@ -1,0 +1,116 @@
+{
+  "capture_url": "https://polymarket.com/event/epstein-suicide-note-released-by",
+  "captured_at_utc": "2026-05-12T22:37:21Z",
+  "pageProps": {
+    "eslug": "epstein-suicide-note-released-by",
+    "mslug": null,
+    "defaultMslug": "epstein-suicide-note-released-by-may-8",
+    "serverDate": "2026-05-12T22:36:46.475Z"
+  },
+  "visible_resolution_state_terms": [
+    "Outcome proposed: Yes",
+    "Disputed",
+    "Outcome proposed: No",
+    "Final review"
+  ],
+  "event": {
+    "id": "435920",
+    "ticker": "epstein-suicide-note-released-by",
+    "slug": "epstein-suicide-note-released-by",
+    "title": "Epstein suicide note released by...?",
+    "description": "This market will resolve to “Yes” if any message or note written by Jeffrey Epstein, intended as a suicide note, is made publicly available by the listed date, 11:59 PM ET. Otherwise, this market will resolve to “No”.\n\nA qualifying note must be credibly reported to have been written by Jeffrey Epstein and have been intended to be a suicide note, final message, or equivalent communication.\n\nA qualifying message or note may be made widely available to the public by any means, regardless of whether it is released officially, leaked, or otherwise disclosed.\n\nThe resolution source will be a consensus of credible reporting.\n",
+    "resolutionSource": "",
+    "startDate": "2026-04-30T23:14:22.609296Z",
+    "creationDate": "2026-04-30T23:14:22.60929Z",
+    "endDate": "2026-05-31T00:00:00Z",
+    "active": true,
+    "closed": false,
+    "archived": false,
+    "restricted": true,
+    "liquidity": 9220685.12663,
+    "volume": 13373621.098375008,
+    "openInterest": 8163953.4680470005,
+    "createdAt": "2026-04-30T23:06:23.263927Z",
+    "updatedAt": "2026-05-12T22:31:40.811709Z",
+    "commentCount": 481,
+    "eventMetadata": {
+      "context_description": "A U.S. District Judge in New York unsealed a purported suicide note attributed to Jeffrey Epstein on May 7, 2026, following a New York Times petition amid litigation with his former cellmate Nicholas Tartaglione, who claimed to have found it after Epstein's July 2019 jail suicide attempt. Handwriting experts confirmed it matches Epstein's script from documents post-death, yet major outlets describe it as unverified and undated, lacking Department of Justice authentication. Trader consensus prices low Yes probabilities for release by May 31—reflecting doubts over credible reporting of intent as a suicide note per market rules—despite $13 million volume and disputes. No hearings or DOJ actions are scheduled before resolution.",
+      "context_requires_regen": true,
+      "context_updated_at": "2026-05-12T22:31:35.765Z"
+    },
+    "markets": [
+      {
+        "id": "2128535",
+        "question": "Epstein suicide note released by May 8?",
+        "conditionId": "0x5e5482b1e2afa7bed0b9a0c3c8ad33a83dd6cc6d649666cdf1977be64c42c82a",
+        "slug": "epstein-suicide-note-released-by-may-8",
+        "endDate": "2026-05-31T00:00:00Z",
+        "endDateIso": "2026-05-31",
+        "startDate": "2026-04-30T23:10:18.320839Z",
+        "startDateIso": "2026-04-30",
+        "description": "This market will resolve to “Yes” if any message or note written by Jeffrey Epstein, intended as a suicide note, is made publicly available by the listed date, 11:59 PM ET. Otherwise, this market will resolve to “No”.\n\nA qualifying note must be credibly reported to have been written by Jeffrey Epstein and have been intended to be a suicide note, final message, or equivalent communication.\n\nA qualifying message or note may be made widely available to the public by any means, regardless of whether it is released officially, leaked, or otherwise disclosed.\n\nThe resolution source will be a consensus of credible reporting.",
+        "outcomes": [
+          "Yes",
+          "No"
+        ],
+        "outcomePrices": [
+          "0.0005",
+          "0.9995"
+        ],
+        "active": true,
+        "closed": false,
+        "archived": false,
+        "resolvedBy": "0x65070BE91477460D8A7AeEb94ef92fe056C2f2A7",
+        "groupItemTitle": "May 8",
+        "groupItemThreshold": "0",
+        "questionID": "0x5ca4d636407564494e9149eb951896ff88923cef8d24c137707e4cff84b4d878",
+        "umaResolutionStatus": "disputed",
+        "umaResolutionStatuses": "[\"proposed\", \"disputed\", \"proposed\", \"disputed\", \"proposed\", \"disputed\"]",
+        "acceptingOrders": true,
+        "ready": false,
+        "funded": false,
+        "volumeNum": 13004419.028706007,
+        "liquidityNum": 9201292.77893,
+        "lastTradePrice": 0.001,
+        "bestAsk": 0.001,
+        "updatedAt": "2026-05-12T22:30:49.135143Z"
+      },
+      {
+        "id": "2128536",
+        "question": "Epstein suicide note released by May 31?",
+        "conditionId": "0x6bf3aa7d5186804e967e1e4737c896778f688e6dafdd0a1b659a4a07bf27d663",
+        "slug": "epstein-suicide-note-released-by-may-31",
+        "endDate": "2026-05-31T00:00:00Z",
+        "endDateIso": "2026-05-31",
+        "startDate": "2026-04-30T23:10:22.308711Z",
+        "startDateIso": "2026-04-30",
+        "description": "This market will resolve to “Yes” if any message or note written by Jeffrey Epstein, intended as a suicide note, is made publicly available by the listed date, 11:59 PM ET. Otherwise, this market will resolve to “No”.\n\nA qualifying note must be credibly reported to have been written by Jeffrey Epstein and have been intended to be a suicide note, final message, or equivalent communication.\n\nA qualifying message or note may be made widely available to the public by any means, regardless of whether it is released officially, leaked, or otherwise disclosed.\n\nThe resolution source will be a consensus of credible reporting.",
+        "outcomes": [
+          "Yes",
+          "No"
+        ],
+        "outcomePrices": [
+          "0.145",
+          "0.855"
+        ],
+        "active": true,
+        "closed": false,
+        "archived": false,
+        "resolvedBy": "0x65070BE91477460D8A7AeEb94ef92fe056C2f2A7",
+        "groupItemTitle": "May 31",
+        "groupItemThreshold": "1",
+        "questionID": "0x63d5ef63c5ac8b89daea100152e0fd85d431034343b5825ef58da3883521315c",
+        "umaResolutionStatuses": "[]",
+        "acceptingOrders": true,
+        "ready": false,
+        "funded": false,
+        "volumeNum": 369202.069669,
+        "liquidityNum": 20698.3307,
+        "lastTradePrice": 0.15,
+        "bestBid": 0.14,
+        "bestAsk": 0.15,
+        "updatedAt": "2026-05-12T22:30:00.043508Z"
+      }
+    ]
+  }
+}

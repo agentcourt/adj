@@ -1,0 +1,27 @@
+# Secondary reporting and dispute context
+
+This file preserves reporting leads for the open-record attorneys. It does not attempt to settle the factual issue inside the packet.
+
+## New York Times leads
+
+Brave search results on 2026-05-12 surfaced these New York Times articles:
+
+- `Jeffrey Epstein’s Possible Suicide Note Hidden From Public View` — https://www.nytimes.com/2026/04/30/us/jeffrey-epstein-suicide-note-sealed.html. Search snippet: The New York Times petitioned the judge to unseal the note, which said it was “time to say goodbye,” according to Nicholas Tartaglione.
+- `Jeffrey Epstein’s Purported Suicide Note Is Released by Federal Judge` — https://www.nytimes.com/2026/05/06/nyregion/epstein-suicide-note.html. Search snippet: Judge Kenneth M. Karas made the note public after The New York Times petitioned the court.
+- `Did Epstein Actually Write That Suicide Note? Here’s How We Tried to Find Out.` — https://www.nytimes.com/2026/05/12/insider/epstein-suicide-note-authentication.html. Search snippet: the article concerns how the Times tried to authenticate the note after it was unsealed.
+
+The NYT pages were not captured as full text in this packet.
+
+## Other secondary sources surfaced during setup
+
+- Reuters: `New York judge releases purported Epstein suicide note` — May 6, 2026.
+- NPR: `A judge unsealed Epstein's purported 2019 suicide note. More documents could follow` — May 7, 2026.
+- BBC: `US judge releases Jeffrey Epstein's purported suicide note` — May 2026.
+- Guardian: `Alleged suicide note written by Jeffrey Epstein unsealed by federal judge` — May 6, 2026.
+
+## Polymarket dispute-state reporting
+
+No separate outside article about the Polymarket dispute state was captured. The dispute state is preserved from the Polymarket page/API itself in `market-page.txt` and `etc/source-captures/`:
+
+- Page-visible state: `Outcome proposed: Yes`; `Disputed`; `Outcome proposed: No`; `Disputed`; `Final review`.
+- API state for the May 8 market: `umaResolutionStatus: disputed`; `umaResolutionStatuses: ["proposed", "disputed", "proposed", "disputed", "proposed", "disputed"]`.

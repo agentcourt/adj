@@ -1,0 +1,150 @@
+# Secondary reporting excerpts
+
+The market rule's source condition was `a consensus of credible reporting`. This file preserves credible reporting relevant to whether Zelenskyy was photographed or videotaped wearing a suit during the market window.
+
+## Reuters — 2025-06-25
+
+URL:
+https://www.reuters.com/world/zelenskiy-opts-more-formal-calibrated-wardrobe-ahead-trump-meeting-2025-06-25/
+
+Excerpts:
+
+> Ukrainian President Volodymyr Zelenskiy has retuned his wardrobe since a disastrous Oval Office meeting with Donald Trump in February, switching his typical khaki military-style tee-shirts and long-sleeved tops for more formal, but still rugged, black suit-style jackets and shirts.
+
+> He sported a similar look when meeting British Prime Minister Keir Starmer in London on Monday, and again at the dinner hosted on Tuesday by the Dutch king that preceded Wednesday's NATO summit in The Hague.
+
+Reuters uses `suit-style jackets and shirts`, not a clean statement that the outfit was a suit.
+
+## Euronews — 2025-06-25
+
+URL:
+https://www.euronews.com/culture/2025/06/25/sharp-dressed-man-ukraines-volodymyr-zelenskyy-and-the-sartorial-switch-for-nato
+
+Excerpts:
+
+> Gone are the army fatigues Zelenskyy has worn since then; in their place is a blazer (albeit with military overtones), dress pants, and a dress shirt, sans necktie.
+
+> Prior to the start of the summit, NATO delegates were welcomed at the Huis ten Bosch royal palace for an official dinner with King Willem-Alexander and Queen Maxima.
+
+> There, Zelenskyy sported a military-style black jacket and dress shirt, perhaps seen as more appropriate to the setting than the olive-green sweatshirt and combat pants he tends to wear.
+
+Euronews describes the outfit in suit-adjacent terms but emphasizes military overtones and absence of tie.
+
+## DL News — 2025-07-02
+
+URL:
+https://www.dlnews.com/articles/markets/polymarket-bettors-clash-over-zelenskyy-suit-dispute/
+
+Excerpts:
+
+> A Polymarket bet has seen users clash against each other.
+>
+> The $14 million bet concerns whether Zelenskyy wore a suit at a NATO summit.
+
+> Zelenskyy appeared at the NATO summit in The Hague on June 24 wearing a black blazer, collared shirt, and suit pants.
+
+> Most media outlets that reported on the event said that Zelenskyy wore a suit.
+
+> On one side, bettors argue that the dispute should be resolved in favour of ‘yes’ because the media widely reported that the Ukrainian President wore a suit, and that, by most definitions, a suit jacket, collared shirt, and suit pants constitute wearing a suit.
+
+> The other side argues that Zelenskyy didn’t wear a suit, citing that the blazer he wore was more stylised than a typical suit jacket, and that he didn’t wear a tie.
+
+DL News supplies both sides of the semantic dispute.
+
+## Newsweek — 2025-06-29
+
+URL:
+https://www.newsweek.com/volodymyr-zelensky-suit-jacket-donald-trump-betting-odds-2092182
+
+Excerpts:
+
+> Polymarket, a platform that allows users to trade on the outcomes of real-world events using cryptocurrency, currently includes a market where users can place wagers on whether or not Zelensky will wear a suit before July.
+
+> It was intended to resolve based on whether the Ukrainian leader was photographed or videotaped wearing a suit between May 22 and June 30, 2025. It attracted over $12 million in volume, but instead of resolving cleanly, it has ignited a furious debate online and among bettors, despite international news coverage and Polymarket's own descriptions seemingly confirming the appearance of a suit.
+
+> Zelensky, attending the NATO summit in The Hague earlier this week, looked to choose a military-style yet formal blazer with a buttoned-up black shirt, including for his arrival to a formal dinner hosted by Dutch royalty on Tuesday.
+
+Newsweek frames the outfit as suit-style and records the contemporaneous dispute before final resolution.
+
+## WIRED — 2025-07-08
+
+URL:
+https://www.wired.com/story/volodymyr-zelensky-suit-polymarket-rebellion/
+
+Excerpts:
+
+> Each individual prediction market is framed as a binary question. In this case: “Will Zelensky wear a suit before July?”
+
+> On June 25, Zelensky was pictured at a dinner before a NATO summit wearing a black jacket, shirt, and trouser combination with military-style detailing that multiple news outlets—including the BBC and the New York Post—described as a suit.
+
+> The discrepancy comes down partly to a dispute over the definition of a suit. “It meets the technical definition,” menswear expert Derek Guy tells WIRED. “I would also recognize that most people would not think of that as a suit.”
+
+> In this case, UMA voters are saying by a seemingly insurmountable margin that Zelensky did not wear a suit.
+
+WIRED gives the cleanest formulation of the semantic ambiguity: technically a suit under one expert's view, while many people may not treat it as a suit.
+
+## Protos — 2025-06-30
+
+URL:
+https://protos.com/zelenskyy-suit-polymarket-dispute/
+
+Excerpts:
+
+> This market was supposed to resolve positively if Zelenskyy “is photographed or videotaped wearing a suit between May 22 and June 30, 2025 ET.”
+
+> Zelenskyy attended a North Atlantic Treaty Organization (NATO) event on June 24 in a jacket and pants that appeared to be cut from the same fabric, though with a somewhat less traditional shape than classic Western tailoring.
+
+> The British Broadcasting Corporation (BBC) noted in an update on the event that “Zelenskyy swaps military fatigues for black suit at Nato summit.”
+
+> The New York Post ran a headline that stated, “Zelenskyy ditches t-shirt for a suit for sit-down meeting with President Trump.”
+
+> Even Polymarket Intel, an official Polymarket account, described a video of Zelenskyy’s arrival as “President Zelenskyy in a suit last night.”
+
+Protos records pro-Yes reporting and the Polymarket-affiliated social characterization, but this packet has not separately captured the X post.
+
+## Decrypt — 2025-07-09
+
+URL:
+https://decrypt.co/329210/polymarket-rules-no-237m-bet-zelenskyys
+
+Excerpts:
+
+> A high-profile Polymarket contract asking whether Ukrainian President Volodymyr Zelenskyy would wear a suit before July closed with a final resolution of “No” on Tuesday evening, despite widespread media coverage and images suggesting otherwise.
+
+> Tuesday’s final review followed a series of disputes, beginning with a challenge to an initial “Yes” outcome. That result was later overturned in favour of “No” after a second review, before being finalized.
+
+> On June 24, Zelenskyy appeared at a NATO event in the Netherlands wearing a black jacket, matching trousers, and a collared shirt, an outfit described by numerous media outlets as a suit.
+
+> Yet on July 1, UMA’s oracle ruled that the reporting consensus had not been sufficiently established and finalized the outcome as “No.”
+
+Caution: Decrypt's article also says the market asked about a window `between March 22 and June 30`. That conflicts with Polymarket's official page/API text, which says `between May 22 and June 30, 2025 ET`. Use the official Polymarket text for the time window.
+
+## CoinDesk — 2025-07-07, updated 2025-07-09
+
+URL:
+https://www.coindesk.com/markets/2025/07/07/polymarket-embroiled-in-usd160m-controversy-over-whether-zelensky-wore-a-suit-at-nato
+
+Excerpts:
+
+> More than $160 million worth of crypto was bet on the market, with the initial outcome of "yes" being disputed by the validators behind UMA, the oracle protocol that determines the results.
+
+> The "yes" voters are striking back, claiming that Zelenskyy did indeed wear a suit at the NATO summit on June 24 and that there could be foul play by UMA validators to swing the decision.
+
+> On the other side, popular menswear influencer and writer who goes by the moniker "derek guy" bet $3.6 million on the market resolving as "no." He stands to make $72,000 if the bet is successful.
+
+CoinDesk is useful for dispute posture and public controversy, not for the best clothing description.
+
+## RBC-Ukraine — 2025-06-25
+
+URL:
+https://newsukraine.rbc.ua/news/suit-alert-zelenskyy-turns-heads-at-nato-1750842102.html
+
+Excerpts:
+
+> For the first time since the start of the full-scale invasion, Volodymyr Zelenskyy appeared in public wearing a classic suit.
+
+> As reported, Zelenskyy arrived yesterday in The Hague, Netherlands, for the NATO summit. Today, the President of Ukraine appeared in photos and videos wearing a classic black suit.
+
+> Volodymyr Zelenskyy chose not a contrasting white shirt, as is usually customary, but one in a black shade. The head of state also declined to wear a tie.
+
+RBC-Ukraine gives a direct `classic suit` characterization, but its article cites social-media sources rather than an official clothing statement.

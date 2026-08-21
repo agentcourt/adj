@@ -1,0 +1,79 @@
+# Primary evidence and factual analysis
+
+## Proposition
+
+Between September 17, 2024 and September 30, 2024, 11:59 PM ET, Israel commenced a military offensive intended to establish control over any portion of Lebanon.
+
+## Elements to test
+
+1. Timing: the conduct must begin between September 17 and September 30, 2024, 11:59 PM ET.
+2. Actor: Israel.
+3. Conduct: commencement of a military offensive.
+4. Location: Lebanon.
+5. Intent: intended to establish control over any portion of Lebanon.
+
+The fifth element is the hard element. The record strongly supports Israeli ground operations or incursions by the deadline. The record is less direct on whether the operations were intended to establish control, rather than to raid, destroy Hezbollah infrastructure, push Hezbollah back, or create conditions for a diplomatic/security arrangement.
+
+## Evidence supporting occurrence by the deadline
+
+### State Department, 30 September 2024
+
+The State Department briefing at 1:18 p.m. EDT on September 30 records that Israel had told the United States it was conducting limited operations focused on Hezbollah infrastructure near the border.
+
+> They have at this time told us that those are limited operations focused on Hizballah infrastructure near the border, but we’re in continuous conversations with them about it.
+
+This is within the market window and from a permanent UN Security Council member. The wording supports actual operations on September 30, not merely later planning, although the spokesperson also avoided characterizing operational details beyond Israel's statements.
+
+### Reuters-syndicated report, 30 September 2024
+
+The Reuters-syndicated U.S. News record states:
+
+> Israel has told the United States it is conducting limited ground operations focused on Hezbollah infrastructure in Lebanon near the border with Israel, the State Department said on Monday.
+>
+> "This is what they have informed us that they are currently conducting, which are limited operations targeting Hezbollah infrastructure near the border," State Department spokesperson Matthew Miller told reporters.
+>
+> Asked to confirm they were limited ground operations, he said: "That is our understanding."
+
+This corroborates the State Department transcript and uses the phrase `limited ground operations`.
+
+### IDF statement as preserved in captured reports
+
+Multiple captured reports preserve the IDF statement:
+
+> A few hours ago, the IDF began limited, localized, and targeted ground raids based on precise intelligence against Hezbollah terrorist targets and infrastructure in southern Lebanon. These targets are located in villages close to the border and pose an immediate threat to Israeli communities in northern Israel.
+
+The IDF statement supports the conduct, actor, location, and timing elements. It characterizes the activity as raids, not occupation or permanent control.
+
+### UNIFIL, 1 October 2024
+
+UNIFIL stated:
+
+> Yesterday, the IDF notified UNIFIL of their intention to undertake limited ground incursions into Lebanon.
+
+This official UN record confirms that Israel notified UNIFIL on September 30 of intended limited ground incursions. Standing alone, it is weaker than the State Department and IDF records because it describes notification of intent rather than observed crossing.
+
+## Evidence bearing on `intended to establish control`
+
+### Evidence that favors the proposition
+
+- NBC reported that Israeli forces crossed the border and that the offensive aimed to push Hezbollah farther from the Israeli border. A military operation to push an armed group away from a border may require at least temporary control over villages, approaches, or a security strip.
+- NPR captured contemporaneous analysis asking whether Israel's ground invasion was to create a permanent security buffer zone occupied long term or only to remain temporarily to destroy Hezbollah infrastructure.
+- BBC reported that Lebanese civilians were warned not to travel south across the Litani River and that residents in around 25 villages were told to evacuate and head north. These area-wide warnings are consistent with an operation seeking military control or denial of territory, although they do not prove intent to establish control.
+- Later UNIFIL records on October 6 and October 13 show IDF activity inside Lebanese territory and crossing the Blue Line. These later records do not prove the September 30 timing element, but they help show the operation developed into territorial presence inside Lebanon.
+
+### Evidence that cuts against the proposition
+
+- The IDF's own language described `limited, localized, and targeted ground raids`, not an occupation, seizure, or declared control operation.
+- The State Department said Israel had described the operations as limited operations focused on Hezbollah infrastructure near the border.
+- Reuters-syndicated reporting used the same limited-ground-operations formulation.
+- UNIFIL's October 1 statement says the IDF notified it of an intention to undertake limited ground incursions. `Incursions` supports entry but does not necessarily establish an intent to control territory.
+
+## Preliminary packet assessment
+
+The packet is strong enough for a search-enabled or closed-record arbitration on whether Israel commenced ground operations or incursions in Lebanon by September 30, 2024.
+
+The packet is also usable for the narrower Polymarket condition, but the decisive issue is semantic and inferential: whether `limited, localized, and targeted ground raids` against infrastructure in villages close to the border, apparently aimed at pushing Hezbollah back, count as a `military offensive intended to establish control over any portion of Lebanon`.
+
+The strongest `demonstrated` theory is that establishing control over any portion can be temporary and tactical, and the operation's stated objective of removing Hezbollah positions from border villages required Israel to control those positions or areas at least long enough to clear them.
+
+The strongest `not demonstrated` theory is that the official descriptions stress raids and infrastructure targeting, while the market required an intent to establish control. If `establish control` means occupation, seizure, holding ground, or a buffer-zone control operation, the captured official record before the deadline does not prove that intent.

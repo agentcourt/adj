@@ -1,0 +1,17 @@
+Source checked: Roll Call / Factba.se archive
+
+Archive title: Remarks: Donald Trump Attends the FIFA World Cup Drawing in Washington - December 5, 2025
+
+Archive URL: https://rollcall.com/factbase/trump/transcript/donald-trump-remarks-fifa-world-cup-drawing-december-5-2025/
+
+What this file establishes:
+
+There is a separate archived transcript page for Trump's formal attendance remarks at the draw.
+
+What this file does not establish:
+
+This session could not retrieve the full transcript text from that archive.  The page is password-protected.  This example therefore does not claim, from local files alone, whether the formal program transcript does or does not contain the word "Ronaldo."
+
+Why this matters:
+
+The complaint does not need to prove that the formal program omitted the strike.  It needs to show that Trump said "Ronaldo" in event-linked remarks and that the market boundary reasonably includes those remarks.  The formal archive remains relevant because it marks the distinction between the pre-event reporter exchange and the formal program.

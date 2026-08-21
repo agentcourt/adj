@@ -1,0 +1,17 @@
+# Unresolved record gaps
+
+Updated: 2026-05-18T21:34:58Z
+
+This directory is suitable for open-record/search-enabled arbitration. It is closer to a closed-record packet than the original preliminary directory, but it remains insufficient for a clean closed-record replication.
+
+Material gaps before a closed-record run:
+- direct capture of Zelenskyy's Telegram/X confirmation of the May 9-May 11 ceasefire regime;
+- direct capture of the official Ukrainian presidential decree from president.gov.ua, which returned 403 here;
+- direct capture of Trump's Truth Social post or White House record, rather than media excerpts quoting it;
+- direct battlefield/monitoring evidence about whether hostilities paused generally or continued materially during May 9-May 11;
+- complete official Russian and Ukrainian post-period violation/implementation statements;
+- if relevant, UMA proposal/dispute transaction records or Polymarket comments explaining the dispute.
+
+Known record tension:
+- The affirmative case has a wide credible-media consensus that both Russia and Ukraine confirmed a May 9-May 11 ceasefire with suspension of kinetic activity.
+- The defense case has credible grounds to argue the arrangement was limited by its Victory Day, Red Square, prisoner-exchange, and alleged-violation context and therefore may not satisfy the market's "general pause" and non-humanitarian exclusions.

@@ -1,0 +1,12 @@
+# Secondary reporting
+
+This preliminary packet has not been built into a closed-record evidence packet.
+
+Known leads from initial discovery searches on 2026-05-11:
+
+- CBC search result, published May 2026: "Russia, Ukraine agree to 3-day ceasefire and prisoner swap announced by Trump." Snippet indicated that Zelenskyy confirmed the ceasefire had been arranged as part of U.S. negotiating efforts and referred to a 1,000-for-1,000 prisoner exchange.
+- USA Today search result, published May 2026: "Putin says Russia-Ukraine war 'coming to an end,' amid 3-day ceasefire." Snippet stated that U.S. President Donald Trump announced a three-day ceasefire from May 9 to May 11 supported by the Kremlin and Kyiv.
+- USA Today search result, published May 2026: "Ukraine, Russia confirm 3-day ceasefire as Trump says it could be extended." Snippet stated that Zelenskyy confirmed the ceasefire had been arranged as part of U.S. negotiating efforts.
+- Epoch Times search result, published May 2026: "Russia, Ukraine Accuse Each Other of Violating 3-Day Ceasefire." Snippet stated that the U.S.-brokered ceasefire was supposed to be in effect from May 9 through 11.
+
+These snippets are leads, not a complete evidence record. A closed-record run would require capture of the underlying articles and official-source materials.

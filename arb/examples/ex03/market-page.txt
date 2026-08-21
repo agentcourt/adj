@@ -1,0 +1,11 @@
+Market URL: https://kalshi.com/markets/kxtrumpmentionb/trump-mention-b/kxtrumpmentionb-25dec06
+
+Public market title: What will Trump say during the FIFA World Cup Draw?
+
+Contract family: PRESMENTION / NEWMENTION
+
+Strike at issue: Ronaldo
+
+Challenged resolution: No
+
+Requested resolution: Yes

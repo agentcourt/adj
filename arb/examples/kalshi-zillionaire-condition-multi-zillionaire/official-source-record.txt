@@ -1,0 +1,58 @@
+Official source record
+
+This packet now contains the official Kalshi event/market API records and the referenced Kalshi mentions contract-terms PDF.
+
+Official market page:
+https://kalshi.com/markets/kxberniemention/bernie-says/kxberniemention-26may03
+
+Official API captures:
+- source-captures/kalshi-series-KXBERNIEMENTION.json
+- source-captures/kalshi-event.json
+- source-captures/kalshi-markets.json
+- source-captures/kalshi-zill_market.json
+
+Referenced contract-terms PDF:
+- URL: https://kalshi-public-docs.s3.amazonaws.com/contract_terms/MENTION.pdf
+- Local PDF: source-captures/MENTION.pdf
+- Local extracted text: source-captures/MENTION.txt
+- Combined full rules file: kalshi-zillionaire-rules-full.txt
+
+Specific market rule text:
+
+rules_primary:
+If
+ Bernie Sanders says Zillion / Zillionaire as part of Fighting Oligarchy: Where We Go From Here with Bernie Sanders in Detroit
+, then the market resolves to Yes.
+
+rules_secondary:
+Video of the Fighting Oligarchy: Where We Go From Here with Bernie Sanders in Detroit will be primarily used to resolve the market; if a consensus by Kalshi employees cannot be reached using video, internal & external (official) transcripts of the Fighting Oligarchy: Where We Go From Here with Bernie Sanders in Detroit will be used.
+
+Payout Criterion:
+The exact phrase/word, or a plural or possessive form of the phrase/word, must be used. Grammatical/tense inflections are otherwise not included.
+Plural nouns occurring within proper nouns and noun phrases (e.g. names, titles, etc) are included.
+For the purpose of this market, the live broadcast or stream will be used to resolve this event.
+The event must be opened to the press for a live televised or streamed event to qualify.
+Except as otherwise specified, previously aired content, archival footage, and recordings captured at times, places, or events wholly separate from the featured address will not count.
+Please see full rules for more details.
+
+Event does not qualify:
+If an event is definitively cancelled or the event fails to qualify under the Payout Criterion, or any other circumstance prevents normal resolution, then the market for "Event does not qualify" resolves to Yes and all other markets will resolve to No.
+The event will resolve based on Bernie Sanders speaking in an official capacity. If Bernie Sanders is or is not present during a livestream, and does not speak in an official capacity the market will not qualify (e.g., inaudible private conversations on camera, unofficial statements picked up on a hot mic).
+
+Postponement:
+If the event is postponed, and such a postponement is announced by the end of the following calendar day to be rescheduled to a time within 14 calendar days, the markets shall remain open.
+
+Most relevant extracted MENTION.pdf rule text:
+
+"The word must appear as a distinct, standalone unit, not buried inside another word. Plural and possessive noun forms count. Other grammatical changes (tense, conjugation, derivation) do not. If <word> appears separated from other words by a space or hyphen or in a compound form with a space or hyphen, it counts. If <word> is fused into a single unhyphenated word, it does not count."
+
+Additional relevant MENTION.pdf examples:
+- Possessive noun forms, plurals, and possessive plural noun forms are included.
+- Grammatical variations beyond plurals/possessives are not included.
+- If <word> specifies a plural form, the singular does not count.
+- Plural nouns occurring within proper nouns and noun phrases are included.
+
+Remaining official-source gaps:
+- No official transcript, video timestamp, or audio excerpt proving the exact utterance has been captured in this packet. The conditional proposition assumes the utterance.
+- No official Kalshi explanation of the dispute has been captured beyond the API result and rule text.
+- The alleged earlier Kalshi `multibillionaire` precedent has not been captured.
