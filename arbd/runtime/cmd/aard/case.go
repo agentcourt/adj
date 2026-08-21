@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -39,6 +40,7 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	councilBackend := fs.String("council-backend", proceeding.DefaultCouncilBackend, "Council backend: direct or councilapi")
 	timeoutSeconds := fs.Int("timeout-seconds", 0, "Override runtime council LLM timeout in seconds")
 	lawyerTimeoutSeconds := fs.Int("lawyer-timeout-seconds", 0, "Override runtime lawyer turn timeout in seconds")
+	engineCallTimeoutSeconds := fs.Int("engine-timeout-seconds", 0, "Override Lean engine call timeout in seconds")
 	maxResponseBytes := fs.Int("max-response-bytes", 0, "Override runtime max parsed response bytes")
 	invalidAttemptLimit := fs.Int("invalid-attempt-limit", 0, "Override runtime invalid-attempt limit")
 	enginePath := fs.String("engine", proceeding.DefaultEnginePath(), "Lean engine binary")
@@ -79,6 +81,7 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 		CouncilBackend:             *councilBackend,
 		CouncilTimeoutSeconds:      *timeoutSeconds,
 		LawyerTimeoutSeconds:       *lawyerTimeoutSeconds,
+		EngineCallTimeoutSeconds:   *engineCallTimeoutSeconds,
 		MaxResponseBytes:           *maxResponseBytes,
 		InvalidAttemptLimit:        *invalidAttemptLimit,
 		EnginePath:                 *enginePath,
@@ -129,7 +132,7 @@ func buildCaseErrorSummary(err error) caseRunSummary {
 
 func reportCaseError(stdout io.Writer, err error) error {
 	if writeErr := writeCaseSummary(stdout, buildCaseErrorSummary(err)); writeErr != nil {
-		return writeErr
+		return errors.Join(err, writeErr)
 	}
 	return &reportedError{err: err}
 }

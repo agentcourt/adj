@@ -17,6 +17,9 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	if strings.TrimSpace(opts.ComplaintPath) == "" || strings.TrimSpace(opts.OutputDir) == "" {
 		return Result{}, fmt.Errorf("complaint path and output dir are required")
 	}
+	if opts.EngineCallTimeoutSeconds < 0 {
+		return Result{}, fmt.Errorf("engine call timeout must be positive when set")
+	}
 	raw, err := os.ReadFile(opts.ComplaintPath)
 	if err != nil {
 		return Result{}, fmt.Errorf("read complaint: %w", err)
@@ -84,6 +87,9 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	}
 	if opts.LawyerTimeoutSeconds > 0 {
 		runtimeLimits.LawyerTurnTimeoutSeconds = opts.LawyerTimeoutSeconds
+	}
+	if opts.EngineCallTimeoutSeconds > 0 {
+		runtimeLimits.EngineCallTimeoutSeconds = opts.EngineCallTimeoutSeconds
 	}
 	if opts.MaxResponseBytes > 0 {
 		runtimeLimits.MaxResponseBytes = opts.MaxResponseBytes

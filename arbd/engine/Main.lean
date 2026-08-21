@@ -32,6 +32,12 @@ structure TechnicalReport where
   summary : String
   deriving Inhabited, ToJson, FromJson, DecidableEq
 
+structure EvidenceCommitment where
+  evidence_id : String
+  sha256 : String
+  size_bytes : Nat
+  deriving Inhabited, ToJson, FromJson, DecidableEq
+
 structure SubmittedEvidence where
   phase : String
   role : String
@@ -44,6 +50,9 @@ structure SubmittedEvidence where
   relevance : String := ""
   sha256 : String := ""
   size_bytes : Nat := 0
+  parent_evidence_id : String := ""
+  parent_sha256 : String := ""
+  derivation_method : String := ""
   deriving Inhabited, ToJson, FromJson, DecidableEq
 
 structure CouncilAnswer where
@@ -108,12 +117,22 @@ structure ArbitrationState where
   forum_name : String
   case : ArbitrationCase
   policy : ArbitrationPolicy := {}
+  evidence_catalog : List EvidenceCommitment := []
   state_version : Nat := 0
+  deriving Inhabited, ToJson, FromJson, DecidableEq
+
+structure OpportunityAuthority where
+  opportunity_id : String
+  expected_state_version : Nat
+  role : String
+  phase : String
+  member_id : String
   deriving Inhabited, ToJson, FromJson, DecidableEq
 
 structure CourtAction where
   action_type : String
   actor_role : String
+  authority : OpportunityAuthority
   payload : Json
   deriving Inhabited, ToJson, FromJson
 
@@ -132,6 +151,7 @@ structure OpportunitySpec where
   opportunity_id : String
   role : String
   phase : String
+  member_id : String := ""
   may_pass : Bool := false
   objective : String
   allowed_tools : List String
@@ -155,8 +175,24 @@ structure NextOpportunityOk where
   opportunity : Option OpportunitySpec := none
   deriving Inhabited, ToJson, DecidableEq
 
+def authorityForOpportunity
+    (state : ArbitrationState)
+    (opportunity : OpportunitySpec) : OpportunityAuthority :=
+  { opportunity_id := opportunity.opportunity_id
+  , expected_state_version := state.state_version
+  , role := opportunity.role
+  , phase := opportunity.phase
+  , member_id := opportunity.member_id
+  }
+
 def trimString (s : String) : String :=
   s.trimAscii.toString
+
+def isLowerHexChar (c : Char) : Bool :=
+  "0123456789abcdef".contains c
+
+def isCanonicalSHA256 (s : String) : Bool :=
+  decide (s.utf8ByteSize = 64) && s.toList.all isLowerHexChar
 
 def getString (j : Json) (k : String) : Except String String := do
   let v ← j.getObjVal? k
@@ -166,13 +202,13 @@ def getNat (j : Json) (k : String) : Except String Nat := do
   let v ← j.getObjVal? k
   v.getNat?
 
-def getOptionalString (j : Json) (k : String) : String :=
+def getOptionalString (j : Json) (k : String) : Except String String := do
   match j.getObjVal? k with
+  | .error _ => pure ""
   | .ok value =>
       match value.getStr? with
-      | .ok s => trimString s
-      | .error _ => ""
-  | .error _ => ""
+      | .ok s => pure (trimString s)
+      | .error _ => throw s!"{k} must be a string"
 
 def getOptionalArray (j : Json) (k : String) : Except String (List Json) := do
   match j.getObjVal? k with
@@ -189,6 +225,156 @@ def hasDuplicateStrings : List String → Bool
 
 def hasDuplicateCouncilMemberIds (members : List CouncilMember) : Bool :=
   hasDuplicateStrings (members.map (fun member => member.member_id))
+
+def hasDuplicateEvidenceCommitmentIds (catalog : List EvidenceCommitment) : Bool :=
+  hasDuplicateStrings (catalog.map (fun item => item.evidence_id))
+
+def hasInvalidEvidenceCommitments (catalog : List EvidenceCommitment) : Bool :=
+  catalog.any (fun item =>
+    trimString item.evidence_id = "" ||
+      trimString item.evidence_id != item.evidence_id ||
+        !isCanonicalSHA256 item.sha256)
+
+def validateEvidenceCatalog (catalog : List EvidenceCommitment) : Except String Unit := do
+  if hasDuplicateEvidenceCommitmentIds catalog then
+    throw "evidence_catalog contains duplicate evidence_id"
+  if hasInvalidEvidenceCommitments catalog then
+    throw (
+      if catalog.any (fun item =>
+          trimString item.evidence_id = "" ||
+            trimString item.evidence_id != item.evidence_id) then
+        "evidence_catalog evidence_id must be nonempty and trimmed"
+      else
+        "evidence_catalog sha256 must contain exactly 64 lowercase hexadecimal characters")
+
+def submittedEvidenceCommitmentMatches
+    (item : SubmittedEvidence)
+    (evidenceId sha256 : String) : Bool :=
+  item.evidence_id = evidenceId && item.sha256 = sha256
+
+def catalogCommitmentMatches
+    (item : EvidenceCommitment)
+    (evidenceId sha256 : String) : Bool :=
+  item.evidence_id = evidenceId && item.sha256 = sha256
+
+def evidenceCommitmentExists
+    (catalog : List EvidenceCommitment)
+    (submitted : List SubmittedEvidence)
+    (evidenceId sha256 : String) : Bool :=
+  catalog.any (fun item => catalogCommitmentMatches item evidenceId sha256) ||
+    submitted.any (fun item => submittedEvidenceCommitmentMatches item evidenceId sha256)
+
+def evidenceReferenceWithinLimit
+    (catalog : List EvidenceCommitment)
+    (submitted : List SubmittedEvidence)
+    (maxBytes : Nat)
+    (evidenceId : String) : Bool :=
+  catalog.any (fun item =>
+      item.evidence_id = evidenceId && decide (item.size_bytes ≤ maxBytes)) ||
+    submitted.any (fun item =>
+      item.evidence_id = evidenceId && decide (item.size_bytes ≤ maxBytes))
+
+def offeredEvidenceBatchValid
+    (catalog : List EvidenceCommitment)
+    (submitted : List SubmittedEvidence)
+    (maxBytes : Nat)
+    (offered : List OfferedEvidence) : Bool :=
+  offered.all (fun item =>
+    evidenceReferenceWithinLimit catalog submitted maxBytes item.evidence_id)
+
+def validateOfferedEvidenceBatch
+    (catalog : List EvidenceCommitment)
+    (submitted : List SubmittedEvidence)
+    (maxBytes : Nat)
+    (offered : List OfferedEvidence) : Except String Unit := do
+  if !offeredEvidenceBatchValid catalog submitted maxBytes offered then
+    throw "offered_evidence contains an unknown or oversized evidence_id"
+
+def technicalReportBatchValid
+    (maxTitleBytes maxSummaryBytes : Nat)
+    (reports : List TechnicalReport) : Bool :=
+  reports.all (fun report =>
+    decide (report.title.utf8ByteSize ≤ maxTitleBytes) &&
+      decide (report.summary.utf8ByteSize ≤ maxSummaryBytes))
+
+def validateTechnicalReportBatch
+    (maxTitleBytes maxSummaryBytes : Nat)
+    (reports : List TechnicalReport) : Except String Unit := do
+  if !technicalReportBatchValid maxTitleBytes maxSummaryBytes reports then
+    throw "technical_reports exceed a UTF-8 byte limit"
+
+def submittedEvidenceParentValid
+    (catalog : List EvidenceCommitment)
+    (prior : List SubmittedEvidence)
+    (item : SubmittedEvidence) : Bool :=
+  if item.parent_evidence_id = "" && item.parent_sha256 = "" && item.derivation_method = "" then
+    true
+  else if item.parent_evidence_id = "" || item.parent_sha256 = "" || item.derivation_method = "" then
+    false
+  else if !isCanonicalSHA256 item.parent_sha256 then
+    false
+  else if item.parent_evidence_id = item.evidence_id then
+    false
+  else
+    evidenceCommitmentExists catalog prior item.parent_evidence_id item.parent_sha256
+
+def submittedEvidenceMetadataValid (item : SubmittedEvidence) : Bool :=
+  trimString item.evidence_id = item.evidence_id &&
+    item.evidence_id != "" &&
+      trimString item.title != "" &&
+        (trimString item.source_url != "" || trimString item.source_description != "") &&
+          trimString item.mime_type != "" &&
+            trimString item.relevance != "" &&
+              isCanonicalSHA256 item.sha256 &&
+                item.size_bytes != 0
+
+def submittedEvidenceEntryValid
+    (catalog : List EvidenceCommitment)
+    (prior : List SubmittedEvidence)
+    (maxBytes : Nat)
+    (item : SubmittedEvidence) : Bool :=
+  submittedEvidenceMetadataValid item &&
+    decide (item.size_bytes ≤ maxBytes) &&
+      !(catalog.any (fun commitment =>
+        commitment.evidence_id = item.evidence_id)) &&
+        !(prior.any (fun previous =>
+          previous.evidence_id = item.evidence_id)) &&
+          submittedEvidenceParentValid catalog prior item
+
+def validateSubmittedEvidenceParent
+    (catalog : List EvidenceCommitment)
+    (prior : List SubmittedEvidence)
+    (item : SubmittedEvidence) : Except String Unit := do
+  let parentEmpty :=
+    item.parent_evidence_id = "" && item.parent_sha256 = "" && item.derivation_method = ""
+  if !parentEmpty then
+    if item.parent_evidence_id = "" || item.parent_sha256 = "" || item.derivation_method = "" then
+      throw "submitted evidence parent derivation requires parent_evidence_id, parent_sha256, and derivation_method"
+    if !isCanonicalSHA256 item.parent_sha256 then
+      throw "submitted evidence parent_sha256 must contain exactly 64 lowercase hexadecimal characters"
+    if item.parent_evidence_id = item.evidence_id then
+      throw "submitted evidence parent_evidence_id must differ from evidence_id"
+    if !evidenceCommitmentExists catalog prior item.parent_evidence_id item.parent_sha256 then
+      throw "submitted evidence parent derivation does not match an existing commitment"
+
+def validateSubmittedEvidenceEntry
+    (catalog : List EvidenceCommitment)
+    (prior : List SubmittedEvidence)
+    (maxBytes : Nat)
+    (item : SubmittedEvidence) : Except String Unit := do
+  if !submittedEvidenceMetadataValid item then
+    throw (
+      if !isCanonicalSHA256 item.sha256 then
+        "submitted evidence sha256 must contain exactly 64 lowercase hexadecimal characters"
+      else
+        "submitted evidence contains invalid normalized metadata")
+  if catalog.any (fun commitment => commitment.evidence_id = item.evidence_id) then
+    throw s!"submitted evidence_id collides with evidence_catalog: {item.evidence_id}"
+  if prior.any (fun previous => previous.evidence_id = item.evidence_id) then
+    throw s!"duplicate submitted evidence_id: {item.evidence_id}"
+  if item.size_bytes > maxBytes then
+    throw s!"submitted evidence exceeds byte limit of {maxBytes}"
+  validateSubmittedEvidenceParent catalog prior item
 
 def plaintiffThenDefendant (xs : List Filing) (plaintiffLabel defendantLabel : String) : Option String :=
   if xs.length = 0 then
@@ -275,7 +461,7 @@ def nextOpportunityForPhase (s : ArbitrationState) : NextOpportunityOk :=
             phase := "surrebuttals"
             may_pass := true
             objective := "defendant surrebuttal"
-            allowed_tools := ["submit_surrebuttal", "pass_phase_opportunity"]
+            allowed_tools := ["submit_evidence", "submit_surrebuttal", "pass_phase_opportunity"]
           } }
       else
         { terminal := true, reason := "no_surrebuttal_opportunity", state_version := s.state_version }
@@ -300,6 +486,7 @@ def nextOpportunityForPhase (s : ArbitrationState) : NextOpportunityOk :=
               opportunity_id := s!"deliberation:{c.deliberation_round}:{member.member_id}"
               role := "council"
               phase := "deliberation"
+              member_id := member.member_id
               objective := s!"council answer by {member.member_id}"
               allowed_tools := ["submit_council_answer"]
             } }
@@ -328,6 +515,69 @@ def requireRole (actual expected : String) : Except String Unit :=
     pure ()
   else
     throw s!"invalid actor role: expected {expected}, got {actual}"
+
+def requireCouncilOpportunityMember
+    (opportunity : OpportunitySpec)
+    (action : CourtAction) : Except String Unit := do
+  let memberId := trimString (← getString action.payload "member_id")
+  if memberId != opportunity.member_id then
+    throw s!"action member_id {memberId} does not match current member_id {opportunity.member_id}"
+
+def opportunityAuthorityMismatch
+    (actual expected : OpportunityAuthority) : String :=
+  if actual.expected_state_version != expected.expected_state_version then
+    s!"stale opportunity state_version={actual.expected_state_version} current={expected.expected_state_version}"
+  else if actual.opportunity_id != expected.opportunity_id then
+    s!"opportunity_id {actual.opportunity_id} does not match current opportunity {expected.opportunity_id}"
+  else if actual.role != expected.role then
+    s!"opportunity role {actual.role} does not match current role {expected.role}"
+  else if actual.phase != expected.phase then
+    s!"opportunity phase {actual.phase} does not match current phase {expected.phase}"
+  else if actual.member_id != expected.member_id then
+    s!"opportunity member_id {actual.member_id} does not match current member_id {expected.member_id}"
+  else
+    "opportunity authority does not match current opportunity"
+
+def requireOpportunityAuthority
+    (actual expected : OpportunityAuthority) : Except String Unit :=
+  if actual = expected then
+    .ok ()
+  else
+    .error (opportunityAuthorityMismatch actual expected)
+
+def authorizeOpportunityAction
+    (opportunity : OpportunitySpec)
+    (action : CourtAction) : Except String Unit := do
+  if action.action_type = "fail_opportunity" then
+    requireRole action.actor_role "system"
+    if opportunity.role = "council" then
+      requireCouncilOpportunityMember opportunity action
+  else if action.action_type = "remove_council_member" then
+    requireRole action.actor_role "system"
+    if opportunity.role != "council" then
+      throw "council member removal requires a council opportunity"
+    requireCouncilOpportunityMember opportunity action
+  else
+    requireRole action.actor_role opportunity.role
+    if !(opportunity.allowed_tools.contains action.action_type) then
+      throw s!"action {action.action_type} is not allowed for opportunity {opportunity.opportunity_id}"
+    if action.action_type = "submit_council_answer" then
+      if opportunity.role != "council" then
+        throw "council answer requires a council opportunity"
+      requireCouncilOpportunityMember opportunity action
+
+def currentOpportunity (s : ArbitrationState) : Except String OpportunitySpec :=
+  match (nextOpportunity s).opportunity with
+  | some opportunity => .ok opportunity
+  | none => .error "no active opportunity"
+
+def authorizeAction
+    (s : ArbitrationState)
+    (action : CourtAction) : Except String OpportunitySpec := do
+  let opportunity ← currentOpportunity s
+  requireOpportunityAuthority action.authority (authorityForOpportunity s opportunity)
+  authorizeOpportunityAction opportunity action
+  pure opportunity
 
 def requireTextWithinLimit (label text : String) (limit : Nat) : Except String Unit := do
   let cleaned := trimString text
@@ -413,13 +663,13 @@ def parseOfferedEvidenceEntry (entry : Json) (phase role : String) : Except Stri
   let evidenceId := trimString rawEvidenceId
   if evidenceId = "" then
     .error "offered_evidence entry requires evidence_id"
-  else
-    .ok {
-      phase := phase
-      role := role
-      evidence_id := evidenceId
-      label := getOptionalString entry "label"
-    }
+  let label ← getOptionalString entry "label"
+  pure {
+    phase := phase
+    role := role
+    evidence_id := evidenceId
+    label := label
+  }
 
 def parseOfferedEvidenceEntries (entries : List Json) (phase role : String) : Except String (List OfferedEvidence) := do
   match entries with
@@ -475,9 +725,12 @@ def parseSubmittedEvidence (payload : Json) (phase role : String) : Except Strin
   let mimeType := trimString rawMimeType
   let relevance := trimString rawRelevance
   let sha256 := trimString rawSha256
-  let sourceUrl := getOptionalString payload "source_url"
-  let sourceDescription := getOptionalString payload "source_description"
-  let retrievalTimestamp := getOptionalString payload "retrieval_timestamp"
+  let sourceUrl ← getOptionalString payload "source_url"
+  let sourceDescription ← getOptionalString payload "source_description"
+  let retrievalTimestamp ← getOptionalString payload "retrieval_timestamp"
+  let parentEvidenceId ← getOptionalString payload "parent_evidence_id"
+  let parentSha256 ← getOptionalString payload "parent_sha256"
+  let derivationMethod ← getOptionalString payload "derivation_method"
   let sizeBytes ← payload.getObjValAs? Nat "size_bytes"
   if evidenceId = "" then
     throw "submitted evidence requires evidence_id"
@@ -491,6 +744,10 @@ def parseSubmittedEvidence (payload : Json) (phase role : String) : Except Strin
     throw "submitted evidence requires relevance"
   if sha256 = "" then
     throw "submitted evidence requires sha256"
+  if !isCanonicalSHA256 sha256 then
+    throw "submitted evidence sha256 must contain exactly 64 lowercase hexadecimal characters"
+  if parentSha256 != "" && !isCanonicalSHA256 parentSha256 then
+    throw "submitted evidence parent_sha256 must contain exactly 64 lowercase hexadecimal characters"
   if sizeBytes = 0 then
     throw "submitted evidence size_bytes must be positive"
   pure {
@@ -505,6 +762,9 @@ def parseSubmittedEvidence (payload : Json) (phase role : String) : Except Strin
     relevance := relevance
     sha256 := sha256
     size_bytes := sizeBytes
+    parent_evidence_id := parentEvidenceId
+    parent_sha256 := parentSha256
+    derivation_method := derivationMethod
   }
 
 def submitEvidence
@@ -521,26 +781,28 @@ def submitEvidence
           pure "plaintiff"
         else
           throw "rebuttal evidence is closed"
-    | _ => throw "submitted evidence is allowed only in arguments and rebuttals"
+    | "surrebuttals" =>
+        if c.surrebuttals.isEmpty then
+          pure "defendant"
+        else
+          throw "surrebuttal evidence is closed"
+    | _ => throw "submitted evidence is allowed only in arguments, rebuttals, and surrebuttals"
   requireRole actorRole expectedRole
   let parsedEvidence ← parseSubmittedEvidence payload c.phase expectedRole
-  let evidence := { parsedEvidence with role := expectedRole }
-  if c.submitted_evidence.any (fun item => item.evidence_id = evidence.evidence_id) then
-    throw s!"duplicate submitted evidence_id: {evidence.evidence_id}"
-  else if evidence.size_bytes > s.policy.max_submitted_evidence_bytes then
-    throw s!"submitted evidence exceeds byte limit of {s.policy.max_submitted_evidence_bytes}"
-  else
-    let total := submittedEvidenceCountForRole c.submitted_evidence expectedRole + 1
-    requireCountWithinLimit "submitted_evidence for this side" total s.policy.max_submitted_evidence_per_side
-    pure <| stateWithCase s (appendSubmittedEvidence c evidence)
+  let evidence := { parsedEvidence with phase := c.phase, role := expectedRole }
+  validateSubmittedEvidenceEntry
+    s.evidence_catalog c.submitted_evidence s.policy.max_submitted_evidence_bytes evidence
+  let total := submittedEvidenceCountForRole c.submitted_evidence expectedRole + 1
+  requireCountWithinLimit "submitted_evidence for this side" total s.policy.max_submitted_evidence_per_side
+  pure <| stateWithCase s (appendSubmittedEvidence c evidence)
 
 def requireNoSupplementalMaterials (payload : Json) : Except String Unit := do
   let offered ← getOptionalArray payload "offered_evidence"
   if !offered.isEmpty then
-    throw "offered_evidence are allowed only in arguments and rebuttals"
+    throw "offered_evidence are allowed only in arguments, rebuttals, and surrebuttals"
   let reports ← getOptionalArray payload "technical_reports"
   if !reports.isEmpty then
-    throw "technical_reports are allowed only in arguments and rebuttals"
+    throw "technical_reports are allowed only in arguments, rebuttals, and surrebuttals"
 
 def recordMeritsSubmission
   (s : ArbitrationState)
@@ -563,6 +825,10 @@ def recordMeritsSubmission
     let totalReports := technicalReportCountForRole c.technical_reports expectedRole + reports.length
     requireCountWithinLimit "offered_evidence for this side" totalOffered s.policy.max_exhibits_per_side
     requireCountWithinLimit "technical_reports for this side" totalReports s.policy.max_reports_per_side
+    validateOfferedEvidenceBatch
+      s.evidence_catalog c.submitted_evidence s.policy.max_exhibit_bytes offered
+    validateTechnicalReportBatch
+      s.policy.max_report_title_bytes s.policy.max_report_summary_bytes reports
     let c1 := addFiling c phase expectedRole text
     let c2 := appendSupplementalMaterials c1 offered reports
     pure <| stateWithCase s c2
@@ -662,9 +928,9 @@ def failOpportunity (s : ArbitrationState) (payload : Json) : Except String Arbi
   let role := trimString (← getString payload "role")
   let phase := trimString (← getString payload "phase")
   let reason := trimString (← getString payload "reason")
-  let message := getOptionalString payload "message"
-  let memberId := getOptionalString payload "member_id"
-  let model := getOptionalString payload "model"
+  let message ← getOptionalString payload "message"
+  let memberId ← getOptionalString payload "member_id"
+  let model ← getOptionalString payload "model"
   if opportunityId = "" then
     throw "opportunity failure requires opportunity_id"
   if role = "" then
@@ -713,6 +979,7 @@ def initializeCase (req : InitializeCaseRequest) : Except String ArbitrationStat
     throw "council_members length does not match policy.council_size"
   if hasDuplicateCouncilMemberIds req.council_members then
     throw "council_members contain duplicate member_id"
+  validateEvidenceCatalog req.state.evidence_catalog
   let c := { req.state.case with
     question := question
     council_members := req.council_members.map (fun member => { member with status := "seated" })
@@ -732,7 +999,7 @@ def initializeCase (req : InitializeCaseRequest) : Except String ArbitrationStat
   }
   pure <| stateWithCase req.state c
 
-def step (req : StepRequest) : Except String ArbitrationState := do
+def stepCore (req : StepRequest) : Except String ArbitrationState := do
   let c := req.state.case
   match req.action.action_type with
   | "record_opening_statement" =>
@@ -742,6 +1009,7 @@ def step (req : StepRequest) : Except String ArbitrationState := do
       requireRole req.action.actor_role role
       let text := trimString (← getString req.action.payload "text")
       requireTextWithinLimit "opening statement" text req.state.policy.max_opening_chars
+      requireNoSupplementalMaterials req.action.payload
       pure <| stateWithCase req.state (addFiling c "openings" role text)
   | "submit_argument" =>
       recordMeritsSubmission
@@ -771,7 +1039,7 @@ def step (req : StepRequest) : Except String ArbitrationState := do
         "defendant"
         "surrebuttal"
         req.state.policy.max_surrebuttal_chars
-        false
+        true
         req.action.payload
   | "submit_evidence" =>
       submitEvidence req.state req.action.actor_role req.action.payload
@@ -782,6 +1050,7 @@ def step (req : StepRequest) : Except String ArbitrationState := do
       requireRole req.action.actor_role role
       let text := trimString (← getString req.action.payload "text")
       requireTextWithinLimit "closing statement" text req.state.policy.max_closing_chars
+      requireNoSupplementalMaterials req.action.payload
       pure <| stateWithCase req.state (addFiling c "closings" role text)
   | "pass_phase_opportunity" =>
       if c.phase = "rebuttals" then
@@ -811,6 +1080,16 @@ def step (req : StepRequest) : Except String ArbitrationState := do
       requireRole req.action.actor_role "system"
       failOpportunity req.state req.action.payload
   | _ => throw s!"unknown action type: {req.action.action_type}"
+
+def step (req : StepRequest) : Except String ArbitrationState :=
+  let c := req.state.case
+  if c.status = "closed" then
+    .error "case is closed"
+  else if c.status = "failed" then
+    .error "case has failed"
+  else do
+    let _ ← authorizeAction req.state req.action
+    stepCore req
 
 def parseJsonInput (input : String) : Except String Json := do
   Json.parse input

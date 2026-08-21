@@ -28,22 +28,20 @@ def oneAnswerState : ArbitrationState :=
 def afterSecondAnswer : Except String ArbitrationState :=
   step
     { state := oneAnswerState
-    , action := councilAnswerAction "C2" 55 "second answer"
+    , action := councilAnswerAction oneAnswerState "C2" 55 "second answer"
     }
 
-def afterThirdAnswer : Except String ArbitrationState :=
+def afterThirdAnswer : Except String ArbitrationState := do
+  let state ← afterSecondAnswer
   step
-    { state :=
-        match afterSecondAnswer with
-        | .ok state => state
-        | .error _ => default
-    , action := councilAnswerAction "C3" 18 "third answer"
+    { state := state
+    , action := councilAnswerAction state "C3" 18 "third answer"
     }
 
 def afterRemovingUnansweredMember : Except String ArbitrationState :=
   step
     { state := oneAnswerState
-    , action := removeCouncilMemberAction "C3" "timed_out"
+    , action := removeCouncilMemberAction oneAnswerState "C2" "timed_out"
     }
 
 def twoAnswersState : ArbitrationState :=
@@ -54,19 +52,16 @@ def twoAnswersState : ArbitrationState :=
 def afterRemovingLastUnansweredMember : Except String ArbitrationState :=
   step
     { state := twoAnswersState
-    , action := removeCouncilMemberAction "C3" "timed_out"
+    , action := removeCouncilMemberAction twoAnswersState "C3" "timed_out"
     }
 
 def afterRemovingAnsweredMember : Except String ArbitrationState :=
-  step
-    { state := oneAnswerState
-    , action := removeCouncilMemberAction "C1" "timed_out"
-    }
+  removeCouncilMember oneAnswerState "C1" "timed_out"
 
 def afterOutOfRangeAnswer : Except String ArbitrationState :=
   step
     { state := activeDeliberationState
-    , action := councilAnswerAction "C1" 101 "too high"
+    , action := councilAnswerAction activeDeliberationState "C1" 101 "too high"
     }
 
 def votedAndTimedOutCase : ArbitrationCase :=

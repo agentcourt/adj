@@ -6,6 +6,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -59,8 +60,7 @@ func WriteCasePacket(opts CasePacketOptions) (CasePacketSummary, error) {
 	if complaintPath == "" || packetPath == "" || manifestPath == "" {
 		return CasePacketSummary{}, fmt.Errorf("complaint, packet, and manifest paths are required")
 	}
-	complaintInfo, err := requirePacketRegularFile(complaintPath, "complaint")
-	if err != nil {
+	if _, err := requirePacketRegularFile(complaintPath, "complaint"); err != nil {
 		return CasePacketSummary{}, err
 	}
 	complaintName := filepath.Base(complaintPath)
@@ -90,7 +90,7 @@ func WriteCasePacket(opts CasePacketOptions) (CasePacketSummary, error) {
 			explicitArchivePaths = append(explicitArchivePaths, archivePath)
 		}
 	} else {
-		caseFiles, err := loadCaseFiles(filepath.Dir(complaintPath))
+		caseFiles, err := loadCaseFiles(filepath.Dir(complaintPath), complaintPath)
 		if err != nil {
 			return CasePacketSummary{}, err
 		}
@@ -126,44 +126,23 @@ func WriteCasePacket(opts CasePacketOptions) (CasePacketSummary, error) {
 		},
 	}
 	for _, entry := range entries {
-		info := complaintInfo
-		if entry.sourcePath != complaintPath {
-			var err error
-			info, err = requirePacketRegularFile(entry.sourcePath, "case file")
-			if err != nil {
-				return CasePacketSummary{}, err
-			}
-		}
-		sum, err := sha384File(entry.sourcePath)
+		meta, err := casePacketFileMetadata(entry)
 		if err != nil {
 			return CasePacketSummary{}, err
 		}
-		manifest.Files = append(manifest.Files, CasePacketFileMeta{
-			ArchivePath: entry.archivePath,
-			SourceName:  filepath.Base(entry.sourcePath),
-			Role:        entry.role,
-			SizeBytes:   info.Size(),
-			SHA384:      sum,
-		})
+		manifest.Files = append(manifest.Files, meta)
 	}
 	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return CasePacketSummary{}, fmt.Errorf("marshal case packet manifest: %w", err)
 	}
 	manifestBytes = append(manifestBytes, '\n')
-	if err := writeCasePacketOutputs(packetPath, manifestPath, entries, control, manifestBytes); err != nil {
-		return CasePacketSummary{}, err
-	}
-	packetInfo, err := os.Stat(packetPath)
-	if err != nil {
-		return CasePacketSummary{}, fmt.Errorf("stat case packet: %w", err)
-	}
-	packetSHA384, err := sha384File(packetPath)
+	packetBytes, packetSHA384, err := writeCasePacketOutputs(packetPath, manifestPath, entries, manifest.Files, control, manifestBytes)
 	if err != nil {
 		return CasePacketSummary{}, err
 	}
 	manifest.PacketSHA384 = packetSHA384
-	manifest.PacketBytes = packetInfo.Size()
+	manifest.PacketBytes = packetBytes
 	return manifest, nil
 }
 
@@ -245,35 +224,96 @@ func canonicalCasePacketWritePath(path string) (string, error) {
 	return filepath.Clean(filepath.Join(resolvedDir, filepath.Base(abs))), nil
 }
 
-func writeCasePacketOutputs(packetPath string, manifestPath string, entries []casePacketEntry, control []byte, manifestBytes []byte) (err error) {
+func writeCasePacketOutputs(packetPath string, manifestPath string, entries []casePacketEntry, files []CasePacketFileMeta, control []byte, manifestBytes []byte) (packetBytes int64, packetSHA384 string, err error) {
 	manifestTemp, err := createCasePacketTempPath(filepath.Dir(manifestPath), ".case-packet-manifest-*.tmp")
 	if err != nil {
-		return err
+		return 0, "", err
 	}
 	defer func() {
 		err = removeCasePacketTemp(manifestTemp, err)
 	}()
 	packetTemp, err := createCasePacketTempPath(filepath.Dir(packetPath), ".case-packet-*.tmp")
 	if err != nil {
-		return err
+		return 0, "", err
 	}
 	defer func() {
 		err = removeCasePacketTemp(packetTemp, err)
 	}()
 	if err := os.WriteFile(manifestTemp, manifestBytes, 0o644); err != nil {
-		return fmt.Errorf("write case packet manifest temp file: %w", err)
+		return 0, "", fmt.Errorf("write case packet manifest temp file: %w", err)
 	}
-	if err := writeCasePacketArchive(packetTemp, entries, control, manifestBytes); err != nil {
+	if err := writeCasePacketArchive(packetTemp, entries, files, control, manifestBytes); err != nil {
+		return 0, "", err
+	}
+	packetSHA384, packetBytes, err = sha384File(packetTemp)
+	if err != nil {
+		return 0, "", err
+	}
+	packetPublishTemp := packetTemp
+	manifestPublishTemp := manifestTemp
+	packetTemp = ""
+	manifestTemp = ""
+	if err := publishCasePacketOutputs(packetPublishTemp, packetPath, manifestPublishTemp, manifestPath); err != nil {
+		return 0, "", err
+	}
+	return packetBytes, packetSHA384, nil
+}
+
+func publishCasePacketOutputs(packetTemp string, packetPath string, manifestTemp string, manifestPath string) (err error) {
+	defer func() {
+		err = removeCasePacketTemp(manifestTemp, err)
+	}()
+	defer func() {
+		err = removeCasePacketTemp(packetTemp, err)
+	}()
+	packetReserved := false
+	manifestReserved := false
+	cleanup := func(retErr error) error {
+		if manifestReserved {
+			retErr = errors.Join(retErr, removeCasePacketOutput(manifestPath, "case packet manifest"))
+		}
+		if packetReserved {
+			retErr = errors.Join(retErr, removeCasePacketOutput(packetPath, "case packet"))
+		}
+		return retErr
+	}
+	if err := reserveCasePacketOutput(packetPath, "case packet"); err != nil {
 		return err
 	}
+	packetReserved = true
+	if err := reserveCasePacketOutput(manifestPath, "case packet manifest"); err != nil {
+		return cleanup(err)
+	}
+	manifestReserved = true
 	if err := os.Rename(packetTemp, packetPath); err != nil {
-		return fmt.Errorf("publish case packet: %w", err)
+		return cleanup(fmt.Errorf("publish case packet: %w", err))
 	}
 	packetTemp = ""
 	if err := os.Rename(manifestTemp, manifestPath); err != nil {
-		return fmt.Errorf("publish case packet manifest: %w", err)
+		return cleanup(fmt.Errorf("publish case packet manifest: %w", err))
 	}
 	manifestTemp = ""
+	return nil
+}
+
+func reserveCasePacketOutput(path string, label string) error {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return fmt.Errorf("reserve %s output %s: %w", label, path, err)
+	}
+	if err := f.Close(); err != nil {
+		return errors.Join(
+			fmt.Errorf("close %s output reservation %s: %w", label, path, err),
+			removeCasePacketOutput(path, label),
+		)
+	}
+	return nil
+}
+
+func removeCasePacketOutput(path string, label string) error {
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("remove %s output %s: %w", label, path, err)
+	}
 	return nil
 }
 
@@ -284,10 +324,11 @@ func createCasePacketTempPath(dir string, pattern string) (string, error) {
 	}
 	path := f.Name()
 	if err := f.Close(); err != nil {
+		closeErr := fmt.Errorf("close case packet temp file %s: %w", path, err)
 		if removeErr := os.Remove(path); removeErr != nil && !os.IsNotExist(removeErr) {
-			return "", fmt.Errorf("close case packet temp file %s: %w; remove temp file: %v", path, err, removeErr)
+			return "", combineCasePacketError(closeErr, removeErr, "remove temp file "+path)
 		}
-		return "", fmt.Errorf("close case packet temp file %s: %w", path, err)
+		return "", closeErr
 	}
 	return path, nil
 }
@@ -297,15 +338,15 @@ func removeCasePacketTemp(path string, retErr error) error {
 		return retErr
 	}
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		if retErr != nil {
-			return fmt.Errorf("%w; remove temp file %s: %v", retErr, path, err)
-		}
-		return fmt.Errorf("remove temp file %s: %w", path, err)
+		return combineCasePacketError(retErr, err, "remove temp file "+path)
 	}
 	return retErr
 }
 
-func writeCasePacketArchive(path string, entries []casePacketEntry, control []byte, manifest []byte) (err error) {
+func writeCasePacketArchive(path string, entries []casePacketEntry, files []CasePacketFileMeta, control []byte, manifest []byte) (err error) {
+	if len(entries) != len(files) {
+		return fmt.Errorf("case packet file metadata count %d does not match source count %d", len(files), len(entries))
+	}
 	f, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("create case packet: %w", err)
@@ -328,8 +369,8 @@ func writeCasePacketArchive(path string, entries []casePacketEntry, control []by
 		retErr = combineCasePacketError(retErr, gz.Close(), "close case packet gzip")
 		return retErr
 	}
-	for _, entry := range entries {
-		if err := addCasePacketFile(tw, entry.archivePath, entry.sourcePath); err != nil {
+	for i, entry := range entries {
+		if err := addCasePacketFile(tw, entry, files[i]); err != nil {
 			return closeWriters(err)
 		}
 	}
@@ -353,28 +394,101 @@ func writeCasePacketArchive(path string, entries []casePacketEntry, control []by
 	return nil
 }
 
-func addCasePacketFile(tw *tar.Writer, archivePath string, sourcePath string) (err error) {
-	if err := validateCasePacketPath(archivePath); err != nil {
+func addCasePacketFile(tw *tar.Writer, entry casePacketEntry, expected CasePacketFileMeta) (err error) {
+	if err := validateCasePacketPath(entry.archivePath); err != nil {
 		return err
 	}
-	info, err := requirePacketRegularFile(sourcePath, "case packet source")
+	if expected.ArchivePath != entry.archivePath || expected.SourceName != filepath.Base(entry.sourcePath) || expected.Role != entry.role {
+		return fmt.Errorf("case packet metadata does not match source %s", entry.sourcePath)
+	}
+	if expected.SizeBytes < 0 {
+		return fmt.Errorf("case packet source %s has invalid expected size %d", entry.sourcePath, expected.SizeBytes)
+	}
+	f, info, err := openCasePacketSource(entry.sourcePath)
 	if err != nil {
 		return err
-	}
-	f, err := os.Open(sourcePath)
-	if err != nil {
-		return fmt.Errorf("open case packet source %s: %w", sourcePath, err)
 	}
 	defer func() {
 		err = combineCasePacketError(err, f.Close(), "close case packet source")
 	}()
-	if err := writeCasePacketHeader(tw, archivePath, info.Size()); err != nil {
+	if info.Size() != expected.SizeBytes {
+		return fmt.Errorf("case packet source %s changed after manifest construction: size %d, want %d", entry.sourcePath, info.Size(), expected.SizeBytes)
+	}
+	if err := writeCasePacketHeader(tw, entry.archivePath, expected.SizeBytes); err != nil {
 		return err
 	}
-	if _, err := io.Copy(tw, f); err != nil {
-		return fmt.Errorf("write case packet member %s: %w", archivePath, err)
+	h := sha512.New384()
+	written, err := io.Copy(io.MultiWriter(tw, h), f)
+	if err != nil {
+		return fmt.Errorf("write case packet member %s: %w", entry.archivePath, err)
+	}
+	if written != expected.SizeBytes {
+		return fmt.Errorf("case packet source %s changed after manifest construction: copied %d bytes, want %d", entry.sourcePath, written, expected.SizeBytes)
+	}
+	sum := hex.EncodeToString(h.Sum(nil))
+	if sum != expected.SHA384 {
+		return fmt.Errorf("case packet source %s changed after manifest construction: SHA-384 %s, want %s", entry.sourcePath, sum, expected.SHA384)
 	}
 	return nil
+}
+
+func casePacketFileMetadata(entry casePacketEntry) (meta CasePacketFileMeta, err error) {
+	f, info, err := openCasePacketSource(entry.sourcePath)
+	if err != nil {
+		return CasePacketFileMeta{}, err
+	}
+	defer func() {
+		err = combineCasePacketError(err, f.Close(), "close case packet source")
+	}()
+	h := sha512.New384()
+	written, err := io.Copy(h, f)
+	if err != nil {
+		return CasePacketFileMeta{}, fmt.Errorf("hash case packet source %s: %w", entry.sourcePath, err)
+	}
+	if written != info.Size() {
+		return CasePacketFileMeta{}, fmt.Errorf("case packet source %s changed while constructing manifest: read %d bytes, want %d", entry.sourcePath, written, info.Size())
+	}
+	return CasePacketFileMeta{
+		ArchivePath: entry.archivePath,
+		SourceName:  filepath.Base(entry.sourcePath),
+		Role:        entry.role,
+		SizeBytes:   written,
+		SHA384:      hex.EncodeToString(h.Sum(nil)),
+	}, nil
+}
+
+func openCasePacketSource(path string) (f *os.File, info os.FileInfo, err error) {
+	f, err = os.Open(path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("open case packet source %s: %w", path, err)
+	}
+	opened := f
+	valid := false
+	defer func() {
+		if valid {
+			return
+		}
+		err = combineCasePacketError(err, opened.Close(), "close case packet source")
+	}()
+	info, err = opened.Stat()
+	if err != nil {
+		return nil, nil, fmt.Errorf("stat open case packet source %s: %w", path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, nil, fmt.Errorf("open case packet source %s is not a regular file", path)
+	}
+	pathInfo, err := os.Stat(path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("stat case packet source %s: %w", path, err)
+	}
+	if !pathInfo.Mode().IsRegular() {
+		return nil, nil, fmt.Errorf("case packet source %s is not a regular file", path)
+	}
+	if !os.SameFile(pathInfo, info) {
+		return nil, nil, fmt.Errorf("case packet source changed while opening: %s", path)
+	}
+	valid = true
+	return opened, info, nil
 }
 
 func combineCasePacketError(primary error, secondary error, label string) error {
@@ -385,7 +499,7 @@ func combineCasePacketError(primary error, secondary error, label string) error 
 	if primary == nil {
 		return secondary
 	}
-	return fmt.Errorf("%w; %v", primary, secondary)
+	return errors.Join(primary, secondary)
 }
 
 func addCasePacketBytes(tw *tar.Writer, archivePath string, data []byte) error {
@@ -449,19 +563,20 @@ func requirePacketRegularFile(path string, label string) (os.FileInfo, error) {
 	return info, nil
 }
 
-func sha384File(path string) (sum string, err error) {
+func sha384File(path string) (sum string, size int64, err error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("open %s: %w", path, err)
+		return "", 0, fmt.Errorf("open %s: %w", path, err)
 	}
 	defer func() {
 		err = combineCasePacketError(err, f.Close(), "close hashed file")
 	}()
 	h := sha512.New384()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", fmt.Errorf("hash %s: %w", path, err)
+	size, err = io.Copy(h, f)
+	if err != nil {
+		return "", 0, fmt.Errorf("hash %s: %w", path, err)
 	}
-	return hex.EncodeToString(h.Sum(nil)), nil
+	return hex.EncodeToString(h.Sum(nil)), size, nil
 }
 
 func sha384Bytes(data []byte) string {

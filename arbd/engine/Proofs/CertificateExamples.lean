@@ -3,23 +3,44 @@ import Proofs.Samples
 
 namespace ArbdProofs
 
+def appendAcceptedAction
+    (state : ArbitrationState)
+    (actions : List CourtAction)
+    (action : CourtAction) : Except String (ArbitrationState × List CourtAction) := do
+  let next ← step { state := state, action := action }
+  pure (next, actions.concat action)
+
+def sampleClosedCertificateRun : Except String (ArbitrationState × List CourtAction) := do
+  let s0 ← initializeCase initRequest
+  let (s1, a1) ← appendAcceptedAction s0 []
+    (openingAction s0 "plaintiff" "Plaintiff opening.")
+  let (s2, a2) ← appendAcceptedAction s1 a1
+    (openingAction s1 "defendant" "Defendant opening.")
+  let (s3, a3) ← appendAcceptedAction s2 a2
+    (argumentAction s2 "plaintiff" "Plaintiff argument.")
+  let (s4, a4) ← appendAcceptedAction s3 a3
+    (argumentAction s3 "defendant" "Defendant argument.")
+  let (s5, a5) ← appendAcceptedAction s4 a4 (passAction s4 "plaintiff")
+  let (s6, a6) ← appendAcceptedAction s5 a5 (passAction s5 "defendant")
+  let (s7, a7) ← appendAcceptedAction s6 a6
+    (closingAction s6 "plaintiff" "Plaintiff closing.")
+  let (s8, a8) ← appendAcceptedAction s7 a7
+    (closingAction s7 "defendant" "Defendant closing.")
+  let (s9, a9) ← appendAcceptedAction s8 a8
+    (councilAnswerAction s8 "C1" 72 "first answer")
+  let (s10, a10) ← appendAcceptedAction s9 a9
+    (councilAnswerAction s9 "C2" 55 "second answer")
+  appendAcceptedAction s10 a10
+    (councilAnswerAction s10 "C3" 18 "third answer")
+
 def sampleClosedCertificateActions : List CourtAction :=
-  [ openingAction "plaintiff" "Plaintiff opening."
-  , openingAction "defendant" "Defendant opening."
-  , argumentAction "plaintiff" "Plaintiff argument."
-  , argumentAction "defendant" "Defendant argument."
-  , passAction "plaintiff"
-  , passAction "defendant"
-  , closingAction "plaintiff" "Plaintiff closing."
-  , closingAction "defendant" "Defendant closing."
-  , councilAnswerAction "C1" 72 "first answer"
-  , councilAnswerAction "C2" 55 "second answer"
-  , councilAnswerAction "C3" 18 "third answer"
-  ]
+  match sampleClosedCertificateRun with
+  | .ok (_, actions) => actions
+  | .error _ => []
 
 def sampleClosedCertificateState : ArbitrationState :=
-  match replayInitialized initRequest sampleClosedCertificateActions with
-  | .ok state => state
+  match sampleClosedCertificateRun with
+  | .ok (state, _) => state
   | .error _ => default
 
 def certificateCheckAccepted : Except String Unit → Bool
@@ -73,19 +94,26 @@ theorem sample_closed_certificate_facts :
     sample_closed_certificate_check
     sample_closed_certificate_status.1
 
-def sampleFailedCertificateActions : List CourtAction :=
-  [ failOpportunityAction
+def sampleFailedCertificateRun : Except String (ArbitrationState × List CourtAction) := do
+  let start ← initializeCase initRequest
+  appendAcceptedAction start []
+    (failOpportunityAction
+      start
       "openings:plaintiff"
       "plaintiff"
       "openings"
       "agent_error"
       "plaintiff agent failed"
-      "model-p"
-  ]
+      "model-p")
+
+def sampleFailedCertificateActions : List CourtAction :=
+  match sampleFailedCertificateRun with
+  | .ok (_, actions) => actions
+  | .error _ => []
 
 def sampleFailedCertificateState : ArbitrationState :=
-  match replayInitialized initRequest sampleFailedCertificateActions with
-  | .ok state => state
+  match sampleFailedCertificateRun with
+  | .ok (state, _) => state
   | .error _ => default
 
 theorem sample_failed_certificate_check_bool :

@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jsmorph/adj/arbd/runtime/lean"
 	"github.com/jsmorph/adj/arbd/runtime/spec"
@@ -31,7 +32,7 @@ func TestLoadCaseFiles(t *testing.T) {
 	write("instructions.txt", "hello")
 	write("samantha_public.pem", "pem")
 
-	files, err := loadCaseFiles(dir)
+	files, err := loadCaseFiles(dir, filepath.Join(dir, "complaint.md"))
 	if err != nil {
 		t.Fatalf("loadCaseFiles returned error: %v", err)
 	}
@@ -168,9 +169,22 @@ func TestEvidenceRegistryStoresCaseFilesAndReadsBoundedRanges(t *testing.T) {
 		t.Fatalf("manifest evidence = %#v, want %q", manifest, evidence.EvidenceID)
 	}
 	budget := &evidenceReadBudget{}
-	got, err := rc.readEvidenceRange(evidence.EvidenceID, 1, 3, budget)
+	rc.mu.Lock()
+	reservation, err := rc.reserveEvidenceReadLocked(evidence.EvidenceID, 1, 3, budget)
+	rc.mu.Unlock()
 	if err != nil {
-		t.Fatalf("readEvidenceRange returned error: %v", err)
+		t.Fatalf("reserveEvidenceReadLocked returned error: %v", err)
+	}
+	got, bytesRead, err := readReservedEvidenceRange(reservation)
+	rc.mu.Lock()
+	if err != nil {
+		rollbackEvidenceReadLocked(&reservation)
+	} else {
+		finalizeEvidenceReadLocked(&reservation, bytesRead)
+	}
+	rc.mu.Unlock()
+	if err != nil {
+		t.Fatalf("readReservedEvidenceRange returned error: %v", err)
 	}
 	if got["content_base64"] != "YmNk" || got["length"] != 3 {
 		t.Fatalf("read result = %#v", got)
@@ -215,6 +229,7 @@ func TestPrepareSubmittedEvidencePreservesContentAndBuildsVisibleFile(t *testing
 			Policy:    DefaultPolicy(),
 		},
 		submittedEvidence: []SubmittedEvidenceMeta{},
+		evidenceStoreDir:  filepath.Join(dir, "evidence-store"),
 	}
 	opportunity := Opportunity{Role: "plaintiff", Phase: "arguments"}
 	content := "  exact text\n"
@@ -238,9 +253,13 @@ func TestPrepareSubmittedEvidencePreservesContentAndBuildsVisibleFile(t *testing
 	if meta.SHA256 != wantSHA {
 		t.Fatalf("sha = %s, want %s", meta.SHA256, wantSHA)
 	}
-	file, err := rc.writeSubmittedEvidenceFile(meta, raw)
+	evidence, err := submittedEvidenceRecordMeta(meta, true)
 	if err != nil {
-		t.Fatalf("writeSubmittedEvidenceFile returned error: %v", err)
+		t.Fatalf("submittedEvidenceRecordMeta returned error: %v", err)
+	}
+	file, _, err := rc.publishSubmittedEvidence(meta, evidence, raw, "")
+	if err != nil {
+		t.Fatalf("publishSubmittedEvidence returned error: %v", err)
 	}
 	if file.EvidenceID != meta.EvidenceID || !file.TextReadable || file.Text != content {
 		t.Fatalf("written file metadata = %#v", file)
@@ -254,7 +273,7 @@ func TestPrepareSubmittedEvidencePreservesContentAndBuildsVisibleFile(t *testing
 	}
 }
 
-func TestChunkedEvidenceUploadCommitsSubmittedEvidenceEvidence(t *testing.T) {
+func TestChunkedEvidenceUploadPreparesSubmittedEvidence(t *testing.T) {
 	dir := t.TempDir()
 	rc := &runContext{
 		cfg: Config{
@@ -267,7 +286,8 @@ func TestChunkedEvidenceUploadCommitsSubmittedEvidenceEvidence(t *testing.T) {
 	}
 	raw := []byte("abcdef")
 	sha := sha256.Sum256(raw)
-	session, err := rc.beginEvidenceUpload(Opportunity{Role: "plaintiff", Phase: "arguments"}, map[string]any{
+	opportunity := Opportunity{Role: "plaintiff", Phase: "arguments"}
+	session, err := rc.beginEvidenceUpload(opportunity, map[string]any{
 		"title":               "Binary source",
 		"mime_type":           "application/octet-stream",
 		"expected_size_bytes": int64(len(raw)),
@@ -278,13 +298,13 @@ func TestChunkedEvidenceUploadCommitsSubmittedEvidenceEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("beginEvidenceUpload returned error: %v", err)
 	}
-	if _, n, err := rc.writeEvidenceChunk(session.UploadID, 0, "YWJj"); err != nil || n != 3 {
+	if _, n, err := rc.writeEvidenceChunk(opportunity, session.UploadID, 0, "YWJj"); err != nil || n != 3 {
 		t.Fatalf("write first chunk = session, %d, %v", n, err)
 	}
-	if _, n, err := rc.writeEvidenceChunk(session.UploadID, 3, "ZGVm"); err != nil || n != 3 {
+	if _, n, err := rc.writeEvidenceChunk(opportunity, session.UploadID, 3, "ZGVm"); err != nil || n != 3 {
 		t.Fatalf("write second chunk = session, %d, %v", n, err)
 	}
-	meta, err := rc.prepareEvidenceUploadCommit(session, "bin")
+	meta, err := rc.prepareEvidenceUploadCommit(opportunity, session, "bin", "")
 	if err != nil {
 		t.Fatalf("prepareEvidenceUploadCommit returned error: %v", err)
 	}
@@ -292,15 +312,16 @@ func TestChunkedEvidenceUploadCommitsSubmittedEvidenceEvidence(t *testing.T) {
 	if fileMeta["evidence_id"] != meta.EvidenceID {
 		t.Fatalf("submitted evidence payload missing evidence_id: %#v", fileMeta)
 	}
-	meta, file, evidence, err := rc.finalizeEvidenceUpload(session, meta)
+	evidence, err := submittedEvidenceRecordMeta(meta, false)
 	if err != nil {
-		t.Fatalf("finalizeEvidenceUpload returned error: %v", err)
+		t.Fatalf("submittedEvidenceRecordMeta returned error: %v", err)
+	}
+	file, _, err := rc.publishSubmittedEvidence(meta, evidence, nil, session.Path)
+	if err != nil {
+		t.Fatalf("publishSubmittedEvidence returned error: %v", err)
 	}
 	if meta.EvidenceID == "" || file.EvidenceID != meta.EvidenceID || evidence.EvidenceID != meta.EvidenceID {
 		t.Fatalf("meta=%#v file=%#v evidence=%#v", meta, file, evidence)
-	}
-	if _, ok := rc.uploadSessions[session.UploadID]; ok {
-		t.Fatalf("upload session was not cleared")
 	}
 	if got, err := os.ReadFile(file.Path); err != nil || string(got) != string(raw) {
 		t.Fatalf("uploaded file = %q, %v", string(got), err)
@@ -318,25 +339,31 @@ func TestSubmittedEvidenceRegistersEvidence(t *testing.T) {
 		evidenceStoreDir: filepath.Join(dir, "evidence-store"),
 	}
 	sha := sha256.Sum256([]byte("source"))
+	shaHex := hex.EncodeToString(sha[:])
 	name := "submitted-evidence-01-plaintiff-abcd.txt"
 	meta := SubmittedEvidenceMeta{
 		Phase:              "arguments",
 		Role:               "plaintiff",
-		EvidenceID:         evidenceIDForFile(hex.EncodeToString(sha[:]), name),
+		EvidenceID:         evidenceIDForFile(shaHex, name),
 		Name:               name,
 		Title:              "Source",
 		SourceURL:          "https://example.test/source",
 		MimeType:           "text/plain",
 		RetrievalTimestamp: "2026-05-21T12:00:00Z",
 		Relevance:          "Shows the fact.",
+		SHA256:             shaHex,
+		SizeBytes:          len("source"),
 	}
 	file := CaseFile{EvidenceID: meta.EvidenceID, Name: meta.Name, Path: filepath.Join(dir, meta.Name), MimeType: meta.MimeType, TextReadable: true, Text: "source"}
 	if err := os.WriteFile(file.Path, []byte(file.Text), 0o644); err != nil {
 		t.Fatalf("write evidence file: %v", err)
 	}
-	evidence, err := rc.registerSubmittedEvidenceEvidence(meta, file)
+	evidence, err := submittedEvidenceRecordMeta(meta, true)
 	if err != nil {
-		t.Fatalf("registerSubmittedEvidenceEvidence returned error: %v", err)
+		t.Fatalf("submittedEvidenceRecordMeta returned error: %v", err)
+	}
+	if _, _, err := rc.publishSubmittedEvidence(meta, evidence, nil, file.Path); err != nil {
+		t.Fatalf("publishSubmittedEvidence returned error: %v", err)
 	}
 	if evidence.AdmissibilityStatus != "submitted_evidence" || evidence.SubmittedByRole != "plaintiff" || evidence.EvidenceID != meta.EvidenceID {
 		t.Fatalf("evidence metadata = %#v", evidence)
@@ -375,7 +402,7 @@ func TestAddEvidenceAllowsIdempotentRegistration(t *testing.T) {
 		StorageName:         "ab/abc123",
 		CreatedAt:           "2026-05-21T20:00:00Z",
 		AdmissibilityStatus: "case_packet",
-		RecordVisibility:    "juror_visible",
+		RecordVisibility:    "council_visible",
 		Title:               "source.txt",
 		OriginalName:        "source.txt",
 		SubmittedByRole:     "system",
@@ -409,7 +436,7 @@ func TestAddEvidenceRejectsMetadataConflict(t *testing.T) {
 		StorageName:         "ab/abc123",
 		CreatedAt:           "2026-05-21T20:00:00Z",
 		AdmissibilityStatus: "case_packet",
-		RecordVisibility:    "juror_visible",
+		RecordVisibility:    "council_visible",
 		Title:               "source.txt",
 		OriginalName:        "source.txt",
 		SubmittedByRole:     "system",
@@ -468,7 +495,7 @@ func TestValidatePolicyKeepsUploadLimitWithinRecordEvidenceLimit(t *testing.T) {
 	}
 }
 
-func TestLoadCaseFilesPreservesTrailingNewline(t *testing.T) {
+func TestLoadCaseFilesDefersTextReadUntilSnapshot(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "situation.md"), []byte("# Question\n\nP\n"), 0o644); err != nil {
 		t.Fatalf("write situation: %v", err)
@@ -481,15 +508,15 @@ func TestLoadCaseFilesPreservesTrailingNewline(t *testing.T) {
 		t.Fatalf("write confession: %v", err)
 	}
 
-	files, err := loadCaseFiles(dir)
+	files, err := loadCaseFiles(dir, filepath.Join(dir, "complaint.md"))
 	if err != nil {
 		t.Fatalf("loadCaseFiles returned error: %v", err)
 	}
 	if len(files) != 1 {
 		t.Fatalf("loadCaseFiles returned %d files, want 1", len(files))
 	}
-	if files[0].Text != body {
-		t.Fatalf("file text = %q, want %q", files[0].Text, body)
+	if files[0].Text != "" {
+		t.Fatalf("file text = %q, want deferred read", files[0].Text)
 	}
 }
 
@@ -508,7 +535,7 @@ func TestLoadCaseFilesAllowsNoUsableFiles(t *testing.T) {
 		t.Fatalf("write readme backup: %v", err)
 	}
 
-	files, err := loadCaseFiles(dir)
+	files, err := loadCaseFiles(dir, filepath.Join(dir, "complaint.md"))
 	if err != nil {
 		t.Fatalf("loadCaseFiles returned error: %v", err)
 	}
@@ -538,8 +565,8 @@ func TestLoadCaseFilesFromPaths(t *testing.T) {
 	if files[0].EvidenceID != "instructions.txt" || files[1].EvidenceID != "samantha_public.pem" {
 		t.Fatalf("unexpected files: %#v", files)
 	}
-	if files[0].Text != "hello\n" {
-		t.Fatalf("instructions text = %q, want hello\\n", files[0].Text)
+	if files[0].Text != "" {
+		t.Fatalf("instructions text = %q, want deferred read", files[0].Text)
 	}
 }
 
@@ -570,8 +597,8 @@ func TestLoadCaseFilesFromPathsRejectsDuplicateBaseNames(t *testing.T) {
 
 func TestValidateAttorneyPayload(t *testing.T) {
 	policy := DefaultPolicy()
-	fileByID := map[string]CaseFile{
-		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128},
+	evidenceByID := map[string]EvidenceMeta{
+		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128, RecordVisibility: "council_visible", AdmissibilityStatus: "case_packet"},
 	}
 	valid := map[string]any{
 		"text": "argument",
@@ -582,13 +609,13 @@ func TestValidateAttorneyPayload(t *testing.T) {
 			map[string]any{"title": "Verification", "summary": "Verified OK."},
 		},
 	}
-	if err := validateAttorneyPayload("submit_argument", valid, fileByID, policy); err != nil {
+	if err := validateAttorneyPayload("submit_argument", valid, evidenceByID, policy); err != nil {
 		t.Fatalf("validateAttorneyPayload returned error: %v", err)
 	}
 	invalid := map[string]any{
 		"text": "",
 	}
-	if err := validateAttorneyPayload("submit_argument", invalid, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("submit_argument", invalid, evidenceByID, policy); err == nil {
 		t.Fatalf("expected validation error for empty text")
 	}
 	badFile := map[string]any{
@@ -597,13 +624,13 @@ func TestValidateAttorneyPayload(t *testing.T) {
 			map[string]any{"evidence_id": "missing.txt"},
 		},
 	}
-	if err := validateAttorneyPayload("submit_argument", badFile, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("submit_argument", badFile, evidenceByID, policy); err == nil {
 		t.Fatalf("expected validation error for missing file")
 	}
 }
 
 func TestCouncilMemberIDFromOpportunity(t *testing.T) {
-	opportunity := Opportunity{ID: "deliberation:2:C4"}
+	opportunity := Opportunity{ID: "deliberation:2:C4", MemberID: "C4"}
 	if got := councilMemberIDFromOpportunity(opportunity); got != "C4" {
 		t.Fatalf("councilMemberIDFromOpportunity = %q, want C4", got)
 	}
@@ -663,46 +690,46 @@ func TestPreflightCouncilCandidatesFailsWhenAvailablePoolExhausted(t *testing.T)
 
 func TestValidateAttorneyPayloadAllowsSupplementalMaterialsInRebuttal(t *testing.T) {
 	policy := DefaultPolicy()
-	fileByID := map[string]CaseFile{
-		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128},
+	evidenceByID := map[string]EvidenceMeta{
+		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128, RecordVisibility: "council_visible", AdmissibilityStatus: "case_packet"},
 	}
 	rebuttal := map[string]any{
 		"text": "reply",
 		"offered_evidence": []any{
-			map[string]any{"evidence_id": "instructions.txt"},
+			map[string]any{"evidence_id": "instructions.txt", "label": "PX-1"},
 		},
 		"technical_reports": []any{
 			map[string]any{"title": "Check", "summary": "Done."},
 		},
 	}
-	if err := validateAttorneyPayload("submit_rebuttal", rebuttal, fileByID, policy); err != nil {
+	if err := validateAttorneyPayload("submit_rebuttal", rebuttal, evidenceByID, policy); err != nil {
 		t.Fatalf("expected rebuttal supplemental materials to be accepted: %v", err)
 	}
 }
 
 func TestValidateAttorneyPayloadAllowsSupplementalMaterialsInSurrebuttal(t *testing.T) {
 	policy := DefaultPolicy()
-	fileByID := map[string]CaseFile{
-		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128},
+	evidenceByID := map[string]EvidenceMeta{
+		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128, RecordVisibility: "council_visible", AdmissibilityStatus: "case_packet"},
 	}
 	surrebuttal := map[string]any{
 		"text": "reply",
 		"offered_evidence": []any{
-			map[string]any{"evidence_id": "instructions.txt"},
+			map[string]any{"evidence_id": "instructions.txt", "label": "PX-1"},
 		},
 		"technical_reports": []any{
 			map[string]any{"title": "Check", "summary": "Done."},
 		},
 	}
-	if err := validateAttorneyPayload("submit_surrebuttal", surrebuttal, fileByID, policy); err != nil {
+	if err := validateAttorneyPayload("submit_surrebuttal", surrebuttal, evidenceByID, policy); err != nil {
 		t.Fatalf("expected surrebuttal supplemental materials to be accepted: %v", err)
 	}
 }
 
 func TestValidateAttorneyPayloadRejectsSupplementalMaterialsInClosing(t *testing.T) {
 	policy := DefaultPolicy()
-	fileByID := map[string]CaseFile{
-		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128},
+	evidenceByID := map[string]EvidenceMeta{
+		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 128, RecordVisibility: "council_visible", AdmissibilityStatus: "case_packet"},
 	}
 	closing := map[string]any{
 		"text": "closing",
@@ -710,7 +737,7 @@ func TestValidateAttorneyPayloadRejectsSupplementalMaterialsInClosing(t *testing
 			map[string]any{"evidence_id": "instructions.txt"},
 		},
 	}
-	if err := validateAttorneyPayload("deliver_closing_statement", closing, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("deliver_closing_statement", closing, evidenceByID, policy); err == nil {
 		t.Fatalf("expected closing offered_evidence to be rejected")
 	}
 	closing = map[string]any{
@@ -719,7 +746,7 @@ func TestValidateAttorneyPayloadRejectsSupplementalMaterialsInClosing(t *testing
 			map[string]any{"title": "Late report", "summary": "New analysis."},
 		},
 	}
-	if err := validateAttorneyPayload("deliver_closing_statement", closing, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("deliver_closing_statement", closing, evidenceByID, policy); err == nil {
 		t.Fatalf("expected closing technical_reports to be rejected")
 	}
 }
@@ -727,8 +754,8 @@ func TestValidateAttorneyPayloadRejectsSupplementalMaterialsInClosing(t *testing
 func TestValidateAttorneyPayloadRejectsOversizeExhibit(t *testing.T) {
 	policy := DefaultPolicy()
 	policy.MaxExhibitBytes = 16
-	fileByID := map[string]CaseFile{
-		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 32},
+	evidenceByID := map[string]EvidenceMeta{
+		"instructions.txt": {EvidenceID: "instructions.txt", SizeBytes: 32, RecordVisibility: "council_visible", AdmissibilityStatus: "case_packet"},
 	}
 	payload := map[string]any{
 		"text": "argument",
@@ -736,7 +763,7 @@ func TestValidateAttorneyPayloadRejectsOversizeExhibit(t *testing.T) {
 			map[string]any{"evidence_id": "instructions.txt"},
 		},
 	}
-	if err := validateAttorneyPayload("submit_argument", payload, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("submit_argument", payload, evidenceByID, policy); err == nil {
 		t.Fatalf("expected oversize exhibit to be rejected")
 	}
 }
@@ -744,7 +771,7 @@ func TestValidateAttorneyPayloadRejectsOversizeExhibit(t *testing.T) {
 func TestValidateAttorneyPayloadRejectsTooManyReports(t *testing.T) {
 	policy := DefaultPolicy()
 	policy.MaxReportsPerFiling = 1
-	fileByID := map[string]CaseFile{}
+	evidenceByID := map[string]EvidenceMeta{}
 	payload := map[string]any{
 		"text": "argument",
 		"technical_reports": []any{
@@ -752,7 +779,7 @@ func TestValidateAttorneyPayloadRejectsTooManyReports(t *testing.T) {
 			map[string]any{"title": "Two", "summary": "B"},
 		},
 	}
-	if err := validateAttorneyPayload("submit_argument", payload, fileByID, policy); err == nil {
+	if err := validateAttorneyPayload("submit_argument", payload, evidenceByID, policy); err == nil {
 		t.Fatalf("expected per-filing report limit to be enforced")
 	}
 }
@@ -1242,7 +1269,10 @@ func TestCouncilSeatRosterIncludesRequestSpec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sampleCouncil error = %v", err)
 	}
-	roster := councilSeatRoster(council, []map[string]any{{"member_id": "C1", "status": "removed"}})
+	roster, err := councilSeatRoster(council, []map[string]any{{"member_id": "C1", "status": "removed"}})
+	if err != nil {
+		t.Fatalf("councilSeatRoster error = %v", err)
+	}
 	if len(roster) != 1 {
 		t.Fatalf("roster length = %d, want 1", len(roster))
 	}
@@ -1702,11 +1732,15 @@ func TestIsCouncilRequestError(t *testing.T) {
 	if isCouncilRequestError(context.Canceled) {
 		t.Fatalf("unexpected request-error match for context cancellation")
 	}
-	if !isCouncilRequestError(fmt.Errorf("responses request failed: 404 model not found")) {
-		t.Fatalf("expected responses request failure to count as request error")
+	if isCouncilRequestError(&openaiapi.ProviderError{Class: openaiapi.ProviderErrorTransient, Err: context.Canceled}) {
+		t.Fatalf("unexpected request-error match for wrapped context cancellation")
 	}
-	if !isCouncilRequestError(fmt.Errorf("responses failed after retries: 503 unavailable")) {
-		t.Fatalf("expected exhausted responses retries to count as request error")
+	providerErr := &openaiapi.ProviderError{
+		Class: openaiapi.ProviderErrorRequest,
+		Err:   fmt.Errorf("responses request failed: 404 model not found"),
+	}
+	if !isCouncilRequestError(providerErr) {
+		t.Fatalf("expected typed provider failure to count as request error")
 	}
 }
 
@@ -1722,7 +1756,7 @@ func TestExecuteCouncilOpportunityRetriesAfterOversizeResponse(t *testing.T) {
 			{ToolCalls: []openaiapi.ToolCall{{Name: "submit_council_answer", Arguments: map[string]any{"answer": 72, "rationale": "record sufficient"}}}, ResponseID: "valid"},
 		},
 	}
-	if err := rc.executeCouncilOpportunity(context.Background(), client, Opportunity{ID: "deliberation:1:C1", Role: "council", Phase: "deliberation"}); err != nil {
+	if err := rc.executeCouncilOpportunity(context.Background(), client, Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}); err != nil {
 		t.Fatalf("executeCouncilOpportunity returned error: %v", err)
 	}
 	if client.calls != 2 {
@@ -1751,7 +1785,7 @@ func TestExecuteCouncilOpportunityFailsMemberAfterRepeatedOversizeResponses(t *t
 			{Text: strings.Repeat("y", 4096), ResponseID: "oversize-2"},
 		},
 	}
-	if err := rc.executeCouncilOpportunity(context.Background(), client, Opportunity{ID: "deliberation:1:C1", Role: "council", Phase: "deliberation"}); err != nil {
+	if err := rc.executeCouncilOpportunity(context.Background(), client, Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}); err != nil {
 		t.Fatalf("executeCouncilOpportunity returned error: %v", err)
 	}
 	if client.calls != 2 {
@@ -1767,9 +1801,9 @@ func TestRemoveTimedOutCouncilMemberRecordsEvent(t *testing.T) {
 	t.Parallel()
 
 	rc := newCouncilRemovalTestContext(t, opportunityFailureDeadline)
-	opportunity := Opportunity{ID: "deliberation:1:C1", Role: "council", Phase: "deliberation"}
+	opportunity := Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}
 	seat := CouncilSeat{MemberID: "C1", Model: "openrouter://openai/gpt-4o"}
-	if err := rc.removeTimedOutCouncilMember(opportunity, seat, context.DeadlineExceeded); err != nil {
+	if err := rc.removeTimedOutCouncilMember(context.Background(), time.Time{}, opportunity, seat, context.DeadlineExceeded); err != nil {
 		t.Fatalf("removeTimedOutCouncilMember returned error: %v", err)
 	}
 	assertFailedCouncilMember(t, rc, opportunityFailureDeadline)
@@ -1779,9 +1813,9 @@ func TestRemoveRequestFailedCouncilMemberRecordsEvent(t *testing.T) {
 	t.Parallel()
 
 	rc := newCouncilRemovalTestContext(t, opportunityFailureRequestFailed)
-	opportunity := Opportunity{ID: "deliberation:1:C1", Role: "council", Phase: "deliberation"}
+	opportunity := Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}
 	seat := CouncilSeat{MemberID: "C1", Model: "openrouter://anthropic/claude-3.7-sonnet"}
-	if err := rc.removeRequestFailedCouncilMember(opportunity, seat, fmt.Errorf("responses request failed: 404 model not found")); err != nil {
+	if err := rc.removeRequestFailedCouncilMember(context.Background(), time.Time{}, opportunity, seat, fmt.Errorf("responses request failed: 404 model not found")); err != nil {
 		t.Fatalf("removeRequestFailedCouncilMember returned error: %v", err)
 	}
 	assertFailedCouncilMember(t, rc, opportunityFailureRequestFailed)
@@ -1827,7 +1861,8 @@ func newCouncilOpportunityTestContext(t *testing.T, failureReason string) *runCo
 		},
 		complaint: spec.Complaint{Question: "P"},
 		state: map[string]any{
-			"policy": DefaultPolicy().StateMap(),
+			"policy":        DefaultPolicy().StateMap(),
+			"state_version": 1,
 			"case": map[string]any{
 				"phase":              "deliberation",
 				"deliberation_round": 1,
@@ -1872,8 +1907,10 @@ func newCouncilRemovalTestContext(t *testing.T, failureReason string) *runContex
 		cfg: Config{
 			Engine:    lean.Engine{Command: []string{"/bin/sh", "-c", script}},
 			OutputDir: dir,
+			Runtime:   DefaultRuntimeLimits(),
 		},
 		state: map[string]any{
+			"state_version": 1,
 			"case": map[string]any{
 				"phase": "deliberation",
 			},
@@ -1882,15 +1919,31 @@ func newCouncilRemovalTestContext(t *testing.T, failureReason string) *runContex
 }
 
 func councilEngineScript(failureReason string) string {
-	failureState := fmt.Sprintf(`{"ok":true,"state":{"case":{"phase":"deliberation","answers":"","council_members":[{"member_id":"C1","status":"failed","failure_reason":"%s","failure_opportunity_id":"deliberation:1:C1","failure_message":"member failed"}]}}}`, failureReason)
-	voteState := `{"ok":true,"state":{"case":{"phase":"deliberation","answers":"","council_members":[{"member_id":"C1","status":"seated"}],"council_answers":[{"round":1,"member_id":"C1","answer": 72,"rationale":"record sufficient"}]}}}`
+	failureState := fmt.Sprintf(`{"ok":true,"state":{"case":{"phase":"deliberation","answers":"","council_members":[{"member_id":"C1","status":"failed","failure_reason":"%s","failure_opportunity_id":"deliberation:1:C1","failure_message":"member failed"}]},"state_version":2}}`, failureReason)
+	answerState := `{"ok":true,"state":{"case":{"phase":"deliberation","answers":"","council_members":[{"member_id":"C1","status":"seated"}],"council_answers":[{"round":1,"member_id":"C1","answer":72,"rationale":"record sufficient"}]},"state_version":2}}`
 	return fmt.Sprintf(`#!/bin/sh
 request=$(cat)
 case "$request" in
   *fail_opportunity*) printf '%%s\n' '%s' ;;
   *) printf '%%s\n' '%s' ;;
 esac
-`, failureState, voteState)
+`, failureState, answerState)
+}
+
+func blockingCouncilEngineScript(failureReason string) string {
+	failureState := fmt.Sprintf(`{"ok":true,"state":{"case":{"phase":"deliberation","council_members":[{"member_id":"C1","status":"failed","failure_reason":"%s","failure_opportunity_id":"deliberation:1:C1","failure_message":"member failed"}]},"state_version":2}}`, failureReason)
+	return fmt.Sprintf(`#!/bin/sh
+request=$(cat)
+case "$request" in
+  *'"reason":"deadline_expired"'*) printf '%%s\n' '%s' ;;
+  *)
+    if [ -n "$1" ]; then
+      printf 'entered\n' > "$1"
+    fi
+    exec sleep 60
+    ;;
+esac
+`, failureState)
 }
 
 func assertFailedCouncilMember(t *testing.T, rc *runContext, reason string) {

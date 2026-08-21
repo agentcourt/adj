@@ -11,6 +11,7 @@ The manual documents the core commands, case-owned HTTP APIs, outputs, and certi
 | [Agent Arbitration Degree Manual](manual.md) | Core commands, case-owned APIs, outputs, failure behavior, and certificate verification. |
 | [Agent Arbitration Degree Practice Guide](docs/practice.md) | Lawyer and council practice for degree questions. |
 | [Agent Rules for Arbitration Degree Procedure](docs/ARAP.md) | Governing AARD procedure. |
+| [Implementation Record and Porting Guide](docs/update.md) | Implemented authority, custody, replay, publication, and later-port guidance. |
 
 ## Requirements
 
@@ -22,7 +23,7 @@ The manual documents the core commands, case-owned HTTP APIs, outputs, and certi
 
 ## Build
 
-Build from `arbd/` with the targets below.  `make build` writes `.bin/aard` and `.bin/aardengine`.  The test and proof targets check the Go runtime and Lean proof tree.
+Build from `arbd/` with the targets below.  `make build` writes `.bin/aard` and `.bin/aardengine`, while `make test` depends on that build and therefore rebuilds `aardengine` before the Go tests.  `make prove` checks the Lean proof tree separately.
 
 ```bash
 make build
@@ -32,7 +33,7 @@ make prove
 
 ## First Run
 
-Start one case process from `arbd/`.  The command writes the private Lawyer and Council API address to stderr and waits for participant clients.  Its output directory contains the durable case record and replay certificate.
+Start one case process from `arbd/`.  The command requires an absent or empty output directory and claims it exclusively during initial publication.  It writes the Case API base address to stderr and waits for participant clients.  The listener always includes the Lawyer and Observer APIs, while `--council-backend councilapi` also includes the Council API.  Its output directory contains the durable case record and replay certificate.
 
 ```bash
 export OPENROUTER_API_KEY=REPLACE_WITH_KEY
@@ -56,7 +57,7 @@ export OPENROUTER_API_KEY=REPLACE_WITH_KEY
 
 ## Output
 
-Case output contains `case-manifest.json`, `run.json`, `state.json`, `certificate.json`, `transcript.md`, `digest.md`, `events.ndjson`, `work-notes.ndjson`, `evidence-manifest.json`, and `evidence-store/`.  Council status and request specifications appear in `council.json`.  Keep these files together as the durable record of one case.
+A terminal packet contains `complaint.md`, `case-manifest.json`, `policy.json`, `runtime.json`, `run.json`, `state.json`, `certificate.json`, `council.json`, `transcript.md`, `digest.md`, `events.ndjson`, and `evidence-manifest.json`.  `work-notes.ndjson` appears after the first submitted work note, and `submitted-evidence/` appears after the first accepted lawyer submission.  `evidence-store/` appears when the record contains stored evidence bytes, while each council turn adds records under `council-turns/`.  An earlier process error can leave only the files published before the error.  Keep the complete directory together because `run.json` describes the final result and the sibling files carry the certificate, stored bytes, prompts, events, and human-readable record.
 
 ## License
 

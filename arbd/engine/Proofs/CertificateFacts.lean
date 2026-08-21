@@ -23,8 +23,18 @@ structure ClosedCertificateFacts
     (claimed : ArbitrationState) : Prop where
   replay_exact :
     replayInitialized req actions = .ok claimed
+  authority_conforming :
+    ∃ start,
+      initializeCase req = .ok start ∧
+        AuthorityConformingReplay start actions
+  merits_offer_chronology :
+    InitializedMeritsOfferChronology req actions
   reachable :
     Reachable claimed
+  record_integrity :
+    RecordIntegrity claimed
+  evidence_catalog_fixed :
+    claimed.evidence_catalog = req.state.evidence_catalog
   step_reachable :
     ∃ start,
       initializeCase req = .ok start ∧
@@ -42,8 +52,18 @@ structure FailedCertificateFacts
     (claimed : ArbitrationState) : Prop where
   replay_exact :
     replayInitialized req actions = .ok claimed
+  authority_conforming :
+    ∃ start,
+      initializeCase req = .ok start ∧
+        AuthorityConformingReplay start actions
+  merits_offer_chronology :
+    InitializedMeritsOfferChronology req actions
   reachable :
     Reachable claimed
+  record_integrity :
+    RecordIntegrity claimed
+  evidence_catalog_fixed :
+    claimed.evidence_catalog = req.state.evidence_catalog
   step_reachable :
     ∃ start,
       initializeCase req = .ok start ∧
@@ -61,6 +81,40 @@ def TerminalCertificateFacts
     (claimed : ArbitrationState) : Prop :=
   ClosedCertificateFacts req actions claimed ∨
     FailedCertificateFacts req actions claimed
+
+theorem checkReplayCertificate_ok_meritsOfferChronology
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction)
+    (claimed : ArbitrationState)
+    (hCheck : checkReplayCertificate req actions claimed = .ok ()) :
+    InitializedMeritsOfferChronology req actions := by
+  exact replayInitialized_success_meritsOfferChronology req actions claimed
+    ((checkReplayCertificate_ok_iff req actions claimed).1 hCheck)
+
+theorem checkReplayCertificate_ok_recordIntegrity
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction)
+    (claimed : ArbitrationState)
+    (hCheck : checkReplayCertificate req actions claimed = .ok ()) :
+    RecordIntegrity claimed ∧
+      claimed.evidence_catalog = req.state.evidence_catalog := by
+  constructor
+  · exact reachable_recordIntegrity claimed
+      (checkReplayCertificate_ok_reachable req actions claimed hCheck)
+  · have hReplay : replayInitialized req actions = .ok claimed :=
+      (checkReplayCertificate_ok_iff req actions claimed).1 hCheck
+    rcases replayInitialized_success_components req actions claimed hReplay with
+      ⟨start, hInit, hSteps⟩
+    exact initialized_run_preserves_evidenceCatalog req start claimed hInit
+      (replaySteps_success_stepReachableFrom start claimed actions hSteps)
+
+theorem checkReplayCertificate_ok_evidenceCatalog_fixed
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction)
+    (claimed : ArbitrationState)
+    (hCheck : checkReplayCertificate req actions claimed = .ok ()) :
+    claimed.evidence_catalog = req.state.evidence_catalog :=
+  (checkReplayCertificate_ok_recordIntegrity req actions claimed hCheck).2
 
 theorem terminalClosedAccounted_of_status_closed
     (s : ArbitrationState)
@@ -87,8 +141,18 @@ theorem checkReplayCertificate_status_closed_facts
     (checkReplayCertificate_ok_iff req actions claimed).1 hCheck
   exact
     { replay_exact := hReplay
+      authority_conforming :=
+        checkReplayCertificate_ok_authorityConforming
+          req actions claimed hCheck
+      merits_offer_chronology :=
+        checkReplayCertificate_ok_meritsOfferChronology
+          req actions claimed hCheck
       reachable :=
         checkReplayCertificate_ok_reachable req actions claimed hCheck
+      record_integrity :=
+        (checkReplayCertificate_ok_recordIntegrity req actions claimed hCheck).1
+      evidence_catalog_fixed :=
+        checkReplayCertificate_ok_evidenceCatalog_fixed req actions claimed hCheck
       step_reachable :=
         checkReplayCertificate_ok_stepReachableFrom req actions claimed hCheck
       terminal_accounted :=
@@ -105,8 +169,18 @@ theorem checkReplayCertificate_status_failed_facts
   exact
     { replay_exact :=
         (checkReplayCertificate_ok_iff req actions claimed).1 hCheck
+      authority_conforming :=
+        checkReplayCertificate_ok_authorityConforming
+          req actions claimed hCheck
+      merits_offer_chronology :=
+        checkReplayCertificate_ok_meritsOfferChronology
+          req actions claimed hCheck
       reachable :=
         checkReplayCertificate_ok_reachable req actions claimed hCheck
+      record_integrity :=
+        (checkReplayCertificate_ok_recordIntegrity req actions claimed hCheck).1
+      evidence_catalog_fixed :=
+        checkReplayCertificate_ok_evidenceCatalog_fixed req actions claimed hCheck
       step_reachable :=
         checkReplayCertificate_ok_stepReachableFrom req actions claimed hCheck
       terminal_accounted :=

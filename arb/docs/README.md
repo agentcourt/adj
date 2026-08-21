@@ -16,6 +16,7 @@ These documents cover AAR rules, practice guidance, process specifications, evid
 | Document | Use |
 | --- | --- |
 | [AAR Process And HTTP Specification](aar-spec.md) | Case process, role APIs, results, and failures. |
+| [AAR Record-Integrity And Runtime Update](update.md) | Completed AAR changes and the AARD and ADC adaptation guide. |
 | [AAR Case Failures](case-failures.md) | Case and council failure rules. |
 | [AAR Case Failure Test Plan](case-failures-testing.md) | Process and HTTP failure tests. |
 

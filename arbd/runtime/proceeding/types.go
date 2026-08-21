@@ -36,6 +36,7 @@ type Policy struct {
 type RuntimeLimits struct {
 	CouncilLLMTimeoutSeconds int   `json:"council_llm_timeout_seconds"`
 	LawyerTurnTimeoutSeconds int   `json:"lawyer_turn_timeout_seconds"`
+	EngineCallTimeoutSeconds int   `json:"engine_call_timeout_seconds"`
 	MaxResponseBytes         int   `json:"max_response_bytes"`
 	InvalidAttemptLimit      int   `json:"invalid_attempt_limit"`
 	CouncilMaxOutputTokens   int64 `json:"council_max_output_tokens"`
@@ -67,6 +68,7 @@ type Options struct {
 	CouncilBackend                string
 	CouncilTimeoutSeconds         int
 	LawyerTimeoutSeconds          int
+	EngineCallTimeoutSeconds      int
 	MaxResponseBytes              int
 	InvalidAttemptLimit           int
 	EnginePath                    string
@@ -137,6 +139,12 @@ type CaseFileMeta struct {
 	TextReadable bool   `json:"text_readable"`
 }
 
+type EvidenceCommitment struct {
+	EvidenceID string `json:"evidence_id"`
+	SHA256     string `json:"sha256"`
+	SizeBytes  int    `json:"size_bytes"`
+}
+
 type SubmittedEvidenceMeta struct {
 	Phase              string `json:"phase"`
 	Role               string `json:"role"`
@@ -150,6 +158,9 @@ type SubmittedEvidenceMeta struct {
 	Relevance          string `json:"relevance"`
 	SHA256             string `json:"sha256"`
 	SizeBytes          int    `json:"size_bytes"`
+	ParentEvidenceID   string `json:"parent_evidence_id,omitempty"`
+	ParentSHA256       string `json:"parent_sha256,omitempty"`
+	DerivationMethod   string `json:"derivation_method,omitempty"`
 }
 
 type EvidenceUploadSession struct {
@@ -208,8 +219,10 @@ type CouncilSeat struct {
 
 type Opportunity struct {
 	ID           string
+	StateVersion int
 	Role         string
 	Phase        string
+	MemberID     string
 	MayPass      bool
 	Objective    string
 	AllowedTools []string
@@ -235,6 +248,9 @@ type WorkNote struct {
 }
 
 type runContext struct {
+	// mu protects mutable case data and both role API turn records. Methods ending
+	// in Locked require it. Provider calls and HTTP writes run without it.
+	mu                 sync.Mutex
 	cfg                Config
 	complaint          spec.Complaint
 	state              map[string]any
@@ -254,6 +270,8 @@ type runContext struct {
 	turn               int
 	certificateInit    ReplayInitializeRequest
 	certificateActions []ReplayAction
+	terminal           bool
+	terminalReason     string
 	responseErrMu      sync.Mutex
 	responseErr        error
 }

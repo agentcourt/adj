@@ -1,109 +1,89 @@
 # Evidence Handling
 
-This note documents the AARD runtime evidence layer used by `aard case`.
+This note documents the evidence custody used by `aard case`.  The runtime stores admitted bytes, assigns record identifiers, records provenance, enforces custody limits, and provides bounded reads.  The [AARD rules](ARAP.md) define when a party may submit or offer that material.
 
-## Model
+## Record Model
 
-AARD owns record custody. It stores admitted bytes, assigns stable evidence identifiers, records provenance metadata, enforces policy limits, and logs access. Attorneys and later council agents inspect evidence through media-agnostic methods. AARD does not parse, render, OCR, transcribe, extract, execute, or otherwise interpret evidence formats.
+An `evidence_id` identifies one record item and follows `ev_<sha-prefix>_<slug>`, where the prefix is the first 12 characters of the stored SHA-256.  The full canonical digest and byte size bind that identifier to the admitted bytes.  Local paths and content-addressed storage names remain custody details rather than record citations.
 
-`evidence_id` is the record identity for an evidence item. It is deterministic from the stored SHA-256 and a normalized source name. It is not a local path, workspace path, or content-addressed storage path. Filings cite visible `evidence_id` values in `offered_evidence`.
+The engine receives an immutable initial evidence catalog during case initialization.  Submitted evidence enters a separate ordered list through accepted `submit_evidence` actions, and filings cite either class through `offered_evidence`.  Arguments, rebuttals, and surrebuttals may submit and offer evidence, while openings and closings may read admitted material but cannot add it.
 
-Local paths, workspace paths, and content-addressed storage names are implementation details.  Use `evidence_id` plus SHA-256 when exact byte custody is at issue.
+Derived evidence carries either all three lineage fields or none: `parent_evidence_id`, `parent_sha256`, and `derivation_method`.  The runtime resolves the parent from the initial catalog or an earlier submission and supplies its verified digest.  Lean rejects an unknown parent, a mismatched digest, self-parenting, incomplete lineage, and a parent absent from the action's source state.
 
-## Runtime storage
+## Initial Capture
 
-Each run writes evidence state under `--out-dir`:
+Automatic selection scans the complaint directory, skips directories, and excludes names ending in `~`.  It excludes the configured complaint by file identity and the exact names `.gitignore`, `README.md`, `complaint.md`, `situation.md`, `sign.sh`, `confession.sig`, and `samantha_private.pem`.  Explicit `--file` values replace that scan, and every selected input must be a regular file.  The runtime checks that the path and opened descriptor refer to the same file, reads and hashes that descriptor, rewinds it for publication, and rejects replacement, size drift, or digest drift.
 
-```text
-evidence-manifest.json
-evidence-store/<sha-prefix>/<sha256>
-submitted-evidence/
-events.ndjson
-run.json
-state.json
-```
+The runtime publishes each verified file into the evidence store before Lean initialization.  It then derives the initial catalog from the verified descriptor results, including identifier, full digest, and size.  An initial file may have zero bytes, while an admitted submission must have a positive size.  Council sampling begins after the catalog exists, and the private API begins after Lean accepts initialization.
 
-`evidence-store/` is content-addressed by SHA-256. Repeated identical bytes may share the same stored object. `evidence-manifest.json` records the AARD view of each visible evidence:
+## Runtime Storage
 
-- `evidence_id`
-- `sha256`
-- `size_bytes`
-- `mime_type`
-- `storage_name`
-- `created_at`
-- `admissibility_status`
-- `record_visibility`
-- optional title, original filename, provenance, parent evidence, derivation, and readability fields
+Each run writes evidence records below `--out-dir`.  The shared manifest schema is `aar.evidence-manifest.v0`, which AARD retains for compatibility with the sibling evidence format.  The Lean state remains schema `v1` and carries its initial catalog plus accepted submitted-evidence metadata.
 
-Initial case materials are registered as `case_packet` evidence. Accepted attorney submissions are registered as `submitted_evidence` evidence.
+| Path | Contents |
+|---|---|
+| `evidence-manifest.json` | Shared manifest schema, creation time, count, and sorted evidence metadata. |
+| `evidence-store/<first-two-sha256-characters>/<sha256>` | Immutable content-addressed bytes. |
+| `submitted-evidence/` | Copies of accepted lawyer submissions. |
+| `events.ndjson` | Process events, including successful Lawyer and Council evidence reads. |
+| `run.json` | Final result with case-file, submitted-evidence, and evidence metadata. |
+| `state.json` | Final engine state and record commitments. |
 
-## Lawyer API Methods
+Manifest entries include `evidence_id`, SHA-256, size, MIME type, storage name, creation time, admissibility status, visibility, and readability.  Optional fields carry title, original name, source description or URL, retrieval time, submitting role and phase, relevance, and lineage.  An initial item has `case_packet` status, while an accepted lawyer submission has `submitted_evidence` status.
 
-AARD exposes evidence operations through the Lawyer API.  The case process supplies the current operation list for each opportunity.  Evidence reads are available in openings, arguments, rebuttals, surrebuttals, and closings, while evidence submission is available in arguments, rebuttals, and surrebuttals.
+## Role API Operations
 
-- `get_case` returns the visible arbitration record.
-- `list_evidence` lists visible evidence metadata. It returns metadata only, not bytes.
-- `stat_evidence` returns metadata, allowed operations, and remaining limits for one evidence item.
-- `read_evidence_range` returns a bounded byte range as base64. It never mutates the record. Successful reads are logged as `evidence_read` events.
-- `submit_evidence` submits small source evidence in one JSON request using `content` or `content_base64`.
-- `submit_decision` submits the legal act for the current opportunity.
-- `case_status` reports the current case phase and active turn.
-- `send_work_notes` records off-record lawyer work notes for outside analysis.
+The Lawyer API publishes the operation list allowed for each opportunity.  Each request body has a finite byte limit and must contain one JSON value, while operation arguments reject unknown fields.  Participant argument errors return `tool_failed`, and storage or engine faults return `runtime_failure`.
 
+| Operation | Behavior |
+|---|---|
+| `list_evidence` | Returns visible evidence metadata without file bytes. |
+| `stat_evidence` | Returns one item's metadata, allowed operations, and remaining limits. |
+| `read_evidence_range` | Returns a bounded range as base64 after verifying the complete stored file. |
+| `submit_evidence` | Submits a small source item from `content` or `content_base64`. |
+| `begin_evidence_upload` | Starts a sequential chunked upload without admitting evidence. |
+| `write_evidence_chunk` | Writes the next bounded base64 chunk at the required offset. |
+| `commit_evidence_upload` | Verifies the completed upload and enters the shared admission path. |
 
-## Chunked upload methods
+Lawyer reads are available in every merits phase, while submissions are limited to arguments, rebuttals, and surrebuttals.  Council API members may list, inspect, and read evidence during their deliberation opportunity.  Observer calls may perform the same bounded inspection, but successful Observer reads do not consume participant read budgets or create `evidence_read` events.
 
-Chunked upload is for evidence too large or unsuitable for single-request `submit_evidence`.
+## Verified Reads
 
-- `begin_evidence_upload` starts an upload session. It requires title, MIME type, expected size, relevance, and either source URL or source description. Nothing is admitted at this step.
-- `write_evidence_chunk` writes one base64 chunk at the next expected offset. Chunks must be sequential. The runtime enforces chunk and total upload limits.
-- `commit_evidence_upload` verifies size and SHA-256, admits the evidence through the Lean `submit_evidence` state transition, moves the uploaded bytes into `submitted-evidence/`, registers the evidence in `evidence-store/`, and returns `evidence_id`.
+A Lawyer or Council read reserves count and byte capacity while holding the case mutex, then releases the mutex for file input.  The runtime opens one regular-file descriptor, confirms path and descriptor identity, hashes and sizes the complete file while collecting the requested range, and reacquires the mutex to check that the opportunity remains current.  A successful read commits the reservation and writes `evidence_read`, while a failed or stale read restores the reservation when applicable.
 
-A failed or incomplete upload session is not evidence. A completed upload becomes record evidence only after commit succeeds and the Lean engine accepts the corresponding `submit_evidence` action.
+Observer reads use the same descriptor verification without participant budget accounting or read events.  Path replacement, a nonregular file, size drift, and digest drift produce request-scoped `runtime_failure` responses for an Observer.  Those Observer storage faults do not end the active case.
 
-## Policy limits
+## Submission and Publication
 
-The policy has three evidence-size limits:
+Direct and chunked submissions converge on one admission path.  The runtime validates a candidate, obtains an accepted Lean transition, publishes the immutable store object and submitted copy, writes a candidate evidence manifest, rechecks the turn deadline, and commits state, evidence registries, and the replay action together under the case mutex.  A filing can offer that evidence only after this commit because Lean checks offers against the filing action's source state.
 
-- `max_submitted_evidence_bytes` is the authoritative record limit enforced by the Lean engine for each submitted evidence.
-- `max_exhibit_bytes` caps an offered evidence item. The default matches `max_submitted_evidence_bytes` so chunked evidence accepted into the record can be offered as an exhibit.
-- `max_direct_submitted_evidence_bytes` is the smaller direct JSON/base64 limit for `submit_evidence`.
-- `max_evidence_upload_bytes` is the chunked-upload limit. It must not exceed `max_submitted_evidence_bytes`.
+Public evidence submission requires an identifier absent from the initial and submitted-evidence registries.  Separate records containing identical bytes may reuse the same content-addressed store object, while their record identifiers remain distinct.  A duplicate submitted `evidence_id` or conflicting digest, size, storage, or provenance causes rejection.  Errors before the in-memory commit preserve the prior state, while a later event-write failure can report an error after state and replay action commit.
 
-Evidence read policy:
+The publication sequence has no multi-file crash journal.  A machine stop can therefore leave files that the committed state and manifest do not reference.  Recovery requires inspection of the output packet before any manual removal.
 
-- `max_evidence_chunk_bytes` caps each uploaded chunk.
-- `max_evidence_read_bytes` caps each evidence range read.
-- `max_evidence_reads_per_opportunity` caps read count per opportunity.
-- `max_evidence_read_bytes_per_opportunity` caps returned evidence bytes per opportunity.
+## Policy Limits
 
-The runtime rejects invalid policies at startup. Evidence access is enforced server-side by phase. Evidence reads are allowed throughout the lawyer merits sequence, and evidence submissions are allowed during arguments, rebuttals, and surrebuttals.
+Four policy fields bound evidence admission and use.  Lean enforces `max_submitted_evidence_bytes` on each submission and `max_exhibit_bytes` on every offered item, while Go applies the same limits before custody publication.  Go also enforces the smaller transport-specific direct and upload limits.
 
-## Custody invariants
+| Field | Scope |
+|---|---|
+| `max_submitted_evidence_bytes` | Maximum bytes in one admitted submitted item. |
+| `max_exhibit_bytes` | Maximum bytes in one item offered by a filing. |
+| `max_direct_submitted_evidence_bytes` | Maximum bytes carried by one direct JSON or base64 submission. |
+| `max_evidence_upload_bytes` | Maximum bytes admitted through one chunked upload. |
 
-The implementation must preserve these invariants:
+Upload chunks also obey `max_evidence_chunk_bytes`.  Range reads obey per-call, per-opportunity count, and per-opportunity byte limits.  Technical-report counts and UTF-8 title and summary byte limits apply to arguments, rebuttals, and surrebuttals in both Go and Lean.
 
-1. AARD stores exact bytes before exposing an item as accepted evidence.
-2. `evidence_id` and SHA-256 identify record bytes. Paths do not.
-3. Upload commit does not bypass the Lean `submit_evidence` transition.
-4. `offered_evidence` uses visible `evidence_id` values.
-5. Evidence reads are logged.
-6. AARD remains media-agnostic. Agents examine bytes with their own tools.
+## Inspection
 
-## Inspection checklist
-
-After a run that uses submitted evidence:
+Packet inspection should compare record identifiers, full digests, sizes, lineage, and the offered references in each filing.  A derived item should name the expected parent identifier and digest, and its parent should occur in the initial catalog or earlier submitted evidence.  The event sequence should place `submitted_evidence` before the filing that first offers that item.
 
 ```bash
-jq '.evidence | length' "$out_dir/run.json"
-jq '.evidence_count' "$out_dir/evidence-manifest.json"
-jq '.evidence[] | {evidence_id,sha256,size_bytes,mime_type,admissibility_status}' "$out_dir/evidence-manifest.json"
-grep -n 'evidence_read\|evidence_materialized\|submitted_evidence' "$out_dir/events.ndjson"
+AARD_OUTPUT=out/example
+jq '.evidence | length' "$AARD_OUTPUT/run.json"
+jq '{schema_version,evidence_count}' "$AARD_OUTPUT/evidence-manifest.json"
+jq '.evidence[] | {evidence_id,sha256,size_bytes,parent_evidence_id,parent_sha256,derivation_method}' "$AARD_OUTPUT/evidence-manifest.json"
+rg -n 'evidence_read|evidence_materialized|submitted_evidence' "$AARD_OUTPUT/events.ndjson"
 ```
 
-For each important exhibit, verify that:
-
-- the `offered_evidence` entry uses a visible `evidence_id`;
-- the corresponding evidence has the expected SHA-256 and size;
-- any derived evidence names its source evidence and derivation method;
-- the attorney's filing distinguishes source evidence from analysis or work product.
+The stored bytes require a separate custody check from replay-certificate verification.  `aard verify-certificate` hashes JSON states and replays engine actions but does not rehash `evidence-store/`.  The [verification guide](verification.md) states that boundary and the formal facts proved for accepted Lean certificates.

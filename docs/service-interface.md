@@ -8,7 +8,7 @@ An interface edit requires paired tests and corresponding documentation edits in
 
 ## Executables and Process Behavior
 
-Service invokes installed `adc`, `aar`, `aard`, `simple`, and `quick` executables.  Each invocation receives an explicit output directory and, for a live participant API, an explicit loopback listen address chosen by service.  Service captures standard output and standard error in the case output directory, sets an explicit working directory when the core installation resolves resource defaults there, and supervises the process until exit.
+Service invokes installed `adc`, `aar`, `aard`, `simple`, and `quick` executables.  Each invocation receives an explicit output directory and, for a live participant API, an explicit loopback listen address chosen by service.  The direct AAR and AARD services store child standard streams beneath their registry directories and leave the selected core output directory to the core process.  Service records the physical log paths, sets an explicit working directory when the core installation resolves resource defaults there, and supervises the process until exit.
 
 A core process returns a nonzero exit status for startup, configuration, input, engine, storage, or other process failures.  A procedure that records an opportunity failure may return zero after writing a terminal failed case record.  The service parses the last nonempty JSON object on standard output as the process summary and reconciles the final status from `run.json`.
 
@@ -22,7 +22,7 @@ A core process returns a nonzero exit status for startup, configuration, input, 
 | Simple | `simple case` | `--proposition`, `--documents`, `--evidence-standard`, `--model` or `--request-spec`, document limits, `--allow-api-key`, `--out-dir`, `--case-id`, and `--run-id`. |
 | Quick | `quick case` | `--proposition`, `--documents`, `--evidence-standard`, council pool, size, and vote threshold, document limits, `--allow-api-key`, `--caseapi-addr`, `--out-dir`, `--case-id`, and `--run-id`. |
 
-The service-owned `adc-run`, `aar-run`, and `aard-run` commands start a formal core case through this interface and use the corresponding service-owned MCP adapter.  The unified `adjudicate` command starts ARB and ADC through service launchers, starts quick with an AAR-compatible MCP adapter and selected lawyers, and starts simple as one supervised core process.  Each path preserves the complete core result, records core standard streams beneath `logs/`, and rejects a result file that the new process did not replace.
+The service-owned `adc-run`, `aar-run`, and `aard-run` commands start a formal core case through this interface and use the corresponding service-owned MCP adapter.  The unified `adjudicate` command starts ARB and ADC through service launchers, starts quick with an AAR-compatible MCP adapter and selected lawyers, and starts simple as one supervised core process.  Each path preserves the complete core result, records core standard streams beneath `logs/`, and rejects a result file that the new process did not replace.  Separating those runner logs from exclusive core output directories remains a distinct service change.
 
 The `adj` repository retains `validate`, `verify-certificate`, and deterministic `case-packet` construction for operator and service use.  Attested drivers live in `adjservices`, invoke the installed core packet command, and identify the exact core source or artifacts placed in a workload image.  This keeps complaint and case-file selection under the procedure that later validates and runs those inputs.
 
@@ -87,9 +87,10 @@ Core writes each durable adjudication record beneath the selected output directo
 | `runtime.json` | Procedure runtime configuration and the bound private API address where present. |
 | `run.db` | ADC runtime database when the selected ADC path writes it. |
 | `local-run.json` | Service-owned local-agent orchestration record after launcher extraction. |
-| `service-logs/` and `clerk.json` | Service-owned process logs and multi-case record. |
+| Logical `service-logs/` artifacts | Direct-service child streams stored under the service registry for new cases and served from exact legacy output-directory paths for older records. |
+| `clerk.json` | Service-owned multi-case record. |
 
-A service must treat an unreadable or missing `run.json` after process exit as a failed or incomplete execution.  It may reconcile a detached service record from a readable terminal `run.json`.  Artifact access must confine paths to the recorded output directory and expose only the service's explicit allowlist.
+A service must treat an unreadable or missing `run.json` after process exit as a failed or incomplete execution.  It may reconcile a detached service record from a readable terminal `run.json`.  A read-only proxy may use that record after the private listener closes only when the case id, run id, top-level result, and final procedure state identify the supervised terminal invocation.  Artifact access must confine core paths to the recorded output directory, direct-service logs to the approved registry path or exact legacy path, and every name to the service's explicit allowlist.
 
 ## Interface Tests
 

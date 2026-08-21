@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -24,13 +25,10 @@ const (
 type lawyerAPIServer struct {
 	rc *runContext
 
-	mu      sync.Mutex
-	cond    *sync.Cond
-	version uint64
-	active  *lawyerTurn
-
-	terminal       bool
-	terminalReason string
+	cond          *sync.Cond
+	version       uint64
+	active        *lawyerTurn
+	evidenceFiles evidenceFileOperations
 }
 
 type lawyerTurn struct {
@@ -59,21 +57,21 @@ func newLawyerAPIServer(rc *runContext) *lawyerAPIServer {
 	api := &lawyerAPIServer{
 		rc: rc,
 	}
-	api.cond = sync.NewCond(&api.mu)
+	api.cond = sync.NewCond(&rc.mu)
 	return api
 }
 
-func (api *lawyerAPIServer) register(mux *http.ServeMux) {
+func (api *lawyerAPIServer) register(mux *http.ServeMux, caseCtx context.Context) {
 	mux.HandleFunc(lawyerAPIBasePath+"/get", api.handleGet)
 	mux.HandleFunc(lawyerAPIBasePath+"/wait", api.handleWait)
 	mux.HandleFunc(lawyerAPIBasePath+"/status", api.handleStatus)
 	mux.HandleFunc(lawyerAPIBasePath+"/result", api.handleResult)
-	mux.HandleFunc(lawyerAPIBasePath+"/do", api.handleDo)
+	mux.HandleFunc(lawyerAPIBasePath+"/do", func(w http.ResponseWriter, r *http.Request) {
+		api.handleDo(caseCtx, w, r)
+	})
 }
 
-func (api *lawyerAPIServer) startTurn(turn *lawyerTurn) error {
-	api.mu.Lock()
-	defer api.mu.Unlock()
+func (api *lawyerAPIServer) startTurnLocked(turn *lawyerTurn) error {
 	if api.active != nil && !api.active.completed {
 		return fmt.Errorf("lawyerapi already has an active turn")
 	}
@@ -83,33 +81,12 @@ func (api *lawyerAPIServer) startTurn(turn *lawyerTurn) error {
 }
 
 func (api *lawyerAPIServer) clearTurn(turn *lawyerTurn) {
-	api.mu.Lock()
-	defer api.mu.Unlock()
+	api.rc.mu.Lock()
+	defer api.rc.mu.Unlock()
 	if api.active == turn {
 		api.active = nil
 		api.signalChangedLocked()
 	}
-}
-
-func (api *lawyerAPIServer) setTerminal(reason string) {
-	if api == nil {
-		return
-	}
-	api.mu.Lock()
-	defer api.mu.Unlock()
-	api.terminal = true
-	api.terminalReason = strings.TrimSpace(reason)
-	api.active = nil
-	api.signalChangedLocked()
-}
-
-func (api *lawyerAPIServer) signalChanged() {
-	if api == nil {
-		return
-	}
-	api.mu.Lock()
-	defer api.mu.Unlock()
-	api.signalChangedLocked()
 }
 
 func (api *lawyerAPIServer) signalChangedLocked() {
@@ -119,7 +96,7 @@ func (api *lawyerAPIServer) signalChangedLocked() {
 
 func (api *lawyerAPIServer) ensureCondLocked() *sync.Cond {
 	if api.cond == nil {
-		api.cond = sync.NewCond(&api.mu)
+		api.cond = sync.NewCond(&api.rc.mu)
 	}
 	return api.cond
 }
@@ -128,54 +105,89 @@ func (rc *runContext) executeAttorneyOpportunity(ctx context.Context, _ any, opp
 	if err := validateAttorneyRole(opportunity.Role); err != nil {
 		return err
 	}
-	if rc.lawyerAPI == nil {
+	rc.mu.Lock()
+	api := rc.lawyerAPI
+	if api == nil {
+		rc.mu.Unlock()
 		return fmt.Errorf("lawyerapi server is not running")
 	}
 	prompt, err := rc.buildAttorneyPrompt(opportunity)
 	if err != nil {
+		rc.mu.Unlock()
 		return err
 	}
+	timeout := rc.cfg.Runtime.LawyerTurnTimeout()
 	turn := &lawyerTurn{
 		opportunity:       opportunity,
 		turnNumber:        rc.turn,
 		prompt:            prompt,
-		deadline:          time.Now().Add(rc.cfg.Runtime.LawyerTurnTimeout()),
+		deadline:          time.Now().Add(timeout),
 		attemptsMax:       rc.cfg.Runtime.InvalidAttemptLimit,
 		attemptsRemaining: rc.cfg.Runtime.InvalidAttemptLimit,
 		evidenceBudget:    &evidenceReadBudget{},
 		done:              make(chan error, 1),
 	}
-	if err := rc.lawyerAPI.startTurn(turn); err != nil {
+	if err := api.startTurnLocked(turn); err != nil {
+		rc.mu.Unlock()
 		return err
 	}
-	defer rc.lawyerAPI.clearTurn(turn)
+	rc.mu.Unlock()
+	defer api.clearTurn(turn)
 	timer := time.NewTimer(time.Until(turn.deadline))
 	defer timer.Stop()
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return context.Cause(ctx)
 	case <-timer.C:
-		err := fmt.Errorf("%s lawyer opportunity timed out after %s", opportunity.Role, rc.cfg.Runtime.LawyerTurnTimeout())
-		failErr := rc.failOpportunity(opportunity, opportunityFailureDeadline, err.Error(), nil)
-		rc.lawyerAPI.finishTurn(turn, failErr)
-		return failErr
+		return api.timeoutTurn(ctx, turn, timeout)
 	case err := <-turn.done:
 		return err
 	}
 }
 
+func (api *lawyerAPIServer) timeoutTurn(caseCtx context.Context, turn *lawyerTurn, timeout time.Duration) error {
+	api.rc.mu.Lock()
+	if turn == nil || api.active != turn {
+		api.rc.mu.Unlock()
+		return fmt.Errorf("lawyerapi timed-out turn is no longer active")
+	}
+	if turn.completed {
+		done := turn.done
+		api.rc.mu.Unlock()
+		return <-done
+	}
+	opportunity := turn.opportunity
+	err := fmt.Errorf("%s lawyer opportunity timed out after %s", opportunity.Role, timeout)
+	if failErr := api.expireTurnLocked(caseCtx, turn, err.Error()); failErr != nil {
+		api.rc.mu.Unlock()
+		return failErr
+	}
+	api.rc.mu.Unlock()
+	return nil
+}
+
 func (api *lawyerAPIServer) finishTurn(turn *lawyerTurn, err error) {
-	api.mu.Lock()
-	defer api.mu.Unlock()
+	api.rc.mu.Lock()
+	defer api.rc.mu.Unlock()
 	api.finishTurnLocked(turn, err)
 }
 
 func (api *lawyerAPIServer) finishTurnLocked(turn *lawyerTurn, err error) {
+	api.completeTurnLocked(turn, err, true)
+}
+
+func (api *lawyerAPIServer) finishTurnAfterSignalLocked(turn *lawyerTurn, err error) {
+	api.completeTurnLocked(turn, err, false)
+}
+
+func (api *lawyerAPIServer) completeTurnLocked(turn *lawyerTurn, err error, signal bool) {
 	if turn == nil || turn.completed {
 		return
 	}
 	turn.completed = true
-	api.signalChangedLocked()
+	if signal {
+		api.signalChangedLocked()
+	}
 	select {
 	case turn.done <- err:
 	default:
@@ -211,9 +223,9 @@ func (api *lawyerAPIServer) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if role == "observer" {
-		api.mu.Lock()
+		api.rc.mu.Lock()
 		response := api.statusResponseLocked(caseID, role)
-		api.mu.Unlock()
+		api.rc.mu.Unlock()
 		writeLawyerJSON(w, http.StatusOK, response)
 		return
 	}
@@ -226,9 +238,9 @@ func (api *lawyerAPIServer) handleGet(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	api.mu.Lock()
+	api.rc.mu.Lock()
 	response := api.statusResponseLocked(caseID, role)
-	api.mu.Unlock()
+	api.rc.mu.Unlock()
 	writeLawyerJSON(w, http.StatusOK, response)
 }
 
@@ -289,7 +301,7 @@ func (api *lawyerAPIServer) handleWait(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	api.mu.Lock()
+	api.rc.mu.Lock()
 	cond := api.ensureCondLocked()
 	baseline := api.version
 	if hasAfterVersion {
@@ -297,34 +309,34 @@ func (api *lawyerAPIServer) handleWait(w http.ResponseWriter, r *http.Request) {
 	}
 	deadline := time.Now().Add(timeout)
 	timer := time.AfterFunc(timeout, func() {
-		api.mu.Lock()
+		api.rc.mu.Lock()
 		api.ensureCondLocked().Broadcast()
-		api.mu.Unlock()
+		api.rc.mu.Unlock()
 	})
 	defer timer.Stop()
 	if done := r.Context().Done(); done != nil {
 		go func() {
 			<-done
-			api.mu.Lock()
+			api.rc.mu.Lock()
 			api.ensureCondLocked().Broadcast()
-			api.mu.Unlock()
+			api.rc.mu.Unlock()
 		}()
 	}
 	for {
 		if r.Context().Err() != nil {
-			api.mu.Unlock()
+			api.rc.mu.Unlock()
 			return
 		}
 		if response, reason, ready := api.waitResponseLocked(caseID, role, after, baseline); ready {
 			response["wait"] = api.waitPayloadLocked(reason)
-			api.mu.Unlock()
+			api.rc.mu.Unlock()
 			writeLawyerJSON(w, http.StatusOK, response)
 			return
 		}
 		if !time.Now().Before(deadline) {
 			response := api.statusResponseLocked(caseID, role)
 			response["wait"] = api.waitPayloadLocked("timeout")
-			api.mu.Unlock()
+			api.rc.mu.Unlock()
 			writeLawyerJSON(w, http.StatusOK, response)
 			return
 		}
@@ -372,9 +384,18 @@ func (api *lawyerAPIServer) handleStatus(w http.ResponseWriter, r *http.Request)
 			return
 		}
 	}
-	api.mu.Lock()
-	response := api.caseStatusResponseLocked(caseID, role)
-	api.mu.Unlock()
+	api.rc.mu.Lock()
+	response, err := api.caseStatusResponseLocked(caseID, role)
+	if err != nil {
+		response = api.responseBaseLocked(caseID, role)
+		response["ok"] = false
+		response["error"] = apiError("runtime_failure", err.Error())
+	}
+	api.rc.mu.Unlock()
+	if err != nil {
+		writeLawyerJSON(w, http.StatusInternalServerError, response)
+		return
+	}
 	writeLawyerJSON(w, http.StatusOK, response)
 }
 
@@ -418,13 +439,13 @@ func (api *lawyerAPIServer) handleResult(w http.ResponseWriter, r *http.Request)
 			return
 		}
 	}
-	api.mu.Lock()
+	api.rc.mu.Lock()
 	response := api.caseResultResponseLocked(caseID, role)
-	api.mu.Unlock()
+	api.rc.mu.Unlock()
 	writeLawyerJSON(w, http.StatusOK, response)
 }
 
-func (api *lawyerAPIServer) handleDo(w http.ResponseWriter, r *http.Request) {
+func (api *lawyerAPIServer) handleDo(caseCtx context.Context, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeLawyerJSON(w, http.StatusMethodNotAllowed, map[string]any{
 			"ok":    false,
@@ -432,13 +453,32 @@ func (api *lawyerAPIServer) handleDo(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	requestBodyLimit, err := lawyerDoRequestBodyLimit(
+		int64(api.rc.cfg.Runtime.MaxResponseBytes),
+		int64(api.rc.cfg.Policy.MaxDirectSubmittedEvidenceBytes),
+	)
+	if err != nil {
+		writeLawyerJSON(w, http.StatusInternalServerError, map[string]any{
+			"ok":    false,
+			"error": apiError("runtime_failure", err.Error()),
+		})
+		return
+	}
 	var req lawyerDoRequest
-	dec := json.NewDecoder(r.Body)
+	body := http.MaxBytesReader(w, r.Body, requestBodyLimit)
+	dec := json.NewDecoder(body)
 	dec.UseNumber()
 	if err := dec.Decode(&req); err != nil {
 		if errors.Is(err, io.EOF) {
 			err = fmt.Errorf("request body is required")
 		}
+		writeLawyerJSON(w, http.StatusBadRequest, map[string]any{
+			"ok":    false,
+			"error": apiError("bad_json", err.Error()),
+		})
+		return
+	}
+	if err := requireJSONEOF(dec); err != nil {
 		writeLawyerJSON(w, http.StatusBadRequest, map[string]any{
 			"ok":    false,
 			"error": apiError("bad_json", err.Error()),
@@ -481,10 +521,46 @@ func (api *lawyerAPIServer) handleDo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.RoleID == "observer" {
-		api.handleObserverDo(w, req)
+		response := api.handleObserverDo(req)
+		if r.Context().Err() == nil {
+			writeLawyerJSON(w, http.StatusOK, response)
+		}
 		return
 	}
-	api.handleLawyerDo(w, req)
+	status, response := api.handleLawyerDo(caseCtx, req)
+	if r.Context().Err() == nil {
+		writeLawyerJSON(w, status, response)
+	}
+}
+
+func lawyerDoRequestBodyLimit(maxResponseBytes int64, maxDirectEvidenceBytes int64) (int64, error) {
+	if maxResponseBytes <= 0 {
+		return 0, fmt.Errorf("runtime.max_response_bytes must be positive")
+	}
+	if maxDirectEvidenceBytes <= 0 {
+		return 0, fmt.Errorf("policy.max_direct_submitted_evidence_bytes must be positive")
+	}
+	const maxInt64 = uint64(1<<63 - 1)
+	encodedEvidenceBytes := ((uint64(maxDirectEvidenceBytes) + 2) / 3) * 4
+	if encodedEvidenceBytes > maxInt64 || uint64(maxResponseBytes) > maxInt64-encodedEvidenceBytes {
+		return 0, fmt.Errorf(
+			"lawyer /do request body limit exceeds the maximum supported size: runtime.max_response_bytes=%d, policy.max_direct_submitted_evidence_bytes=%d",
+			maxResponseBytes,
+			maxDirectEvidenceBytes,
+		)
+	}
+	return int64(uint64(maxResponseBytes) + encodedEvidenceBytes), nil
+}
+
+func requireJSONEOF(dec *json.Decoder) error {
+	var trailing any
+	if err := dec.Decode(&trailing); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		return err
+	}
+	return fmt.Errorf("request body must contain exactly one JSON value")
 }
 
 func (api *lawyerAPIServer) caseIDMatches(caseID string) bool {
@@ -503,184 +579,438 @@ func (api *lawyerAPIServer) writeCaseMismatch(w http.ResponseWriter, caseID stri
 	writeLawyerJSON(w, http.StatusNotFound, response)
 }
 
-func (api *lawyerAPIServer) handleLawyerDo(w http.ResponseWriter, req lawyerDoRequest) {
+func (api *lawyerAPIServer) handleLawyerDo(caseCtx context.Context, req lawyerDoRequest) (int, map[string]any) {
 	if err := validateAttorneyRole(req.RoleID); err != nil {
-		writeLawyerJSON(w, http.StatusForbidden, map[string]any{
+		return http.StatusForbidden, map[string]any{
 			"ok":      false,
 			"case_id": req.CaseID,
 			"role_id": req.RoleID,
 			"error":   apiError("invalid_role", err.Error()),
-		})
-		return
+		}
 	}
-	api.mu.Lock()
-	defer api.mu.Unlock()
+	if evidenceFileTool(req.Tool) {
+		return http.StatusOK, api.lawyerEvidenceDoResponse(caseCtx, req)
+	}
+	api.rc.mu.Lock()
+	response := api.lawyerDoResponseLocked(caseCtx, req)
+	api.rc.mu.Unlock()
+	return http.StatusOK, response
+}
+
+func (api *lawyerAPIServer) lawyerDoResponseLocked(caseCtx context.Context, req lawyerDoRequest) map[string]any {
 	if req.Tool == "case_status" {
 		response := api.responseBaseLocked(req.CaseID, req.RoleID)
+		if err := requireAllowedKeys(req.Arguments, "case_status arguments"); err != nil {
+			response["ok"] = false
+			response["error"] = apiError("tool_failed", err.Error())
+			return response
+		}
+		result, err := api.caseStatusPayloadLocked(req.RoleID)
+		if err != nil {
+			response["ok"] = false
+			response["error"] = apiError("runtime_failure", err.Error())
+			return response
+		}
 		response["ok"] = true
-		response["result"] = api.caseStatusPayloadLocked(req.RoleID)
-		writeLawyerJSON(w, http.StatusOK, response)
-		return
+		response["result"] = result
+		return response
 	}
+	turn, response := api.lawyerRequestTurnLocked(caseCtx, req)
+	if response != nil {
+		return response
+	}
+	result, decisionAttempt, err := api.callLawyerToolLocked(caseCtx, turn, req.Tool, req.Arguments, req.CallID)
+	if err != nil {
+		return api.lawyerToolErrorResponseLocked(caseCtx, req, turn, err, decisionAttempt)
+	}
+	if !turn.completed && req.Tool != "submit_evidence" && req.Tool != "commit_evidence_upload" {
+		if err := turnStepError(caseCtx, turn.deadline, nil); err != nil {
+			return api.lawyerToolErrorResponseLocked(caseCtx, req, turn, err, false)
+		}
+	}
+	response = api.responseBaseLocked(req.CaseID, req.RoleID)
+	response["ok"] = true
+	response["result"] = result
+	return response
+}
+
+func (api *lawyerAPIServer) lawyerToolErrorResponseLocked(caseCtx context.Context, req lawyerDoRequest, turn *lawyerTurn, err error, decisionAttempt bool) map[string]any {
+	if isParticipantInput(err) {
+		if timingErr := turnStepError(caseCtx, turn.deadline, nil); timingErr != nil {
+			err = timingErr
+		} else {
+			err = api.consumeAttemptLocked(caseCtx, turn, err, decisionAttempt)
+		}
+	}
+	if errors.Is(err, errTurnDeadlineExceeded) {
+		return api.lawyerDeadlineResponseLocked(caseCtx, req, turn)
+	}
+	code := "runtime_failure"
+	if isParticipantInput(err) {
+		code = "tool_failed"
+	} else if !turn.completed {
+		api.finishTurnLocked(turn, err)
+	}
+	response := api.responseBaseLocked(req.CaseID, req.RoleID)
+	response["ok"] = false
+	response["error"] = apiError(code, err.Error())
+	return response
+}
+
+func (api *lawyerAPIServer) lawyerDeadlineResponseLocked(caseCtx context.Context, req lawyerDoRequest, turn *lawyerTurn) map[string]any {
+	err := fmt.Errorf("%s lawyer opportunity timed out", turn.opportunity.Role)
+	code := "turn_timeout"
+	responseErr := err
+	if failErr := api.expireTurnLocked(caseCtx, turn, err.Error()); failErr != nil {
+		code = "runtime_failure"
+		responseErr = failErr
+	}
+	response := api.responseBaseLocked(req.CaseID, req.RoleID)
+	response["ok"] = false
+	response["error"] = apiError(code, responseErr.Error())
+	return response
+}
+
+func (api *lawyerAPIServer) expireTurnLocked(caseCtx context.Context, turn *lawyerTurn, message string) error {
+	if turn == nil || turn.completed {
+		return nil
+	}
+	if err := api.rc.failOpportunityLocked(caseCtx, time.Time{}, turn.opportunity, opportunityFailureDeadline, message, nil); err != nil {
+		api.finishTurnLocked(turn, err)
+		return err
+	}
+	api.finishTurnAfterSignalLocked(turn, nil)
+	return nil
+}
+
+func (api *lawyerAPIServer) lawyerRequestTurnLocked(caseCtx context.Context, req lawyerDoRequest) (*lawyerTurn, map[string]any) {
 	turn := api.active
 	if turn == nil || turn.completed {
 		response := api.responseBaseLocked(req.CaseID, req.RoleID)
 		response["ok"] = false
 		response["error"] = apiError("no_active_turn", "no lawyer turn is active")
-		writeLawyerJSON(w, http.StatusOK, response)
-		return
+		return nil, response
 	}
-	if time.Now().After(turn.deadline) {
-		err := fmt.Errorf("%s lawyer opportunity timed out", turn.opportunity.Role)
+	if err := context.Cause(caseCtx); err != nil {
+		api.finishTurnLocked(turn, err)
 		response := api.responseBaseLocked(req.CaseID, req.RoleID)
 		response["ok"] = false
-		if failErr := api.rc.failOpportunity(turn.opportunity, opportunityFailureDeadline, err.Error(), nil); failErr != nil {
-			api.finishTurnLocked(turn, failErr)
-			response["error"] = apiError("case_failure_failed", failErr.Error())
-		} else {
-			api.finishTurnLocked(turn, nil)
-			response["error"] = apiError("turn_timeout", err.Error())
-		}
-		writeLawyerJSON(w, http.StatusOK, response)
-		return
+		response["error"] = apiError("runtime_failure", err.Error())
+		return nil, response
+	}
+	if !time.Now().Before(turn.deadline) {
+		return nil, api.lawyerDeadlineResponseLocked(caseCtx, req, turn)
 	}
 	if turn.opportunity.Role != req.RoleID {
 		response := api.responseBaseLocked(req.CaseID, req.RoleID)
 		response["ok"] = false
 		response["error"] = apiError("not_current_turn", fmt.Sprintf("current turn belongs to %s", turn.opportunity.Role))
-		writeLawyerJSON(w, http.StatusOK, response)
-		return
+		return nil, response
 	}
 	if req.OpportunityID == "" {
 		response := api.responseBaseLocked(req.CaseID, req.RoleID)
 		response["ok"] = false
 		response["error"] = apiError("missing_opportunity_id", "opportunity_id is required for lawyer tool calls")
-		writeLawyerJSON(w, http.StatusOK, response)
-		return
+		return nil, response
 	}
 	if req.OpportunityID != turn.opportunity.ID {
 		response := api.responseBaseLocked(req.CaseID, req.RoleID)
 		response["ok"] = false
 		response["error"] = apiError("stale_opportunity", fmt.Sprintf("request opportunity_id %q does not match active opportunity_id %q", req.OpportunityID, turn.opportunity.ID))
-		writeLawyerJSON(w, http.StatusOK, response)
-		return
+		return nil, response
 	}
-	result, countAttempt, decisionAttempt, err := api.callLawyerToolLocked(turn, req.Tool, req.Arguments, req.CallID)
-	response := api.responseBaseLocked(req.CaseID, req.RoleID)
-	if err != nil {
-		if countAttempt {
-			err = api.consumeAttemptLocked(turn, err, decisionAttempt)
-		}
-		response["ok"] = false
-		response["error"] = apiError("tool_failed", err.Error())
-		writeLawyerJSON(w, http.StatusOK, response)
-		return
-	}
-	response["ok"] = true
-	response["result"] = result
-	writeLawyerJSON(w, http.StatusOK, response)
+	return turn, nil
 }
 
-func (api *lawyerAPIServer) handleObserverDo(w http.ResponseWriter, req lawyerDoRequest) {
-	api.mu.Lock()
-	defer api.mu.Unlock()
+func (api *lawyerAPIServer) handleObserverDo(req lawyerDoRequest) map[string]any {
+	if evidenceFileTool(req.Tool) {
+		return api.observerEvidenceDoResponse(req)
+	}
+	api.rc.mu.Lock()
+	response := api.observerDoResponseLocked(req)
+	api.rc.mu.Unlock()
+	return response
+}
+
+func (api *lawyerAPIServer) observerDoResponseLocked(req lawyerDoRequest) map[string]any {
 	result, err := api.callObserverToolLocked(req.Tool, req.Arguments)
 	response := api.responseBaseLocked(req.CaseID, req.RoleID)
 	if err != nil {
 		response["ok"] = false
-		response["error"] = apiError("tool_failed", err.Error())
-		writeLawyerJSON(w, http.StatusOK, response)
-		return
+		response["error"] = apiError(roleAPIToolErrorCode(err), err.Error())
+		return response
 	}
 	response["ok"] = true
 	response["result"] = result
-	writeLawyerJSON(w, http.StatusOK, response)
+	return response
 }
 
-func (api *lawyerAPIServer) callLawyerToolLocked(turn *lawyerTurn, tool string, args map[string]any, callID string) (map[string]any, bool, bool, error) {
+func evidenceFileTool(tool string) bool {
+	return tool == "stat_evidence" || tool == "read_evidence_range"
+}
+
+func (api *lawyerAPIServer) lawyerEvidenceDoResponse(caseCtx context.Context, req lawyerDoRequest) map[string]any {
+	api.rc.mu.Lock()
+	turn, response := api.lawyerRequestTurnLocked(caseCtx, req)
+	if response != nil {
+		api.rc.mu.Unlock()
+		return response
+	}
+	if !evidenceReadAllowed(turn.opportunity) {
+		response := api.lawyerToolErrorResponseLocked(caseCtx, req, turn, participantInput(fmt.Errorf("evidence access is not allowed in phase %q", turn.opportunity.Phase)), false)
+		api.rc.mu.Unlock()
+		return response
+	}
+	if err := validateEvidenceFileToolArguments(req.Tool, req.Arguments); err != nil {
+		response := api.lawyerToolErrorResponseLocked(caseCtx, req, turn, participantInput(err), false)
+		api.rc.mu.Unlock()
+		return response
+	}
+	if req.Tool == "stat_evidence" {
+		file, err := api.rc.evidenceFileSnapshotLocked(mapString(req.Arguments["evidence_id"]))
+		if err != nil {
+			response := api.lawyerToolErrorResponseLocked(caseCtx, req, turn, err, false)
+			api.rc.mu.Unlock()
+			return response
+		}
+		api.rc.mu.Unlock()
+		err = api.evidenceFiles.verifyFile(file)
+		api.rc.mu.Lock()
+		defer api.rc.mu.Unlock()
+		if response := api.revalidateLawyerEvidenceTurnLocked(caseCtx, req, turn, nil); response != nil {
+			return response
+		}
+		if err != nil {
+			return api.lawyerToolErrorResponseLocked(caseCtx, req, turn, err, false)
+		}
+		response = api.responseBaseLocked(req.CaseID, req.RoleID)
+		response["ok"] = true
+		response["result"] = map[string]any{
+			"evidence": file.meta,
+			"limits":   api.evidenceReadLimitsLocked(turn),
+		}
+		return response
+	}
+
+	offset, err := requiredIntParam(req.Arguments, "offset")
+	if err != nil {
+		response := api.lawyerToolErrorResponseLocked(caseCtx, req, turn, participantInput(err), false)
+		api.rc.mu.Unlock()
+		return response
+	}
+	length, err := requiredIntParam(req.Arguments, "length")
+	if err != nil {
+		response := api.lawyerToolErrorResponseLocked(caseCtx, req, turn, participantInput(err), false)
+		api.rc.mu.Unlock()
+		return response
+	}
+	reservation, err := api.rc.reserveEvidenceReadLocked(mapString(req.Arguments["evidence_id"]), int64(offset), length, turn.evidenceBudget)
+	if err != nil {
+		response := api.lawyerToolErrorResponseLocked(caseCtx, req, turn, err, false)
+		api.rc.mu.Unlock()
+		return response
+	}
+	api.rc.mu.Unlock()
+	result, bytesRead, readErr := api.evidenceFiles.readRange(reservation)
+	api.rc.mu.Lock()
+	defer api.rc.mu.Unlock()
+	if response := api.revalidateLawyerEvidenceTurnLocked(caseCtx, req, turn, &reservation); response != nil {
+		return response
+	}
+	if readErr != nil {
+		rollbackEvidenceReadLocked(&reservation)
+		return api.lawyerToolErrorResponseLocked(caseCtx, req, turn, readErr, false)
+	}
+	finalizeEvidenceReadLocked(&reservation, bytesRead)
+	result["remaining_read_bytes_for_opportunity"] = remainingCapacity(api.rc.cfg.Policy.MaxEvidenceReadBytesPerOpportunity, turn.evidenceBudget.bytes)
+	result["remaining_reads_for_opportunity"] = remainingCapacity(api.rc.cfg.Policy.MaxEvidenceReadsPerOpportunity, turn.evidenceBudget.reads)
+	if err := api.rc.recordEventAtTurnLocked(turn.turnNumber, "evidence_read", turn.opportunity.Role, turn.opportunity.Phase, map[string]any{
+		"evidence_id": result["evidence_id"],
+		"offset":      result["offset"],
+		"length":      result["length"],
+		"byte_count":  result["length"],
+	}); err != nil {
+		api.rc.signalRoleAPIsLocked()
+		api.finishTurnAfterSignalLocked(turn, err)
+		return api.lawyerToolErrorResponseLocked(caseCtx, req, turn, err, false)
+	}
+	api.rc.signalRoleAPIsLocked()
+	response = api.responseBaseLocked(req.CaseID, req.RoleID)
+	response["ok"] = true
+	response["result"] = result
+	return response
+}
+
+func (api *lawyerAPIServer) revalidateLawyerEvidenceTurnLocked(caseCtx context.Context, req lawyerDoRequest, turn *lawyerTurn, reservation *evidenceReadReservation) map[string]any {
+	if api.active != turn || turn.completed {
+		rollbackEvidenceReadLocked(reservation)
+		return api.staleLawyerEvidenceResponseLocked(req, turn)
+	}
+	if err := context.Cause(caseCtx); err != nil {
+		rollbackEvidenceReadLocked(reservation)
+		return api.lawyerToolErrorResponseLocked(caseCtx, req, turn, err, false)
+	}
+	if !time.Now().Before(turn.deadline) {
+		rollbackEvidenceReadLocked(reservation)
+		_, response := api.lawyerRequestTurnLocked(caseCtx, req)
+		return response
+	}
+	return nil
+}
+
+func (api *lawyerAPIServer) staleLawyerEvidenceResponseLocked(req lawyerDoRequest, turn *lawyerTurn) map[string]any {
+	response := api.responseBaseLocked(req.CaseID, req.RoleID)
+	response["ok"] = false
+	response["error"] = apiError("stale_opportunity", fmt.Sprintf("evidence file operation completed after opportunity %q ended", turn.opportunity.ID))
+	return response
+}
+
+func (api *lawyerAPIServer) observerEvidenceDoResponse(req lawyerDoRequest) map[string]any {
+	api.rc.mu.Lock()
+	if err := validateEvidenceFileToolArguments(req.Tool, req.Arguments); err != nil {
+		response := api.responseBaseLocked(req.CaseID, req.RoleID)
+		response["ok"] = false
+		response["error"] = apiError("tool_failed", err.Error())
+		api.rc.mu.Unlock()
+		return response
+	}
+	if req.Tool == "stat_evidence" {
+		file, err := api.rc.evidenceFileSnapshotLocked(mapString(req.Arguments["evidence_id"]))
+		if err != nil {
+			response := api.responseBaseLocked(req.CaseID, req.RoleID)
+			response["ok"] = false
+			response["error"] = apiError(roleAPIToolErrorCode(err), err.Error())
+			api.rc.mu.Unlock()
+			return response
+		}
+		api.rc.mu.Unlock()
+		err = api.evidenceFiles.verifyFile(file)
+		api.rc.mu.Lock()
+		response := api.responseBaseLocked(req.CaseID, req.RoleID)
+		api.rc.mu.Unlock()
+		if err != nil {
+			response["ok"] = false
+			response["error"] = apiError(roleAPIToolErrorCode(err), err.Error())
+			return response
+		}
+		response["ok"] = true
+		response["result"] = map[string]any{"evidence": file.meta}
+		return response
+	}
+
+	offset, err := requiredIntParam(req.Arguments, "offset")
+	if err != nil {
+		response := api.responseBaseLocked(req.CaseID, req.RoleID)
+		response["ok"] = false
+		response["error"] = apiError("tool_failed", err.Error())
+		api.rc.mu.Unlock()
+		return response
+	}
+	length, err := requiredIntParam(req.Arguments, "length")
+	if err != nil {
+		response := api.responseBaseLocked(req.CaseID, req.RoleID)
+		response["ok"] = false
+		response["error"] = apiError("tool_failed", err.Error())
+		api.rc.mu.Unlock()
+		return response
+	}
+	reservation, err := api.rc.reserveEvidenceReadLocked(mapString(req.Arguments["evidence_id"]), int64(offset), length, nil)
+	if err != nil {
+		response := api.responseBaseLocked(req.CaseID, req.RoleID)
+		response["ok"] = false
+		response["error"] = apiError(roleAPIToolErrorCode(err), err.Error())
+		api.rc.mu.Unlock()
+		return response
+	}
+	api.rc.mu.Unlock()
+	result, _, readErr := api.evidenceFiles.readRange(reservation)
+	api.rc.mu.Lock()
+	response := api.responseBaseLocked(req.CaseID, req.RoleID)
+	api.rc.mu.Unlock()
+	if readErr != nil {
+		response["ok"] = false
+		response["error"] = apiError("runtime_failure", readErr.Error())
+		return response
+	}
+	response["ok"] = true
+	response["result"] = result
+	return response
+}
+
+func (api *lawyerAPIServer) callLawyerToolLocked(caseCtx context.Context, turn *lawyerTurn, tool string, args map[string]any, callID string) (map[string]any, bool, error) {
 	switch tool {
 	case "case_status":
-		return api.caseStatusPayloadLocked(turn.opportunity.Role), false, false, nil
+		if err := requireAllowedKeys(args, "case_status arguments"); err != nil {
+			return nil, false, participantInput(err)
+		}
+		result, err := api.caseStatusPayloadLocked(turn.opportunity.Role)
+		return result, false, err
 	case "get_case":
+		if err := requireAllowedKeys(args, "get_case arguments"); err != nil {
+			return nil, false, participantInput(err)
+		}
 		view := api.rc.attorneyView(turn.opportunity)
-		return map[string]any{"case": view}, false, false, nil
+		return map[string]any{"case": view}, false, nil
 	case "send_work_notes":
+		if err := requireAllowedKeys(args, "send_work_notes arguments", "notes"); err != nil {
+			return nil, false, participantInput(err)
+		}
 		notes, ok := args["notes"].(string)
 		if !ok {
-			return nil, false, false, fmt.Errorf("arguments.notes is required and must be a string")
+			return nil, false, participantInput(fmt.Errorf("arguments.notes is required and must be a string"))
 		}
 		if err := api.rc.recordWorkNotesAtTurn(turn.turnNumber, turn.opportunity, callID, notes); err != nil {
-			return nil, false, false, err
+			return nil, false, err
 		}
 		return map[string]any{
 			"text":       "Work notes accepted off record.",
 			"byte_count": len([]byte(notes)),
-		}, false, false, nil
+		}, false, nil
 	case "list_evidence":
+		if err := requireAllowedKeys(args, "list_evidence arguments"); err != nil {
+			return nil, false, participantInput(err)
+		}
 		if !evidenceReadAllowed(turn.opportunity) {
-			return nil, true, false, fmt.Errorf("evidence access is not allowed in phase %q", turn.opportunity.Phase)
+			return nil, false, participantInput(fmt.Errorf("evidence access is not allowed in phase %q", turn.opportunity.Phase))
 		}
-		return map[string]any{"evidence": api.rc.listVisibleEvidence()}, false, false, nil
-	case "stat_evidence":
-		if !evidenceReadAllowed(turn.opportunity) {
-			return nil, true, false, fmt.Errorf("evidence access is not allowed in phase %q", turn.opportunity.Phase)
-		}
-		evidence, err := api.rc.statEvidence(mapString(args["evidence_id"]))
-		if err != nil {
-			return nil, false, false, err
-		}
-		return map[string]any{"evidence": evidence, "limits": api.evidenceReadLimitsLocked(turn)}, false, false, nil
-	case "read_evidence_range":
-		if !evidenceReadAllowed(turn.opportunity) {
-			return nil, true, false, fmt.Errorf("evidence access is not allowed in phase %q", turn.opportunity.Phase)
-		}
-		offset, err := requiredIntParam(args, "offset")
-		if err != nil {
-			return nil, false, false, err
-		}
-		length, err := requiredIntParam(args, "length")
-		if err != nil {
-			return nil, false, false, err
-		}
-		result, err := api.rc.readEvidenceRange(mapString(args["evidence_id"]), int64(offset), length, turn.evidenceBudget)
-		if err != nil {
-			return nil, false, false, err
-		}
-		result["remaining_read_bytes_for_opportunity"] = remainingCapacity(api.rc.cfg.Policy.MaxEvidenceReadBytesPerOpportunity, turn.evidenceBudget.bytes)
-		result["remaining_reads_for_opportunity"] = remainingCapacity(api.rc.cfg.Policy.MaxEvidenceReadsPerOpportunity, turn.evidenceBudget.reads)
-		if err := api.rc.recordEventAtTurn(turn.turnNumber, "evidence_read", turn.opportunity.Role, turn.opportunity.Phase, map[string]any{
-			"evidence_id": result["evidence_id"],
-			"offset":      result["offset"],
-			"length":      result["length"],
-			"byte_count":  result["length"],
-		}); err != nil {
-			return nil, false, false, err
-		}
-		return result, false, false, nil
+		return map[string]any{"evidence": api.rc.listVisibleEvidence()}, false, nil
+	case "stat_evidence", "read_evidence_range":
+		return nil, false, fmt.Errorf("evidence file tool %q requires unlocked execution", tool)
 	case "begin_evidence_upload":
 		if !evidenceSubmissionAllowed(turn.opportunity) {
-			return nil, true, false, fmt.Errorf("evidence submission is not allowed in phase %q", turn.opportunity.Phase)
+			return nil, false, participantInput(fmt.Errorf("evidence submission is not allowed in phase %q", turn.opportunity.Phase))
 		}
 		session, err := api.rc.beginEvidenceUpload(turn.opportunity, args)
 		if err != nil {
-			return nil, true, false, err
+			return nil, false, err
 		}
 		return map[string]any{
 			"upload_id":              session.UploadID,
 			"max_chunk_bytes":        api.rc.cfg.Policy.MaxEvidenceChunkBytes,
 			"remaining_upload_bytes": session.ExpectedSizeBytes,
-		}, false, false, nil
+		}, false, nil
 	case "write_evidence_chunk":
 		if !evidenceSubmissionAllowed(turn.opportunity) {
-			return nil, true, false, fmt.Errorf("evidence submission is not allowed in phase %q", turn.opportunity.Phase)
+			return nil, false, participantInput(fmt.Errorf("evidence submission is not allowed in phase %q", turn.opportunity.Phase))
+		}
+		if err := requireAllowedKeys(args, "write_evidence_chunk arguments", "upload_id", "offset", "content_base64"); err != nil {
+			return nil, false, participantInput(err)
 		}
 		offset, err := requiredIntParam(args, "offset")
 		if err != nil {
-			return nil, true, false, err
+			return nil, false, participantInput(err)
 		}
-		session, n, err := api.rc.writeEvidenceChunk(mapString(args["upload_id"]), offset, mapString(args["content_base64"]))
+		uploadID, err := optionalStringParam(args, "upload_id")
 		if err != nil {
-			return nil, true, false, err
+			return nil, false, participantInput(err)
+		}
+		contentBase64, err := optionalStringParam(args, "content_base64")
+		if err != nil {
+			return nil, false, participantInput(err)
+		}
+		session, n, err := api.rc.writeEvidenceChunk(turn.opportunity, uploadID, offset, contentBase64)
+		if err != nil {
+			return nil, false, err
 		}
 		return map[string]any{
 			"upload_id":              session.UploadID,
@@ -688,64 +1018,62 @@ func (api *lawyerAPIServer) callLawyerToolLocked(turn *lawyerTurn, tool string, 
 			"accepted_length":        n,
 			"received_bytes":         session.ReceivedBytes,
 			"remaining_upload_bytes": remainingCapacity(session.ExpectedSizeBytes, session.ReceivedBytes),
-		}, false, false, nil
+		}, false, nil
 	case "commit_evidence_upload":
 		if !evidenceSubmissionAllowed(turn.opportunity) {
-			return nil, true, false, fmt.Errorf("evidence submission is not allowed in phase %q", turn.opportunity.Phase)
+			return nil, false, participantInput(fmt.Errorf("evidence submission is not allowed in phase %q", turn.opportunity.Phase))
 		}
-		result, err := api.commitEvidenceUploadLocked(turn, args)
-		return result, err != nil, false, err
+		result, err := api.commitEvidenceUploadLocked(caseCtx, turn, args)
+		return result, false, err
 	case "submit_evidence":
 		if !evidenceSubmissionAllowed(turn.opportunity) {
-			return nil, true, false, fmt.Errorf("evidence submission is not allowed in phase %q", turn.opportunity.Phase)
+			return nil, false, participantInput(fmt.Errorf("evidence submission is not allowed in phase %q", turn.opportunity.Phase))
 		}
-		result, err := api.submitEvidenceLocked(turn, args)
-		return result, err != nil, false, err
+		result, err := api.submitEvidenceLocked(caseCtx, turn, args)
+		return result, false, err
 	case "submit_decision":
-		result, err := api.submitDecisionLocked(turn, args)
-		return result, err != nil, true, err
+		result, err := api.submitDecisionLocked(caseCtx, turn, args)
+		return result, true, err
 	default:
-		return nil, true, false, fmt.Errorf("unknown tool %q", tool)
+		return nil, false, participantInput(fmt.Errorf("unknown tool %q", tool))
 	}
 }
 
-func (api *lawyerAPIServer) commitEvidenceUploadLocked(turn *lawyerTurn, args map[string]any) (map[string]any, error) {
-	uploadID := mapString(args["upload_id"])
+func (api *lawyerAPIServer) commitEvidenceUploadLocked(caseCtx context.Context, turn *lawyerTurn, args map[string]any) (map[string]any, error) {
+	if err := requireAllowedKeys(args, "commit_evidence_upload arguments", "upload_id", "expected_sha256", "preferred_filename_ext"); err != nil {
+		return nil, participantInput(err)
+	}
+	uploadID, err := optionalStringParam(args, "upload_id")
+	if err != nil {
+		return nil, participantInput(err)
+	}
+	preferredExt, err := optionalStringParam(args, "preferred_filename_ext")
+	if err != nil {
+		return nil, participantInput(err)
+	}
+	expectedSHA256, err := optionalStringParam(args, "expected_sha256")
+	if err != nil {
+		return nil, participantInput(err)
+	}
 	session := api.rc.uploadSessions[uploadID]
 	if session == nil {
-		return nil, fmt.Errorf("unknown upload_id %q", uploadID)
+		return nil, participantInput(fmt.Errorf("unknown upload_id %q", uploadID))
 	}
-	if expected := strings.ToLower(mapString(args["expected_sha256"])); expected != "" {
-		session.ExpectedSHA256 = expected
-	}
-	meta, err := api.rc.prepareEvidenceUploadCommit(session, mapString(args["preferred_filename_ext"]))
+	meta, err := api.rc.prepareEvidenceUploadCommit(
+		turn.opportunity,
+		session,
+		preferredExt,
+		expectedSHA256,
+	)
 	if err != nil {
 		return nil, err
 	}
-	payload := submittedEvidencePayload(meta)
-	stepResp, err := api.rc.stepForCertificate("submit_evidence", turn.opportunity.Role, payload)
+	evidence, err := api.commitEvidenceSubmissionLocked(caseCtx, turn, meta, nil, session.Path, session.UploadID)
 	if err != nil {
-		return nil, err
-	}
-	if ok, _ := stepResp["ok"].(bool); !ok {
-		return nil, fmt.Errorf("%s", mapString(stepResp["error"]))
-	}
-	meta, file, evidence, err := api.rc.finalizeEvidenceUpload(session, meta)
-	if err != nil {
-		return nil, err
-	}
-	api.rc.state = mapAny(stepResp["state"])
-	api.signalChangedLocked()
-	if api.rc.councilAPI != nil {
-		api.rc.councilAPI.signalChanged()
-	}
-	api.rc.caseFiles = append(api.rc.caseFiles, file)
-	api.rc.fileByID[file.EvidenceID] = file
-	api.rc.submittedEvidence = append(api.rc.submittedEvidence, meta)
-	if err := api.rc.writeEvidenceManifest(); err != nil {
 		return nil, err
 	}
 	if err := api.recordSubmittedEvidenceEventLocked(turn, meta); err != nil {
+		api.finishTurnAfterSignalLocked(turn, err)
 		return nil, err
 	}
 	return map[string]any{
@@ -755,40 +1083,17 @@ func (api *lawyerAPIServer) commitEvidenceUploadLocked(turn *lawyerTurn, args ma
 	}, nil
 }
 
-func (api *lawyerAPIServer) submitEvidenceLocked(turn *lawyerTurn, args map[string]any) (map[string]any, error) {
+func (api *lawyerAPIServer) submitEvidenceLocked(caseCtx context.Context, turn *lawyerTurn, args map[string]any) (map[string]any, error) {
 	meta, raw, err := api.rc.prepareSubmittedEvidence(turn.opportunity, args)
 	if err != nil {
 		return nil, err
 	}
-	payload := submittedEvidencePayload(meta)
-	stepResp, err := api.rc.stepForCertificate("submit_evidence", turn.opportunity.Role, payload)
+	evidence, err := api.commitEvidenceSubmissionLocked(caseCtx, turn, meta, raw, "", "")
 	if err != nil {
-		return nil, err
-	}
-	if ok, _ := stepResp["ok"].(bool); !ok {
-		return nil, fmt.Errorf("%s", mapString(stepResp["error"]))
-	}
-	file, err := api.rc.writeSubmittedEvidenceFile(meta, raw)
-	if err != nil {
-		return nil, err
-	}
-	evidence, err := api.rc.registerSubmittedEvidenceEvidence(meta, file)
-	if err != nil {
-		return nil, err
-	}
-	meta.EvidenceID = evidence.EvidenceID
-	api.rc.state = mapAny(stepResp["state"])
-	api.signalChangedLocked()
-	if api.rc.councilAPI != nil {
-		api.rc.councilAPI.signalChanged()
-	}
-	api.rc.caseFiles = append(api.rc.caseFiles, file)
-	api.rc.fileByID[file.EvidenceID] = file
-	api.rc.submittedEvidence = append(api.rc.submittedEvidence, meta)
-	if err := api.rc.writeEvidenceManifest(); err != nil {
 		return nil, err
 	}
 	if err := api.recordSubmittedEvidenceEventLocked(turn, meta); err != nil {
+		api.finishTurnAfterSignalLocked(turn, err)
 		return nil, err
 	}
 	return map[string]any{
@@ -798,42 +1103,160 @@ func (api *lawyerAPIServer) submitEvidenceLocked(turn *lawyerTurn, args map[stri
 	}, nil
 }
 
-func (api *lawyerAPIServer) submitDecisionLocked(turn *lawyerTurn, args map[string]any) (map[string]any, error) {
+func (api *lawyerAPIServer) commitEvidenceSubmissionLocked(caseCtx context.Context, turn *lawyerTurn, meta SubmittedEvidenceMeta, raw []byte, sourcePath string, uploadID string) (evidence EvidenceMeta, err error) {
+	if meta.Role != turn.opportunity.Role || meta.Phase != turn.opportunity.Phase {
+		return EvidenceMeta{}, fmt.Errorf("submitted evidence belongs to role %s in phase %s, not role %s in phase %s", meta.Role, meta.Phase, turn.opportunity.Role, turn.opportunity.Phase)
+	}
+	if err := api.rc.validateSubmittedEvidenceID(meta.EvidenceID); err != nil {
+		return EvidenceMeta{}, err
+	}
+	if err := api.rc.validateSubmittedEvidenceLineage(meta); err != nil {
+		return EvidenceMeta{}, err
+	}
+	_, readableKind := caseFileKind(meta.Name)
+	textReadable := (readableKind || strings.HasPrefix(strings.ToLower(meta.MimeType), "text/") || strings.EqualFold(meta.MimeType, "application/json")) && meta.SizeBytes <= api.rc.cfg.Policy.MaxEvidenceReadBytes
+	evidence, err = submittedEvidenceRecordMeta(meta, textReadable)
+	if err != nil {
+		return EvidenceMeta{}, err
+	}
+	candidateEvidence, candidateEvidenceByID, err := api.rc.candidateEvidenceRegistry(evidence)
+	if err != nil {
+		return EvidenceMeta{}, err
+	}
+	payload := submittedEvidencePayload(meta)
+	stepResp, replayAction, err := api.rc.evaluateTurnStepLocked(caseCtx, turn.deadline, turn.opportunity, "submit_evidence", turn.opportunity.Role, payload)
+	if err != nil {
+		return EvidenceMeta{}, err
+	}
+	if ok, _ := stepResp["ok"].(bool); !ok {
+		return EvidenceMeta{}, fmt.Errorf("%s", mapString(stepResp["error"]))
+	}
+	nextState, nextVersion, err := acceptedStepState(stepResp, turn.opportunity.StateVersion)
+	if err != nil {
+		return EvidenceMeta{}, err
+	}
+	file, submittedCopyPath, err := api.rc.publishSubmittedEvidence(meta, evidence, raw, sourcePath)
+	if err != nil {
+		return EvidenceMeta{}, err
+	}
+	if uploadID != "" {
+		session := api.rc.uploadSessions[uploadID]
+		if session == nil || session.Path != sourcePath {
+			return EvidenceMeta{}, fmt.Errorf("upload session %s changed during commit", uploadID)
+		}
+		if sourcePath != submittedCopyPath {
+			if removeErr := os.Remove(sourcePath); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+				return EvidenceMeta{}, fmt.Errorf("remove published upload staging file %s: %w", uploadID, removeErr)
+			}
+		}
+		session.Path = submittedCopyPath
+	}
+	candidateCaseFiles := append(append([]CaseFile(nil), api.rc.caseFiles...), file)
+	candidateFileByID := make(map[string]CaseFile, len(api.rc.fileByID)+1)
+	for evidenceID, existing := range api.rc.fileByID {
+		candidateFileByID[evidenceID] = existing
+	}
+	candidateFileByID[file.EvidenceID] = file
+	candidateSubmittedEvidence := append(append([]SubmittedEvidenceMeta(nil), api.rc.submittedEvidence...), meta)
+	if err := api.rc.writeEvidenceManifestCandidate(candidateEvidence); err != nil {
+		return EvidenceMeta{}, err
+	}
+	if err := turnStepError(caseCtx, turn.deadline, nil); err != nil {
+		restoreErr := api.rc.writeEvidenceManifestCandidate(api.rc.evidence)
+		if restoreErr != nil {
+			restoreFailure := fmt.Errorf("restore evidence manifest after canceled submission: %w", restoreErr)
+			runtimeErr := errors.Join(err, restoreFailure)
+			if errors.Is(err, errTurnDeadlineExceeded) {
+				message := fmt.Sprintf("%s lawyer opportunity timed out", turn.opportunity.Role)
+				failErr := api.rc.failOpportunityLocked(caseCtx, time.Time{}, turn.opportunity, opportunityFailureDeadline, message, nil)
+				runtimeErr = errors.Join(errors.New("evidence submission exceeded its opportunity deadline"), restoreFailure, failErr)
+				if failErr == nil {
+					api.finishTurnAfterSignalLocked(turn, runtimeErr)
+				} else {
+					api.finishTurnLocked(turn, runtimeErr)
+				}
+			}
+			return EvidenceMeta{}, runtimeErr
+		}
+		return EvidenceMeta{}, err
+	}
+
+	api.rc.state = nextState
+	turn.opportunity.StateVersion = nextVersion
+	api.rc.evidence = candidateEvidence
+	api.rc.evidenceByID = candidateEvidenceByID
+	api.rc.caseFiles = candidateCaseFiles
+	api.rc.fileByID = candidateFileByID
+	api.rc.submittedEvidence = candidateSubmittedEvidence
+	api.rc.certificateActions = append(api.rc.certificateActions, replayAction)
+	if uploadID != "" {
+		delete(api.rc.uploadSessions, uploadID)
+	}
+	api.rc.signalRoleAPIsLocked()
+	return evidence, err
+}
+
+func acceptedStepState(stepResp map[string]any, sourceVersion int) (map[string]any, int, error) {
+	state := mapAny(stepResp["state"])
+	if len(state) == 0 {
+		return nil, 0, fmt.Errorf("accepted Lean step returned empty state")
+	}
+	if len(mapAny(state["case"])) == 0 {
+		return nil, 0, fmt.Errorf("accepted Lean step returned empty case state")
+	}
+	version, err := requiredStateVersion(state)
+	if err != nil {
+		return nil, 0, fmt.Errorf("accepted Lean step state: %w", err)
+	}
+	if version != sourceVersion+1 {
+		return nil, 0, fmt.Errorf("accepted Lean step state_version=%d, want %d", version, sourceVersion+1)
+	}
+	return state, version, nil
+}
+
+func (api *lawyerAPIServer) submitDecisionLocked(caseCtx context.Context, turn *lawyerTurn, args map[string]any) (map[string]any, error) {
 	if turn.completed {
 		return nil, fmt.Errorf("decision already submitted for this opportunity")
 	}
-	actionType, payload, err := attorneyDecision(turn.opportunity, args, api.rc.fileByID, api.rc.cfg.Policy)
+	actionType, payload, err := attorneyDecision(turn.opportunity, args, api.rc.evidenceByID, api.rc.cfg.Policy)
 	if err != nil {
-		return nil, err
+		return nil, participantInput(err)
 	}
 	if err := api.rc.validateAttorneyPayloadAgainstState(turn.opportunity, actionType, payload); err != nil {
-		return nil, err
+		return nil, participantInput(err)
 	}
-	stepResp, err := api.rc.stepForCertificate(actionType, turn.opportunity.Role, payload)
+	stepResp, replayAction, err := api.rc.evaluateTurnStepLocked(caseCtx, turn.deadline, turn.opportunity, actionType, turn.opportunity.Role, payload)
 	if err != nil {
 		return nil, err
 	}
 	if ok, _ := stepResp["ok"].(bool); !ok {
 		return nil, fmt.Errorf("%s", mapString(stepResp["error"]))
 	}
-	api.rc.state = mapAny(stepResp["state"])
-	api.signalChangedLocked()
-	if api.rc.councilAPI != nil {
-		api.rc.councilAPI.signalChanged()
+	nextState, nextVersion, err := acceptedStepState(stepResp, turn.opportunity.StateVersion)
+	if err != nil {
+		return nil, err
 	}
-	if err := api.rc.recordEventAtTurn(turn.turnNumber, "attorney_action", turn.opportunity.Role, turn.opportunity.Phase, map[string]any{
+	if err := turnStepError(caseCtx, turn.deadline, nil); err != nil {
+		return nil, err
+	}
+	api.rc.state = nextState
+	turn.opportunity.StateVersion = nextVersion
+	api.rc.certificateActions = append(api.rc.certificateActions, replayAction)
+	api.rc.signalRoleAPIsLocked()
+	if err := api.rc.recordEventAtTurnLocked(turn.turnNumber, "attorney_action", turn.opportunity.Role, turn.opportunity.Phase, map[string]any{
 		"opportunity_id": turn.opportunity.ID,
 		"action_type":    actionType,
 		"payload":        payload,
 	}); err != nil {
+		api.finishTurnAfterSignalLocked(turn, err)
 		return nil, err
 	}
-	api.finishTurnLocked(turn, nil)
+	api.finishTurnAfterSignalLocked(turn, nil)
 	return map[string]any{"text": "Decision accepted."}, nil
 }
 
 func (api *lawyerAPIServer) recordSubmittedEvidenceEventLocked(turn *lawyerTurn, meta SubmittedEvidenceMeta) error {
-	return api.rc.recordEventAtTurn(turn.turnNumber, "submitted_evidence", turn.opportunity.Role, turn.opportunity.Phase, map[string]any{
+	return api.rc.recordEventAtTurnLocked(turn.turnNumber, "submitted_evidence", turn.opportunity.Role, turn.opportunity.Phase, map[string]any{
 		"evidence_id":         meta.EvidenceID,
 		"title":               meta.Title,
 		"source_url":          meta.SourceURL,
@@ -843,61 +1266,66 @@ func (api *lawyerAPIServer) recordSubmittedEvidenceEventLocked(turn *lawyerTurn,
 		"relevance":           meta.Relevance,
 		"sha256":              meta.SHA256,
 		"size_bytes":          meta.SizeBytes,
+		"parent_evidence_id":  meta.ParentEvidenceID,
+		"parent_sha256":       meta.ParentSHA256,
+		"derivation_method":   meta.DerivationMethod,
 	})
 }
 
 func (api *lawyerAPIServer) callObserverToolLocked(tool string, args map[string]any) (map[string]any, error) {
 	switch tool {
 	case "case_status":
-		return api.caseStatusPayloadLocked("observer"), nil
+		if err := requireAllowedKeys(args, "case_status arguments"); err != nil {
+			return nil, participantInput(err)
+		}
+		return api.caseStatusPayloadLocked("observer")
 	case "get_case":
+		if err := requireAllowedKeys(args, "get_case arguments"); err != nil {
+			return nil, participantInput(err)
+		}
 		return map[string]any{"case": api.observerViewLocked()}, nil
 	case "get_turn":
+		if err := requireAllowedKeys(args, "get_turn arguments"); err != nil {
+			return nil, participantInput(err)
+		}
 		return map[string]any{"turn": api.turnPayloadLocked(api.active)}, nil
 	case "list_events":
+		if err := requireAllowedKeys(args, "list_events arguments", "offset", "limit"); err != nil {
+			return nil, participantInput(err)
+		}
 		offset, err := optionalIntParam(args, "offset", 0)
 		if err != nil {
-			return nil, err
+			return nil, participantInput(err)
 		}
 		limit, err := optionalIntParam(args, "limit", 100)
 		if err != nil {
-			return nil, err
+			return nil, participantInput(err)
 		}
 		if offset < 0 {
-			return nil, fmt.Errorf("offset must be non-negative")
+			return nil, participantInput(fmt.Errorf("offset must be non-negative"))
 		}
 		if limit <= 0 || limit > 1000 {
-			return nil, fmt.Errorf("limit must be between 1 and 1000")
+			return nil, participantInput(fmt.Errorf("limit must be between 1 and 1000"))
 		}
-		events := append([]Event(nil), api.rc.events...)
-		if offset > len(events) {
-			offset = len(events)
+		total := len(api.rc.events)
+		if offset > total {
+			offset = total
 		}
 		end := offset + limit
-		if end > len(events) {
-			end = len(events)
+		if end > total {
+			end = total
 		}
-		return map[string]any{"events": events[offset:end], "offset": offset, "limit": limit, "total": len(events)}, nil
+		events := cloneAPIEvents(api.rc.events[offset:end])
+		return map[string]any{"events": events, "offset": offset, "limit": limit, "total": total}, nil
 	case "list_evidence":
+		if err := requireAllowedKeys(args, "list_evidence arguments"); err != nil {
+			return nil, participantInput(err)
+		}
 		return map[string]any{"evidence": api.rc.listVisibleEvidence()}, nil
-	case "stat_evidence":
-		evidence, err := api.rc.statEvidence(mapString(args["evidence_id"]))
-		if err != nil {
-			return nil, err
-		}
-		return map[string]any{"evidence": evidence}, nil
-	case "read_evidence_range":
-		offset, err := requiredIntParam(args, "offset")
-		if err != nil {
-			return nil, err
-		}
-		length, err := requiredIntParam(args, "length")
-		if err != nil {
-			return nil, err
-		}
-		return api.rc.readEvidenceRange(mapString(args["evidence_id"]), int64(offset), length, nil)
+	case "stat_evidence", "read_evidence_range":
+		return nil, fmt.Errorf("evidence file tool %q requires unlocked execution", tool)
 	default:
-		return nil, fmt.Errorf("unknown observer tool %q", tool)
+		return nil, participantInput(fmt.Errorf("unknown observer tool %q", tool))
 	}
 }
 
@@ -909,15 +1337,15 @@ func (api *lawyerAPIServer) observerViewLocked() map[string]any {
 		"phase":             currentPhase(api.rc.state),
 		"record": map[string]any{
 			"evidence":           api.rc.listVisibleEvidence(),
-			"openings":           mapList(caseObj["openings"]),
-			"arguments":          mapList(caseObj["arguments"]),
-			"rebuttals":          mapList(caseObj["rebuttals"]),
-			"surrebuttals":       mapList(caseObj["surrebuttals"]),
-			"closings":           mapList(caseObj["closings"]),
-			"submitted_evidence": mapList(caseObj["submitted_evidence"]),
+			"openings":           cloneJSONLikeMapList(mapList(caseObj["openings"])),
+			"arguments":          cloneJSONLikeMapList(mapList(caseObj["arguments"])),
+			"rebuttals":          cloneJSONLikeMapList(mapList(caseObj["rebuttals"])),
+			"surrebuttals":       cloneJSONLikeMapList(mapList(caseObj["surrebuttals"])),
+			"closings":           cloneJSONLikeMapList(mapList(caseObj["closings"])),
+			"submitted_evidence": cloneJSONLikeMapList(mapList(caseObj["submitted_evidence"])),
 			"exhibits":           api.rc.attorneyExhibits(),
-			"technical_reports":  mapList(caseObj["technical_reports"]),
-			"council_answers":    mapList(caseObj["council_answers"]),
+			"technical_reports":  cloneJSONLikeMapList(mapList(caseObj["technical_reports"])),
+			"council_answers":    cloneJSONLikeMapList(mapList(caseObj["council_answers"])),
 		},
 		"turn":   api.turnPayloadLocked(api.active),
 		"events": len(api.rc.events),
@@ -925,25 +1353,42 @@ func (api *lawyerAPIServer) observerViewLocked() map[string]any {
 	}
 }
 
-func (api *lawyerAPIServer) caseStatusResponseLocked(caseID string, roleID string) map[string]any {
-	response := api.responseBaseLocked(caseID, roleID)
-	for key, value := range api.caseStatusPayloadLocked(roleID) {
-		response[key] = value
+func cloneAPIEvents(events []Event) []Event {
+	out := make([]Event, len(events))
+	for i, event := range events {
+		event.Payload = cloneJSONLikeMap(event.Payload)
+		out[i] = event
 	}
-	return response
+	return out
 }
 
-func (api *lawyerAPIServer) caseStatusPayloadLocked(roleID string) map[string]any {
+func (api *lawyerAPIServer) caseStatusResponseLocked(caseID string, roleID string) (map[string]any, error) {
+	response := api.responseBaseLocked(caseID, roleID)
+	payload, err := api.caseStatusPayloadLocked(roleID)
+	if err != nil {
+		return nil, err
+	}
+	for key, value := range payload {
+		response[key] = value
+	}
+	return response, nil
+}
+
+func (api *lawyerAPIServer) caseStatusPayloadLocked(roleID string) (map[string]any, error) {
 	caseObj := mapAny(api.rc.state["case"])
 	phase := currentPhase(api.rc.state)
 	caseStatus := mapString(caseObj["status"])
 	roleStatus := api.caseRoleStatusLocked(roleID, caseObj)
+	councilRoster, err := councilSeatRoster(api.rc.council, mapList(caseObj["council_members"]))
+	if err != nil {
+		return nil, fmt.Errorf("build case-status council roster: %w", err)
+	}
 	payload := map[string]any{
 		"status":              roleStatus,
 		"phase":               phase,
 		"case_status":         caseStatus,
 		"council_backend":     api.rc.cfg.CouncilBackend,
-		"council_roster":      councilSeatRoster(api.rc.council, mapList(caseObj["council_members"])),
+		"council_roster":      councilRoster,
 		"deliberation_round":  intNumber(caseObj["deliberation_round"]),
 		"state_version":       mapAny(api.rc.state)["state_version"],
 		"turn":                api.turnPayloadLocked(api.active),
@@ -951,8 +1396,8 @@ func (api *lawyerAPIServer) caseStatusPayloadLocked(roleID string) map[string]an
 		"counts":              api.caseStatusCountsLocked(caseObj),
 		"message":             caseStatusMessage(roleStatus),
 	}
-	if api.terminalReason != "" {
-		payload["final_reason"] = api.terminalReason
+	if api.rc.terminalReason != "" {
+		payload["final_reason"] = api.rc.terminalReason
 	}
 	if caseStatus == "failed" {
 		failure := caseFailure(api.rc.state)
@@ -964,7 +1409,7 @@ func (api *lawyerAPIServer) caseStatusPayloadLocked(roleID string) map[string]an
 	} else if api.active != nil && !api.active.completed && api.active.opportunity.Role == roleID {
 		payload["limits"] = api.lawyerLimitsLocked(api.active)
 	}
-	return payload
+	return payload, nil
 }
 
 func (api *lawyerAPIServer) caseRoleStatusLocked(roleID string, caseObj map[string]any) string {
@@ -1058,13 +1503,13 @@ func (api *lawyerAPIServer) caseResultResponseLocked(caseID string, roleID strin
 	}
 	answers := normalizeCouncilAnswers(mapList(caseObj["council_answers"]))
 	response["status"] = "done"
-	if api.terminalReason != "" {
-		response["final_reason"] = api.terminalReason
+	if api.rc.terminalReason != "" {
+		response["final_reason"] = api.rc.terminalReason
 	}
 	response["result"] = map[string]any{
 		"phase":              phase,
 		"case_status":        caseStatus,
-		"final_reason":       api.terminalReason,
+		"final_reason":       api.rc.terminalReason,
 		"answers":            currentAnswers(api.rc.state),
 		"council_answers":    answers,
 		"answer_summary":     councilAnswerSummary(answers),
@@ -1074,7 +1519,7 @@ func (api *lawyerAPIServer) caseResultResponseLocked(caseID string, roleID strin
 }
 
 func (api *lawyerAPIServer) caseIsFinalLocked(caseObj map[string]any) bool {
-	if api.terminal {
+	if api.rc.terminal {
 		return true
 	}
 	if mapString(caseObj["status"]) == "failed" {
@@ -1162,7 +1607,7 @@ func councilAnswerSummary(answers []map[string]any) map[string]any {
 	}
 }
 
-func (api *lawyerAPIServer) consumeAttemptLocked(turn *lawyerTurn, err error, decisionAttempt bool) error {
+func (api *lawyerAPIServer) consumeAttemptLocked(caseCtx context.Context, turn *lawyerTurn, err error, decisionAttempt bool) error {
 	if turn.attemptsRemaining > 0 {
 		turn.attemptsRemaining--
 	}
@@ -1188,21 +1633,27 @@ func (api *lawyerAPIServer) consumeAttemptLocked(turn *lawyerTurn, err error, de
 	}
 	if turn.attemptsRemaining <= 0 {
 		details := map[string]any{"invalid_reasons": append([]string(nil), turn.invalidReasons...)}
-		if failErr := api.rc.failOpportunity(turn.opportunity, opportunityFailureAttemptsExhausted, feedback.Error(), details); failErr != nil {
-			feedback = errors.Join(feedback, failErr)
-			api.finishTurnLocked(turn, feedback)
+		if failErr := api.rc.failOpportunityLocked(caseCtx, turn.deadline, turn.opportunity, opportunityFailureAttemptsExhausted, feedback.Error(), details); failErr != nil {
+			if errors.Is(failErr, errTurnDeadlineExceeded) {
+				return failErr
+			}
+			runtimeErr := errors.Join(feedback, failErr)
+			api.finishTurnLocked(turn, runtimeErr)
+			return runtimeErr
 		} else {
-			api.finishTurnLocked(turn, nil)
+			api.finishTurnAfterSignalLocked(turn, nil)
 		}
+	} else {
+		api.rc.signalRoleAPIsLocked()
 	}
-	return feedback
+	return participantInput(feedback)
 }
 
 func (api *lawyerAPIServer) statusResponseLocked(caseID string, roleID string) map[string]any {
-	if api.terminal {
+	terminalStatus := roleAPITerminalStatus(api.rc.state)
+	if api.rc.terminal || terminalStatus != "" {
 		response := api.responseBaseLocked(caseID, roleID)
-		caseObj := mapAny(api.rc.state["case"])
-		if mapString(caseObj["status"]) == "failed" {
+		if terminalStatus == "failed" {
 			response["status"] = "failed"
 			response["failure"] = caseFailure(api.rc.state)
 			response["error"] = caseFailureError(api.rc.state)
@@ -1211,18 +1662,9 @@ func (api *lawyerAPIServer) statusResponseLocked(caseID string, roleID string) m
 		}
 		response["prompt"] = ""
 		response["tools"] = []map[string]any{caseStatusHTTPToolSpec()}
-		if api.terminalReason != "" {
-			response["final_reason"] = api.terminalReason
+		if api.rc.terminalReason != "" {
+			response["final_reason"] = api.rc.terminalReason
 		}
-		return response
-	}
-	if mapString(mapAny(api.rc.state["case"])["status"]) == "failed" {
-		response := api.responseBaseLocked(caseID, roleID)
-		response["status"] = "failed"
-		response["prompt"] = ""
-		response["tools"] = []map[string]any{caseStatusHTTPToolSpec()}
-		response["failure"] = caseFailure(api.rc.state)
-		response["error"] = caseFailureError(api.rc.state)
 		return response
 	}
 	if roleID == "observer" {
@@ -1250,14 +1692,11 @@ func (api *lawyerAPIServer) statusResponseLocked(caseID string, roleID string) m
 
 func (api *lawyerAPIServer) waitResponseLocked(caseID string, roleID string, after string, baseline uint64) (map[string]any, string, bool) {
 	response := api.statusResponseLocked(caseID, roleID)
-	if api.terminal {
-		if response["status"] == "failed" {
-			return response, "failed", true
-		}
-		return response, "done", true
-	}
 	if response["status"] == "failed" {
 		return response, "failed", true
+	}
+	if response["status"] == "done" {
+		return response, "done", true
 	}
 	turn := api.active
 	if turn != nil && !turn.completed && turn.opportunity.Role == roleID {
@@ -1269,6 +1708,17 @@ func (api *lawyerAPIServer) waitResponseLocked(caseID string, roleID string, aft
 		return response, "changed", true
 	}
 	return response, "", false
+}
+
+func roleAPITerminalStatus(state map[string]any) string {
+	caseObj := mapAny(state["case"])
+	if mapString(caseObj["status"]) == "failed" {
+		return "failed"
+	}
+	if mapString(caseObj["status"]) == "closed" || currentPhase(state) == "closed" {
+		return "done"
+	}
+	return ""
 }
 
 func (api *lawyerAPIServer) waitPayloadLocked(reason string) map[string]any {

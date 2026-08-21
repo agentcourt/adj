@@ -10,9 +10,15 @@ import (
 	"github.com/jsmorph/adj/arbd/runtime/spec"
 )
 
+func (rc *runContext) recordEventAtTurn(turn int, eventType string, role string, phase string, payload map[string]any) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return rc.recordEventAtTurnLocked(turn, eventType, role, phase, payload)
+}
+
 func TestRenderTranscriptOmitsRawEvents(t *testing.T) {
 	result, rc := sampleRenderResult()
-	out := renderTranscript(result, rc)
+	out := renderTranscript(result, rc.fileByID)
 	if strings.Contains(out, "## Events") {
 		t.Fatalf("transcript still includes raw events:\n%s", out)
 	}
@@ -35,7 +41,7 @@ func TestRenderTranscriptOmitsRawEvents(t *testing.T) {
 
 func TestRenderDigestUsesExhibitIndex(t *testing.T) {
 	result, rc := sampleRenderResult()
-	out := renderDigest(result, rc)
+	out := renderDigest(result, rc.fileByID)
 	if strings.Contains(out, "instructions body") {
 		t.Fatalf("digest should not inline exhibit body:\n%s", out)
 	}
@@ -89,6 +95,49 @@ func TestRecordEventUsesUTCTimestamp(t *testing.T) {
 	}
 	if _, err := time.Parse("2006-01-02T15:04:05.000Z07:00", timestamp); err != nil {
 		t.Fatalf("timestamp = %q, want millisecond UTC timestamp: %v", timestamp, err)
+	}
+}
+
+func TestFinalOutputSnapshotOwnsMutableData(t *testing.T) {
+	rc := &runContext{
+		evidence: []EvidenceMeta{{EvidenceID: "ev_1", Title: "Original evidence"}},
+		fileByID: map[string]CaseFile{
+			"ev_1": {EvidenceID: "ev_1", Text: "original file"},
+		},
+		workProductDirs: map[string]string{"plaintiff": "original-work"},
+		certificateInit: ReplayInitializeRequest{
+			State:          map[string]any{"case": map[string]any{"phase": "openings"}},
+			Question:       "P",
+			CouncilMembers: []map[string]any{{"member_id": "C1"}},
+		},
+		certificateActions: []ReplayAction{{
+			ActionType: "record_opening_statement",
+			Payload:    map[string]any{"nested": map[string]any{"text": "original action"}},
+		}},
+	}
+	rc.mu.Lock()
+	snapshot, err := rc.finalOutputSnapshotLocked()
+	rc.mu.Unlock()
+	if err != nil {
+		t.Fatalf("final output snapshot: %v", err)
+	}
+	rc.evidence[0].Title = "changed evidence"
+	rc.fileByID["ev_1"] = CaseFile{EvidenceID: "ev_1", Text: "changed file"}
+	rc.workProductDirs["plaintiff"] = "changed-work"
+	mapAny(rc.certificateInit.State["case"])["phase"] = "changed"
+	rc.certificateInit.CouncilMembers[0]["member_id"] = "changed"
+	mapAny(rc.certificateActions[0].Payload["nested"])["text"] = "changed action"
+
+	if snapshot.evidence[0].Title != "Original evidence" || snapshot.fileByID["ev_1"].Text != "original file" {
+		t.Fatalf("record snapshot changed: evidence=%#v file=%#v", snapshot.evidence, snapshot.fileByID)
+	}
+	if snapshot.workProductDirs["plaintiff"] != "original-work" {
+		t.Fatalf("work-product snapshot = %#v", snapshot.workProductDirs)
+	}
+	if mapString(mapAny(snapshot.certificateInit.State["case"])["phase"]) != "openings" ||
+		mapString(snapshot.certificateInit.CouncilMembers[0]["member_id"]) != "C1" ||
+		mapString(mapAny(snapshot.certificateActions[0].Payload["nested"])["text"]) != "original action" {
+		t.Fatalf("certificate snapshot changed: init=%#v actions=%#v", snapshot.certificateInit, snapshot.certificateActions)
 	}
 }
 

@@ -24,13 +24,10 @@ const (
 type councilAPIServer struct {
 	rc *runContext
 
-	mu      sync.Mutex
-	cond    *sync.Cond
-	version uint64
-	active  *councilTurn
-
-	terminal       bool
-	terminalReason string
+	cond          *sync.Cond
+	version       uint64
+	active        *councilTurn
+	evidenceFiles evidenceFileOperations
 }
 
 type councilTurn struct {
@@ -69,20 +66,25 @@ func newCouncilAPIServer(rc *runContext) *councilAPIServer {
 	api := &councilAPIServer{
 		rc: rc,
 	}
-	api.cond = sync.NewCond(&api.mu)
+	api.cond = sync.NewCond(&rc.mu)
 	return api
 }
 
-func (api *councilAPIServer) register(mux *http.ServeMux) {
+func (api *councilAPIServer) register(mux *http.ServeMux, caseCtx context.Context) {
+	if caseCtx == nil {
+		caseCtx = context.Background()
+	}
 	mux.HandleFunc(councilAPIBasePath+"/get", api.handleGet)
 	mux.HandleFunc(councilAPIBasePath+"/wait", api.handleWait)
-	mux.HandleFunc(councilAPIBasePath+"/do", api.handleDo)
-	mux.HandleFunc(councilAPIBasePath+"/fail", api.handleFail)
+	mux.HandleFunc(councilAPIBasePath+"/do", func(w http.ResponseWriter, r *http.Request) {
+		api.handleDoContext(caseCtx, w, r)
+	})
+	mux.HandleFunc(councilAPIBasePath+"/fail", func(w http.ResponseWriter, r *http.Request) {
+		api.handleFailContext(caseCtx, w, r)
+	})
 }
 
-func (api *councilAPIServer) startTurn(turn *councilTurn) error {
-	api.mu.Lock()
-	defer api.mu.Unlock()
+func (api *councilAPIServer) startTurnLocked(turn *councilTurn) error {
 	if api.active != nil && !api.active.completed {
 		return fmt.Errorf("councilapi already has an active turn")
 	}
@@ -92,33 +94,12 @@ func (api *councilAPIServer) startTurn(turn *councilTurn) error {
 }
 
 func (api *councilAPIServer) clearTurn(turn *councilTurn) {
-	api.mu.Lock()
-	defer api.mu.Unlock()
+	api.rc.mu.Lock()
+	defer api.rc.mu.Unlock()
 	if api.active == turn {
 		api.active = nil
 		api.signalChangedLocked()
 	}
-}
-
-func (api *councilAPIServer) setTerminal(reason string) {
-	if api == nil {
-		return
-	}
-	api.mu.Lock()
-	defer api.mu.Unlock()
-	api.terminal = true
-	api.terminalReason = strings.TrimSpace(reason)
-	api.active = nil
-	api.signalChangedLocked()
-}
-
-func (api *councilAPIServer) signalChanged() {
-	if api == nil {
-		return
-	}
-	api.mu.Lock()
-	defer api.mu.Unlock()
-	api.signalChangedLocked()
 }
 
 func (api *councilAPIServer) signalChangedLocked() {
@@ -128,17 +109,21 @@ func (api *councilAPIServer) signalChangedLocked() {
 
 func (api *councilAPIServer) ensureCondLocked() *sync.Cond {
 	if api.cond == nil {
-		api.cond = sync.NewCond(&api.mu)
+		api.cond = sync.NewCond(&api.rc.mu)
 	}
 	return api.cond
 }
 
 func (rc *runContext) executeCouncilAPIOpportunity(ctx context.Context, opportunity Opportunity, seat CouncilSeat) error {
-	if rc.councilAPI == nil {
+	rc.mu.Lock()
+	api := rc.councilAPI
+	if api == nil {
+		rc.mu.Unlock()
 		return fmt.Errorf("councilapi server is not running")
 	}
 	prompt, err := rc.buildCouncilAPIPrompt(seat, opportunity)
 	if err != nil {
+		rc.mu.Unlock()
 		return err
 	}
 	turn := &councilTurn{
@@ -152,39 +137,80 @@ func (rc *runContext) executeCouncilAPIOpportunity(ctx context.Context, opportun
 		evidenceBudget:    &evidenceReadBudget{},
 		done:              make(chan error, 1),
 	}
-	if err := rc.councilAPI.startTurn(turn); err != nil {
+	if err := rc.writeCouncilTurnSnapshot(turn, prompt); err != nil {
+		rc.mu.Unlock()
 		return err
 	}
-	defer rc.councilAPI.clearTurn(turn)
+	if err := api.startTurnLocked(turn); err != nil {
+		rc.mu.Unlock()
+		return err
+	}
+	rc.mu.Unlock()
+	defer api.clearTurn(turn)
 	timer := time.NewTimer(time.Until(turn.deadline))
 	defer timer.Stop()
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return context.Cause(ctx)
 	case <-timer.C:
-		err := fmt.Errorf("council member %s opportunity timed out after %s", seat.MemberID, rc.cfg.Runtime.CouncilTimeout())
-		rc.councilAPI.finishTurn(turn, err)
-		return rc.removeTimedOutCouncilMember(opportunity, seat, err)
+		return api.timeoutTurnContext(ctx, turn, rc.cfg.Runtime.CouncilTimeout())
 	case err := <-turn.done:
-		if err != nil {
-			return rc.removeInvalidResponseCouncilMember(opportunity, seat, err)
-		}
-		return nil
+		return err
 	}
 }
 
+func (api *councilAPIServer) timeoutTurn(turn *councilTurn, timeout time.Duration) error {
+	return api.timeoutTurnContext(context.Background(), turn, timeout)
+}
+
+func (api *councilAPIServer) timeoutTurnContext(caseCtx context.Context, turn *councilTurn, timeout time.Duration) error {
+	api.rc.mu.Lock()
+	if turn == nil || api.active != turn {
+		api.rc.mu.Unlock()
+		return fmt.Errorf("councilapi timed-out turn is no longer active")
+	}
+	if turn.completed {
+		done := turn.done
+		api.rc.mu.Unlock()
+		return <-done
+	}
+	err := fmt.Errorf("council member %s opportunity timed out after %s", turn.seat.MemberID, timeout)
+	details := map[string]any{
+		"member_id": turn.seat.MemberID,
+		"model":     turn.seat.Model,
+	}
+	if failErr := api.rc.failOpportunityLocked(caseCtx, time.Time{}, turn.opportunity, opportunityFailureDeadline, err.Error(), details); failErr != nil {
+		api.finishTurnLocked(turn, failErr)
+		api.rc.mu.Unlock()
+		return failErr
+	}
+	api.finishTurnAfterSignalLocked(turn, nil)
+	api.rc.mu.Unlock()
+	return nil
+}
+
 func (api *councilAPIServer) finishTurn(turn *councilTurn, err error) {
-	api.mu.Lock()
-	defer api.mu.Unlock()
+	api.rc.mu.Lock()
+	defer api.rc.mu.Unlock()
 	api.finishTurnLocked(turn, err)
 }
 
 func (api *councilAPIServer) finishTurnLocked(turn *councilTurn, err error) {
+	api.completeTurnLocked(turn, err, true)
+}
+
+func (api *councilAPIServer) finishTurnAfterSignalLocked(turn *councilTurn, err error) {
+	api.completeTurnLocked(turn, err, false)
+}
+
+func (api *councilAPIServer) completeTurnLocked(turn *councilTurn, err error, signal bool) {
 	if turn == nil || turn.completed {
 		return
 	}
 	turn.completed = true
-	api.signalChangedLocked()
+	if signal {
+		api.signalChangedLocked()
+	}
 	select {
 	case turn.done <- err:
 	default:
@@ -203,9 +229,9 @@ func (api *councilAPIServer) handleGet(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	api.mu.Lock()
+	api.rc.mu.Lock()
 	response := api.statusResponseLocked(caseID, memberID)
-	api.mu.Unlock()
+	api.rc.mu.Unlock()
 	writeCouncilJSON(w, http.StatusOK, response)
 }
 
@@ -239,7 +265,7 @@ func (api *councilAPIServer) handleWait(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	api.mu.Lock()
+	api.rc.mu.Lock()
 	cond := api.ensureCondLocked()
 	baseline := api.version
 	if hasAfterVersion {
@@ -247,34 +273,34 @@ func (api *councilAPIServer) handleWait(w http.ResponseWriter, r *http.Request) 
 	}
 	deadline := time.Now().Add(timeout)
 	timer := time.AfterFunc(timeout, func() {
-		api.mu.Lock()
+		api.rc.mu.Lock()
 		api.ensureCondLocked().Broadcast()
-		api.mu.Unlock()
+		api.rc.mu.Unlock()
 	})
 	defer timer.Stop()
 	if done := r.Context().Done(); done != nil {
 		go func() {
 			<-done
-			api.mu.Lock()
+			api.rc.mu.Lock()
 			api.ensureCondLocked().Broadcast()
-			api.mu.Unlock()
+			api.rc.mu.Unlock()
 		}()
 	}
 	for {
 		if r.Context().Err() != nil {
-			api.mu.Unlock()
+			api.rc.mu.Unlock()
 			return
 		}
 		if response, reason, ready := api.waitResponseLocked(caseID, memberID, after, baseline); ready {
 			response["wait"] = api.waitPayloadLocked(reason)
-			api.mu.Unlock()
+			api.rc.mu.Unlock()
 			writeCouncilJSON(w, http.StatusOK, response)
 			return
 		}
 		if !time.Now().Before(deadline) {
 			response := api.statusResponseLocked(caseID, memberID)
 			response["wait"] = api.waitPayloadLocked("timeout")
-			api.mu.Unlock()
+			api.rc.mu.Unlock()
 			writeCouncilJSON(w, http.StatusOK, response)
 			return
 		}
@@ -283,6 +309,10 @@ func (api *councilAPIServer) handleWait(w http.ResponseWriter, r *http.Request) 
 }
 
 func (api *councilAPIServer) handleDo(w http.ResponseWriter, r *http.Request) {
+	api.handleDoContext(context.Background(), w, r)
+}
+
+func (api *councilAPIServer) handleDoContext(caseCtx context.Context, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeCouncilJSON(w, http.StatusMethodNotAllowed, map[string]any{
 			"ok":    false,
@@ -292,10 +322,18 @@ func (api *councilAPIServer) handleDo(w http.ResponseWriter, r *http.Request) {
 	}
 	var req councilDoRequest
 	body := http.MaxBytesReader(w, r.Body, int64(api.rc.cfg.Runtime.MaxResponseBytes))
-	if err := json.NewDecoder(body).Decode(&req); err != nil {
+	dec := json.NewDecoder(body)
+	if err := dec.Decode(&req); err != nil {
 		if errors.Is(err, io.EOF) {
 			err = fmt.Errorf("request body is required")
 		}
+		writeCouncilJSON(w, http.StatusBadRequest, map[string]any{
+			"ok":    false,
+			"error": apiError("bad_json", err.Error()),
+		})
+		return
+	}
+	if err := requireJSONEOF(dec); err != nil {
 		writeCouncilJSON(w, http.StatusBadRequest, map[string]any{
 			"ok":    false,
 			"error": apiError("bad_json", err.Error()),
@@ -337,10 +375,14 @@ func (api *councilAPIServer) handleDo(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	api.handleCouncilDo(w, req)
+	api.handleCouncilDo(caseCtx, r.Context(), w, req)
 }
 
 func (api *councilAPIServer) handleFail(w http.ResponseWriter, r *http.Request) {
+	api.handleFailContext(context.Background(), w, r)
+}
+
+func (api *councilAPIServer) handleFailContext(caseCtx context.Context, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeCouncilJSON(w, http.StatusMethodNotAllowed, map[string]any{
 			"ok":    false,
@@ -350,10 +392,18 @@ func (api *councilAPIServer) handleFail(w http.ResponseWriter, r *http.Request) 
 	}
 	var req councilFailRequest
 	body := http.MaxBytesReader(w, r.Body, int64(api.rc.cfg.Runtime.MaxResponseBytes))
-	if err := json.NewDecoder(body).Decode(&req); err != nil {
+	dec := json.NewDecoder(body)
+	if err := dec.Decode(&req); err != nil {
 		if errors.Is(err, io.EOF) {
 			err = fmt.Errorf("request body is required")
 		}
+		writeCouncilJSON(w, http.StatusBadRequest, map[string]any{
+			"ok":    false,
+			"error": apiError("bad_json", err.Error()),
+		})
+		return
+	}
+	if err := requireJSONEOF(dec); err != nil {
 		writeCouncilJSON(w, http.StatusBadRequest, map[string]any{
 			"ok":    false,
 			"error": apiError("bad_json", err.Error()),
@@ -405,197 +455,430 @@ func (api *councilAPIServer) handleFail(w http.ResponseWriter, r *http.Request) 
 		})
 		return
 	}
-	api.handleCouncilFail(w, req)
+	api.handleCouncilFail(caseCtx, r.Context(), w, req)
 }
 
-func (api *councilAPIServer) handleCouncilFail(w http.ResponseWriter, req councilFailRequest) {
-	api.mu.Lock()
-	defer api.mu.Unlock()
+func (api *councilAPIServer) handleCouncilFail(caseCtx context.Context, requestCtx context.Context, w http.ResponseWriter, req councilFailRequest) {
+	api.rc.mu.Lock()
+	response := api.councilFailResponseLocked(caseCtx, req)
+	api.rc.mu.Unlock()
+	if requestCtx.Err() != nil {
+		return
+	}
+	writeCouncilJSON(w, http.StatusOK, response)
+}
+
+func (api *councilAPIServer) councilFailResponseLocked(caseCtx context.Context, req councilFailRequest) map[string]any {
 	turn := api.active
-	response := api.responseBaseLocked(req.CaseID, req.MemberID)
 	if turn == nil || turn.completed {
+		response := api.responseBaseLocked(req.CaseID, req.MemberID)
 		response["ok"] = false
 		response["error"] = apiError("no_active_turn", "no council turn is active")
-		writeCouncilJSON(w, http.StatusOK, response)
-		return
+		return response
 	}
 	if turn.seat.MemberID != req.MemberID {
+		response := api.responseBaseLocked(req.CaseID, req.MemberID)
 		response["ok"] = false
 		response["error"] = apiError("not_current_turn", fmt.Sprintf("current council turn belongs to %s", turn.seat.MemberID))
-		writeCouncilJSON(w, http.StatusOK, response)
-		return
+		return response
 	}
 	if req.OpportunityID != turn.opportunity.ID {
+		response := api.responseBaseLocked(req.CaseID, req.MemberID)
 		response["ok"] = false
 		response["error"] = apiError("stale_opportunity", fmt.Sprintf("request opportunity_id %q does not match active opportunity_id %q", req.OpportunityID, turn.opportunity.ID))
-		writeCouncilJSON(w, http.StatusOK, response)
-		return
+		return response
+	}
+	if !time.Now().Before(turn.deadline) {
+		err := api.councilTurnDeadlineError(turn)
+		if failErr := api.expireCouncilTurnLocked(caseCtx, turn); failErr != nil {
+			api.finishTurnLocked(turn, failErr)
+			response := api.responseBaseLocked(req.CaseID, req.MemberID)
+			response["ok"] = false
+			response["error"] = apiError("runtime_failure", failErr.Error())
+			return response
+		}
+		api.finishTurnAfterSignalLocked(turn, nil)
+		response := api.responseBaseLocked(req.CaseID, req.MemberID)
+		response["ok"] = false
+		response["error"] = apiError("turn_timeout", err.Error())
+		return response
 	}
 	details := cloneMap(req.Details)
 	details["member_id"] = turn.seat.MemberID
 	details["model"] = turn.seat.Model
-	if failErr := api.rc.failOpportunity(turn.opportunity, req.Reason, req.Message, details); failErr != nil {
+	if failErr := api.rc.failOpportunityLocked(caseCtx, turn.deadline, turn.opportunity, req.Reason, req.Message, details); failErr != nil {
+		if errors.Is(failErr, errTurnDeadlineExceeded) {
+			deadlineErr := api.councilTurnDeadlineError(turn)
+			if transitionErr := api.expireCouncilTurnLocked(caseCtx, turn); transitionErr != nil {
+				api.finishTurnLocked(turn, transitionErr)
+				response := api.responseBaseLocked(req.CaseID, req.MemberID)
+				response["ok"] = false
+				response["error"] = apiError("runtime_failure", transitionErr.Error())
+				return response
+			}
+			api.finishTurnAfterSignalLocked(turn, nil)
+			response := api.responseBaseLocked(req.CaseID, req.MemberID)
+			response["ok"] = false
+			response["error"] = apiError("turn_timeout", deadlineErr.Error())
+			return response
+		}
 		api.finishTurnLocked(turn, failErr)
+		response := api.responseBaseLocked(req.CaseID, req.MemberID)
 		response["ok"] = false
-		response["error"] = apiError("member_failure_failed", failErr.Error())
-		writeCouncilJSON(w, http.StatusOK, response)
-		return
+		response["error"] = apiError("runtime_failure", failErr.Error())
+		return response
 	}
-	api.finishTurnLocked(turn, nil)
+	api.finishTurnAfterSignalLocked(turn, nil)
+	response := api.responseBaseLocked(req.CaseID, req.MemberID)
 	response["ok"] = true
 	response["result"] = map[string]any{"text": "Council member failure recorded."}
 	if failure := api.failedCouncilMemberPayloadLocked(req.MemberID); failure != nil {
 		response["failure"] = failure
 	}
+	return response
+}
+
+func (api *councilAPIServer) councilTurnDeadlineError(turn *councilTurn) error {
+	return fmt.Errorf("council member %s opportunity timed out: %w", turn.seat.MemberID, errTurnDeadlineExceeded)
+}
+
+func (api *councilAPIServer) expireCouncilTurnLocked(caseCtx context.Context, turn *councilTurn) error {
+	details := map[string]any{
+		"member_id": turn.seat.MemberID,
+		"model":     turn.seat.Model,
+	}
+	return api.rc.failOpportunityLocked(
+		caseCtx,
+		time.Time{},
+		turn.opportunity,
+		opportunityFailureDeadline,
+		opportunityFailureMessage(turn.opportunity, opportunityFailureDeadline),
+		details,
+	)
+}
+
+func (api *councilAPIServer) handleCouncilDo(caseCtx context.Context, requestCtx context.Context, w http.ResponseWriter, req councilDoRequest) {
+	if evidenceFileTool(req.Tool) {
+		response := api.councilEvidenceDoResponse(caseCtx, req)
+		if requestCtx.Err() != nil {
+			return
+		}
+		writeCouncilJSON(w, http.StatusOK, response)
+		return
+	}
+	api.rc.mu.Lock()
+	response := api.councilDoResponseLocked(caseCtx, req)
+	api.rc.mu.Unlock()
+	if requestCtx.Err() != nil {
+		return
+	}
 	writeCouncilJSON(w, http.StatusOK, response)
 }
 
-func (api *councilAPIServer) handleCouncilDo(w http.ResponseWriter, req councilDoRequest) {
-	api.mu.Lock()
-	defer api.mu.Unlock()
+func (api *councilAPIServer) councilDoResponseLocked(caseCtx context.Context, req councilDoRequest) map[string]any {
+	turn, response := api.councilRequestTurnLocked(caseCtx, req)
+	if response != nil {
+		return response
+	}
+	result, err := api.callCouncilToolLocked(caseCtx, turn, req.Tool, req.Arguments)
+	if err != nil {
+		return api.councilToolErrorResponseLocked(caseCtx, req, turn, err)
+	}
+	if !turn.completed {
+		if err := turnStepError(caseCtx, turn.deadline, nil); err != nil {
+			return api.councilToolErrorResponseLocked(caseCtx, req, turn, err)
+		}
+	}
+	response = api.responseBaseLocked(req.CaseID, req.MemberID)
+	response["ok"] = true
+	response["result"] = result
+	return response
+}
+
+func (api *councilAPIServer) councilToolErrorResponseLocked(caseCtx context.Context, req councilDoRequest, turn *councilTurn, err error) map[string]any {
+	if isParticipantInput(err) {
+		if timingErr := turnStepError(caseCtx, turn.deadline, nil); timingErr != nil {
+			err = timingErr
+		} else {
+			err = api.consumeAttemptLocked(caseCtx, turn, err)
+		}
+	}
+	if errors.Is(err, errTurnDeadlineExceeded) {
+		return api.councilDeadlineResponseLocked(caseCtx, req, turn)
+	}
+	code := "runtime_failure"
+	if isParticipantInput(err) {
+		code = "tool_failed"
+	} else if !turn.completed {
+		api.finishTurnLocked(turn, err)
+	}
+	response := api.responseBaseLocked(req.CaseID, req.MemberID)
+	response["ok"] = false
+	response["error"] = apiError(code, err.Error())
+	return response
+}
+
+func (api *councilAPIServer) councilDeadlineResponseLocked(caseCtx context.Context, req councilDoRequest, turn *councilTurn) map[string]any {
+	err := api.councilTurnDeadlineError(turn)
+	code := "turn_timeout"
+	responseErr := err
+	if !turn.completed {
+		if failErr := api.expireCouncilTurnLocked(caseCtx, turn); failErr != nil {
+			api.finishTurnLocked(turn, failErr)
+			code = "runtime_failure"
+			responseErr = failErr
+		} else {
+			api.finishTurnAfterSignalLocked(turn, nil)
+		}
+	}
+	response := api.responseBaseLocked(req.CaseID, req.MemberID)
+	response["ok"] = false
+	response["error"] = apiError(code, responseErr.Error())
+	return response
+}
+
+func (api *councilAPIServer) councilRequestTurnLocked(caseCtx context.Context, req councilDoRequest) (*councilTurn, map[string]any) {
 	turn := api.active
 	if turn == nil || turn.completed {
 		response := api.responseBaseLocked(req.CaseID, req.MemberID)
 		response["ok"] = false
 		response["error"] = apiError("no_active_turn", "no council turn is active")
-		writeCouncilJSON(w, http.StatusOK, response)
-		return
+		return nil, response
+	}
+	if err := context.Cause(caseCtx); err != nil {
+		api.finishTurnLocked(turn, err)
+		response := api.responseBaseLocked(req.CaseID, req.MemberID)
+		response["ok"] = false
+		response["error"] = apiError("runtime_failure", err.Error())
+		return nil, response
 	}
 	if time.Now().After(turn.deadline) {
 		err := fmt.Errorf("council member %s opportunity timed out", turn.seat.MemberID)
-		response := api.responseBaseLocked(req.CaseID, req.MemberID)
-		response["ok"] = false
-		if failErr := api.rc.failOpportunity(turn.opportunity, opportunityFailureDeadline, err.Error(), map[string]any{
+		code := "turn_timeout"
+		responseErr := err
+		if failErr := api.rc.failOpportunityLocked(caseCtx, time.Time{}, turn.opportunity, opportunityFailureDeadline, err.Error(), map[string]any{
 			"member_id": turn.seat.MemberID,
 			"model":     turn.seat.Model,
 		}); failErr != nil {
 			api.finishTurnLocked(turn, failErr)
-			response["error"] = apiError("member_failure_failed", failErr.Error())
+			code = "runtime_failure"
+			responseErr = failErr
 		} else {
-			api.finishTurnLocked(turn, nil)
-			response["error"] = apiError("turn_timeout", err.Error())
+			api.finishTurnAfterSignalLocked(turn, nil)
 		}
-		writeCouncilJSON(w, http.StatusOK, response)
-		return
+		response := api.responseBaseLocked(req.CaseID, req.MemberID)
+		response["ok"] = false
+		response["error"] = apiError(code, responseErr.Error())
+		return nil, response
 	}
 	if turn.seat.MemberID != req.MemberID {
 		response := api.responseBaseLocked(req.CaseID, req.MemberID)
 		response["ok"] = false
 		response["error"] = apiError("not_current_turn", fmt.Sprintf("current council turn belongs to %s", turn.seat.MemberID))
-		writeCouncilJSON(w, http.StatusOK, response)
-		return
+		return nil, response
 	}
 	if req.OpportunityID == "" {
 		response := api.responseBaseLocked(req.CaseID, req.MemberID)
 		response["ok"] = false
 		response["error"] = apiError("missing_opportunity_id", "opportunity_id is required for council tool calls")
-		writeCouncilJSON(w, http.StatusOK, response)
-		return
+		return nil, response
 	}
 	if req.OpportunityID != turn.opportunity.ID {
 		response := api.responseBaseLocked(req.CaseID, req.MemberID)
 		response["ok"] = false
 		response["error"] = apiError("stale_opportunity", fmt.Sprintf("request opportunity_id %q does not match active opportunity_id %q", req.OpportunityID, turn.opportunity.ID))
-		writeCouncilJSON(w, http.StatusOK, response)
-		return
+		return nil, response
 	}
-	result, countAttempt, err := api.callCouncilToolLocked(turn, req.Tool, req.Arguments)
-	response := api.responseBaseLocked(req.CaseID, req.MemberID)
-	if err != nil {
-		if countAttempt {
-			err = api.consumeAttemptLocked(turn, err)
+	return turn, nil
+}
+
+func (api *councilAPIServer) councilEvidenceDoResponse(caseCtx context.Context, req councilDoRequest) map[string]any {
+	api.rc.mu.Lock()
+	turn, response := api.councilRequestTurnLocked(caseCtx, req)
+	if response != nil {
+		api.rc.mu.Unlock()
+		return response
+	}
+	if err := validateEvidenceFileToolArguments(req.Tool, req.Arguments); err != nil {
+		response := api.councilToolErrorResponseLocked(caseCtx, req, turn, participantInput(err))
+		api.rc.mu.Unlock()
+		return response
+	}
+	if req.Tool == "stat_evidence" {
+		file, err := api.rc.evidenceFileSnapshotLocked(mapString(req.Arguments["evidence_id"]))
+		if err != nil {
+			response := api.councilToolErrorResponseLocked(caseCtx, req, turn, err)
+			api.rc.mu.Unlock()
+			return response
 		}
-		response["ok"] = false
-		response["error"] = apiError("tool_failed", err.Error())
-		writeCouncilJSON(w, http.StatusOK, response)
-		return
+		api.rc.mu.Unlock()
+		err = api.evidenceFiles.verifyFile(file)
+		api.rc.mu.Lock()
+		defer api.rc.mu.Unlock()
+		if response := api.revalidateCouncilEvidenceTurnLocked(caseCtx, req, turn, nil); response != nil {
+			return response
+		}
+		if err != nil {
+			return api.councilToolErrorResponseLocked(caseCtx, req, turn, err)
+		}
+		response = api.responseBaseLocked(req.CaseID, req.MemberID)
+		response["ok"] = true
+		response["result"] = map[string]any{
+			"evidence": file.meta,
+			"limits":   api.evidenceReadLimitsLocked(turn),
+		}
+		return response
 	}
+
+	offset, err := requiredIntParam(req.Arguments, "offset")
+	if err != nil {
+		response := api.councilToolErrorResponseLocked(caseCtx, req, turn, participantInput(err))
+		api.rc.mu.Unlock()
+		return response
+	}
+	length, err := requiredIntParam(req.Arguments, "length")
+	if err != nil {
+		response := api.councilToolErrorResponseLocked(caseCtx, req, turn, participantInput(err))
+		api.rc.mu.Unlock()
+		return response
+	}
+	reservation, err := api.rc.reserveEvidenceReadLocked(mapString(req.Arguments["evidence_id"]), int64(offset), length, turn.evidenceBudget)
+	if err != nil {
+		response := api.councilToolErrorResponseLocked(caseCtx, req, turn, err)
+		api.rc.mu.Unlock()
+		return response
+	}
+	api.rc.mu.Unlock()
+	result, bytesRead, readErr := api.evidenceFiles.readRange(reservation)
+	api.rc.mu.Lock()
+	defer api.rc.mu.Unlock()
+	if response := api.revalidateCouncilEvidenceTurnLocked(caseCtx, req, turn, &reservation); response != nil {
+		return response
+	}
+	if readErr != nil {
+		rollbackEvidenceReadLocked(&reservation)
+		return api.councilToolErrorResponseLocked(caseCtx, req, turn, readErr)
+	}
+	finalizeEvidenceReadLocked(&reservation, bytesRead)
+	result["remaining_read_bytes_for_opportunity"] = remainingCapacity(api.rc.cfg.Policy.MaxEvidenceReadBytesPerOpportunity, turn.evidenceBudget.bytes)
+	result["remaining_reads_for_opportunity"] = remainingCapacity(api.rc.cfg.Policy.MaxEvidenceReadsPerOpportunity, turn.evidenceBudget.reads)
+	if err := api.rc.recordEventAtTurnLocked(turn.turnNumber, "evidence_read", "council", turn.opportunity.Phase, map[string]any{
+		"member_id":   turn.seat.MemberID,
+		"evidence_id": result["evidence_id"],
+		"offset":      result["offset"],
+		"length":      result["length"],
+		"byte_count":  result["length"],
+	}); err != nil {
+		api.rc.signalRoleAPIsLocked()
+		api.finishTurnAfterSignalLocked(turn, err)
+		return api.councilToolErrorResponseLocked(caseCtx, req, turn, err)
+	}
+	api.rc.signalRoleAPIsLocked()
+	response = api.responseBaseLocked(req.CaseID, req.MemberID)
 	response["ok"] = true
 	response["result"] = result
-	writeCouncilJSON(w, http.StatusOK, response)
+	return response
 }
 
-func (api *councilAPIServer) callCouncilToolLocked(turn *councilTurn, tool string, args map[string]any) (map[string]any, bool, error) {
+func (api *councilAPIServer) revalidateCouncilEvidenceTurnLocked(caseCtx context.Context, req councilDoRequest, turn *councilTurn, reservation *evidenceReadReservation) map[string]any {
+	if api.active != turn || turn.completed {
+		rollbackEvidenceReadLocked(reservation)
+		return api.staleCouncilEvidenceResponseLocked(req, turn)
+	}
+	if err := context.Cause(caseCtx); err != nil {
+		rollbackEvidenceReadLocked(reservation)
+		return api.councilToolErrorResponseLocked(caseCtx, req, turn, err)
+	}
+	if time.Now().After(turn.deadline) {
+		rollbackEvidenceReadLocked(reservation)
+		_, response := api.councilRequestTurnLocked(caseCtx, req)
+		return response
+	}
+	return nil
+}
+
+func (api *councilAPIServer) staleCouncilEvidenceResponseLocked(req councilDoRequest, turn *councilTurn) map[string]any {
+	response := api.responseBaseLocked(req.CaseID, req.MemberID)
+	response["ok"] = false
+	response["error"] = apiError("stale_opportunity", fmt.Sprintf("evidence file operation completed after opportunity %q ended", turn.opportunity.ID))
+	return response
+}
+
+func (api *councilAPIServer) callCouncilToolLocked(caseCtx context.Context, turn *councilTurn, tool string, args map[string]any) (map[string]any, error) {
 	switch tool {
 	case "get_case":
-		return map[string]any{"case": api.rc.councilView(turn.seat, turn.opportunity)}, false, nil
+		if err := requireAllowedKeys(args, "get_case arguments"); err != nil {
+			return nil, participantInput(err)
+		}
+		return map[string]any{"case": api.rc.councilView(turn.seat, turn.opportunity)}, nil
 	case "list_evidence":
+		if err := requireAllowedKeys(args, "list_evidence arguments"); err != nil {
+			return nil, participantInput(err)
+		}
 		evidence := api.rc.listVisibleEvidence()
-		return map[string]any{"evidence": evidence}, false, nil
-	case "stat_evidence":
-		evidence, err := api.rc.statEvidence(mapString(args["evidence_id"]))
-		if err != nil {
-			return nil, false, err
-		}
-		return map[string]any{"evidence": evidence, "limits": api.evidenceReadLimitsLocked(turn)}, false, nil
-	case "read_evidence_range":
-		offset, err := requiredIntParam(args, "offset")
-		if err != nil {
-			return nil, false, err
-		}
-		length, err := requiredIntParam(args, "length")
-		if err != nil {
-			return nil, false, err
-		}
-		result, err := api.rc.readEvidenceRange(mapString(args["evidence_id"]), int64(offset), length, turn.evidenceBudget)
-		if err != nil {
-			return nil, false, err
-		}
-		result["remaining_read_bytes_for_opportunity"] = remainingCapacity(api.rc.cfg.Policy.MaxEvidenceReadBytesPerOpportunity, turn.evidenceBudget.bytes)
-		result["remaining_reads_for_opportunity"] = remainingCapacity(api.rc.cfg.Policy.MaxEvidenceReadsPerOpportunity, turn.evidenceBudget.reads)
-		if err := api.rc.recordEventAtTurn(turn.turnNumber, "evidence_read", "council", turn.opportunity.Phase, map[string]any{
-			"member_id":   turn.seat.MemberID,
-			"evidence_id": result["evidence_id"],
-			"offset":      result["offset"],
-			"length":      result["length"],
-			"byte_count":  result["length"],
-		}); err != nil {
-			return nil, false, err
-		}
-		return result, false, nil
+		return map[string]any{"evidence": evidence}, nil
+	case "stat_evidence", "read_evidence_range":
+		return nil, fmt.Errorf("evidence file tool %q requires unlocked execution", tool)
 	case "submit_council_answer":
-		result, err := api.submitCouncilAnswerLocked(turn, args)
-		return result, err != nil, err
+		return api.submitCouncilAnswerLocked(caseCtx, turn, args)
 	default:
-		return nil, true, fmt.Errorf("unknown tool %q", tool)
+		return nil, participantInput(fmt.Errorf("unknown tool %q", tool))
 	}
 }
 
-func (api *councilAPIServer) submitCouncilAnswerLocked(turn *councilTurn, args map[string]any) (map[string]any, error) {
+func (api *councilAPIServer) submitCouncilAnswerLocked(caseCtx context.Context, turn *councilTurn, args map[string]any) (map[string]any, error) {
 	if turn.completed {
 		return nil, fmt.Errorf("council answer already submitted for this opportunity")
 	}
 	payload := cloneMap(args)
+	if err := requireAllowedKeys(payload, "submit_council_answer arguments", "answer", "rationale"); err != nil {
+		return nil, participantInput(err)
+	}
 	payload["member_id"] = turn.seat.MemberID
 	normalizedPayload, err := normalizeCouncilAnswerPayload(payload)
 	if err != nil {
-		return nil, err
+		return nil, participantInput(err)
 	}
-	stepResp, err := api.rc.stepForCertificate("submit_council_answer", "council", normalizedPayload)
+	stepResp, replayAction, err := api.rc.evaluateTurnStepLocked(caseCtx, turn.deadline, turn.opportunity, "submit_council_answer", "council", normalizedPayload)
 	if err != nil {
+		if errors.Is(err, errTurnDeadlineExceeded) {
+			if failErr := api.expireCouncilTurnLocked(caseCtx, turn); failErr != nil {
+				api.finishTurnLocked(turn, failErr)
+				return nil, failErr
+			}
+			api.finishTurnAfterSignalLocked(turn, nil)
+			return nil, api.councilTurnDeadlineError(turn)
+		}
 		return nil, err
 	}
 	if ok, _ := stepResp["ok"].(bool); !ok {
 		return nil, fmt.Errorf("%s", mapString(stepResp["error"]))
 	}
-	api.rc.state = mapAny(stepResp["state"])
-	api.signalChangedLocked()
-	if api.rc.lawyerAPI != nil {
-		api.rc.lawyerAPI.signalChanged()
+	nextState, nextVersion, err := acceptedStepState(stepResp, turn.opportunity.StateVersion)
+	if err != nil {
+		return nil, err
 	}
-	if err := api.rc.recordEventAtTurn(turn.turnNumber, "council_answer", "council", turn.opportunity.Phase, map[string]any{
+	if err := turnStepError(caseCtx, turn.deadline, nil); err != nil {
+		return nil, err
+	}
+	api.rc.state = nextState
+	turn.opportunity.StateVersion = nextVersion
+	api.rc.certificateActions = append(api.rc.certificateActions, replayAction)
+	api.rc.signalRoleAPIsLocked()
+	if err := api.rc.recordEventAtTurnLocked(turn.turnNumber, "council_answer", "council", turn.opportunity.Phase, map[string]any{
 		"member_id": turn.seat.MemberID,
 		"model":     turn.seat.Model,
 		"backend":   councilBackendAPI,
 		"payload":   normalizedPayload,
 	}); err != nil {
+		api.finishTurnAfterSignalLocked(turn, err)
 		return nil, err
 	}
-	api.finishTurnLocked(turn, nil)
+	api.finishTurnAfterSignalLocked(turn, nil)
 	return map[string]any{"text": "Council answer accepted."}, nil
 }
 
-func (api *councilAPIServer) consumeAttemptLocked(turn *councilTurn, err error) error {
+func (api *councilAPIServer) consumeAttemptLocked(caseCtx context.Context, turn *councilTurn, err error) error {
 	if turn.attemptsRemaining > 0 {
 		turn.attemptsRemaining--
 	}
@@ -623,14 +906,25 @@ func (api *councilAPIServer) consumeAttemptLocked(turn *councilTurn, err error) 
 			"model":           turn.seat.Model,
 			"invalid_reasons": append([]string(nil), turn.invalidReasons...),
 		}
-		if failErr := api.rc.failOpportunity(turn.opportunity, opportunityFailureAttemptsExhausted, feedback.Error(), details); failErr != nil {
+		if failErr := api.rc.failOpportunityLocked(caseCtx, turn.deadline, turn.opportunity, opportunityFailureAttemptsExhausted, feedback.Error(), details); failErr != nil {
+			if errors.Is(failErr, errTurnDeadlineExceeded) {
+				if deadlineErr := api.expireCouncilTurnLocked(caseCtx, turn); deadlineErr != nil {
+					api.finishTurnLocked(turn, deadlineErr)
+					return deadlineErr
+				}
+				api.finishTurnAfterSignalLocked(turn, nil)
+				return api.councilTurnDeadlineError(turn)
+			}
 			feedback = errors.Join(feedback, failErr)
 			api.finishTurnLocked(turn, feedback)
+			return feedback
 		} else {
-			api.finishTurnLocked(turn, nil)
+			api.finishTurnAfterSignalLocked(turn, nil)
 		}
+	} else {
+		api.rc.signalRoleAPIsLocked()
 	}
-	return feedback
+	return participantInput(feedback)
 }
 
 func (api *councilAPIServer) parseGetWaitIdentity(w http.ResponseWriter, r *http.Request) (string, string, bool) {
@@ -675,9 +969,10 @@ func (api *councilAPIServer) writeCaseMismatch(w http.ResponseWriter, caseID str
 }
 
 func (api *councilAPIServer) statusResponseLocked(caseID string, memberID string) map[string]any {
-	if api.terminal {
+	terminalStatus := roleAPITerminalStatus(api.rc.state)
+	if api.rc.terminal || terminalStatus != "" {
 		response := api.responseBaseLocked(caseID, memberID)
-		if mapString(mapAny(api.rc.state["case"])["status"]) == "failed" {
+		if terminalStatus == "failed" {
 			response["status"] = "failed"
 			response["failure"] = caseFailure(api.rc.state)
 			response["error"] = caseFailureError(api.rc.state)
@@ -686,20 +981,12 @@ func (api *councilAPIServer) statusResponseLocked(caseID string, memberID string
 		}
 		response["prompt"] = ""
 		response["tools"] = []map[string]any{}
-		if api.terminalReason != "" {
-			response["final_reason"] = api.terminalReason
+		if api.rc.terminalReason != "" {
+			response["final_reason"] = api.rc.terminalReason
 		}
 		return response
 	}
 	response := api.responseBaseLocked(caseID, memberID)
-	if mapString(mapAny(api.rc.state["case"])["status"]) == "failed" {
-		response["status"] = "failed"
-		response["prompt"] = ""
-		response["tools"] = []map[string]any{}
-		response["failure"] = caseFailure(api.rc.state)
-		response["error"] = caseFailureError(api.rc.state)
-		return response
-	}
 	if failure := api.failedCouncilMemberPayloadLocked(memberID); failure != nil {
 		response["status"] = "failed"
 		response["prompt"] = ""
@@ -724,14 +1011,11 @@ func (api *councilAPIServer) statusResponseLocked(caseID string, memberID string
 
 func (api *councilAPIServer) waitResponseLocked(caseID string, memberID string, after string, baseline uint64) (map[string]any, string, bool) {
 	response := api.statusResponseLocked(caseID, memberID)
-	if api.terminal {
-		if response["status"] == "failed" {
-			return response, "failed", true
-		}
-		return response, "done", true
-	}
 	if response["status"] == "failed" {
 		return response, "failed", true
+	}
+	if response["status"] == "done" {
+		return response, "done", true
 	}
 	turn := api.active
 	if turn != nil && !turn.completed && turn.seat.MemberID == memberID {

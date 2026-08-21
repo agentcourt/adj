@@ -1,22 +1,25 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/jsmorph/adj/arbd/runtime/lean"
 	"github.com/jsmorph/adj/arbd/runtime/proceeding"
 )
 
-func runVerifyCertificate(args []string, stdout io.Writer, stderr io.Writer) error {
+func runVerifyCertificate(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
 	fs := newCommandFlagSet("verify-certificate", stderr)
 	packetDir := fs.String("dir", "", "AARD output packet directory")
 	certificatePath := fs.String("certificate", "", "Certificate JSON path. Default: DIR/certificate.json")
 	statePath := fs.String("state", "", "Final state JSON path. Default: DIR/state.json")
 	enginePath := fs.String("engine", proceeding.DefaultEnginePath(), "Lean engine binary")
+	engineTimeoutSeconds := fs.Int("engine-timeout-seconds", proceeding.DefaultRuntimeLimits().EngineCallTimeoutSeconds, "Maximum seconds for one Lean engine call")
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), "Usage: aard verify-certificate --dir DIR\n\n")
 		fs.PrintDefaults()
@@ -45,10 +48,17 @@ func runVerifyCertificate(args []string, stdout io.Writer, stderr io.Writer) err
 	if cert == "" || state == "" {
 		return fmt.Errorf("--dir or both --certificate and --state are required")
 	}
-	result, err := proceeding.VerifyReplayCertificate(proceeding.VerifyReplayCertificateOptions{
+	if *engineTimeoutSeconds <= 0 {
+		return fmt.Errorf("--engine-timeout-seconds must be positive")
+	}
+	if int64(*engineTimeoutSeconds) > proceeding.MaxEngineCallTimeoutSeconds {
+		return fmt.Errorf("--engine-timeout-seconds must be at most %d", proceeding.MaxEngineCallTimeoutSeconds)
+	}
+	result, err := proceeding.VerifyReplayCertificate(ctx, proceeding.VerifyReplayCertificateOptions{
 		CertificatePath: cert,
 		StatePath:       state,
 		Engine:          lean.New([]string{strings.TrimSpace(*enginePath)}),
+		EngineTimeout:   time.Duration(*engineTimeoutSeconds) * time.Second,
 	})
 	if err != nil {
 		return err
@@ -57,6 +67,8 @@ func runVerifyCertificate(args []string, stdout io.Writer, stderr io.Writer) err
 	if err != nil {
 		return fmt.Errorf("marshal verification result: %w", err)
 	}
-	_, err = fmt.Fprintf(stdout, "%s\n", raw)
-	return err
+	if _, err := fmt.Fprintf(stdout, "%s\n", raw); err != nil {
+		return fmt.Errorf("write verification result: %w", err)
+	}
+	return nil
 }

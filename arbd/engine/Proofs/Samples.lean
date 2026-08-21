@@ -135,21 +135,29 @@ def meritsPayload (text : String) : Json :=
     , ("technical_reports", Json.arr #[])
     ]
 
-def openingAction (role text : String) : CourtAction :=
+def currentAuthority (s : ArbitrationState) : OpportunityAuthority :=
+  match (nextOpportunity s).opportunity with
+  | some opportunity => authorityForOpportunity s opportunity
+  | none => default
+
+def openingAction (s : ArbitrationState) (role text : String) : CourtAction :=
   { action_type := "record_opening_statement"
   , actor_role := role
+  , authority := currentAuthority s
   , payload := textPayload text
   }
 
-def argumentAction (role text : String) : CourtAction :=
+def argumentAction (s : ArbitrationState) (role text : String) : CourtAction :=
   { action_type := "submit_argument"
   , actor_role := role
+  , authority := currentAuthority s
   , payload := meritsPayload text
   }
 
-def submittedEvidenceAction (role : String) : CourtAction :=
+def submittedEvidenceAction (s : ArbitrationState) (role : String) : CourtAction :=
   { action_type := "submit_evidence"
   , actor_role := role
+  , authority := currentAuthority s
   , payload := Json.mkObj
       [ ("evidence_id", Json.str "ev_abc123_submitted-evidence-01-plaintiff")
       , ("title", Json.str "Source text")
@@ -157,38 +165,47 @@ def submittedEvidenceAction (role : String) : CourtAction :=
       , ("mime_type", Json.str "text/plain")
       , ("retrieval_timestamp", Json.str "2026-05-20T00:00:00Z")
       , ("relevance", Json.str "Shows the source material.")
-      , ("sha256", Json.str "abc123")
+      , ("sha256", Json.str "abc123abc123abc123abc123abc123abc123abc123abc123abc123abc123abcd")
       , ("size_bytes", toJson (12 : Nat))
       ]
   }
 
-def rebuttalAction (text : String) : CourtAction :=
+def rebuttalAction (s : ArbitrationState) (text : String) : CourtAction :=
   { action_type := "submit_rebuttal"
   , actor_role := "plaintiff"
+  , authority := currentAuthority s
   , payload := meritsPayload text
   }
 
-def surrebuttalAction (text : String) : CourtAction :=
+def surrebuttalAction (s : ArbitrationState) (text : String) : CourtAction :=
   { action_type := "submit_surrebuttal"
   , actor_role := "defendant"
+  , authority := currentAuthority s
   , payload := meritsPayload text
   }
 
-def closingAction (role text : String) : CourtAction :=
+def closingAction (s : ArbitrationState) (role text : String) : CourtAction :=
   { action_type := "deliver_closing_statement"
   , actor_role := role
+  , authority := currentAuthority s
   , payload := textPayload text
   }
 
-def passAction (role : String) : CourtAction :=
+def passAction (s : ArbitrationState) (role : String) : CourtAction :=
   { action_type := "pass_phase_opportunity"
   , actor_role := role
+  , authority := currentAuthority s
   , payload := Json.null
   }
 
-def councilAnswerAction (memberId : String) (answer : Nat) (rationale : String) : CourtAction :=
+def councilAnswerAction
+    (s : ArbitrationState)
+    (memberId : String)
+    (answer : Nat)
+    (rationale : String) : CourtAction :=
   { action_type := "submit_council_answer"
   , actor_role := "council"
+  , authority := currentAuthority s
   , payload := Json.mkObj
       [ ("member_id", Json.str memberId)
       , ("answer", toJson answer)
@@ -196,9 +213,12 @@ def councilAnswerAction (memberId : String) (answer : Nat) (rationale : String) 
       ]
   }
 
-def removeCouncilMemberAction (memberId status : String) : CourtAction :=
+def removeCouncilMemberAction
+    (s : ArbitrationState)
+    (memberId status : String) : CourtAction :=
   { action_type := "remove_council_member"
   , actor_role := "system"
+  , authority := currentAuthority s
   , payload := Json.mkObj
       [ ("member_id", Json.str memberId)
       , ("status", Json.str status)
@@ -206,9 +226,11 @@ def removeCouncilMemberAction (memberId status : String) : CourtAction :=
   }
 
 def failOpportunityAction
+    (s : ArbitrationState)
     (opportunityId role phase reason message model : String) : CourtAction :=
   { action_type := "fail_opportunity"
   , actor_role := "system"
+  , authority := currentAuthority s
   , payload := Json.mkObj
       [ ("opportunity_id", Json.str opportunityId)
       , ("role", Json.str role)

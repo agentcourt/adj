@@ -15,6 +15,25 @@ inductive StepReachableFrom (start : ArbitrationState) : ArbitrationState → Pr
       (hs : StepReachableFrom start s)
       (h : step { state := s, action := action } = .ok t) : StepReachableFrom start t
 
+theorem stepCore_ok_of_step_ok
+    (s t : ArbitrationState)
+    (action : CourtAction)
+    (hStep : step { state := s, action := action } = .ok t) :
+    stepCore { state := s, action := action } = .ok t := by
+  unfold step at hStep
+  by_cases hClosed : s.case.status = "closed"
+  · simp [hClosed] at hStep
+  · by_cases hFailed : s.case.status = "failed"
+    · simp [hFailed] at hStep
+    · simp [hClosed, hFailed] at hStep
+      cases hAuthority : authorizeAction s action with
+      | error err =>
+          rw [hAuthority] at hStep
+          contradiction
+      | ok opportunity =>
+          rw [hAuthority] at hStep
+          exact hStep
+
 theorem stepReachableFrom_reachable
     (start target : ArbitrationState)
     (hStart : Reachable start)

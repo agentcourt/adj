@@ -35,6 +35,11 @@ detect_profile() {
     return
   fi
 
+  if [[ -f "${PROOFS_DIR}/CertificateExamples.lean" ]]; then
+    printf 'aard'
+    return
+  fi
+
   printf 'generic'
 }
 
@@ -71,6 +76,25 @@ category_for() {
           printf 'Invariants'
           ;;
         OutcomeSoundness.lean|NoStuck.lean|BoundedTermination.lean)
+          printf 'Results'
+          ;;
+        *)
+          printf 'Other'
+          ;;
+      esac
+      ;;
+    aard)
+      case "$base" in
+        Samples.lean|Reachability.lean|InitializeCase.lean)
+          printf 'Foundations'
+          ;;
+        MeritsFlow.lean|Deliberation.lean)
+          printf 'Execution'
+          ;;
+        OpportunityAgreement.lean|RecordIntegrity.lean)
+          printf 'Invariants'
+          ;;
+        Replay.lean|CertificateFacts.lean|CertificateExamples.lean)
           printf 'Results'
           ;;
         *)
@@ -169,7 +193,11 @@ sort -t$'\t' -k1,1 -k2,2 "$tmp_rows" > "$tmp_files"
 
 {
   printf '# Proof Stats\n\n'
-  printf 'Generated from `engine/Proofs/*.lean` using declarations matching `^(theorem|lemma)`.\n\n'
+  if [[ "${PROFILE}" == "aard" ]]; then
+    printf 'Generated from `engine/Proofs/*.lean` using declarations matching `^(theorem|lemma)`.  The counts include every matching declaration in the proof files.  The tables report proof, line, and byte totals by category and source file.\n\n'
+  else
+    printf 'Generated from `engine/Proofs/*.lean` using declarations matching `^(theorem|lemma)`.\n\n'
+  fi
 
   printf '## Summary\n\n'
   printf '| Metric | Value |\n'

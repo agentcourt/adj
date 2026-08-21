@@ -12,10 +12,28 @@ import (
 	"strings"
 )
 
-func attorneyDecision(opportunity Opportunity, params map[string]any, fileByID map[string]CaseFile, policy Policy) (string, map[string]any, error) {
-	kind := mapString(params["kind"])
+func attorneyDecision(opportunity Opportunity, params map[string]any, evidenceByID map[string]EvidenceMeta, policy Policy) (string, map[string]any, error) {
+	if err := requireAllowedKeys(params, "submit_decision arguments", "kind", "tool_name", "payload"); err != nil {
+		return "", nil, err
+	}
+	payload := map[string]any{}
+	if rawPayload, supplied := params["payload"]; supplied {
+		var ok bool
+		payload, ok = rawPayload.(map[string]any)
+		if !ok {
+			return "", nil, fmt.Errorf("submit_decision payload must be an object")
+		}
+	}
+	kind, kindOK := params["kind"].(string)
+	kind = strings.TrimSpace(kind)
+	if !kindOK {
+		return "", nil, fmt.Errorf("submit_decision kind must be tool or pass")
+	}
 	switch kind {
 	case "pass":
+		if err := validateAttorneyPayloadKeys(payload); err != nil {
+			return "", nil, err
+		}
 		if !opportunity.MayPass {
 			return "", nil, fmt.Errorf("passing is not allowed in this opportunity")
 		}
@@ -26,8 +44,9 @@ func attorneyDecision(opportunity Opportunity, params map[string]any, fileByID m
 			return "", nil, fmt.Errorf("passing is not allowed in phase %q", opportunity.Phase)
 		}
 	case "tool":
-		toolName := mapString(params["tool_name"])
-		if toolName == "" {
+		toolName, toolNameOK := params["tool_name"].(string)
+		toolName = strings.TrimSpace(toolName)
+		if !toolNameOK || toolName == "" {
 			return "", nil, fmt.Errorf("submit_decision tool_name is required when kind is tool")
 		}
 		if !submitDecisionTool(toolName) {
@@ -36,8 +55,8 @@ func attorneyDecision(opportunity Opportunity, params map[string]any, fileByID m
 		if !slices.Contains(opportunity.AllowedTools, toolName) {
 			return "", nil, fmt.Errorf("tool %q is not allowed in this opportunity", toolName)
 		}
-		payload := normalizePayload(params["payload"])
-		if err := validateAttorneyPayload(toolName, payload, fileByID, policy); err != nil {
+		payload = normalizeAttorneyPayload(payload)
+		if err := validateAttorneyPayload(toolName, payload, evidenceByID, policy); err != nil {
 			return "", nil, err
 		}
 		return toolName, payload, nil
@@ -46,50 +65,49 @@ func attorneyDecision(opportunity Opportunity, params map[string]any, fileByID m
 	}
 }
 
-func validateAttorneyPayload(actionType string, payload map[string]any, fileByID map[string]CaseFile, policy Policy) error {
+func validateAttorneyPayload(actionType string, payload map[string]any, evidenceByID map[string]EvidenceMeta, policy Policy) error {
+	if err := validateAttorneyPayloadKeys(payload); err != nil {
+		return err
+	}
 	switch actionType {
 	case "record_opening_statement":
-		if mapString(payload["text"]) == "" {
-			return fmt.Errorf("payload.text is required")
-		}
-	case "deliver_closing_statement":
-		if mapString(payload["text"]) == "" {
-			return fmt.Errorf("payload.text is required")
-		}
-		if len(listOfMaps(payload["offered_evidence"])) != 0 {
-			return fmt.Errorf("offered_evidence are allowed only in arguments, rebuttals, and surrebuttals")
-		}
-		if len(listOfMaps(payload["technical_reports"])) != 0 {
-			return fmt.Errorf("technical_reports are allowed only in arguments, rebuttals, and surrebuttals")
-		}
-	case "submit_argument":
-		if mapString(payload["text"]) == "" {
-			return fmt.Errorf("payload.text is required")
-		}
-		if err := validateOfferedEvidence(payload["offered_evidence"], fileByID, policy); err != nil {
+		if _, err := requiredStringField(payload, "text", "payload.text is required"); err != nil {
 			return err
 		}
-		if err := validateReports(payload["technical_reports"], policy); err != nil {
+		return validateNoSupplementalMaterials(payload)
+	case "deliver_closing_statement":
+		if _, err := requiredStringField(payload, "text", "payload.text is required"); err != nil {
+			return err
+		}
+		return validateNoSupplementalMaterials(payload)
+	case "submit_argument":
+		if _, err := requiredStringField(payload, "text", "payload.text is required"); err != nil {
+			return err
+		}
+		if err := validateOfferedEvidence(payload, evidenceByID, policy); err != nil {
+			return err
+		}
+		if err := validateReports(payload, policy); err != nil {
 			return err
 		}
 	case "submit_rebuttal":
-		if mapString(payload["text"]) == "" {
-			return fmt.Errorf("payload.text is required")
-		}
-		if err := validateOfferedEvidence(payload["offered_evidence"], fileByID, policy); err != nil {
+		if _, err := requiredStringField(payload, "text", "payload.text is required"); err != nil {
 			return err
 		}
-		if err := validateReports(payload["technical_reports"], policy); err != nil {
+		if err := validateOfferedEvidence(payload, evidenceByID, policy); err != nil {
+			return err
+		}
+		if err := validateReports(payload, policy); err != nil {
 			return err
 		}
 	case "submit_surrebuttal":
-		if mapString(payload["text"]) == "" {
-			return fmt.Errorf("payload.text is required")
-		}
-		if err := validateOfferedEvidence(payload["offered_evidence"], fileByID, policy); err != nil {
+		if _, err := requiredStringField(payload, "text", "payload.text is required"); err != nil {
 			return err
 		}
-		if err := validateReports(payload["technical_reports"], policy); err != nil {
+		if err := validateOfferedEvidence(payload, evidenceByID, policy); err != nil {
+			return err
+		}
+		if err := validateReports(payload, policy); err != nil {
 			return err
 		}
 	case "pass_phase_opportunity":
@@ -99,40 +117,109 @@ func validateAttorneyPayload(actionType string, payload map[string]any, fileByID
 	return nil
 }
 
-func validateOfferedEvidence(value any, fileByID map[string]CaseFile, policy Policy) error {
-	entries := listOfMaps(value)
+func validateAttorneyPayloadKeys(payload map[string]any) error {
+	if err := requireAllowedKeys(payload, "submit_decision payload", "text", "offered_evidence", "technical_reports"); err != nil {
+		return err
+	}
+	offered, err := strictObjectList(payload, "offered_evidence")
+	if err != nil {
+		return err
+	}
+	for _, entry := range offered {
+		if err := requireAllowedKeys(entry, "offered_evidence entry", "evidence_id", "label"); err != nil {
+			return err
+		}
+	}
+	reports, err := strictObjectList(payload, "technical_reports")
+	if err != nil {
+		return err
+	}
+	for _, entry := range reports {
+		if err := requireAllowedKeys(entry, "technical_reports entry", "title", "summary"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func requireAllowedKeys(values map[string]any, object string, allowed ...string) error {
+	unknown := make([]string, 0)
+	for key := range values {
+		if !slices.Contains(allowed, key) {
+			unknown = append(unknown, key)
+		}
+	}
+	if len(unknown) == 0 {
+		return nil
+	}
+	slices.Sort(unknown)
+	if len(unknown) == 1 {
+		return fmt.Errorf("%s contains unknown field %q", object, unknown[0])
+	}
+	return fmt.Errorf("%s contains unknown fields %q", object, unknown)
+}
+
+func validateNoSupplementalMaterials(payload map[string]any) error {
+	offered, err := strictObjectList(payload, "offered_evidence")
+	if err != nil {
+		return err
+	}
+	if len(offered) != 0 {
+		return fmt.Errorf("offered_evidence are allowed only in arguments, rebuttals, and surrebuttals")
+	}
+	reports, err := strictObjectList(payload, "technical_reports")
+	if err != nil {
+		return err
+	}
+	if len(reports) != 0 {
+		return fmt.Errorf("technical_reports are allowed only in arguments, rebuttals, and surrebuttals")
+	}
+	return nil
+}
+
+func validateOfferedEvidence(payload map[string]any, evidenceByID map[string]EvidenceMeta, policy Policy) error {
+	entries, err := strictObjectList(payload, "offered_evidence")
+	if err != nil {
+		return err
+	}
 	if len(entries) > policy.MaxExhibitsPerFiling {
 		return fmt.Errorf("offered_evidence exceed per-filing limit of %d (attempted %d)", policy.MaxExhibitsPerFiling, len(entries))
 	}
 	for _, entry := range entries {
-		evidenceID := mapString(entry["evidence_id"])
-		if evidenceID == "" {
-			return fmt.Errorf("offered_evidence entry requires evidence_id")
+		evidenceID, err := requiredStringField(entry, "evidence_id", "offered_evidence entry requires evidence_id")
+		if err != nil {
+			return err
 		}
-		file, ok := fileByID[evidenceID]
-		if !ok {
+		if _, err := requiredStringField(entry, "label", "offered_evidence entry requires label"); err != nil {
+			return err
+		}
+		evidence, ok := evidenceByID[evidenceID]
+		if !ok || !recordEvidence(evidence) {
 			return fmt.Errorf("unknown offered file %q; offered_evidence must use visible case evidence_id values, not workspace paths or downloaded filenames", evidenceID)
 		}
-		if file.SizeBytes > policy.MaxExhibitBytes {
+		if evidence.SizeBytes > policy.MaxExhibitBytes {
 			return fmt.Errorf("offered file %q exceeds byte limit of %d", evidenceID, policy.MaxExhibitBytes)
 		}
 	}
 	return nil
 }
 
-func validateReports(value any, policy Policy) error {
-	entries := listOfMaps(value)
+func validateReports(payload map[string]any, policy Policy) error {
+	entries, err := strictObjectList(payload, "technical_reports")
+	if err != nil {
+		return err
+	}
 	if len(entries) > policy.MaxReportsPerFiling {
 		return fmt.Errorf("technical_reports exceed per-filing limit of %d (attempted %d)", policy.MaxReportsPerFiling, len(entries))
 	}
 	for _, entry := range entries {
-		title := mapString(entry["title"])
-		summary := mapString(entry["summary"])
-		if title == "" {
-			return fmt.Errorf("technical_reports entry requires title")
+		title, err := requiredStringField(entry, "title", "technical_reports entry requires title")
+		if err != nil {
+			return err
 		}
-		if summary == "" {
-			return fmt.Errorf("technical_reports entry requires summary")
+		summary, err := requiredStringField(entry, "summary", "technical_reports entry requires summary")
+		if err != nil {
+			return err
 		}
 		if len([]byte(title)) > policy.MaxReportTitleBytes {
 			return fmt.Errorf("technical_reports title exceeds byte limit of %d", policy.MaxReportTitleBytes)
@@ -144,20 +231,71 @@ func validateReports(value any, policy Policy) error {
 	return nil
 }
 
-func normalizePayload(value any) map[string]any {
-	payload := mapAny(value)
-	if len(payload) == 0 {
+func requiredStringField(values map[string]any, key string, message string) (string, error) {
+	value, ok := values[key].(string)
+	value = trimLeanWhitespace(value)
+	if !ok || value == "" {
+		return "", fmt.Errorf("%s", message)
+	}
+	return value, nil
+}
+
+func normalizeAttorneyPayload(payload map[string]any) map[string]any {
+	if payload == nil {
 		return map[string]any{}
 	}
-	return cloneMap(payload)
+	out := cloneJSONLikeMap(payload)
+	trimAttorneyStringField(out, "text")
+	for _, entry := range listOfMaps(out["offered_evidence"]) {
+		trimAttorneyStringField(entry, "evidence_id")
+		trimAttorneyStringField(entry, "label")
+	}
+	for _, entry := range listOfMaps(out["technical_reports"]) {
+		trimAttorneyStringField(entry, "title")
+		trimAttorneyStringField(entry, "summary")
+	}
+	return out
+}
+
+func trimAttorneyStringField(values map[string]any, key string) {
+	if value, ok := values[key].(string); ok {
+		values[key] = trimLeanWhitespace(value)
+	}
+}
+
+func trimLeanWhitespace(value string) string {
+	return strings.Trim(value, " \t\r\n")
+}
+
+func strictObjectList(values map[string]any, field string) ([]map[string]any, error) {
+	value, supplied := values[field]
+	if !supplied {
+		return nil, nil
+	}
+	switch entries := value.(type) {
+	case []map[string]any:
+		return entries, nil
+	case []any:
+		out := make([]map[string]any, 0, len(entries))
+		for _, raw := range entries {
+			entry, ok := raw.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("%s entries must be objects", field)
+			}
+			out = append(out, entry)
+		}
+		return out, nil
+	default:
+		return nil, fmt.Errorf("%s must be an array", field)
+	}
 }
 
 func jsonPayloadSize(value any) (int, error) {
-	raw, err := json.Marshal(value)
+	wire, err := json.Marshal(value)
 	if err != nil {
 		return 0, fmt.Errorf("marshal response payload size: %w", err)
 	}
-	return len(raw), nil
+	return len(wire), nil
 }
 
 func listOfMaps(value any) []map[string]any {
@@ -264,6 +402,8 @@ func submittedEvidenceSchema() map[string]any {
 			"content":                map[string]any{"type": "string"},
 			"content_base64":         map[string]any{"type": "string"},
 			"preferred_filename_ext": map[string]any{"type": "string"},
+			"parent_evidence_id":     map[string]any{"type": "string"},
+			"derivation_method":      map[string]any{"type": "string"},
 		},
 		"required":             []string{"title", "mime_type", "relevance"},
 		"additionalProperties": false,
@@ -285,6 +425,7 @@ func evidenceSubmissionAllowed(opportunity Opportunity) bool {
 
 func (rc *runContext) attorneyView(opportunity Opportunity) map[string]any {
 	limits := rc.attorneyLimits(opportunity)
+	caseObj := mapAny(rc.state["case"])
 	return map[string]any{
 		"question":          rc.complaint.Question,
 		"judgment_standard": currentJudgmentStandard(rc.state, rc.cfg.Policy),
@@ -294,22 +435,22 @@ func (rc *runContext) attorneyView(opportunity Opportunity) map[string]any {
 			"role":          opportunity.Role,
 			"phase":         opportunity.Phase,
 			"objective":     opportunity.Objective,
-			"allowed_tools": opportunity.AllowedTools,
+			"allowed_tools": append([]string(nil), opportunity.AllowedTools...),
 			"may_pass":      opportunity.MayPass,
 		},
 		"record": map[string]any{
 			"evidence":           rc.listVisibleEvidence(),
-			"openings":           mapList(mapAny(rc.state["case"])["openings"]),
-			"arguments":          mapList(mapAny(rc.state["case"])["arguments"]),
-			"rebuttals":          mapList(mapAny(rc.state["case"])["rebuttals"]),
-			"surrebuttals":       mapList(mapAny(rc.state["case"])["surrebuttals"]),
-			"closings":           mapList(mapAny(rc.state["case"])["closings"]),
-			"submitted_evidence": mapList(mapAny(rc.state["case"])["submitted_evidence"]),
+			"openings":           cloneJSONLikeMapList(mapList(caseObj["openings"])),
+			"arguments":          cloneJSONLikeMapList(mapList(caseObj["arguments"])),
+			"rebuttals":          cloneJSONLikeMapList(mapList(caseObj["rebuttals"])),
+			"surrebuttals":       cloneJSONLikeMapList(mapList(caseObj["surrebuttals"])),
+			"closings":           cloneJSONLikeMapList(mapList(caseObj["closings"])),
+			"submitted_evidence": cloneJSONLikeMapList(mapList(caseObj["submitted_evidence"])),
 			"exhibits":           rc.attorneyExhibits(),
-			"technical_reports":  mapList(mapAny(rc.state["case"])["technical_reports"]),
+			"technical_reports":  cloneJSONLikeMapList(mapList(caseObj["technical_reports"])),
 		},
 		"limits":  limits,
-		"council": rc.council,
+		"council": append([]CouncilSeat(nil), rc.council...),
 	}
 }
 
@@ -323,7 +464,19 @@ func (rc *runContext) buildAttorneyPrompt(opportunity Opportunity) (string, erro
 	workspaceSection := "Use list_evidence, stat_evidence, and read_evidence_range when exact evidence bytes matter. Do not reconstruct byte-sensitive evidence by hand. Use evidence_id plus hash as record identity.\n"
 	workProductSection := ""
 	if opportunity.Phase == "arguments" || opportunity.Phase == "rebuttals" || opportunity.Phase == "surrebuttals" {
-		visibleFilesSection = "Visible evidence:\n" + marshalIndented(rc.listVisibleEvidence()) + "\n"
+		visibleEvidence, err := marshalIndented("visible evidence", rc.listVisibleEvidence())
+		if err != nil {
+			return "", err
+		}
+		visibleFilesSection = "Visible evidence:\n" + visibleEvidence + "\n"
+	}
+	record, err := marshalIndented("current record", view["record"])
+	if err != nil {
+		return "", err
+	}
+	council, err := marshalIndented("council", view["council"])
+	if err != nil {
+		return "", err
 	}
 	common, err := rc.cfg.renderPromptFile("attorney-common.md", map[string]string{
 		"ROLE":                       opportunity.Role,
@@ -333,13 +486,12 @@ func (rc *runContext) buildAttorneyPrompt(opportunity Opportunity) (string, erro
 		"QUESTION":                   rc.complaint.Question,
 		"JUDGMENT_STANDARD":          currentJudgmentStandard(rc.state, rc.cfg.Policy),
 		"MODEL_CAPABILITIES_SECTION": rc.attorneyCapabilitySection(opportunity.Role, opportunity.ID),
-		"CURRENT_RECORD":             marshalIndented(view["record"]),
+		"CURRENT_RECORD":             record,
 		"LIMITS_SECTION":             rc.attorneyLimitsSection(opportunity),
-		"COUNCIL":                    marshalIndented(view["council"]),
+		"COUNCIL":                    council,
 		"VISIBLE_CASE_FILES_SECTION": visibleFilesSection,
 		"WORKSPACE_SECTION":          workspaceSection,
 		"WORK_PRODUCT_SECTION":       workProductSection,
-		"ALLOWED_TOOLS":              strings.Join(decisionToolEnum(opportunity.AllowedTools), ", "),
 		"DECISION_TOOLS":             strings.Join(decisionToolEnum(opportunity.AllowedTools), ", "),
 	})
 	if err != nil {
@@ -358,46 +510,96 @@ func (rc *runContext) buildAttorneyPrompt(opportunity Opportunity) (string, erro
 
 func (rc *runContext) prepareSubmittedEvidence(opportunity Opportunity, params map[string]any) (SubmittedEvidenceMeta, []byte, error) {
 	if !evidenceSubmissionAllowed(opportunity) {
-		return SubmittedEvidenceMeta{}, nil, fmt.Errorf("submitted evidence is allowed only in arguments, rebuttals, and surrebuttals")
+		return SubmittedEvidenceMeta{}, nil, participantInput(fmt.Errorf("submitted evidence is allowed only in arguments, rebuttals, and surrebuttals"))
 	}
-	title := mapString(params["title"])
-	mimeType := mapString(params["mime_type"])
-	relevance := mapString(params["relevance"])
-	sourceURL := mapString(params["source_url"])
-	sourceDescription := mapString(params["source_description"])
-	retrievalTimestamp := mapString(params["retrieval_timestamp"])
+	if err := rejectCallerParentSHA(params); err != nil {
+		return SubmittedEvidenceMeta{}, nil, err
+	}
+	if err := requireAllowedKeys(
+		params,
+		"submit_evidence arguments",
+		"title",
+		"source_url",
+		"source_description",
+		"retrieval_timestamp",
+		"mime_type",
+		"relevance",
+		"content",
+		"content_base64",
+		"preferred_filename_ext",
+		"parent_evidence_id",
+		"derivation_method",
+	); err != nil {
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
+	}
+	title, err := optionalStringParam(params, "title")
+	if err != nil {
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
+	}
+	mimeType, err := optionalStringParam(params, "mime_type")
+	if err != nil {
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
+	}
+	relevance, err := optionalStringParam(params, "relevance")
+	if err != nil {
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
+	}
+	sourceURL, err := optionalStringParam(params, "source_url")
+	if err != nil {
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
+	}
+	sourceDescription, err := optionalStringParam(params, "source_description")
+	if err != nil {
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
+	}
+	retrievalTimestamp, err := optionalStringParam(params, "retrieval_timestamp")
+	if err != nil {
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
+	}
+	preferredExt, err := optionalStringParam(params, "preferred_filename_ext")
+	if err != nil {
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
+	}
 	if title == "" {
-		return SubmittedEvidenceMeta{}, nil, fmt.Errorf("submitted evidence requires title")
+		return SubmittedEvidenceMeta{}, nil, participantInput(fmt.Errorf("submitted evidence requires title"))
 	}
 	if sourceURL == "" && sourceDescription == "" {
-		return SubmittedEvidenceMeta{}, nil, fmt.Errorf("submitted evidence requires source_url or source_description")
+		return SubmittedEvidenceMeta{}, nil, participantInput(fmt.Errorf("submitted evidence requires source_url or source_description"))
 	}
 	if mimeType == "" {
-		return SubmittedEvidenceMeta{}, nil, fmt.Errorf("submitted evidence requires mime_type")
+		return SubmittedEvidenceMeta{}, nil, participantInput(fmt.Errorf("submitted evidence requires mime_type"))
 	}
 	if relevance == "" {
-		return SubmittedEvidenceMeta{}, nil, fmt.Errorf("submitted evidence requires relevance")
+		return SubmittedEvidenceMeta{}, nil, participantInput(fmt.Errorf("submitted evidence requires relevance"))
 	}
 	raw, err := submittedEvidenceContent(params)
 	if err != nil {
-		return SubmittedEvidenceMeta{}, nil, err
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
 	}
 	if len(raw) == 0 {
-		return SubmittedEvidenceMeta{}, nil, fmt.Errorf("submitted evidence content must not be empty")
+		return SubmittedEvidenceMeta{}, nil, participantInput(fmt.Errorf("submitted evidence content must not be empty"))
 	}
 	if len(raw) > rc.cfg.Policy.MaxDirectSubmittedEvidenceBytes {
-		return SubmittedEvidenceMeta{}, nil, fmt.Errorf("direct submitted evidence exceeds byte limit of %d", rc.cfg.Policy.MaxDirectSubmittedEvidenceBytes)
+		return SubmittedEvidenceMeta{}, nil, participantInput(fmt.Errorf("direct submitted evidence exceeds byte limit of %d", rc.cfg.Policy.MaxDirectSubmittedEvidenceBytes))
 	}
 	if len(raw) > rc.cfg.Policy.MaxSubmittedEvidenceBytes {
-		return SubmittedEvidenceMeta{}, nil, fmt.Errorf("submitted evidence exceeds byte limit of %d", rc.cfg.Policy.MaxSubmittedEvidenceBytes)
+		return SubmittedEvidenceMeta{}, nil, participantInput(fmt.Errorf("submitted evidence exceeds byte limit of %d", rc.cfg.Policy.MaxSubmittedEvidenceBytes))
 	}
 	if submittedEvidenceCountForRole(rc.submittedEvidence, opportunity.Role) >= rc.cfg.Policy.MaxSubmittedEvidencePerSide {
-		return SubmittedEvidenceMeta{}, nil, fmt.Errorf("submitted_evidence for this side exceed limit of %d", rc.cfg.Policy.MaxSubmittedEvidencePerSide)
+		return SubmittedEvidenceMeta{}, nil, participantInput(fmt.Errorf("submitted_evidence for this side exceed limit of %d", rc.cfg.Policy.MaxSubmittedEvidencePerSide))
+	}
+	parentEvidenceIDArg, err := optionalStringParam(params, "parent_evidence_id")
+	if err != nil {
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
+	}
+	derivationMethodArg, err := optionalStringParam(params, "derivation_method")
+	if err != nil {
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
 	}
 	sum := sha256.Sum256(raw)
 	sha := hex.EncodeToString(sum[:])
-	name := submittedEvidenceFilename(len(rc.submittedEvidence)+1, opportunity.Role, sha, mimeType, mapString(params["preferred_filename_ext"]))
-	return SubmittedEvidenceMeta{
+	name := submittedEvidenceFilename(len(rc.submittedEvidence)+1, opportunity.Role, sha, mimeType, preferredExt)
+	meta := SubmittedEvidenceMeta{
 		Phase:              opportunity.Phase,
 		Role:               opportunity.Role,
 		EvidenceID:         evidenceIDForFile(sha, name),
@@ -410,12 +612,34 @@ func (rc *runContext) prepareSubmittedEvidence(opportunity Opportunity, params m
 		Relevance:          relevance,
 		SHA256:             sha,
 		SizeBytes:          len(raw),
-	}, raw, nil
+	}
+	parentEvidenceID, parentSHA256, derivationMethod, err := rc.resolveEvidenceLineage(
+		parentEvidenceIDArg,
+		derivationMethodArg,
+		meta.EvidenceID,
+	)
+	if err != nil {
+		return SubmittedEvidenceMeta{}, nil, err
+	}
+	meta.ParentEvidenceID = parentEvidenceID
+	meta.ParentSHA256 = parentSHA256
+	meta.DerivationMethod = derivationMethod
+	if err := rc.validateSubmittedEvidenceID(meta.EvidenceID); err != nil {
+		return SubmittedEvidenceMeta{}, nil, participantInput(err)
+	}
+	return meta, raw, nil
 }
 
 func submittedEvidenceContent(params map[string]any) ([]byte, error) {
-	content, hasContent := rawStringParam(params, "content")
-	contentBase64 := mapString(params["content_base64"])
+	rawContent, hasContent := params["content"]
+	content, contentOK := rawContent.(string)
+	if hasContent && !contentOK {
+		return nil, fmt.Errorf("content must be a string")
+	}
+	contentBase64, err := optionalStringParam(params, "content_base64")
+	if err != nil {
+		return nil, err
+	}
 	if hasContent && contentBase64 != "" {
 		return nil, fmt.Errorf("use content or content_base64, not both")
 	}
@@ -430,15 +654,6 @@ func submittedEvidenceContent(params map[string]any) ([]byte, error) {
 		return nil, fmt.Errorf("submitted evidence requires content or content_base64")
 	}
 	return []byte(content), nil
-}
-
-func rawStringParam(params map[string]any, key string) (string, bool) {
-	value, ok := params[key]
-	if !ok || value == nil {
-		return "", false
-	}
-	s, ok := value.(string)
-	return s, ok
 }
 
 func submittedEvidenceFilename(index int, role string, sha string, mimeType string, preferredExt string) string {
@@ -514,43 +729,12 @@ func submittedEvidencePayload(meta SubmittedEvidenceMeta) map[string]any {
 		"sha256":              meta.SHA256,
 		"size_bytes":          meta.SizeBytes,
 	}
-	if meta.EvidenceID != "" {
-		payload["evidence_id"] = meta.EvidenceID
+	if meta.ParentEvidenceID != "" || meta.ParentSHA256 != "" || meta.DerivationMethod != "" {
+		payload["parent_evidence_id"] = meta.ParentEvidenceID
+		payload["parent_sha256"] = meta.ParentSHA256
+		payload["derivation_method"] = meta.DerivationMethod
 	}
 	return payload
-}
-
-func (rc *runContext) writeSubmittedEvidenceFile(meta SubmittedEvidenceMeta, raw []byte) (CaseFile, error) {
-	dir := filepath.Join(rc.cfg.OutputDir, "submitted-evidence")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return CaseFile{}, fmt.Errorf("create submitted evidence dir: %w", err)
-	}
-	name := filepath.Base(meta.Name)
-	if name == "" || name == "." || name == string(filepath.Separator) {
-		return CaseFile{}, fmt.Errorf("invalid submitted evidence filename %q", meta.Name)
-	}
-	path := filepath.Join(dir, name)
-	if _, err := os.Stat(path); err == nil {
-		return CaseFile{}, fmt.Errorf("submitted evidence file already exists: %s", path)
-	} else if !os.IsNotExist(err) {
-		return CaseFile{}, fmt.Errorf("stat submitted evidence file %s: %w", path, err)
-	}
-	if err := os.WriteFile(path, raw, 0o644); err != nil {
-		return CaseFile{}, fmt.Errorf("write submitted evidence %s: %w", path, err)
-	}
-	_, readable := caseFileKind(name)
-	file := CaseFile{
-		EvidenceID:   meta.EvidenceID,
-		Name:         name,
-		Path:         path,
-		MimeType:     meta.MimeType,
-		TextReadable: readable || strings.HasPrefix(strings.ToLower(meta.MimeType), "text/") || strings.EqualFold(meta.MimeType, "application/json"),
-		SizeBytes:    len(raw),
-	}
-	if file.TextReadable {
-		file.Text = string(raw)
-	}
-	return file, nil
 }
 
 func (rc *runContext) attorneyExhibits() []map[string]any {
@@ -714,7 +898,8 @@ func remainingCapacity(limit int, used int) int {
 }
 
 func (rc *runContext) validateAttorneyPayloadAgainstState(opportunity Opportunity, actionType string, payload map[string]any) error {
-	text := strings.TrimSpace(mapString(payload["text"]))
+	text, _ := payload["text"].(string)
+	text = trimLeanWhitespace(text)
 	if limit := phaseTextCharLimit(rc.cfg.Policy, opportunity.Phase); limit > 0 {
 		charCount := len([]rune(text))
 		if charCount > limit {
@@ -767,20 +952,12 @@ func filingLabel(actionType string) string {
 	}
 }
 
-func marshalInline(value any) string {
-	raw, err := json.Marshal(value)
+func marshalIndented(label string, value any) (string, error) {
+	wire, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
-		return fmt.Sprintf("%v", value)
+		return "", fmt.Errorf("marshal %s: %w", label, err)
 	}
-	return string(raw)
-}
-
-func marshalIndented(value any) string {
-	raw, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		return fmt.Sprintf("%v", value)
-	}
-	return string(raw)
+	return string(wire), nil
 }
 
 func copyTree(dstRoot string, srcRoot string) error {

@@ -17,11 +17,15 @@ These documents cover AARD rules, practice guidance, process references, evidenc
 | Document | Use |
 | --- | --- |
 | [AARD Process And HTTP Specification](aard-spec.md) | Case process, role APIs, results, and failures. |
+| [Implementation Record and Porting Guide](update.md) | Completed AARD changes, verification status, deferred limits, and later-port sequence. |
 
-## Supporting Notes
+## Verification and Supporting Notes
 
 | Document | Use |
 | --- | --- |
+| [Verification](verification.md) | Lean verification scope, principal results, certificate boundary, and limits. |
+| [Proof Statistics](proofstats.md) | Complete proof count by category and source file. |
+| [Theorems](theorems.md) | Selected theorem catalog. |
 | [Goals](goals.md) | Design and proof goals. |
 
 Current command instructions live in the [Agent Arbitration Degree Manual](../manual.md).  Current practice guidance lives in the [Practice Guide](practice.md).  The root [development notes](../../devnotes.md) record repository-wide implementation policies and verification work.

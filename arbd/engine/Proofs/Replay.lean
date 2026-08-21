@@ -1,4 +1,5 @@
-import Proofs.Reachability
+import Proofs.OpportunityAgreement
+import Proofs.RecordIntegrity
 
 namespace ArbdProofs
 
@@ -14,6 +15,78 @@ def replayInitialized
     Except String ArbitrationState := do
   let start ← initializeCase req
   replaySteps start actions
+
+inductive AuthorityConformingReplay : ArbitrationState → List CourtAction → Prop where
+  | nil (s : ArbitrationState) : AuthorityConformingReplay s []
+  | cons
+      {s t : ArbitrationState}
+      {action : CourtAction}
+      {rest : List CourtAction}
+      (opportunity : OpportunitySpec)
+      (next_opportunity : (nextOpportunity s).opportunity = some opportunity)
+      (authority : action.authority = authorityForOpportunity s opportunity)
+      (operation_authorized : authorizeOpportunityAction opportunity action = .ok ())
+      (accepted : step { state := s, action := action } = .ok t)
+      (remaining : AuthorityConformingReplay t rest) :
+      AuthorityConformingReplay s (action :: rest)
+
+inductive MeritsOfferChronology : ArbitrationState → List CourtAction → Prop where
+  | nil (s : ArbitrationState) : MeritsOfferChronology s []
+  | cons
+      {s t : ArbitrationState}
+      {action : CourtAction}
+      {rest : List CourtAction}
+      (prior_record : MeritsOffersUsePriorRecord s action)
+      (accepted : step { state := s, action := action } = .ok t)
+      (remaining : MeritsOfferChronology t rest) :
+      MeritsOfferChronology s (action :: rest)
+
+def InitializedMeritsOfferChronology
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction) : Prop :=
+  ∃ start,
+    initializeCase req = .ok start ∧
+      MeritsOfferChronology start actions
+
+theorem replaySteps_success_authorityConforming
+    (start target : ArbitrationState)
+    (actions : List CourtAction)
+    (hReplay : replaySteps start actions = .ok target) :
+    AuthorityConformingReplay start actions := by
+  induction actions generalizing start with
+  | nil => exact AuthorityConformingReplay.nil start
+  | cons action rest ih =>
+      simp [replaySteps] at hReplay
+      cases hStep : step { state := start, action := action } with
+      | error err =>
+          rw [hStep] at hReplay
+          contradiction
+      | ok next =>
+          rw [hStep] at hReplay
+          rcases step_ok_matches_currentOpportunity start next action hStep with
+            ⟨opportunity, hNext, hAuthority, hOperation⟩
+          exact AuthorityConformingReplay.cons
+            opportunity hNext hAuthority hOperation hStep (ih next hReplay)
+
+theorem replaySteps_success_meritsOfferChronology
+    (start target : ArbitrationState)
+    (actions : List CourtAction)
+    (hReplay : replaySteps start actions = .ok target) :
+    MeritsOfferChronology start actions := by
+  induction actions generalizing start with
+  | nil => exact MeritsOfferChronology.nil start
+  | cons action rest ih =>
+      simp [replaySteps] at hReplay
+      cases hStep : step { state := start, action := action } with
+      | error err =>
+          rw [hStep] at hReplay
+          contradiction
+      | ok next =>
+          rw [hStep] at hReplay
+          exact MeritsOfferChronology.cons
+            (step_ok_meritsOffersUsePriorRecord start next action hStep)
+            hStep
+            (ih next hReplay)
 
 def checkReplayCertificate
     (req : InitializeCaseRequest)
@@ -150,6 +223,30 @@ theorem replayInitialized_success_reachable
   exact replaySteps_success_reachable start target actions
     (Reachable.init req start hInit) hSteps
 
+theorem replayInitialized_success_authorityConforming
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction)
+    (target : ArbitrationState)
+    (hReplay : replayInitialized req actions = .ok target) :
+    ∃ start,
+      initializeCase req = .ok start ∧
+        AuthorityConformingReplay start actions := by
+  rcases replayInitialized_success_components req actions target hReplay with
+    ⟨start, hInit, hSteps⟩
+  exact ⟨start, hInit,
+    replaySteps_success_authorityConforming start target actions hSteps⟩
+
+theorem replayInitialized_success_meritsOfferChronology
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction)
+    (target : ArbitrationState)
+    (hReplay : replayInitialized req actions = .ok target) :
+    InitializedMeritsOfferChronology req actions := by
+  rcases replayInitialized_success_components req actions target hReplay with
+    ⟨start, hInit, hSteps⟩
+  exact ⟨start, hInit,
+    replaySteps_success_meritsOfferChronology start target actions hSteps⟩
+
 theorem replayInitialized_success_stepReachableFrom
     (req : InitializeCaseRequest)
     (actions : List CourtAction)
@@ -197,6 +294,17 @@ theorem checkReplayCertificate_ok_reachable
     (hCheck : checkReplayCertificate req actions claimed = .ok ()) :
     Reachable claimed := by
   exact replayInitialized_success_reachable req actions claimed
+    ((checkReplayCertificate_ok_iff req actions claimed).1 hCheck)
+
+theorem checkReplayCertificate_ok_authorityConforming
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction)
+    (claimed : ArbitrationState)
+    (hCheck : checkReplayCertificate req actions claimed = .ok ()) :
+    ∃ start,
+      initializeCase req = .ok start ∧
+        AuthorityConformingReplay start actions := by
+  exact replayInitialized_success_authorityConforming req actions claimed
     ((checkReplayCertificate_ok_iff req actions claimed).1 hCheck)
 
 theorem checkReplayCertificate_ok_stepReachableFrom
