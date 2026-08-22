@@ -115,7 +115,11 @@ func TestIssueFromMalformedToolCall(t *testing.T) {
 		RawArguments:   "{",
 		ArgumentsError: "unexpected end of JSON input",
 	}
-	issue := issueFromMalformedToolCall(call)
+	r := &Runner{prompts: testPromptCatalog(t)}
+	issue, err := r.issueFromMalformedToolCall(call)
+	if err != nil {
+		t.Fatalf("issueFromMalformedToolCall() error = %v", err)
+	}
 	if issue.Tool != "submit_juror_vote" {
 		t.Fatalf("Tool = %q, want submit_juror_vote", issue.Tool)
 	}

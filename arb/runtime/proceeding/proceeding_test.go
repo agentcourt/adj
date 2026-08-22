@@ -1436,12 +1436,10 @@ func TestValidateRuntimeLimitsRejectsZeroResponseLimit(t *testing.T) {
 }
 
 func TestBuildAttorneyPromptStatesCouncilForum(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 	rc := &runContext{
 		cfg: Config{
-			Policy: DefaultPolicy(),
+			PromptDir: testPromptDir(),
+			Policy:    DefaultPolicy(),
 		},
 		complaint: spec.Complaint{
 			Proposition: "P",
@@ -1511,9 +1509,6 @@ func TestBuildAttorneyPromptStatesCouncilForum(t *testing.T) {
 }
 
 func TestBuildAttorneyPromptIncludesWorkGuidanceEveryTurn(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 
 	opportunities := []Opportunity{
 		{
@@ -1574,7 +1569,8 @@ func TestBuildAttorneyPromptIncludesWorkGuidanceEveryTurn(t *testing.T) {
 		t.Run(opportunity.ID, func(t *testing.T) {
 			rc := &runContext{
 				cfg: Config{
-					Policy: DefaultPolicy(),
+					PromptDir: testPromptDir(),
+					Policy:    DefaultPolicy(),
 				},
 				complaint: spec.Complaint{
 					Proposition: "P",
@@ -1794,12 +1790,10 @@ func TestCouncilSeatMapsReturnsRequestSpecMarshalError(t *testing.T) {
 }
 
 func TestBuildAttorneyPromptConstrainsArgumentExperiments(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 	rc := &runContext{
 		cfg: Config{
-			Policy: DefaultPolicy(),
+			PromptDir: testPromptDir(),
+			Policy:    DefaultPolicy(),
 		},
 		complaint: spec.Complaint{
 			Proposition: "P",
@@ -1870,12 +1864,10 @@ func TestBuildAttorneyPromptConstrainsArgumentExperiments(t *testing.T) {
 }
 
 func TestBuildAttorneyPromptConstrainsArgumentExperimentsWithoutSearch(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 	rc := &runContext{
 		cfg: Config{
-			Policy: DefaultPolicy(),
+			PromptDir: testPromptDir(),
+			Policy:    DefaultPolicy(),
 		},
 		complaint: spec.Complaint{
 			Proposition: "P",
@@ -1913,12 +1905,10 @@ func TestBuildAttorneyPromptConstrainsArgumentExperimentsWithoutSearch(t *testin
 }
 
 func TestBuildAttorneyPromptAllowsRebuttalSupplementalMaterials(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 	rc := &runContext{
 		cfg: Config{
-			Policy: DefaultPolicy(),
+			PromptDir: testPromptDir(),
+			Policy:    DefaultPolicy(),
 		},
 		complaint: spec.Complaint{
 			Proposition: "P",
@@ -1980,12 +1970,10 @@ func TestBuildAttorneyPromptAllowsRebuttalSupplementalMaterials(t *testing.T) {
 }
 
 func TestBuildAttorneyPromptAllowsSurrebuttalSupplementalMaterials(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 	rc := &runContext{
 		cfg: Config{
-			Policy: DefaultPolicy(),
+			PromptDir: testPromptDir(),
+			Policy:    DefaultPolicy(),
 		},
 		complaint: spec.Complaint{
 			Proposition: "P",
@@ -2035,12 +2023,10 @@ func TestBuildAttorneyPromptAllowsSurrebuttalSupplementalMaterials(t *testing.T)
 }
 
 func TestBuildAttorneyPromptConstrainsRebuttalWithoutSearch(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 	rc := &runContext{
 		cfg: Config{
-			Policy: DefaultPolicy(),
+			PromptDir: testPromptDir(),
+			Policy:    DefaultPolicy(),
 		},
 		complaint: spec.Complaint{
 			Proposition: "P",
@@ -2077,12 +2063,10 @@ func TestBuildAttorneyPromptConstrainsRebuttalWithoutSearch(t *testing.T) {
 }
 
 func TestBuildCouncilPromptIncludesPersonaAndRecord(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 	rc := &runContext{
 		cfg: Config{
-			Policy: DefaultPolicy(),
+			PromptDir: testPromptDir(),
+			Policy:    DefaultPolicy(),
 		},
 		complaint: spec.Complaint{
 			Proposition: "P",
@@ -2172,16 +2156,22 @@ func TestIsCouncilRequestError(t *testing.T) {
 }
 
 func TestExecuteCouncilOpportunityRetriesAfterOversizeResponse(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 
 	rc := newCouncilOpportunityTestContext(t, "")
+	repairPath := filepath.Join(t.TempDir(), "response-too-large.md")
+	if err := os.WriteFile(repairPath, []byte("custom repair {{SIZE_BYTES}}/{{LIMIT_BYTES}} using {{COUNCIL_TOOL}} with {{SUBMISSION_FIELDS}}"), 0o644); err != nil {
+		t.Fatalf("write repair prompt: %v", err)
+	}
+	rc.cfg.PromptFiles = map[string]string{promptCouncilRepairOversize: repairPath}
 	client := &fakeCouncilResponseClient{
 		responses: []openaiapi.Response{
 			{Text: strings.Repeat("x", 4096), ResponseID: "oversize"},
 			{ToolCalls: []openaiapi.ToolCall{{Name: "submit_council_vote", Arguments: map[string]any{"vote": "demonstrated", "rationale": "record sufficient"}}}, ResponseID: "valid"},
 		},
+	}
+	oversizeBytes, err := jsonPayloadSize(client.responses[0])
+	if err != nil {
+		t.Fatalf("measure oversize response: %v", err)
 	}
 	if err := rc.executeCouncilOpportunity(context.Background(), client, Opportunity{ID: "deliberation:1:C1", StateVersion: 1, Role: "council", Phase: "deliberation", MemberID: "C1"}); err != nil {
 		t.Fatalf("executeCouncilOpportunity returned error: %v", err)
@@ -2189,8 +2179,8 @@ func TestExecuteCouncilOpportunityRetriesAfterOversizeResponse(t *testing.T) {
 	if client.calls != 2 {
 		t.Fatalf("client calls = %d, want 2", client.calls)
 	}
-	if !strings.Contains(client.inputs[1][len(client.inputs[1])-1]["content"].(string), "response payload") {
-		t.Fatalf("second prompt did not include oversize correction: %#v", client.inputs[1])
+	if got, want := client.inputs[1][len(client.inputs[1])-1]["content"].(string), fmt.Sprintf("custom repair %d/2048 using submit_council_vote with vote and rationale", oversizeBytes); got != want {
+		t.Fatalf("second prompt = %q", got)
 	}
 	caseObj := mapAny(rc.state["case"])
 	votes := mapList(caseObj["council_votes"])
@@ -2200,9 +2190,6 @@ func TestExecuteCouncilOpportunityRetriesAfterOversizeResponse(t *testing.T) {
 }
 
 func TestExecuteCouncilOpportunityRetriesInvalidVote(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 
 	rc := newCouncilOpportunityTestContext(t, "")
 	rc.cfg.Runtime.InvalidAttemptLimit = 2
@@ -2226,9 +2213,6 @@ func TestExecuteCouncilOpportunityRetriesInvalidVote(t *testing.T) {
 }
 
 func TestExecuteCouncilOpportunityRejectsCallerMemberID(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 
 	rc := newCouncilOpportunityTestContext(t, "")
 	rc.cfg.Runtime.InvalidAttemptLimit = 2
@@ -2274,9 +2258,6 @@ func TestExecuteCouncilOpportunityRejectsCallerMemberID(t *testing.T) {
 }
 
 func TestExecuteCouncilOpportunityReturnsEngineFailure(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 
 	for _, tc := range []struct {
 		name     string
@@ -2314,9 +2295,6 @@ func TestExecuteCouncilOpportunityReturnsEngineFailure(t *testing.T) {
 }
 
 func TestExecuteCouncilOpportunityEngineCallCrossingDeadlineRecordsDeadlineFailure(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 
 	rc := newCouncilOpportunityTestContext(t, opportunityFailureDeadline)
 	rc.cfg.Runtime.CouncilLLMTimeoutSeconds = 1
@@ -2345,9 +2323,6 @@ func TestExecuteCouncilOpportunityEngineCallCrossingDeadlineRecordsDeadlineFailu
 }
 
 func TestExecuteCouncilOpportunityEngineCallStopsOnCaseCancellation(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 
 	rc := newCouncilOpportunityTestContext(t, opportunityFailureDeadline)
 	marker := filepath.Join(t.TempDir(), "engine-entered")
@@ -2384,9 +2359,6 @@ func TestExecuteCouncilOpportunityEngineCallStopsOnCaseCancellation(t *testing.T
 }
 
 func TestExecuteCouncilOpportunityFailsMemberAfterRepeatedOversizeResponses(t *testing.T) {
-	origPromptBaseDir := promptBaseDir
-	promptBaseDir = filepath.Join("..", "..", "prompts")
-	defer func() { promptBaseDir = origPromptBaseDir }()
 
 	rc := newCouncilOpportunityTestContext(t, opportunityFailureAttemptsExhausted)
 	rc.cfg.Runtime.InvalidAttemptLimit = 2
@@ -2501,6 +2473,7 @@ func newCouncilOpportunityTestContext(t *testing.T, failureReason string) *runCo
 		cfg: Config{
 			Engine:    lean.Engine{Command: []string{"/bin/sh", "-c", script}},
 			OutputDir: dir,
+			PromptDir: testPromptDir(),
 			Policy:    DefaultPolicy(),
 			Runtime:   runtimeLimits,
 		},

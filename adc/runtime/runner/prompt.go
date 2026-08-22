@@ -3,6 +3,7 @@ package runner
 import (
 	"strings"
 
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 )
 
@@ -44,41 +45,60 @@ func (r *Runner) effectiveRoleTemperatureByName(roleName string) *float64 {
 	return r.effectiveRoleTemperature(r.roleSpec(roleName))
 }
 
-func buildSystemPrompt(role spec.RoleSpec, view map[string]any) string {
-	payload := marshalString(view)
-	allowed := role.EffectiveAllowedActions()
-	preamble := ""
-	if strings.TrimSpace(role.PromptPreamble) != "" {
-		preamble = "\nRole prompt preamble: " + role.PromptPreamble
-	}
-	return "Role: " + role.Name +
-		preamble +
-		"\nInstructions: " + role.Instructions +
-		"\nAllowed actions: " + strings.Join(allowed, ", ") +
-		"\nUse only listed tools with precise payloads." +
-		"\nWhen you decide to act, call exactly one tool rather than replying with prose." +
-		"\nCurrent view:\n" + payload
+func (r *Runner) buildSystemPrompt(role spec.RoleSpec, view map[string]any) (string, error) {
+	return r.prompts.Render(adcprompts.RuntimeSystemID, map[string]string{
+		"{{ROLE}}":            strings.TrimSpace(role.Name),
+		"{{PREAMBLE}}":        promptValue(role.PromptPreamble),
+		"{{INSTRUCTIONS}}":    promptValue(role.Instructions),
+		"{{ALLOWED_ACTIONS}}": promptList(role.EffectiveAllowedActions()),
+		"{{VIEW}}":            marshalString(view),
+	})
 }
 
-func buildOpportunityPrompt(role spec.RoleSpec, opportunity leanOpportunity) string {
-	referenceTools := referenceToolsForRole(role)
-	lines := []string{
-		"Current opportunity:",
-		opportunity.ActorMessage,
-		"Objective: " + opportunity.Objective,
-		"Phase: " + opportunity.Phase,
-		"Allowed actions: " + strings.Join(opportunity.AllowedTools, ", "),
+func (r *Runner) buildOpportunityPrompt(role spec.RoleSpec, opportunity leanOpportunity) (string, error) {
+	return r.prompts.Render(adcprompts.RuntimeOpportunityID, map[string]string{
+		"{{ACTOR_MESSAGE}}":   promptValue(opportunity.ActorMessage),
+		"{{OBJECTIVE}}":       promptValue(opportunity.Objective),
+		"{{PHASE}}":           promptValue(opportunity.Phase),
+		"{{ALLOWED_ACTIONS}}": promptList(opportunity.AllowedTools),
+		"{{REFERENCE_TOOLS}}": promptList(referenceToolsForRole(role)),
+		"{{CONSTRAINTS}}":     promptJSON(opportunity.Constraints),
+		"{{PASS_ACTION}}":     passAction(opportunity.MayPass),
+	})
+}
+
+func promptValue(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "(none)"
 	}
-	if len(referenceTools) > 0 {
-		lines = append(lines, "Reference tools: "+strings.Join(referenceTools, ", "))
+	return value
+}
+
+func promptList(values []string) string {
+	if len(values) == 0 {
+		return "(none)"
 	}
-	if len(opportunity.Constraints) > 0 {
-		lines = append(lines, "Opportunity constraints: "+marshalString(opportunity.Constraints))
+	return strings.Join(values, ", ")
+}
+
+func promptSections(values []string) string {
+	if len(values) == 0 {
+		return "(none)"
 	}
-	if opportunity.MayPass {
-		lines = append(lines, "You may decline this opportunity by calling pass_turn.")
-	} else {
-		lines = append(lines, "You must choose one allowed action now.")
+	return strings.Join(values, "\n\n")
+}
+
+func promptJSON(value map[string]any) string {
+	if len(value) == 0 {
+		return "{}"
 	}
-	return strings.Join(lines, "\n")
+	return marshalString(value)
+}
+
+func passAction(mayPass bool) string {
+	if mayPass {
+		return "pass_turn"
+	}
+	return "(unavailable)"
 }

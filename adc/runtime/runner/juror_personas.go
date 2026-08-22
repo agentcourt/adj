@@ -235,7 +235,7 @@ func (r *Runner) jurorOpportunityPromptContext(opportunity leanOpportunity) (str
 	if context == "" {
 		return model, ""
 	}
-	return model, persona.JurorPrompt(jurorID, context)
+	return model, context
 }
 
 func (r *Runner) jurorOpportunityRequestSpec(opportunity leanOpportunity) *modelrequest.Spec {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/jsmorph/adj/adc/runtime/casegen"
 	"github.com/jsmorph/adj/adc/runtime/courts"
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 	"github.com/jsmorph/adj/common/documents"
 )
@@ -78,13 +79,23 @@ func TestRunCaseHelpIncludesPropositionFlags(t *testing.T) {
 	if err := RunCase(context.Background(), []string{"--help"}, &stdout, &stderr); err != nil {
 		t.Fatalf("RunCase() error = %v", err)
 	}
-	for _, flag := range []string{"--proposition", "--evidence-standard", "--documents", "--max-document-files", "--max-document-file-bytes", "--max-documents-total-bytes"} {
+	for _, flag := range []string{"--proposition", "--evidence-standard", "--documents", "--max-document-files", "--max-document-file-bytes", "--max-documents-total-bytes", "--prompt-dir", "--prompt-file"} {
 		if !strings.Contains(stderr.String(), strings.TrimPrefix(flag, "-")) {
 			t.Fatalf("help omitted %s: %s", flag, stderr.String())
 		}
 	}
 	if stdout.Len() != 0 {
 		t.Fatalf("stdout = %q", stdout.String())
+	}
+	var promptFiles promptFileFlag
+	if err := promptFiles.Set("complaint.system=one.md"); err != nil {
+		t.Fatalf("first prompt override: %v", err)
+	}
+	if err := promptFiles.Set("complaint.system=two.md"); err == nil || !strings.Contains(err.Error(), "more than once") {
+		t.Fatalf("duplicate prompt override error = %v", err)
+	}
+	if err := promptFiles.Set("unknown=one.md"); err == nil || !strings.Contains(err.Error(), "unknown ADC prompt id") {
+		t.Fatalf("unknown prompt override error = %v", err)
 	}
 }
 
@@ -100,6 +111,10 @@ func TestPreparePropositionScenarioImportsDocuments(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(source, "nested", "record.txt"), contents, 0o644); err != nil {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
+	proponentPromptPath := filepath.Join(root, "proponent.md")
+	if err := os.WriteFile(proponentPromptPath, []byte("Custom proponent strategy for {{PROPOSITION}} under {{EVIDENCE_STANDARD}}."), 0o644); err != nil {
+		t.Fatalf("WriteFile(proponent prompt) error = %v", err)
+	}
 	outDir := filepath.Join(root, "out")
 	result, err := preparePropositionScenario(propositionSetupOptions{
 		Proposition:      "The record is accurate.",
@@ -112,6 +127,9 @@ func TestPreparePropositionScenarioImportsDocuments(t *testing.T) {
 		},
 		OutDir:            outDir,
 		TrialModeOverride: "auto",
+		PromptFiles: map[string]string{
+			adcprompts.PropositionProponentStrategyID: proponentPromptPath,
+		},
 	})
 	if err != nil {
 		t.Fatalf("preparePropositionScenario() error = %v", err)
@@ -151,6 +169,13 @@ func TestPreparePropositionScenarioImportsDocuments(t *testing.T) {
 	}
 	if len(scenario.Claims) != 1 || scenario.Claims[0].StandardOfProof != casegen.EvidenceStandardClearConvincing {
 		t.Fatalf("claims = %+v", scenario.Claims)
+	}
+	plaintiffStrategy, err := os.ReadFile(result.PlaintiffStrategyPath)
+	if err != nil {
+		t.Fatalf("ReadFile(plaintiff strategy) error = %v", err)
+	}
+	if got, want := string(plaintiffStrategy), "Custom proponent strategy for The record is accurate. under clear_and_convincing.\n"; got != want {
+		t.Fatalf("plaintiff strategy = %q, want %q", got, want)
 	}
 	for _, path := range []string{result.NormalizedCasePath, result.PlaintiffStrategyPath, result.DefenseStrategyPath, result.ScenarioPath} {
 		if _, err := os.Stat(path); err != nil {

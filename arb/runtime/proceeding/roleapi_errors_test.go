@@ -272,7 +272,7 @@ func TestCouncilAcceptedVoteEventFailureCompletesWithoutAttemptCharge(t *testing
 func TestCouncilAPIRuntimeFailurePropagatesFromOpportunity(t *testing.T) {
 	rc := newCouncilOpportunityTestContext(t, "")
 	rc.cfg.CaseID = "arb-1"
-	rc.cfg.PromptDir = filepath.Join("..", "..", "prompts")
+	rc.cfg.PromptDir = testPromptDir()
 	rc.cfg.Engine = roleAPITestEngine(`{"ok":false,"error":"engine rejected valid vote"}`)
 	api := newCouncilAPIServer(rc)
 	rc.councilAPI = api

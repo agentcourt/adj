@@ -4,43 +4,38 @@ import (
 	"fmt"
 	"strings"
 
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 )
 
-func buildJurorSystemPrompt(role spec.RoleSpec, opportunity leanOpportunity, personaPrompt string, caseObj map[string]any) string {
-	var b strings.Builder
-	b.WriteString("Role: ")
-	b.WriteString(role.Name)
-	if strings.TrimSpace(role.PromptPreamble) != "" {
-		b.WriteString("\nRole prompt preamble: ")
-		b.WriteString(strings.TrimSpace(role.PromptPreamble))
+func (r *Runner) buildJurorSystemPrompt(role spec.RoleSpec, opportunity leanOpportunity, personaText string, caseObj map[string]any) (string, error) {
+	deliberation := "(none for this opportunity)"
+	if jurorVoteOpportunity(opportunity) {
+		round := jurorVoteRound(caseObj)
+		prior := "(no prior ballot round)"
+		if round > 1 {
+			prior = priorDeliberationRoundPacket(caseObj, round-1)
+		}
+		var err error
+		deliberation, err = r.prompts.Render(adcprompts.RuntimeJurorDeliberationID, map[string]string{
+			"{{ROUND}}":             fmt.Sprintf("%d", round),
+			"{{TRANSCRIPT}}":        juryFacingTrialTranscript(caseObj),
+			"{{JURY_INSTRUCTIONS}}": juryInstructionsText(caseObj),
+			"{{PRIOR_BALLOT}}":      prior,
+		})
+		if err != nil {
+			return "", err
+		}
 	}
-	b.WriteString("\nInstructions: ")
-	b.WriteString(role.Instructions)
-	b.WriteString("\nAllowed actions: ")
-	b.WriteString(strings.Join(role.EffectiveAllowedActions(), ", "))
-	b.WriteString("\nUse only listed tools with precise payloads.")
-	b.WriteString("\nWhen you decide to act, call exactly one tool rather than replying with prose.")
-	if strings.TrimSpace(personaPrompt) != "" {
-		b.WriteString("\n\nJuror identity:\n")
-		b.WriteString(strings.TrimSpace(personaPrompt))
-	}
-	if !jurorVoteOpportunity(opportunity) {
-		return b.String()
-	}
-	round := jurorVoteRound(caseObj)
-	b.WriteString("\n\nDeliberation round: ")
-	b.WriteString(fmt.Sprintf("%d", round))
-	b.WriteString("\n\nTrial transcript:\n")
-	b.WriteString(juryFacingTrialTranscript(caseObj))
-	b.WriteString("\n\nEvidence review:\nUse the transcript as the starting point. Use the case-view and case-file tools to inspect admitted exhibits and visible files when the contents, provenance, or analysis matter. You may use ordinary local tools to organize and analyze visible record material, but your verdict must rest on the case record and the court's instructions.")
-	b.WriteString("\n\nJudge's instructions:\n")
-	b.WriteString(juryInstructionsText(caseObj))
-	if round > 1 {
-		b.WriteString("\n\nPrior ballot round:\n")
-		b.WriteString(priorDeliberationRoundPacket(caseObj, round-1))
-	}
-	return b.String()
+	return r.prompts.Render(adcprompts.RuntimeJurorID, map[string]string{
+		"{{ROLE}}":            strings.TrimSpace(role.Name),
+		"{{PREAMBLE}}":        promptValue(role.PromptPreamble),
+		"{{INSTRUCTIONS}}":    promptValue(role.Instructions),
+		"{{ALLOWED_ACTIONS}}": promptList(role.EffectiveAllowedActions()),
+		"{{JUROR_ID}}":        promptValue(targetJurorIDForOpportunity(opportunity)),
+		"{{PERSONA}}":         promptValue(personaText),
+		"{{DELIBERATION}}":    deliberation,
+	})
 }
 
 func jurorVoteOpportunity(opportunity leanOpportunity) bool {

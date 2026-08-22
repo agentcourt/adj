@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	inputSchema      = "adj.quick.input.v1"
+	inputSchema      = "adj.quick.input.v2"
 	runtimeSchema    = "adj.quick.runtime.v1"
 	transcriptSchema = "adj.quick.transcript.v1"
 	resultSchema     = ResultSchemaVersion
@@ -34,6 +34,7 @@ func (r *records) writeInput(cfg Config) error {
 		CouncilSize:            cfg.CouncilSize,
 		RequiredVotes:          cfg.RequiredVotes,
 		EvidenceStandard:       cfg.EvidenceStandard,
+		LawyerWebSearchEnabled: cfg.LawyerWebSearchEnabled,
 		CaseAPIAddr:            cfg.CaseAPIAddr,
 		LawyerTimeout:          cfg.LawyerTimeout.String(),
 		CouncilTimeout:         cfg.CouncilTimeout.String(),

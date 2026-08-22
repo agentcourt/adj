@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 )
 
 func publicJurorRecord(raw map[string]any) map[string]any {
@@ -142,7 +144,7 @@ func (r *Runner) visibleCaseFilesForRole(actorRole string) ([]any, error) {
 	return caseFiles, nil
 }
 
-func unknownCaseFileResult(fileID string, visibleFiles []any) map[string]any {
+func (r *Runner) unknownCaseFileResult(fileID string, visibleFiles []any) (map[string]any, error) {
 	choices := make([]string, 0, len(visibleFiles))
 	for _, entry := range visibleFiles {
 		fileObj, _ := entry.(map[string]any)
@@ -155,9 +157,12 @@ func unknownCaseFileResult(fileID string, visibleFiles []any) map[string]any {
 		}
 		choices = append(choices, summary)
 	}
-	actorMessage := fmt.Sprintf("Use a case file identifier, not a filename. %q is not a known file_id.", fileID)
-	if len(choices) > 0 {
-		actorMessage += " Available file_id values: " + strings.Join(choices, ", ") + "."
+	actorMessage, err := r.prompts.Render(adcprompts.RuntimeResultUnknownFileID, map[string]string{
+		"{{FILE_ID}}":            fileID,
+		"{{AVAILABLE_FILE_IDS}}": promptList(choices),
+	})
+	if err != nil {
+		return nil, err
 	}
 	return map[string]any{
 		"ok":            false,
@@ -165,7 +170,7 @@ func unknownCaseFileResult(fileID string, visibleFiles []any) map[string]any {
 		"code":          "UNKNOWN_CASE_FILE_ID",
 		"details":       map[string]any{"file_id": fileID},
 		"actor_message": actorMessage,
-	}
+	}, nil
 }
 
 func visibleCaseFileByID(visibleFiles []any, fileID string) map[string]any {
@@ -327,7 +332,7 @@ func enrichVisibleCaseFile(caseObj map[string]any, visibleFile map[string]any) m
 	return enriched
 }
 
-func caseFileAttachmentContent(fileObj map[string]any, raw []byte) ([]map[string]any, error) {
+func (r *Runner) caseFileAttachmentContent(fileObj map[string]any, raw []byte) ([]map[string]any, error) {
 	filename := strings.TrimSpace(stringOrDefault(fileObj["original_name"], ""))
 	if filename == "" {
 		filename = strings.TrimSpace(stringOrDefault(fileObj["label"], ""))
@@ -343,7 +348,12 @@ func caseFileAttachmentContent(fileObj map[string]any, raw []byte) ([]map[string
 	if mimeType == "" {
 		mimeType = "application/octet-stream"
 	}
-	summary := "Requested case file " + filename + ". Review it and continue with the current opportunity."
+	summary, err := r.prompts.Render(adcprompts.RuntimeCaseFileAttachmentID, map[string]string{
+		"{{FILENAME}}": filename,
+	})
+	if err != nil {
+		return nil, err
+	}
 	items := []map[string]any{
 		{
 			"type": "input_text",
@@ -439,10 +449,14 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 		} else {
 			name, uploadLabel, uploadRaw, err := uploadedCaseFilePayload(payload)
 			if err != nil {
+				actorMessage, promptErr := r.prompts.Text(adcprompts.RuntimeResultImportUploadID)
+				if promptErr != nil {
+					return ActionExecution{}, true, promptErr
+				}
 				return ActionExecution{Result: map[string]any{
 					"ok":            false,
 					"error":         err.Error(),
-					"actor_message": "To import a new file, submit original_name and base64-encoded content in content_base64. Do not refer to a host path.",
+					"actor_message": actorMessage,
 				}}, true, nil
 			}
 			originalName = name
@@ -513,7 +527,8 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 		}
 		visibleFile := visibleCaseFileByID(visibleFiles, fileID)
 		if visibleFile == nil {
-			return ActionExecution{Result: unknownCaseFileResult(fileID, visibleFiles)}, true, nil
+			result, err := r.unknownCaseFileResult(fileID, visibleFiles)
+			return ActionExecution{Result: result}, true, err
 		}
 		internalFile := findCaseFile(caseObj, fileID)
 		if internalFile == nil {
@@ -521,22 +536,33 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 		}
 		extension := caseFileExtension(internalFile)
 		if !isReadableCaseTextExtension(extension) {
+			actorMessage, err := r.prompts.Render(adcprompts.RuntimeResultTextExtensionID, map[string]string{
+				"{{CASE_FILE}}": summarizeCaseFileChoice(enrichVisibleCaseFile(caseObj, visibleFile)),
+				"{{EXTENSION}}": extension,
+			})
+			if err != nil {
+				return ActionExecution{}, true, err
+			}
 			return ActionExecution{Result: map[string]any{
 				"ok":            false,
 				"error":         fmt.Sprintf("read_case_text_file only supports .md, .txt, .pem, and .b64 files; got %s", extension),
 				"code":          "UNSUPPORTED_CASE_TEXT_EXTENSION",
 				"details":       map[string]any{"file_id": fileID, "extension": extension},
-				"actor_message": fmt.Sprintf("read_case_text_file only supports .md, .txt, .pem, and .b64 files. %s has extension %s.", summarizeCaseFileChoice(enrichVisibleCaseFile(caseObj, visibleFile)), extension),
+				"actor_message": actorMessage,
 			}}, true, nil
 		}
 		storedPath := strings.TrimSpace(stringOrDefault(internalFile["storage_relpath"], ""))
 		if storedPath == "" {
+			actorMessage, err := r.prompts.Text(adcprompts.RuntimeResultUnreadableID)
+			if err != nil {
+				return ActionExecution{}, true, err
+			}
 			return ActionExecution{Result: map[string]any{
 				"ok":            false,
 				"error":         "stored path missing for case file",
 				"code":          "CASE_FILE_PATH_MISSING",
 				"details":       map[string]any{"file_id": fileID},
-				"actor_message": "This case file has no stored path and cannot be read.",
+				"actor_message": actorMessage,
 			}}, true, nil
 		}
 		raw, err := r.readCaseFile(internalFile)
@@ -544,12 +570,18 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 			return ActionExecution{}, true, err
 		}
 		if !utf8.Valid(raw) {
+			actorMessage, err := r.prompts.Render(adcprompts.RuntimeResultNonUTF8ID, map[string]string{
+				"{{CASE_FILE}}": summarizeCaseFileChoice(enrichVisibleCaseFile(caseObj, visibleFile)),
+			})
+			if err != nil {
+				return ActionExecution{}, true, err
+			}
 			return ActionExecution{Result: map[string]any{
 				"ok":            false,
 				"error":         "case file is not valid UTF-8 text",
 				"code":          "CASE_FILE_NOT_UTF8",
 				"details":       map[string]any{"file_id": fileID},
-				"actor_message": fmt.Sprintf("%s could not be read as UTF-8 text.", summarizeCaseFileChoice(enrichVisibleCaseFile(caseObj, visibleFile))),
+				"actor_message": actorMessage,
 			}}, true, nil
 		}
 		return ActionExecution{Result: map[string]any{
@@ -568,7 +600,8 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 		}
 		visibleFile := visibleCaseFileByID(visibleFiles, fileID)
 		if visibleFile == nil {
-			return ActionExecution{Result: unknownCaseFileResult(fileID, visibleFiles)}, true, nil
+			result, err := r.unknownCaseFileResult(fileID, visibleFiles)
+			return ActionExecution{Result: result}, true, err
 		}
 		internalFile := findCaseFile(caseObj, fileID)
 		if internalFile == nil {
@@ -576,19 +609,23 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 		}
 		storedPath := strings.TrimSpace(stringOrDefault(internalFile["storage_relpath"], ""))
 		if storedPath == "" {
+			actorMessage, err := r.prompts.Text(adcprompts.RuntimeResultUnattachableID)
+			if err != nil {
+				return ActionExecution{}, true, err
+			}
 			return ActionExecution{Result: map[string]any{
 				"ok":            false,
 				"error":         "stored path missing for case file",
 				"code":          "CASE_FILE_PATH_MISSING",
 				"details":       map[string]any{"file_id": fileID},
-				"actor_message": "This case file has no stored path and cannot be attached.",
+				"actor_message": actorMessage,
 			}}, true, nil
 		}
 		raw, err := r.readCaseFile(internalFile)
 		if err != nil {
 			return ActionExecution{}, true, err
 		}
-		contentItems, err := caseFileAttachmentContent(internalFile, raw)
+		contentItems, err := r.caseFileAttachmentContent(internalFile, raw)
 		if err != nil {
 			return ActionExecution{}, true, err
 		}
@@ -649,15 +686,20 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 			if err != nil {
 				return ActionExecution{}, true, err
 			}
-			return ActionExecution{Result: unknownCaseFileResult(fileID, visibleFiles)}, true, nil
+			result, err := r.unknownCaseFileResult(fileID, visibleFiles)
+			return ActionExecution{Result: result}, true, err
 		}
 		if caseFileAlreadyOfferedByParty(caseObj, party, fileID) {
+			actorMessage, err := r.prompts.Text(adcprompts.RuntimeResultAlreadyOfferedID)
+			if err != nil {
+				return ActionExecution{}, true, err
+			}
 			return ActionExecution{Result: map[string]any{
 				"ok":            false,
 				"error":         "file already offered by party",
 				"code":          "FILE_ALREADY_OFFERED",
 				"details":       map[string]any{"file_id": fileID, "party": party},
-				"actor_message": "Choose a case file that this side has not already offered as an exhibit.",
+				"actor_message": actorMessage,
 			}}, true, nil
 		}
 		if strings.TrimSpace(exhibitID) == "" {

@@ -4,23 +4,53 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 )
 
 var actionSchemas = buildActionSchemas()
 
+type schemaPropertyPrompt struct {
+	tool     string
+	property string
+	promptID string
+}
+
+var schemaPropertyPrompts = []schemaPropertyPrompt{
+	{tool: "import_case_file", property: "source_filename", promptID: adcprompts.ImportSourceFilenameID},
+	{tool: "import_case_file", property: "original_name", promptID: adcprompts.ImportOriginalNameID},
+	{tool: "import_case_file", property: "content_base64", promptID: adcprompts.ImportContentBase64ID},
+}
+
 func buildTools(allowed []string) ([]map[string]any, error) {
+	promptCatalog, err := adcprompts.Load(adcprompts.Options{})
+	if err != nil {
+		return nil, err
+	}
+	schemaDescriptions, err := loadSchemaPropertyDescriptions(promptCatalog)
+	if err != nil {
+		return nil, err
+	}
 	tools := make([]map[string]any, 0, len(allowed))
 	missing := make([]string, 0)
 	for _, name := range allowed {
-		params := toolSchema(name)
+		params := toolSchemaWithDescriptions(name, toolSchema(name), schemaDescriptions)
 		if params == nil {
 			missing = append(missing, name)
 			continue
 		}
+		descriptionID, ok := adcprompts.DirectToolDescriptionID(name)
+		if !ok {
+			return nil, fmt.Errorf("missing direct tool description prompt for %q", name)
+		}
+		description, err := promptCatalog.Text(descriptionID)
+		if err != nil {
+			return nil, err
+		}
 		tools = append(tools, map[string]any{
 			"type":        "function",
 			"name":        name,
-			"description": "Execute " + name,
+			"description": description,
 			"parameters":  params,
 		})
 	}
@@ -86,6 +116,46 @@ func cloneJSONMap(in map[string]any) map[string]any {
 	return out
 }
 
+func loadSchemaPropertyDescriptions(promptCatalog *adcprompts.Catalog) (map[string]map[string]string, error) {
+	descriptions := make(map[string]map[string]string)
+	for _, definition := range schemaPropertyPrompts {
+		schema := toolSchema(definition.tool)
+		properties, _ := schema["properties"].(map[string]any)
+		if _, ok := properties[definition.property]; !ok {
+			return nil, fmt.Errorf("schema-property prompt %s names unknown property %s.%s", definition.promptID, definition.tool, definition.property)
+		}
+		description, err := promptCatalog.Text(definition.promptID)
+		if err != nil {
+			return nil, err
+		}
+		if descriptions[definition.tool] == nil {
+			descriptions[definition.tool] = make(map[string]string)
+		}
+		descriptions[definition.tool][definition.property] = description
+	}
+	return descriptions, nil
+}
+
+func toolSchemaWithDescriptions(name string, schema map[string]any, descriptions map[string]map[string]string) map[string]any {
+	if schema == nil {
+		return nil
+	}
+	out := cloneJSONMap(schema)
+	propertyDescriptions := descriptions[name]
+	if len(propertyDescriptions) == 0 {
+		return out
+	}
+	properties, _ := out["properties"].(map[string]any)
+	for property, description := range propertyDescriptions {
+		spec, _ := properties[property].(map[string]any)
+		if spec == nil {
+			continue
+		}
+		spec["description"] = description
+	}
+	return out
+}
+
 func buildActionSchemas() map[string]map[string]any {
 	m := make(map[string]map[string]any)
 	register := func(schema map[string]any, names ...string) {
@@ -120,9 +190,9 @@ func buildActionSchemas() map[string]map[string]any {
 
 	register(schemaObj(
 		map[string]any{
-			"source_filename": map[string]any{"type": "string", "description": "Host path for local runner use only"},
-			"original_name":   map[string]any{"type": "string", "description": "Original filename when uploading file content"},
-			"content_base64":  map[string]any{"type": "string", "description": "Base64-encoded file content"},
+			"source_filename": map[string]any{"type": "string"},
+			"original_name":   map[string]any{"type": "string"},
+			"content_base64":  map[string]any{"type": "string"},
 			"label":           map[string]any{"type": "string"},
 		},
 	), "import_case_file")

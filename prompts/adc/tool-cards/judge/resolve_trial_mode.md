@@ -1,0 +1,1 @@
+Resolve trial mode from the existing jury demand and the procedural inputs presented on this turn.  Do not improvise equitable reasons to override a proper jury demand.  If the case remains jury-triable, preserve the jury path.  If the rules permit a bench path, state the procedural reason for that result.

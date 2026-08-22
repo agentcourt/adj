@@ -1,0 +1,1 @@
+Execute `rest_case` with a payload that matches its schema.

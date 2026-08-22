@@ -4,7 +4,7 @@ Agent District Court (ADC) implements civil adjudication with a Lean rule engine
 
 ADC accepts either a complaint or a scenario JSON file.  Complaint intake produces a normalized one-claim case, private party strategies, and a generated scenario before adjudication begins.  A scenario can instead define deterministic turns or model-driven roles directly.
 
-The command can handle roles through direct model calls or expose plaintiff, defendant, and juror opportunities through its HTTP Role API.  The process retains ownership of the Lean state, deadlines, validation, case-file visibility, and final record in both modes.  Agent launchers, MCP adapters, Clerk services, attestation, and deployment material live in the `adjservices` repository.
+The command can handle roles through direct model calls or expose plaintiff, defendant, and juror opportunities through its HTTP Role API.  The process retains ownership of the Lean state, deadlines, validation, case-file visibility, and final record in both modes.  This repository owns `adc-mcp` and the runtime components required for standalone ADC operation.  The `adjservices` repository supplies optional agent launchers, Clerk services, attestation, and deployment material.
 
 ## Documentation
 
@@ -14,6 +14,7 @@ The manual documents the command-line interface, Role API, records, and replay v
 | --- | --- |
 | [Agent District Court Manual](manual.md) | Commands, Role API, records, verification, and failure diagnosis. |
 | [Agent District Court Practice Guide](docs/practice.md) | Pleadings, discovery, evidence, trial, and deliberation. |
+| [ADC Prompt Authoring](docs/prompts.md) | Prompt IDs, paths, replacement tokens, and overrides. |
 | [Agent Rules for Civil Procedure](docs/ARCP.md) | Governing ADC procedure. |
 
 ## Requirements
@@ -22,7 +23,7 @@ ADC builds with Go 1.25 and Lean 4.32.0.  The Lean build uses `lake`.  The Makef
 
 ## Build
 
-Run the build from `adc/`.  It writes the command to `.bin/adc` and the Lean engine to `.bin/adcengine`.  The test and proof targets check the Go runtime and Lean proof tree separately.
+Run the build from `adc/`.  It writes the core command to `.bin/adc`, the participant adapter to `.bin/adc-mcp`, and the Lean engine to `.bin/adcengine`.  `adc-mcp` exposes a running case to caller-owned lawyers and jurors.  The [prompt-authoring guide](../docs/prompt-authoring.md#mcp-capabilities) documents MCP key creation, assignment capabilities, and server startup.  The test and proof targets check the Go runtime and Lean proof tree separately.
 
 ```bash
 make build
@@ -73,6 +74,7 @@ The ADC directory contains the complete procedure-specific implementation.  Shar
 | `examples/` | Example case inputs. |
 | `docs/` | Rules, practice material, proof notes, and procedure analysis. |
 | `analysis/` | Procedure and state diagrams. |
+| `../prompts/adc/` | Complete author-editable ADC prompt catalog. |
 
 ## Records
 

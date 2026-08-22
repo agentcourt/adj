@@ -14,9 +14,9 @@ import (
 
 	"github.com/jsmorph/adj/common/modelrequest"
 
-	openaisdk "github.com/openai/openai-go"
-	"github.com/openai/openai-go/option"
-	"github.com/openai/openai-go/responses"
+	openaisdk "github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
+	"github.com/openai/openai-go/v3/responses"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -246,26 +246,37 @@ func TestConvertTools(t *testing.T) {
 	t.Parallel()
 
 	tools, err := convertTools([]map[string]any{
-		{"type": "function", "name": "issue_order", "parameters": map[string]any{"type": "object"}},
+		{"type": "function", "name": "issue_order", "parameters": map[string]any{"type": "object"}, "strict": true},
+		{"type": "function", "name": "read_record", "parameters": map[string]any{"type": "object"}},
 	}, true)
 	if err != nil {
 		t.Fatalf("convertTools error = %v", err)
 	}
-	if len(tools) != 2 {
-		t.Fatalf("len(tools) = %d, want 2", len(tools))
+	if len(tools) != 3 {
+		t.Fatalf("len(tools) = %d, want 3", len(tools))
 	}
 	raw, err := json.Marshal(tools)
 	if err != nil {
 		t.Fatalf("json.Marshal error = %v", err)
 	}
 	text := string(raw)
-	for _, needle := range []string{"issue_order", "web_search_preview"} {
+	for _, needle := range []string{"issue_order", "read_record", `"strict":true`, `"strict":false`, `"type":"web_search"`} {
 		if !strings.Contains(text, needle) {
 			t.Fatalf("convertTools JSON missing %q\n%s", needle, text)
 		}
 	}
+	if strings.Contains(text, "web_search_preview") {
+		t.Fatalf("convertTools used legacy web search\n%s", text)
+	}
+	params, err := json.Marshal(responseParams("test-model", nil, tools, "", nil, nil, nil, nil))
+	if err != nil {
+		t.Fatalf("marshal response params: %v", err)
+	}
+	if !strings.Contains(string(params), `"include":["web_search_call.action.sources"]`) {
+		t.Fatalf("response params omit web search sources\n%s", params)
+	}
 
-	explicit, err := convertTools([]map[string]any{{"type": "web_search"}}, true)
+	explicit, err := convertTools([]map[string]any{{"type": "web_search"}}, false)
 	if err != nil {
 		t.Fatalf("convertTools explicit web_search error = %v", err)
 	}
@@ -281,26 +292,49 @@ func TestConvertTools(t *testing.T) {
 func TestParseResponse(t *testing.T) {
 	t.Parallel()
 
-	resp := &responses.Response{
-		ID: "resp_123",
-		Output: []responses.ResponseOutputItemUnion{
-			{
-				Type: "message",
-				Content: []responses.ResponseOutputMessageContentUnion{
-					{Type: "output_text", Text: "hello "},
-					{Type: "output_text", Text: "world"},
-				},
-			},
-			{
-				Type:      "function_call",
-				CallID:    "call_1",
-				Name:      "get_case",
-				Arguments: `{"case_id":"case-1"}`,
-			},
-		},
+	var resp responses.Response
+	if err := json.Unmarshal([]byte(`{
+  "id":"resp_123",
+  "output":[
+    {
+      "type":"web_search_call",
+      "id":"ws_1",
+      "status":"completed",
+      "action":{
+        "type":"search",
+        "queries":["current fact"],
+        "sources":[{"type":"url","url":"https://example.test/source"}]
+      }
+    },
+    {
+      "type":"message",
+      "content":[
+        {
+          "type":"output_text",
+          "text":"hello ",
+          "annotations":[{
+            "type":"url_citation",
+            "url":"https://example.test/source",
+            "title":"Example source",
+            "start_index":0,
+            "end_index":6
+          }]
+        },
+        {"type":"output_text","text":"world","annotations":[]}
+      ]
+    },
+    {
+      "type":"function_call",
+      "call_id":"call_1",
+      "name":"get_case",
+      "arguments":"{\"case_id\":\"case-1\"}"
+    }
+  ]
+}`), &resp); err != nil {
+		t.Fatal(err)
 	}
 
-	got, err := parseResponse(resp)
+	got, err := parseResponse(&resp)
 	if err != nil {
 		t.Fatalf("parseResponse error = %v", err)
 	}
@@ -316,16 +350,28 @@ func TestParseResponse(t *testing.T) {
 	if got.ToolCalls[0].ArgumentsError != "" {
 		t.Fatalf("ArgumentsError = %q", got.ToolCalls[0].ArgumentsError)
 	}
-
-	bad := &responses.Response{
-		Output: []responses.ResponseOutputItemUnion{{
-			Type:      "function_call",
-			CallID:    "call_2",
-			Name:      "bad",
-			Arguments: "{",
-		}},
+	if len(got.WebSearchCalls) != 1 || got.WebSearchCalls[0].ID != "ws_1" || len(got.WebSearchCalls[0].Queries) != 1 || got.WebSearchCalls[0].Queries[0] != "current fact" {
+		t.Fatalf("WebSearchCalls = %+v", got.WebSearchCalls)
 	}
-	badResp, err := parseResponse(bad)
+	if len(got.WebSearchCalls[0].Sources) != 1 || got.WebSearchCalls[0].Sources[0].URL != "https://example.test/source" {
+		t.Fatalf("WebSearchCalls sources = %+v", got.WebSearchCalls[0].Sources)
+	}
+	if len(got.URLCitations) != 1 || got.URLCitations[0].Title != "Example source" || got.URLCitations[0].EndIndex != 6 {
+		t.Fatalf("URLCitations = %+v", got.URLCitations)
+	}
+
+	var bad responses.Response
+	if err := json.Unmarshal([]byte(`{
+  "output":[{
+    "type":"function_call",
+    "call_id":"call_2",
+    "name":"bad",
+    "arguments":"{"
+  }]
+}`), &bad); err != nil {
+		t.Fatal(err)
+	}
+	badResp, err := parseResponse(&bad)
 	if err != nil {
 		t.Fatalf("parseResponse bad arguments error = %v", err)
 	}
@@ -389,6 +435,62 @@ func TestResponseParamsSetsMaxOutputTokens(t *testing.T) {
 	text := string(wire)
 	if !strings.Contains(text, `"max_output_tokens":800`) {
 		t.Fatalf("responseParams JSON missing max_output_tokens:\n%s", text)
+	}
+}
+
+func TestResponseParamsSetsReasoningEffort(t *testing.T) {
+	t.Parallel()
+
+	effort := modelrequest.ReasoningEffortXHigh
+	spec := modelrequest.Spec{
+		Endpoint: "openai",
+		Model:    "gpt-5.4-mini",
+		Request:  modelrequest.RequestParameters{ReasoningEffort: &effort},
+	}
+	params := responseParams(spec.RuntimeModel(), nil, nil, "", nil, nil, nil, &spec)
+	wire, err := json.Marshal(params)
+	if err != nil {
+		t.Fatalf("json.Marshal error = %v", err)
+	}
+	if !strings.Contains(string(wire), `"reasoning":{"effort":"xhigh"}`) {
+		t.Fatalf("responseParams JSON missing reasoning effort:\n%s", wire)
+	}
+
+	params = responseParams("openai://gpt-5.4-mini", nil, nil, "", nil, nil, nil, nil)
+	wire, err = json.Marshal(params)
+	if err != nil {
+		t.Fatalf("json.Marshal without spec error = %v", err)
+	}
+	if strings.Contains(string(wire), `"reasoning"`) {
+		t.Fatalf("responseParams JSON includes unrequested reasoning effort:\n%s", wire)
+	}
+}
+
+func TestResponseParamsSetsMaxToolCalls(t *testing.T) {
+	t.Parallel()
+
+	maxToolCalls := int64(8)
+	spec := modelrequest.Spec{
+		Endpoint: "openai",
+		Model:    "gpt-5.4-mini",
+		Request:  modelrequest.RequestParameters{MaxToolCalls: &maxToolCalls},
+	}
+	params := responseParams(spec.RuntimeModel(), nil, nil, "", nil, nil, nil, &spec)
+	wire, err := json.Marshal(params)
+	if err != nil {
+		t.Fatalf("json.Marshal error = %v", err)
+	}
+	if !strings.Contains(string(wire), `"max_tool_calls":8`) {
+		t.Fatalf("responseParams JSON missing max_tool_calls:\n%s", wire)
+	}
+
+	params = responseParams("openai://gpt-5.4-mini", nil, nil, "", nil, nil, nil, nil)
+	wire, err = json.Marshal(params)
+	if err != nil {
+		t.Fatalf("json.Marshal without spec error = %v", err)
+	}
+	if strings.Contains(string(wire), `"max_tool_calls"`) {
+		t.Fatalf("responseParams JSON includes unrequested max_tool_calls:\n%s", wire)
 	}
 }
 

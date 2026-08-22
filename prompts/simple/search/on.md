@@ -1,0 +1,1 @@
+Web search is available. Use it when a material public fact is missing or time-dependent. Prefer primary sources, identify each source by URL in the rationale, and distinguish the source from your inference.

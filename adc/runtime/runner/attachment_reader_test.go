@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jsmorph/adj/adc/runtime/lean"
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 )
 
@@ -74,6 +75,17 @@ func TestComplaintAttachmentReadsReachPromptAndRoleAPI(t *testing.T) {
 	contents := []byte("record text\n")
 	r, fileObj, _ := testRunnerWithAttachment(t, contents)
 	setAttachmentRoleView(t, r, fileObj)
+	overridePath := filepath.Join(t.TempDir(), "case-file-attachment.md")
+	if err := os.WriteFile(overridePath, []byte("Catalog attachment: {{FILENAME}}"), 0o644); err != nil {
+		t.Fatalf("write attachment prompt override: %v", err)
+	}
+	catalog, err := adcprompts.Load(adcprompts.Options{PromptFiles: map[string]string{
+		adcprompts.RuntimeCaseFileAttachmentID: overridePath,
+	}})
+	if err != nil {
+		t.Fatalf("load attachment prompt override: %v", err)
+	}
+	r.prompts = catalog
 
 	promptResult, handled, err := r.executeLocalAction("plaintiff", "request_case_file", map[string]any{"file_id": "file-0001"})
 	if err != nil {
@@ -85,6 +97,9 @@ func TestComplaintAttachmentReadsReachPromptAndRoleAPI(t *testing.T) {
 	items, ok := promptResult.FollowupInputItems[0]["content_items"].([]map[string]any)
 	if !ok || len(items) != 2 {
 		t.Fatalf("prompt content items = %#v", promptResult.FollowupInputItems[0]["content_items"])
+	}
+	if got := items[0]["text"]; got != "Catalog attachment: record.txt" {
+		t.Fatalf("prompt text item = %#v", got)
 	}
 	if items[1]["type"] != "input_file" || items[1]["filename"] != "record.txt" {
 		t.Fatalf("prompt file item = %#v", items[1])
@@ -98,7 +113,10 @@ func TestComplaintAttachmentReadsReachPromptAndRoleAPI(t *testing.T) {
 		t.Fatalf("prompt bytes = %q", promptBytes)
 	}
 
-	apiResult := r.readCaseFileBytes("plaintiff", "file-0001")
+	apiResult, err := r.readCaseFileBytes("plaintiff", "file-0001")
+	if err != nil {
+		t.Fatalf("readCaseFileBytes() error = %v", err)
+	}
 	if ok, _ := apiResult["ok"].(bool); !ok {
 		t.Fatalf("readCaseFileBytes() = %#v", apiResult)
 	}
@@ -155,6 +173,7 @@ func testRunnerWithAttachment(t *testing.T, contents []byte) (*Runner, map[strin
 	r := &Runner{
 		scenario: spec.FormalScenario{CaseInit: &spec.CaseInitializationSpec{Attachments: []spec.ComplaintAttachmentSpec{attachment}}},
 		cfg:      Config{ScenarioBaseDir: root},
+		prompts:  testPromptCatalog(t),
 		state: map[string]any{
 			"case": map[string]any{"case_files": []any{fileObj}},
 		},

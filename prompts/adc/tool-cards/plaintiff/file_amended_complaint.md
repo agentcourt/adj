@@ -1,0 +1,1 @@
+Amend to cure a real pleading defect or to add concrete factual detail already supportable from the record.  Keep the claim tight.  Do not add new unsupported theories just because amendment is available.

@@ -44,6 +44,8 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	clerkModel := fs.String("clerk-model", "", "Runtime model for the clerk. Default: --non-juror-model")
 	plannerModel := fs.String("planner-model", casegen.DefaultPlannerModel(), "Model for neutral intake and strategy planning")
 	reportModel := fs.String("report-model", casegen.DefaultRuntimeModel(), "Model for digest generation")
+	promptDir := fs.String("prompt-dir", "", "ADC prompt catalog directory")
+	var promptFiles promptFileFlag
 	temperature := fs.String("temperature", "", "Override runtime temperature")
 	nonJurorTemperature := fs.String("non-juror-temperature", "", "Override runtime temperature for judge, lawyers, and clerk")
 	jurorTemperature := fs.String("juror-temperature", "", "Override runtime temperature for jurors only")
@@ -65,6 +67,7 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	engineCommand := fs.String("engine", defaultEngineCommand(), "Engine command string")
 	jsonSummary := fs.Bool("json-summary", true, "Emit JSON summary to stdout")
 	fs.Var(&externalRoles, "external-role", "Role to serve through the role API during opportunity turns; repeat as needed")
+	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	help, parseErr := parseFlagSet(fs, args)
 	if parseErr != nil {
 		return parseErr
@@ -95,11 +98,15 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	if strings.TrimSpace(*outDir) == "" {
 		return fmt.Errorf("--out-dir is required")
 	}
+	resolvedPromptDir, resolvedPromptFiles, err := resolvePromptOptions(*promptDir, promptFiles)
+	if err != nil {
+		return err
+	}
 	resolvedReportModel := resolveDefault(*reportModel, casegen.DefaultRuntimeModel())
 	timeout := time.Duration(*timeoutSeconds) * time.Second
 	var client *openai.Client
 	var jurorClient *openai.Client
-	client, err := openai.NewFromEnv(*online, timeout)
+	client, err = openai.NewFromEnv(*online, timeout)
 	if err != nil {
 		return err
 	}
@@ -130,7 +137,6 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	if err != nil {
 		return err
 	}
-
 	var setup caseSetupResult
 	if strings.TrimSpace(*proposition) != "" {
 		setup, err = preparePropositionScenario(propositionSetupOptions{
@@ -156,6 +162,8 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 			JurorCount:          *jurorCount,
 			MinimumConcurring:   *minimumConcurring,
 			UnanimousRequired:   unanimousRequiredPtr,
+			PromptDir:           resolvedPromptDir,
+			PromptFiles:         resolvedPromptFiles,
 		})
 	} else {
 		setup, err = prepareComplaintScenario(ctx, client, complaintSetupOptions{
@@ -176,6 +184,8 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 			JurorCount:          *jurorCount,
 			MinimumConcurring:   *minimumConcurring,
 			UnanimousRequired:   unanimousRequiredPtr,
+			PromptDir:           resolvedPromptDir,
+			PromptFiles:         resolvedPromptFiles,
 		})
 	}
 	if err != nil {
@@ -237,6 +247,8 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 		JurorPersonasPath: strings.TrimSpace(*jurorPersonas),
 		Runtime:           runtimeLimits,
 		PolicyOverrides:   policyOverrides,
+		PromptDir:         resolvedPromptDir,
+		PromptFiles:       resolvedPromptFiles,
 	})
 	if err != nil {
 		return err
@@ -248,7 +260,12 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	if err := report.WriteTranscript(transcriptPath, result); err != nil {
 		return err
 	}
-	digestErr := report.WriteDigestWithClient(digestPath, result, resolvedReportModel, client)
+	digestErr := report.WriteDigestWithOptions(digestPath, result, report.DigestOptions{
+		Model:       resolvedReportModel,
+		Client:      client,
+		PromptDir:   resolvedPromptDir,
+		PromptFiles: resolvedPromptFiles,
+	})
 	accountingErr := r.RefreshProviderAccounting(&result)
 	if err := errors.Join(digestErr, accountingErr); err != nil {
 		return err

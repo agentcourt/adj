@@ -3,7 +3,6 @@ package casegen
 import (
 	"context"
 	"crypto/sha256"
-	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -19,30 +18,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/jsmorph/adj/adc/runtime/courts"
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 	"github.com/jsmorph/adj/common/openai"
 )
-
-//go:embed prompts/case_packet_system.md
-var casePacketSystemPrompt string
-
-//go:embed prompts/plaintiff_strategy_system.md
-var plaintiffStrategySystemPrompt string
-
-//go:embed prompts/defense_strategy_system.md
-var defenseStrategySystemPrompt string
-
-//go:embed prompts/plaintiff_runtime_brief.md
-var plaintiffRuntimeBrief string
-
-//go:embed prompts/defendant_runtime_brief.md
-var defendantRuntimeBrief string
-
-//go:embed prompts/judge_runtime_brief.md
-var judgeRuntimeBrief string
-
-//go:embed prompts/juror_runtime_brief.md
-var jurorRuntimeBrief string
 
 var markdownLinkPattern = regexp.MustCompile(`!?\[([^\]]*)\]\(([^)]+)\)`)
 
@@ -64,10 +43,6 @@ func DefaultPlannerModel() string {
 
 func DefaultNonJurorModel() string {
 	return defaultNonJurorModel
-}
-
-func JudgeRuntimeBrief() string {
-	return strings.TrimSpace(judgeRuntimeBrief)
 }
 
 type LinkedFile struct {
@@ -132,6 +107,13 @@ type ScenarioOptions struct {
 	JurorCount          int
 	MinimumConcurring   int
 	UnanimousRequired   *bool
+	PromptDir           string
+	PromptFiles         map[string]string
+}
+
+type PlanningOptions struct {
+	PromptDir   string
+	PromptFiles map[string]string
 }
 
 func LoadComplaint(path string) (ComplaintInput, error) {
@@ -203,6 +185,10 @@ func StageComplaintAssets(outDir string, in ComplaintInput) (ComplaintInput, err
 }
 
 func CreatePlan(ctx context.Context, client *openai.Client, plannerModel string, complaint ComplaintInput, court courts.Profile) (Plan, error) {
+	return CreatePlanWithOptions(ctx, client, plannerModel, complaint, court, PlanningOptions{})
+}
+
+func CreatePlanWithOptions(ctx context.Context, client *openai.Client, plannerModel string, complaint ComplaintInput, court courts.Profile, opts PlanningOptions) (Plan, error) {
 	if client == nil {
 		return Plan{}, fmt.Errorf("planner client is nil")
 	}
@@ -211,12 +197,20 @@ func CreatePlan(ctx context.Context, client *openai.Client, plannerModel string,
 		return Plan{}, fmt.Errorf("planner model is required")
 	}
 	temp := 0.2
-
-	packet, err := planCasePacket(ctx, client, model, complaint, court, &temp)
+	promptCatalog, err := adcprompts.Load(adcprompts.Options{PromptDir: opts.PromptDir, PromptFiles: opts.PromptFiles})
 	if err != nil {
 		return Plan{}, err
 	}
-	plaintiffPrompt, err := buildStrategyPrompt("plaintiff", packet, complaint, court)
+
+	packet, err := planCasePacket(ctx, client, model, complaint, court, &temp, promptCatalog)
+	if err != nil {
+		return Plan{}, err
+	}
+	plaintiffPrompt, err := buildStrategyPrompt(promptCatalog, adcprompts.PlaintiffStrategyUserID, packet, complaint, court)
+	if err != nil {
+		return Plan{}, err
+	}
+	plaintiffSystem, err := promptCatalog.Text(adcprompts.PlaintiffStrategySystemID)
 	if err != nil {
 		return Plan{}, err
 	}
@@ -226,14 +220,18 @@ func CreatePlan(ctx context.Context, client *openai.Client, plannerModel string,
 		client,
 		model,
 		"plaintiff",
-		strings.TrimSpace(plaintiffStrategySystemPrompt),
+		plaintiffSystem,
 		plaintiffPrompt,
 		&temp,
 	)
 	if err != nil {
 		return Plan{}, err
 	}
-	defensePrompt, err := buildStrategyPrompt("defendant", packet, complaint, court)
+	defensePrompt, err := buildStrategyPrompt(promptCatalog, adcprompts.DefenseStrategyUserID, packet, complaint, court)
+	if err != nil {
+		return Plan{}, err
+	}
+	defenseSystem, err := promptCatalog.Text(adcprompts.DefenseStrategySystemID)
 	if err != nil {
 		return Plan{}, err
 	}
@@ -242,7 +240,7 @@ func CreatePlan(ctx context.Context, client *openai.Client, plannerModel string,
 		client,
 		model,
 		"defendant",
-		strings.TrimSpace(defenseStrategySystemPrompt),
+		defenseSystem,
 		defensePrompt,
 		&temp,
 	)
@@ -296,46 +294,100 @@ func BuildScenario(plan Plan, complaint ComplaintInput, opts ScenarioOptions) (s
 	if clerkModel == "" {
 		return spec.FormalScenario{}, fmt.Errorf("clerk model is required")
 	}
+	promptCatalog, err := adcprompts.Load(adcprompts.Options{PromptDir: opts.PromptDir, PromptFiles: opts.PromptFiles})
+	if err != nil {
+		return spec.FormalScenario{}, err
+	}
+	plaintiffInstructions, err := promptCatalog.Text(adcprompts.PlaintiffInstructionsID)
+	if err != nil {
+		return spec.FormalScenario{}, err
+	}
+	plaintiffPreamble, err := promptCatalog.Render(adcprompts.PlaintiffRuntimeID, map[string]string{
+		"{{COURT_RULES}}": strings.TrimSpace(opts.Court.RulesMarkdown),
+		"{{STRATEGY}}":    strings.TrimSpace(plan.PlaintiffStrategy),
+	})
+	if err != nil {
+		return spec.FormalScenario{}, err
+	}
+	defendantInstructions, err := promptCatalog.Text(adcprompts.DefendantInstructionsID)
+	if err != nil {
+		return spec.FormalScenario{}, err
+	}
+	defendantPreamble, err := promptCatalog.Render(adcprompts.DefendantRuntimeID, map[string]string{
+		"{{COURT_RULES}}": strings.TrimSpace(opts.Court.RulesMarkdown),
+		"{{STRATEGY}}":    strings.TrimSpace(plan.DefenseStrategy),
+	})
+	if err != nil {
+		return spec.FormalScenario{}, err
+	}
+	clerkInstructions, err := promptCatalog.Text(adcprompts.ClerkInstructionsID)
+	if err != nil {
+		return spec.FormalScenario{}, err
+	}
+	clerkPreamble, err := promptCatalog.Render(adcprompts.ClerkRuntimeID, map[string]string{
+		"{{COURT_RULES}}": strings.TrimSpace(opts.Court.RulesMarkdown),
+	})
+	if err != nil {
+		return spec.FormalScenario{}, err
+	}
+	judgeInstructions, err := promptCatalog.Text(adcprompts.JudgeInstructionsID)
+	if err != nil {
+		return spec.FormalScenario{}, err
+	}
+	judgePreamble, err := promptCatalog.Render(adcprompts.JudgeRuntimeID, map[string]string{
+		"{{COURT_RULES}}": strings.TrimSpace(opts.Court.RulesMarkdown),
+	})
+	if err != nil {
+		return spec.FormalScenario{}, err
+	}
 
 	roles := []spec.RoleSpec{
 		{
 			Name:           "plaintiff",
 			Model:          plaintiffModel,
 			Temperature:    opts.NonJurorTemperature,
-			Instructions:   "Plaintiff counsel. Use the case-specific strategy memo to prosecute the pleaded claim within the available tools.",
-			PromptPreamble: composeRuntimePreamble(plaintiffRuntimeBrief, opts.Court.RulesMarkdown, plan.PlaintiffStrategy),
+			Instructions:   plaintiffInstructions,
+			PromptPreamble: plaintiffPreamble,
 			AllowedTools:   plaintiffTools(trialMode, opts.Court),
 		},
 		{
 			Name:           "defendant",
 			Model:          defendantModel,
 			Temperature:    opts.NonJurorTemperature,
-			Instructions:   "Defense counsel. Use the case-specific strategy memo to resist liability or narrow relief within the available tools.",
-			PromptPreamble: composeRuntimePreamble(defendantRuntimeBrief, opts.Court.RulesMarkdown, plan.DefenseStrategy),
+			Instructions:   defendantInstructions,
+			PromptPreamble: defendantPreamble,
 			AllowedTools:   defendantTools(trialMode, opts.Court),
 		},
 		{
 			Name:           "clerk",
 			Model:          clerkModel,
 			Temperature:    opts.NonJurorTemperature,
-			Instructions:   "Clerk for pleadings service dates and jury administration when applicable.",
-			PromptPreamble: composeRuntimePreamble("", opts.Court.RulesMarkdown, ""),
+			Instructions:   clerkInstructions,
+			PromptPreamble: clerkPreamble,
 			AllowedTools:   clerkTools(trialMode),
 		},
 		{
 			Name:           "judge",
 			Model:          judgeModel,
 			Temperature:    opts.NonJurorTemperature,
-			Instructions:   "Judge for procedural rulings, trial control, and judgment entry.",
-			PromptPreamble: composeRuntimePreamble(judgeRuntimeBrief, opts.Court.RulesMarkdown, ""),
+			Instructions:   judgeInstructions,
+			PromptPreamble: judgePreamble,
 			AllowedTools:   judgeTools(trialMode, opts.Court),
 		},
 	}
 	if trialMode == "jury" {
+		jurorInstructions, err := promptCatalog.Text(adcprompts.JurorInstructionsID)
+		if err != nil {
+			return spec.FormalScenario{}, err
+		}
+		jurorPreamble, err := promptCatalog.Text(adcprompts.JurorRuntimeID)
+		if err != nil {
+			return spec.FormalScenario{}, err
+		}
 		roles = append(roles, spec.RoleSpec{
 			Name:           "juror",
-			Instructions:   "Juror for voir dire responses and one individual verdict vote.",
-			PromptPreamble: strings.TrimSpace(jurorRuntimeBrief),
+			Instructions:   jurorInstructions,
+			PromptPreamble: jurorPreamble,
 			AllowedTools: []string{
 				"answer_juror_questionnaire",
 				"answer_voir_dire_question",
@@ -569,35 +621,6 @@ func buildCaseInitialization(packet CasePacket, complaint ComplaintInput, filedO
 	return caseInit, nil
 }
 
-func composeRuntimePreamble(base string, courtRules string, memo string) string {
-	base = strings.TrimSpace(base)
-	courtRules = strings.TrimSpace(courtRules)
-	memo = strings.TrimSpace(memo)
-	parts := make([]string, 0, 3)
-	if base != "" {
-		parts = append(parts, base)
-	}
-	if courtRules != "" {
-		parts = append(parts, "Court rules:\n\n"+courtRules)
-	}
-	if memo != "" {
-		parts = append(parts, "Case-specific strategy memo:\n\n"+memo)
-	}
-	return strings.Join(parts, "\n\n")
-}
-
-var requiredStrategyHeadings = []string{
-	"## Case Theory",
-	"## Procedural Posture And Immediate Acts",
-	"## Proof Map",
-	"## Discovery Plan",
-	"## Motion Plan",
-	"## Trial Plan",
-	"## Instructions, Verdict, And Judgment",
-	"## Vulnerabilities And Concessions",
-	"## Decision Rules",
-}
-
 func buildAnswerSummary(packet CasePacket) string {
 	parts := []string{"Defendant denies liability and demands strict proof of every required element."}
 	if len(packet.Claim.Defenses) > 0 {
@@ -610,22 +633,26 @@ func buildAnswerSummary(packet CasePacket) string {
 }
 
 func buildCasePacketPrompt(complaint ComplaintInput, court courts.Profile) (string, error) {
+	promptCatalog, err := adcprompts.Load(adcprompts.Options{})
+	if err != nil {
+		return "", err
+	}
+	return buildCasePacketPromptWithCatalog(promptCatalog, complaint, court)
+}
+
+func buildCasePacketPromptWithCatalog(promptCatalog *adcprompts.Catalog, complaint ComplaintInput, court courts.Profile) (string, error) {
 	courtContext, err := renderCourtContext(court)
 	if err != nil {
 		return "", err
 	}
-	var b strings.Builder
-	b.WriteString(courtContext)
-	b.WriteString("\n")
-	b.WriteString("Complaint markdown follows.\n\n")
-	b.WriteString(complaint.Markdown)
-	b.WriteString("\n\nLinked local attachments:\n")
-	b.WriteString(renderLinkedFileContext(complaint.LinkedFiles))
-	return b.String(), nil
+	return promptCatalog.Render(adcprompts.CasePacketUserID, map[string]string{
+		"{{COURT}}":        courtContext,
+		"{{COMPLAINT}}":    complaint.Markdown,
+		"{{LINKED_FILES}}": renderLinkedFileContext(complaint.LinkedFiles),
+	})
 }
 
-func buildStrategyPrompt(side string, packet CasePacket, complaint ComplaintInput, court courts.Profile) (string, error) {
-	var b strings.Builder
+func buildStrategyPrompt(promptCatalog *adcprompts.Catalog, promptID string, packet CasePacket, complaint ComplaintInput, court courts.Profile) (string, error) {
 	packetJSON, err := json.MarshalIndent(packet, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("encode case packet: %w", err)
@@ -634,61 +661,16 @@ func buildStrategyPrompt(side string, packet CasePacket, complaint ComplaintInpu
 	if err != nil {
 		return "", err
 	}
-	b.WriteString(courtContext)
-	b.WriteString("\n")
-	b.WriteString("Given this complaint, the normalized case packet, the listed attachments, and the available tool surface for ")
-	b.WriteString(side)
-	b.WriteString(", write a private litigation plan for ")
-	if side == "plaintiff" {
-		b.WriteString("plaintiff's trial counsel.\n\n")
-	} else {
-		b.WriteString("defense trial counsel.\n\n")
-	}
-	b.WriteString("This memo will serve as working instructions for counsel during a live case run.  Write for action, not exposition.\n\n")
-	b.WriteString("Normalized case packet:\n")
-	b.WriteString(string(packetJSON))
-	b.WriteString("\n\nComplaint markdown:\n")
-	b.WriteString(complaint.Markdown)
-	b.WriteString("\n\nLinked local attachments:\n")
-	b.WriteString(renderLinkedFileContext(complaint.LinkedFiles))
 	plaintiffToolList := plaintiffTools(packet.TrialModeRecommendation, court)
 	defendantToolList := defendantTools(packet.TrialModeRecommendation, court)
-	b.WriteString("\n\nExhaustive tool surface by side:\n")
-	b.WriteString("Plaintiff: ")
-	b.WriteString(strings.Join(plaintiffToolList, ", "))
-	b.WriteString("\nDefendant: ")
-	b.WriteString(strings.Join(defendantToolList, ", "))
-	b.WriteString("\n\nTreat those tool lists as exhaustive.\n")
-	b.WriteString("If a motion, request, filing step, or trial move is not named in the list for that side, that side cannot do it in this system, and you must not mention it.\n")
-	b.WriteString("Do not mention Rule 12(e), a more definite statement, depositions, witnesses, cross-examination, meet-and-confer obligations, subpoenas, affidavits, or any other unavailable procedure.\n")
-	b.WriteString("Do not write a courtroom speech.  Do not use ceremonial phrases.\n")
-	b.WriteString("\n\nThe memo must contain these exact headings, in this order:\n")
-	for _, heading := range requiredStrategyHeadings {
-		b.WriteString("- ")
-		b.WriteString(heading)
-		b.WriteString("\n")
-	}
-	b.WriteString("\nWithin those sections:\n")
-	b.WriteString("- State what counsel should do first, what to avoid, and what the other side is most likely to do next.\n")
-	b.WriteString("- Distinguish what the existing record already supports from what remains weak, disputed, or missing.\n")
-	b.WriteString("- Tie proof to documents, productions, admissions, interrogatory responses, technical reports, exhibits, openings, trial-theory presentations, closings, jury instructions, verdict, and judgment.\n")
-	b.WriteString("- Give concrete if-then guidance for likely developments.\n")
-	b.WriteString("- Be candid about which listed tools are worth using and which are not.\n")
-	b.WriteString("- When describing likely acts by the other side, stay inside the other side's tool list.\n")
-	b.WriteString("- Tie arguments to the burden holder and standard of proof when burden or proof affects the outcome.\n")
-	b.WriteString("\nSide-specific guidance:\n")
-	if side == "plaintiff" {
-		b.WriteString("- Build the claim element by element.\n")
-		b.WriteString("- Identify the cleanest path to liability and damages.\n")
-		b.WriteString("- Explain how to answer the strongest defense points before they mature.\n")
-		b.WriteString("- If a motion or procedural fight would be weak or distracting on these facts, say so plainly.\n")
-	} else {
-		b.WriteString("- Attack the case at the narrowest sound point first.\n")
-		b.WriteString("- Separate true legal insufficiency from factual dispute, and both from damages reduction.\n")
-		b.WriteString("- Do not recommend a dispositive motion unless the standard and these facts justify it.\n")
-		b.WriteString("- Focus on burden failures, disputed inferences, causation limits, damages limits, and any supported defense.\n")
-	}
-	return b.String(), nil
+	return promptCatalog.Render(promptID, map[string]string{
+		"{{COURT}}":           courtContext,
+		"{{CASE_PACKET}}":     string(packetJSON),
+		"{{COMPLAINT}}":       complaint.Markdown,
+		"{{LINKED_FILES}}":    renderLinkedFileContext(complaint.LinkedFiles),
+		"{{PLAINTIFF_TOOLS}}": strings.Join(plaintiffToolList, ", "),
+		"{{DEFENDANT_TOOLS}}": strings.Join(defendantToolList, ", "),
+	})
 }
 
 func planCasePacket(
@@ -698,13 +680,18 @@ func planCasePacket(
 	complaint ComplaintInput,
 	court courts.Profile,
 	temperature *float64,
+	promptCatalog *adcprompts.Catalog,
 ) (CasePacket, error) {
-	prompt, err := buildCasePacketPrompt(complaint, court)
+	prompt, err := buildCasePacketPromptWithCatalog(promptCatalog, complaint, court)
+	if err != nil {
+		return CasePacket{}, err
+	}
+	systemPrompt, err := promptCatalog.Text(adcprompts.CasePacketSystemID)
 	if err != nil {
 		return CasePacket{}, err
 	}
 	baseMessages := []map[string]any{
-		{"role": "system", "content": strings.TrimSpace(casePacketSystemPrompt)},
+		{"role": "system", "content": systemPrompt},
 		{"role": "user", "content": prompt},
 	}
 	messages := append([]map[string]any(nil), baseMessages...)
@@ -734,10 +721,14 @@ func planCasePacket(
 			maxPlannerAttempts,
 			err.Error(),
 		)
+		correctionPrompt, renderErr := promptCatalog.Render(adcprompts.CasePacketRepairID, map[string]string{"{{ERROR}}": err.Error()})
+		if renderErr != nil {
+			return CasePacket{}, renderErr
+		}
 		messages = append(
 			append([]map[string]any(nil), baseMessages...),
 			map[string]any{"role": "assistant", "content": strings.TrimSpace(resp.Text)},
-			map[string]any{"role": "user", "content": buildCasePacketCorrectionPrompt(err)},
+			map[string]any{"role": "user", "content": correctionPrompt},
 		)
 	}
 	return CasePacket{}, fmt.Errorf("plan case packet: exhausted planner attempts")
@@ -763,27 +754,12 @@ func planStrategyMemo(
 	return strings.TrimSpace(resp.Text), nil
 }
 
-func buildCasePacketCorrectionPrompt(err error) string {
-	var b strings.Builder
-	b.WriteString("The prior response was invalid for this system.\n")
-	b.WriteString("Reason: ")
-	b.WriteString(err.Error())
-	b.WriteString("\n\nRewrite the response as one corrected JSON object only.\n")
-	b.WriteString("Do not use code fences or prose outside the JSON object.\n")
-	b.WriteString("Keep one claim only.\n")
-	b.WriteString("Keep `legal_theory` short, and keep `elements` and `defenses` as short phrases.\n")
-	return b.String()
-}
-
 func renderCourtContext(court courts.Profile) (string, error) {
 	profileJSON, err := json.MarshalIndent(court, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("encode court profile: %w", err)
 	}
-	var b strings.Builder
-	b.WriteString("Selected court profile:\n")
-	b.WriteString(string(profileJSON))
-	return b.String(), nil
+	return string(profileJSON), nil
 }
 
 var amountTokenPattern = regexp.MustCompile(`([0-9][0-9,]*(?:\.[0-9]{1,2})?)`)

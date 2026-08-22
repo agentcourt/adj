@@ -50,8 +50,11 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 	transcriptPath := fs.String("transcript", "", "Optional transcript markdown output path")
 	digestPath := fs.String("digest", "", "Optional digest/report markdown output path")
 	reportModel := fs.String("report-model", "", "Model for digest generation")
+	promptDir := fs.String("prompt-dir", "", "ADC prompt catalog directory")
+	var promptFiles promptFileFlag
 	allowAssertionFailures := fs.Bool("allow-assertion-failures", false, "Return success after recording failed scenario assertions")
 	fs.Var(&externalRoles, "external-role", "Role to serve through the role API during opportunity turns; repeat as needed")
+	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	help, parseErr := parseFlagSet(fs, args)
 	if parseErr != nil {
 		return parseErr
@@ -64,6 +67,10 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 	}
 	if strings.TrimSpace(*scenarioPath) == "" {
 		return fmt.Errorf("--scenario is required")
+	}
+	resolvedPromptDir, resolvedPromptFiles, err := resolvePromptOptions(*promptDir, promptFiles)
+	if err != nil {
+		return err
 	}
 	for _, path := range []string{*outputPath, *runtimePath, *eventsPath, *dbPath, *transcriptPath, *digestPath} {
 		if strings.TrimSpace(path) == "" {
@@ -124,7 +131,6 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 	if err != nil {
 		return err
 	}
-
 	runtimeLimits := runner.RuntimeLimits{
 		LLMTimeoutSeconds:     *timeoutSeconds,
 		RoleAPITimeoutSeconds: *roleAPITimeoutSeconds,
@@ -150,6 +156,8 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 		Runtime:           runtimeLimits,
 		Offline:           *offline,
 		PolicyOverrides:   policyOverrides,
+		PromptDir:         resolvedPromptDir,
+		PromptFiles:       resolvedPromptFiles,
 	})
 	if err != nil {
 		return err
@@ -172,7 +180,12 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 	if err := report.WriteTranscript(strings.TrimSpace(*transcriptPath), result); err != nil {
 		return err
 	}
-	digestErr := report.WriteDigestWithClient(strings.TrimSpace(*digestPath), result, strings.TrimSpace(*reportModel), client)
+	digestErr := report.WriteDigestWithOptions(strings.TrimSpace(*digestPath), result, report.DigestOptions{
+		Model:       strings.TrimSpace(*reportModel),
+		Client:      client,
+		PromptDir:   resolvedPromptDir,
+		PromptFiles: resolvedPromptFiles,
+	})
 	accountingErr := r.RefreshProviderAccounting(&result)
 	if err := errors.Join(digestErr, accountingErr); err != nil {
 		return err

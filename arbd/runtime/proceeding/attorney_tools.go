@@ -454,14 +454,9 @@ func (rc *runContext) attorneyView(opportunity Opportunity) map[string]any {
 	}
 }
 
-func (rc *runContext) attorneyCapabilitySection(role string, opportunityID string) string {
-	return fmt.Sprintf("Use the Lawyer API as role %s. GET returns the current prompt, available tools, opportunity id, live deadline, and attempts left. POST executes one tool call and must include the current turn.opportunity_id. For this turn, opportunity_id is %s.", role, opportunityID)
-}
-
 func (rc *runContext) buildAttorneyPrompt(opportunity Opportunity) (string, error) {
 	view := rc.attorneyView(opportunity)
 	visibleFilesSection := ""
-	workspaceSection := "Use list_evidence, stat_evidence, and read_evidence_range when exact evidence bytes matter. Do not reconstruct byte-sensitive evidence by hand. Use evidence_id plus hash as record identity.\n"
 	workProductSection := ""
 	if opportunity.Phase == "arguments" || opportunity.Phase == "rebuttals" || opportunity.Phase == "surrebuttals" {
 		visibleEvidence, err := marshalIndented("visible evidence", rc.listVisibleEvidence())
@@ -478,34 +473,68 @@ func (rc *runContext) buildAttorneyPrompt(opportunity Opportunity) (string, erro
 	if err != nil {
 		return "", err
 	}
-	common, err := rc.cfg.renderPromptFile("attorney-common.md", map[string]string{
+	componentValues := map[string]string{
+		"ROLE":           opportunity.Role,
+		"PHASE":          opportunity.Phase,
+		"OPPORTUNITY_ID": opportunity.ID,
+	}
+	capabilitiesSection, err := rc.cfg.renderPromptFile(promptAttorneyCapabilities, componentValues)
+	if err != nil {
+		return "", err
+	}
+	workspaceSection, err := rc.cfg.renderPromptFile(promptAttorneyWorkspace, componentValues)
+	if err != nil {
+		return "", err
+	}
+	limitsSection, err := rc.attorneyLimitsSection(opportunity)
+	if err != nil {
+		return "", err
+	}
+	values := map[string]string{
 		"ROLE":                       opportunity.Role,
 		"PHASE":                      opportunity.Phase,
 		"OBJECTIVE":                  opportunity.Objective,
 		"OPPORTUNITY_ID":             opportunity.ID,
 		"QUESTION":                   rc.complaint.Question,
 		"JUDGMENT_STANDARD":          currentJudgmentStandard(rc.state, rc.cfg.Policy),
-		"MODEL_CAPABILITIES_SECTION": rc.attorneyCapabilitySection(opportunity.Role, opportunity.ID),
+		"MODEL_CAPABILITIES_SECTION": capabilitiesSection,
 		"CURRENT_RECORD":             record,
-		"LIMITS_SECTION":             rc.attorneyLimitsSection(opportunity),
+		"LIMITS_SECTION":             limitsSection,
 		"COUNCIL":                    council,
 		"VISIBLE_CASE_FILES_SECTION": visibleFilesSection,
 		"WORKSPACE_SECTION":          workspaceSection,
 		"WORK_PRODUCT_SECTION":       workProductSection,
 		"DECISION_TOOLS":             strings.Join(decisionToolEnum(opportunity.AllowedTools), ", "),
+	}
+	standing, err := rc.cfg.renderPromptFile(promptAttorneyStanding, values)
+	if err != nil {
+		return "", err
+	}
+	common, err := rc.cfg.renderPromptFile(promptAttorneyCommon, values)
+	if err != nil {
+		return "", err
+	}
+	phaseID, err := attorneyPromptID(opportunity.Phase)
+	if err != nil {
+		return "", err
+	}
+	phaseText, err := rc.cfg.renderPromptFile(phaseID, values)
+	if err != nil {
+		return "", err
+	}
+	finalize, err := rc.cfg.renderPromptFile(promptAttorneyFinalize, values)
+	if err != nil {
+		return "", err
+	}
+	return rc.cfg.renderPromptFile(promptAttorney, map[string]string{
+		"ATTORNEY_STANDING": standing,
+		"ATTORNEY_COMMON":   common,
+		"ATTORNEY_PHASE":    phaseText,
+		"ATTORNEY_FINALIZE": finalize,
+		"ROLE":              opportunity.Role,
+		"PHASE":             opportunity.Phase,
+		"OPPORTUNITY_ID":    opportunity.ID,
 	})
-	if err != nil {
-		return "", err
-	}
-	phaseFile, err := attorneyPromptFile(opportunity.Phase)
-	if err != nil {
-		return "", err
-	}
-	phaseText, err := rc.cfg.renderPromptFile(phaseFile, nil)
-	if err != nil {
-		return "", err
-	}
-	return common + "\n\n" + phaseText + "\n\nSubmit the legal act with submit_decision before the deadline.", nil
 }
 
 func (rc *runContext) prepareSubmittedEvidence(opportunity Opportunity, params map[string]any) (SubmittedEvidenceMeta, []byte, error) {
@@ -796,50 +825,57 @@ func (rc *runContext) attorneyLimits(opportunity Opportunity) map[string]any {
 	return limits
 }
 
-func (rc *runContext) attorneyLimitsSection(opportunity Opportunity) string {
+func (rc *runContext) attorneyLimitsSection(opportunity Opportunity) (string, error) {
 	limits := rc.attorneyLimits(opportunity)
-	lines := []string{}
-	if limit, _ := limits["text_char_limit"].(int); limit > 0 {
-		lines = append(lines, fmt.Sprintf("Text limit for this submission: %d characters.", limit))
-		lines = append(lines, fmt.Sprintf("Target length for the first submission: %d characters or less.", targetSubmissionCharLimit(limit)))
+	values := map[string]string{
+		"ROLE":           opportunity.Role,
+		"PHASE":          opportunity.Phase,
+		"OPPORTUNITY_ID": opportunity.ID,
 	}
+	textLimitsSection := ""
+	if limit, _ := limits["text_char_limit"].(int); limit > 0 {
+		values["TEXT_CHAR_LIMIT"] = fmt.Sprintf("%d", limit)
+		values["TARGET_TEXT_CHAR_LIMIT"] = fmt.Sprintf("%d", targetSubmissionCharLimit(limit))
+		var err error
+		textLimitsSection, err = rc.cfg.renderPromptFile(promptAttorneyTextLimits, values)
+		if err != nil {
+			return "", err
+		}
+	}
+	evidenceLimitsSection := ""
 	switch opportunity.Phase {
 	case "arguments", "rebuttals", "surrebuttals":
-		lines = append(lines,
-			fmt.Sprintf(
-				"Exhibits: at most %d in this filing. This side has used %d of %d total, with %d left.",
-				limits["max_exhibits_per_filing"].(int),
-				limits["used_exhibits_for_side"].(int),
-				limits["max_exhibits_per_side"].(int),
-				limits["remaining_exhibits_for_side"].(int),
-			),
-		)
-		lines = append(lines,
-			fmt.Sprintf(
-				"Technical reports: at most %d in this filing. This side has used %d of %d total, with %d left.",
-				limits["max_reports_per_filing"].(int),
-				limits["used_reports_for_side"].(int),
-				limits["max_reports_per_side"].(int),
-				limits["remaining_reports_for_side"].(int),
-			),
-		)
-		lines = append(lines,
-			fmt.Sprintf(
-				"Submitted evidence: admitted items may be at most %d bytes. Direct submit_evidence items may be at most %d bytes; chunked evidence uploads may be at most %d bytes with %d-byte chunks. This side has submitted %d of %d total, with %d left.",
-				limits["max_submitted_evidence_bytes"].(int),
-				limits["max_direct_submitted_evidence_bytes"].(int),
-				limits["max_evidence_upload_bytes"].(int),
-				limits["max_evidence_chunk_bytes"].(int),
-				limits["used_submitted_evidence_for_side"].(int),
-				limits["max_submitted_evidence_per_side"].(int),
-				limits["remaining_submitted_evidence_for_side"].(int),
-			),
-		)
-		lines = append(lines, fmt.Sprintf("Evidence reads: at most %d bytes per read, %d reads per opportunity, and %d bytes total per opportunity.", limits["max_evidence_read_bytes"].(int), limits["max_evidence_reads_per_opportunity"].(int), limits["max_evidence_read_bytes_per_opportunity"].(int)))
-		lines = append(lines, "Use only visible case evidence_id values in offered_evidence. Submit new source material first with submit_evidence, then cite the returned evidence_id in offered_evidence. Use evidence_id and hash for custody checks and exact byte inspection.")
-		lines = append(lines, "Use technical_reports for attorney analysis or synthesized work product, not as a substitute for source evidence when exact source content matters.")
+		for token, key := range map[string]string{
+			"MAX_EXHIBITS_PER_FILING":                 "max_exhibits_per_filing",
+			"USED_EXHIBITS_FOR_SIDE":                  "used_exhibits_for_side",
+			"MAX_EXHIBITS_PER_SIDE":                   "max_exhibits_per_side",
+			"REMAINING_EXHIBITS_FOR_SIDE":             "remaining_exhibits_for_side",
+			"MAX_REPORTS_PER_FILING":                  "max_reports_per_filing",
+			"USED_REPORTS_FOR_SIDE":                   "used_reports_for_side",
+			"MAX_REPORTS_PER_SIDE":                    "max_reports_per_side",
+			"REMAINING_REPORTS_FOR_SIDE":              "remaining_reports_for_side",
+			"MAX_SUBMITTED_EVIDENCE_BYTES":            "max_submitted_evidence_bytes",
+			"MAX_DIRECT_SUBMITTED_EVIDENCE_BYTES":     "max_direct_submitted_evidence_bytes",
+			"MAX_EVIDENCE_UPLOAD_BYTES":               "max_evidence_upload_bytes",
+			"MAX_EVIDENCE_CHUNK_BYTES":                "max_evidence_chunk_bytes",
+			"USED_SUBMITTED_EVIDENCE_FOR_SIDE":        "used_submitted_evidence_for_side",
+			"MAX_SUBMITTED_EVIDENCE_PER_SIDE":         "max_submitted_evidence_per_side",
+			"REMAINING_SUBMITTED_EVIDENCE_FOR_SIDE":   "remaining_submitted_evidence_for_side",
+			"MAX_EVIDENCE_READ_BYTES":                 "max_evidence_read_bytes",
+			"MAX_EVIDENCE_READS_PER_OPPORTUNITY":      "max_evidence_reads_per_opportunity",
+			"MAX_EVIDENCE_READ_BYTES_PER_OPPORTUNITY": "max_evidence_read_bytes_per_opportunity",
+		} {
+			values[token] = fmt.Sprintf("%d", limits[key].(int))
+		}
+		var err error
+		evidenceLimitsSection, err = rc.cfg.renderPromptFile(promptAttorneyEvidenceLimits, values)
+		if err != nil {
+			return "", err
+		}
 	}
-	return strings.Join(lines, "\n")
+	values["TEXT_LIMITS_SECTION"] = textLimitsSection
+	values["EVIDENCE_LIMITS_SECTION"] = evidenceLimitsSection
+	return rc.cfg.renderPromptFile(promptAttorneyLimits, values)
 }
 
 func targetSubmissionCharLimit(limit int) int {

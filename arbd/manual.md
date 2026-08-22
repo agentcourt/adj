@@ -47,8 +47,7 @@ The packet records the outcome, engine state, procedural sequence, off-record pl
 | `runtime/spec/` | Complaint parser. |
 | `engine/` | Lean degree-arbitration engine and proofs. |
 | `etc/policy.json` | Default case policy. |
-| `prompts/` | Lawyer and council prompt files used by the case runner. |
-| `attorney-instructions/` | Standing instructions supplied to lawyer clients. |
+| `../prompts/arbd/` | Complete editable AARD prompt set. |
 | `examples/` | Complaints and initial case files. |
 
 ## Build And Environment
@@ -165,7 +164,7 @@ Successful verification prints a JSON object containing `status: "ok"`, the case
 ### Example
 
 ```bash
-.bin/aard case --complaint examples/ex1/complaint.md --out-dir out/ex1-direct
+.bin/aard case --complaint examples/ex1/complaint.md --prompt-dir ../prompts/arbd --out-dir out/ex1-direct
 ```
 
 ### Flags
@@ -178,11 +177,8 @@ Successful verification prints a JSON object containing `status: "ok"`, the case
 | `--policy` | Policy JSON file.  Defaults to `./etc/policy.json` when present. |
 | `--council-size` | Override `policy.council_size`. |
 | `--judgment-standard` | Override `policy.judgment_standard`. |
-| `--attorney-instructions` | Standing attorney instructions file. |
-| `--prompt-dir` | Prompt directory override. |
-| `--attorney-common-prompt` | Attorney common prompt file override. |
-| `--attorney-arguments-prompt` | Attorney arguments prompt file override. |
-| `--attorney-rebuttals-prompt` | Attorney rebuttals prompt file override. |
+| `--prompt-file` | Prompt override in `ID=PATH` form.  May repeat. |
+| `--prompt-dir` | Complete prompt directory.  Every non-overridden catalog file is required. |
 | `--common-root` | Shared `common/` tree for council pool and personas. |
 | `--council-pool` | Council JSONL request-spec pool. |
 | `--caseapi-addr` | Private Case API listen address.  Default: `127.0.0.1:0`. |
@@ -201,6 +197,67 @@ The default council backend is `direct`.  Direct mode passes the rendered final 
 Both backends write operator records under `council-turns/`.  Each `input.json` uses schema `aard.council-turn-snapshot.v0`, and the sibling `prompt.txt` contains the rendered prompt.  A direct model receives the prompt through its provider request rather than reading these snapshot files.
 
 The Case API provides `GET /health` on the listener.  It returns HTTP `200` with JSON containing `ok`, `case_id`, and `run_id` after the process has bound its address.  The listener address printed to stderr becomes the base for both role APIs.
+
+## Prompt Configuration
+
+Prompt resolution follows four levels: an individual file override, the complete `--prompt-dir` set, the conventional file under the process working directory, and the compiled fallback.  `--prompt-file ID=PATH` may repeat and provides partial overrides.  A supplied prompt directory must contain every catalog filename that an individual override does not replace.
+
+Conventional files live under `prompts/arbd/` relative to the process working directory.  The checked-in set has that layout from the repository root; a command run from `arbd/` selects it with `--prompt-dir ../prompts/arbd`.  Each source undergoes token validation before runtime values are inserted, so unknown `{{...}}` sequences fail while brace text inside a runtime value remains literal.
+
+A template may omit any available token, and replacement uses literal strings rather than Go template evaluation.  The `--prompt-dir` paths in the tables are relative to the supplied directory.  The case-runtime catalog contains 45 IDs: 27 instruction entries and 18 tool or schema-description entries.  Every entry in the second table accepts `{{TOOL_NAME}}` and `{{READ_ONLY}}`; the checked-in files contain the complete description and need neither token.
+
+| Prompt ID | `--prompt-dir` path | Available replacement tokens |
+| --- | --- | --- |
+| `attorney.wrapper` | `attorney/wrapper.md` | `{{ATTORNEY_STANDING}}`, `{{ATTORNEY_COMMON}}`, `{{ATTORNEY_PHASE}}`, `{{ATTORNEY_FINALIZE}}`, `{{ROLE}}`, `{{PHASE}}`, `{{OPPORTUNITY_ID}}` |
+| `attorney.common` | `attorney/common.md` | `{{ROLE}}`, `{{PHASE}}`, `{{OBJECTIVE}}`, `{{OPPORTUNITY_ID}}`, `{{QUESTION}}`, `{{JUDGMENT_STANDARD}}`, `{{MODEL_CAPABILITIES_SECTION}}`, `{{CURRENT_RECORD}}`, `{{LIMITS_SECTION}}`, `{{COUNCIL}}`, `{{VISIBLE_CASE_FILES_SECTION}}`, `{{WORKSPACE_SECTION}}`, `{{WORK_PRODUCT_SECTION}}`, `{{DECISION_TOOLS}}` |
+| `attorney.standing` | `attorney/standing.md` | `{{ROLE}}`, `{{PHASE}}`, `{{OPPORTUNITY_ID}}` |
+| `attorney.capabilities` | `attorney/capabilities.md` | `{{ROLE}}`, `{{PHASE}}`, `{{OPPORTUNITY_ID}}` |
+| `attorney.workspace` | `attorney/workspace.md` | `{{ROLE}}`, `{{PHASE}}`, `{{OPPORTUNITY_ID}}` |
+| `attorney.limits.wrapper` | `attorney/limits/wrapper.md` | `{{TEXT_LIMITS_SECTION}}`, `{{EVIDENCE_LIMITS_SECTION}}`, `{{ROLE}}`, `{{PHASE}}`, `{{OPPORTUNITY_ID}}` |
+| `attorney.limits.text` | `attorney/limits/text.md` | `{{TEXT_CHAR_LIMIT}}`, `{{TARGET_TEXT_CHAR_LIMIT}}`, `{{ROLE}}`, `{{PHASE}}`, `{{OPPORTUNITY_ID}}` |
+| `attorney.limits.evidence` | `attorney/limits/evidence.md` | `{{MAX_EXHIBITS_PER_FILING}}`, `{{USED_EXHIBITS_FOR_SIDE}}`, `{{MAX_EXHIBITS_PER_SIDE}}`, `{{REMAINING_EXHIBITS_FOR_SIDE}}`, `{{MAX_REPORTS_PER_FILING}}`, `{{USED_REPORTS_FOR_SIDE}}`, `{{MAX_REPORTS_PER_SIDE}}`, `{{REMAINING_REPORTS_FOR_SIDE}}`, `{{MAX_SUBMITTED_EVIDENCE_BYTES}}`, `{{MAX_DIRECT_SUBMITTED_EVIDENCE_BYTES}}`, `{{MAX_EVIDENCE_UPLOAD_BYTES}}`, `{{MAX_EVIDENCE_CHUNK_BYTES}}`, `{{USED_SUBMITTED_EVIDENCE_FOR_SIDE}}`, `{{MAX_SUBMITTED_EVIDENCE_PER_SIDE}}`, `{{REMAINING_SUBMITTED_EVIDENCE_FOR_SIDE}}`, `{{MAX_EVIDENCE_READ_BYTES}}`, `{{MAX_EVIDENCE_READS_PER_OPPORTUNITY}}`, `{{MAX_EVIDENCE_READ_BYTES_PER_OPPORTUNITY}}`, `{{ROLE}}`, `{{PHASE}}`, `{{OPPORTUNITY_ID}}` |
+| `attorney.phase.openings` | `attorney/phase/openings.md` | `{{ROLE}}`, `{{PHASE}}`, `{{OBJECTIVE}}`, `{{OPPORTUNITY_ID}}`, `{{QUESTION}}`, `{{JUDGMENT_STANDARD}}`, `{{DECISION_TOOLS}}` |
+| `attorney.phase.arguments` | `attorney/phase/arguments.md` | Same as `attorney.phase.openings`. |
+| `attorney.phase.rebuttals` | `attorney/phase/rebuttals.md` | Same as `attorney.phase.openings`. |
+| `attorney.phase.surrebuttals` | `attorney/phase/surrebuttals.md` | Same as `attorney.phase.openings`. |
+| `attorney.phase.closings` | `attorney/phase/closings.md` | Same as `attorney.phase.openings`. |
+| `attorney.finalize` | `attorney/finalize.md` | `{{ROLE}}`, `{{PHASE}}`, `{{OPPORTUNITY_ID}}`, `{{DECISION_TOOLS}}` |
+| `council.system` | `council/system.md` | `{{MEMBER_ID}}`, `{{DELIBERATION_ROUND}}`, `{{QUESTION}}`, `{{JUDGMENT_STANDARD}}`, `{{PERSONA_SECTION}}`, `{{RECORD}}`, `{{OPPORTUNITY_ID}}`, `{{OBJECTIVE}}` |
+| `council.persona` | `council/persona.md` | `{{PERSONA}}`, `{{MEMBER_ID}}`, `{{MODEL}}`, `{{PERSONA_FILE}}`, `{{OPPORTUNITY_ID}}` |
+| `council.direct.request` | `council/direct/request.md` | `{{COUNCIL_TOOL}}`, `{{MEMBER_ID}}`, `{{OPPORTUNITY_ID}}` |
+| `council.direct.repair` | `council/direct/repair.md` | `{{CORRECTION}}`, `{{REPAIR_KIND}}`, `{{COUNCIL_TOOL}}`, `{{SUBMISSION_FIELDS}}`, `{{MEMBER_ID}}`, `{{OPPORTUNITY_ID}}`, `{{SIZE_BYTES}}`, `{{LIMIT_BYTES}}` |
+| `council.direct.repair.malformed_arguments` | `council/direct/repair/malformed-arguments.md` | `{{COUNCIL_TOOL}}`, `{{SUBMISSION_FIELDS}}`, `{{MEMBER_ID}}`, `{{OPPORTUNITY_ID}}` |
+| `council.direct.repair.response_too_large` | `council/direct/repair/response-too-large.md` | `{{COUNCIL_TOOL}}`, `{{SUBMISSION_FIELDS}}`, `{{MEMBER_ID}}`, `{{OPPORTUNITY_ID}}`, `{{SIZE_BYTES}}`, `{{LIMIT_BYTES}}` |
+| `council.direct.repair.tool_call_count` | `council/direct/repair/tool-call-count.md` | `{{COUNCIL_TOOL}}`, `{{SUBMISSION_FIELDS}}`, `{{MEMBER_ID}}`, `{{OPPORTUNITY_ID}}` |
+| `council.direct.repair.wrong_tool` | `council/direct/repair/wrong-tool.md` | `{{COUNCIL_TOOL}}`, `{{SUBMISSION_FIELDS}}`, `{{MEMBER_ID}}`, `{{OPPORTUNITY_ID}}` |
+| `council.direct.repair.invalid_arguments` | `council/direct/repair/invalid-arguments.md` | `{{REASON}}`, `{{COUNCIL_TOOL}}`, `{{SUBMISSION_FIELDS}}`, `{{MEMBER_ID}}`, `{{OPPORTUNITY_ID}}` |
+| `council.api` | `council/api.md` | `{{COUNCIL_SYSTEM}}`, `{{COUNCIL_TOOL}}`, `{{SUBMISSION_FIELDS}}`, `{{MEMBER_ID}}`, `{{OPPORTUNITY_ID}}` |
+| `council.preflight.system` | `council/preflight/system.md` | `{{MEMBER_ID}}`, `{{MODEL}}`, `{{PERSONA_FILE}}` |
+| `council.preflight.user` | `council/preflight/user.md` | `{{MEMBER_ID}}`, `{{MODEL}}`, `{{PERSONA_FILE}}` |
+| `observer` | `observer.md` | `{{CASE_ID}}` |
+
+| Tool or schema-description prompt ID | `--prompt-dir` path |
+| --- | --- |
+| `tool.case_status` | `tools/case-status.md` |
+| `tool.lawyer.get_case` | `tools/lawyer/get-case.md` |
+| `tool.observer.get_case` | `tools/observer/get-case.md` |
+| `tool.council.get_case` | `tools/council/get-case.md` |
+| `tool.send_work_notes` | `tools/send-work-notes.md` |
+| `tool.get_turn` | `tools/get-turn.md` |
+| `tool.list_events` | `tools/list-events.md` |
+| `tool.list_evidence` | `tools/list-evidence.md` |
+| `tool.stat_evidence` | `tools/stat-evidence.md` |
+| `tool.observer.stat_evidence` | `tools/observer/stat-evidence.md` |
+| `tool.read_evidence_range` | `tools/read-evidence-range.md` |
+| `tool.begin_evidence_upload` | `tools/begin-evidence-upload.md` |
+| `tool.write_evidence_chunk` | `tools/write-evidence-chunk.md` |
+| `tool.commit_evidence_upload` | `tools/commit-evidence-upload.md` |
+| `tool.submit_evidence` | `tools/submit-evidence.md` |
+| `tool.submit_decision` | `tools/submit-decision.md` |
+| `tool.submit_council_answer` | `tools/submit-council-answer.md` |
+| `tool.send_work_notes.property.notes` | `tools/send-work-notes/property-notes.md` |
+
+The Go API exposes the same partial map as `Options.PromptFiles` and `Config.PromptFiles`; `PromptIDs` returns the accepted identifiers.  The case-owned Lawyer API supplies all lawyer prompts and tools to external clients, including clients reached through an MCP adapter.  Neither prompt resolution nor role execution depends on `adjservices`; the broader [prompt authoring guide](../docs/prompt-authoring.md) covers editing and evaluation practice.
 
 ## Lawyer API
 

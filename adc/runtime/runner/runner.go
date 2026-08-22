@@ -12,6 +12,7 @@ import (
 
 	"github.com/jsmorph/adj/adc/runtime/courts"
 	"github.com/jsmorph/adj/adc/runtime/lean"
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 	"github.com/jsmorph/adj/adc/runtime/store"
 	"github.com/jsmorph/adj/common/casemanifest"
@@ -34,6 +35,8 @@ type Config struct {
 	Offline           bool
 	Runtime           RuntimeLimits
 	PolicyOverrides   map[string]any
+	PromptDir         string
+	PromptFiles       map[string]string
 }
 
 type TurnLog struct {
@@ -80,6 +83,8 @@ type Runner struct {
 	jurorPersonaAssignments map[string]jurorPersonaPair
 	externalRoles           map[string]bool
 	roleAPI                 *roleAPIServer
+	prompts                 *adcprompts.Catalog
+	schemaDescriptions      map[string]map[string]string
 }
 
 func (r *Runner) RequiresLLMTurns() bool {
@@ -115,6 +120,14 @@ func New(st *store.Store, le lean.Engine, client *openai.Client, jurorClient *op
 	if err != nil {
 		return nil, err
 	}
+	promptCatalog, err := adcprompts.Load(adcprompts.Options{PromptDir: cfg.PromptDir, PromptFiles: cfg.PromptFiles})
+	if err != nil {
+		return nil, err
+	}
+	schemaDescriptions, err := loadSchemaPropertyDescriptions(promptCatalog)
+	if err != nil {
+		return nil, err
+	}
 	r := &Runner{
 		scenario:                scenario,
 		lean:                    le,
@@ -127,6 +140,8 @@ func New(st *store.Store, le lean.Engine, client *openai.Client, jurorClient *op
 		workProductDirs:         map[string]string{},
 		jurorPersonaAssignments: map[string]jurorPersonaPair{},
 		externalRoles:           externalRoleSet(cfg.ExternalRoles),
+		prompts:                 promptCatalog,
+		schemaDescriptions:      schemaDescriptions,
 	}
 	if strings.TrimSpace(cfg.JurorPersonasPath) != "" {
 		pool, err := loadJurorPersonaPool(cfg.JurorPersonasPath, cfg.ScenarioBaseDir)

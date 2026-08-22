@@ -1,0 +1,14 @@
+Printer: Great Lakes Commercial Print
+Invoice: GLP-2026-0311-044
+Invoice date: 2026-03-11
+Customer: Peter
+Project: "Claws" essay and client briefing package
+
+Line items:
+- 1,000 full-color essay booklets, 48 pages, saddle stitched: $68,000
+- Cover stock upgrade and proof cycle: $7,000
+- Rush setup and press scheduling: $5,000
+- Freight to Peter's warehouse: $5,000
+
+Total due: $85,000
+Status: invoiced and approved for payment

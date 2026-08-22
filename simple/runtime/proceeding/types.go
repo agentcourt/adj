@@ -10,13 +10,13 @@ import (
 )
 
 const (
-	RunSchemaVersion      = "simple.run.v1"
+	RunSchemaVersion      = "simple.run.v2"
 	InputSchemaVersion    = "simple.input.v1"
-	RuntimeSchemaVersion  = "simple.runtime.v1"
+	RuntimeSchemaVersion  = "simple.runtime.v2"
 	DecisionSchemaVersion = "simple.decision.v1"
-	StateSchemaVersion    = "simple.state.v1"
-	RequestSchemaVersion  = "simple.model-request.v1"
-	ResponseSchemaVersion = "simple.model-response.v1"
+	StateSchemaVersion    = "simple.state.v2"
+	RequestSchemaVersion  = "simple.model-request.v2"
+	ResponseSchemaVersion = "simple.model-response.v2"
 	EventSchemaVersion    = "simple.event.v1"
 
 	DefaultCaseID          = "simple-1"
@@ -32,18 +32,30 @@ type Options struct {
 	RunID             string
 	RequestSpecPath   string
 	Model             string
+	ReasoningEffort   string
+	MaxOutputTokens   int64
+	MaxToolCalls      int64
 	EvidenceStandard  string
+	PromptDir         string
+	PromptFiles       map[string]string
 	AllowAPIKey       bool
+	WebSearch         *bool
 	MaxDocuments      int
 	MaxDocumentBytes  int64
 	MaxDocumentsBytes int64
 	TimeoutSeconds    int
+	developerPrompt   string
+	prompts           map[string]string
 }
 
 type Runtime struct {
 	SchemaVersion          string `json:"schema_version"`
 	EvidenceStandard       string `json:"evidence_standard"`
 	AllowAPIKey            bool   `json:"allow_api_key"`
+	WebSearchEnabled       bool   `json:"web_search_enabled"`
+	ReasoningEffort        string `json:"reasoning_effort"`
+	MaxOutputTokens        int64  `json:"max_output_tokens"`
+	MaxToolCalls           int64  `json:"max_tool_calls"`
 	MaxDocuments           int    `json:"max_documents"`
 	MaxDocumentBytes       int64  `json:"max_document_bytes"`
 	MaxDocumentsBytes      int64  `json:"max_documents_bytes"`
@@ -54,6 +66,13 @@ type Runtime struct {
 type Decision struct {
 	Value     string `json:"value"`
 	Rationale string `json:"rationale"`
+}
+
+type WebSearchSummary struct {
+	Enabled       bool `json:"enabled"`
+	CallCount     int  `json:"call_count"`
+	SourceCount   int  `json:"source_count"`
+	CitationCount int  `json:"citation_count"`
 }
 
 type Result struct {
@@ -71,6 +90,10 @@ type Result struct {
 	Error            string               `json:"error,omitempty"`
 	ErrorClass       string               `json:"error_class,omitempty"`
 	ResponseID       string               `json:"response_id,omitempty"`
+	WebSearch        WebSearchSummary     `json:"web_search"`
+	ReasoningEffort  string               `json:"reasoning_effort"`
+	MaxOutputTokens  int64                `json:"max_output_tokens"`
+	MaxToolCalls     int64                `json:"max_tool_calls"`
 	Provider         openaiapi.Accounting `json:"provider"`
 	Documents        documents.Manifest   `json:"documents"`
 }
@@ -125,6 +148,10 @@ type StateRecord struct {
 	Decision         *Decision          `json:"decision,omitempty"`
 	Error            string             `json:"error,omitempty"`
 	ErrorClass       string             `json:"error_class,omitempty"`
+	WebSearch        WebSearchSummary   `json:"web_search"`
+	ReasoningEffort  string             `json:"reasoning_effort"`
+	MaxOutputTokens  int64              `json:"max_output_tokens"`
+	MaxToolCalls     int64              `json:"max_tool_calls"`
 }
 
 type ModelRequestRecord struct {
@@ -134,24 +161,30 @@ type ModelRequestRecord struct {
 	Proposition      string            `json:"proposition"`
 	EvidenceStandard string            `json:"evidence_standard"`
 	Documents        []documents.File  `json:"documents"`
+	WebSearchEnabled bool              `json:"web_search_enabled"`
+	ReasoningEffort  string            `json:"reasoning_effort"`
+	MaxOutputTokens  int64             `json:"max_output_tokens"`
+	MaxToolCalls     int64             `json:"max_tool_calls"`
 	Tools            []map[string]any  `json:"tools"`
 	Error            string            `json:"error,omitempty"`
 }
 
 type ModelResponseRecord struct {
-	SchemaVersion           string           `json:"schema_version"`
-	Status                  string           `json:"status"`
-	ResponseID              string           `json:"response_id,omitempty"`
-	Text                    string           `json:"text,omitempty"`
-	ToolCalls               []ToolCallRecord `json:"tool_calls,omitempty"`
-	RawResponse             string           `json:"raw_response,omitempty"`
-	ProviderMetadata        map[string]any   `json:"provider_metadata,omitempty"`
-	ProviderGeneration      map[string]any   `json:"provider_generation,omitempty"`
-	ProviderGenerationError string           `json:"provider_generation_error,omitempty"`
-	ProviderUsage           *openaiapi.Usage `json:"provider_usage,omitempty"`
-	RecoveredCostUSD        *float64         `json:"recovered_cost_usd,omitempty"`
-	Error                   string           `json:"error,omitempty"`
-	ErrorClass              string           `json:"error_class,omitempty"`
+	SchemaVersion           string                    `json:"schema_version"`
+	Status                  string                    `json:"status"`
+	ResponseID              string                    `json:"response_id,omitempty"`
+	Text                    string                    `json:"text,omitempty"`
+	ToolCalls               []ToolCallRecord          `json:"tool_calls,omitempty"`
+	WebSearchCalls          []openaiapi.WebSearchCall `json:"web_search_calls,omitempty"`
+	URLCitations            []openaiapi.URLCitation   `json:"url_citations,omitempty"`
+	RawResponse             string                    `json:"raw_response,omitempty"`
+	ProviderMetadata        map[string]any            `json:"provider_metadata,omitempty"`
+	ProviderGeneration      map[string]any            `json:"provider_generation,omitempty"`
+	ProviderGenerationError string                    `json:"provider_generation_error,omitempty"`
+	ProviderUsage           *openaiapi.Usage          `json:"provider_usage,omitempty"`
+	RecoveredCostUSD        *float64                  `json:"recovered_cost_usd,omitempty"`
+	Error                   string                    `json:"error,omitempty"`
+	ErrorClass              string                    `json:"error_class,omitempty"`
 }
 
 type ToolCallRecord struct {

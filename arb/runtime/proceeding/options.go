@@ -43,23 +43,11 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	resolvedAttorneyInstructionsPath, err := resolveAttorneyInstructionsPath(opts.AttorneyInstructionsPath)
-	if err != nil {
-		return Result{}, err
-	}
 	resolvedPromptDir, err := resolvePromptDir(opts.PromptDir)
 	if err != nil {
 		return Result{}, err
 	}
-	resolvedAttorneyCommonPrompt, err := resolvePromptFile("attorney common prompt", opts.AttorneyCommonPromptPath)
-	if err != nil {
-		return Result{}, err
-	}
-	resolvedAttorneyArgumentPrompt, err := resolvePromptFile("attorney arguments prompt", opts.AttorneyArgumentPromptPath)
-	if err != nil {
-		return Result{}, err
-	}
-	resolvedAttorneyRebuttalPrompt, err := resolvePromptFile("attorney rebuttals prompt", opts.AttorneyRebuttalPromptPath)
+	resolvedPromptFiles, err := resolvePromptFiles(opts.PromptFiles)
 	if err != nil {
 		return Result{}, err
 	}
@@ -117,23 +105,20 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		enginePath = DefaultEnginePath()
 	}
 	cfg := Config{
-		CaseID:                     strings.TrimSpace(opts.CaseID),
-		RunID:                      effectiveRunID,
-		ComplaintPath:              opts.ComplaintPath,
-		CaseFilePaths:              explicitCaseFiles,
-		OutputDir:                  opts.OutputDir,
-		CommonRoot:                 commonRootResolved,
-		CouncilPoolPath:            councilPoolPath,
-		AttorneyInstructionsPath:   resolvedAttorneyInstructionsPath,
-		PromptDir:                  resolvedPromptDir,
-		AttorneyCommonPromptPath:   resolvedAttorneyCommonPrompt,
-		AttorneyArgumentPromptPath: resolvedAttorneyArgumentPrompt,
-		AttorneyRebuttalPromptPath: resolvedAttorneyRebuttalPrompt,
-		CaseAPIAddr:                strings.TrimSpace(opts.CaseAPIAddr),
-		Policy:                     policy,
-		Runtime:                    runtimeLimits,
-		CouncilBackend:             NormalizeCouncilBackend(opts.CouncilBackend),
-		Engine:                     lean.New([]string{enginePath}),
+		CaseID:          strings.TrimSpace(opts.CaseID),
+		RunID:           effectiveRunID,
+		ComplaintPath:   opts.ComplaintPath,
+		CaseFilePaths:   explicitCaseFiles,
+		OutputDir:       opts.OutputDir,
+		CommonRoot:      commonRootResolved,
+		CouncilPoolPath: councilPoolPath,
+		PromptDir:       resolvedPromptDir,
+		PromptFiles:     resolvedPromptFiles,
+		CaseAPIAddr:     strings.TrimSpace(opts.CaseAPIAddr),
+		Policy:          policy,
+		Runtime:         runtimeLimits,
+		CouncilBackend:  NormalizeCouncilBackend(opts.CouncilBackend),
+		Engine:          lean.New([]string{enginePath}),
 	}
 	return runConfigured(ctx, cfg, complaint)
 }
@@ -240,33 +225,22 @@ func loadCasePolicy(pathValue string) (Policy, error) {
 	return policy, nil
 }
 
-func defaultAttorneyInstructionsPath() string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return ""
+func resolvePromptFiles(files map[string]string) (map[string]string, error) {
+	if err := validatePromptFileIDs(files); err != nil {
+		return nil, err
 	}
-	path := filepath.Join(cwd, "attorney-instructions", "default.md")
-	if _, err := os.Stat(path); err != nil {
-		return ""
+	resolved := make(map[string]string, len(files))
+	ids := make([]string, 0, len(files))
+	for id := range files {
+		ids = append(ids, id)
 	}
-	return path
-}
-
-func resolveAttorneyInstructionsPath(pathValue string) (string, error) {
-	path := strings.TrimSpace(pathValue)
-	if path == "" {
-		return defaultAttorneyInstructionsPath(), nil
-	}
-	resolved, err := filepath.Abs(path)
-	if err != nil {
-		return "", fmt.Errorf("resolve attorney instructions %s: %w", path, err)
-	}
-	info, err := os.Stat(resolved)
-	if err != nil {
-		return "", fmt.Errorf("stat attorney instructions %s: %w", resolved, err)
-	}
-	if info.IsDir() {
-		return "", fmt.Errorf("attorney instructions %s must be a file", resolved)
+	slices.Sort(ids)
+	for _, id := range ids {
+		path, err := resolvePromptFile(id+" prompt", files[id])
+		if err != nil {
+			return nil, err
+		}
+		resolved[id] = path
 	}
 	return resolved, nil
 }

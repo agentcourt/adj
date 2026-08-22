@@ -17,11 +17,25 @@ type ProviderConstraints struct {
 	Quantizations     []string `json:"quantizations,omitempty"`
 }
 
+type ReasoningEffort string
+
+const (
+	ReasoningEffortNone    ReasoningEffort = "none"
+	ReasoningEffortMinimal ReasoningEffort = "minimal"
+	ReasoningEffortLow     ReasoningEffort = "low"
+	ReasoningEffortMedium  ReasoningEffort = "medium"
+	ReasoningEffortHigh    ReasoningEffort = "high"
+	ReasoningEffortXHigh   ReasoningEffort = "xhigh"
+	ReasoningEffortMax     ReasoningEffort = "max"
+)
+
 type RequestParameters struct {
-	Temperature     *float64 `json:"temperature,omitempty"`
-	TopP            *float64 `json:"top_p,omitempty"`
-	MaxTokens       *int64   `json:"max_tokens,omitempty"`
-	MaxOutputTokens *int64   `json:"max_output_tokens,omitempty"`
+	Temperature     *float64         `json:"temperature,omitempty"`
+	TopP            *float64         `json:"top_p,omitempty"`
+	MaxTokens       *int64           `json:"max_tokens,omitempty"`
+	MaxOutputTokens *int64           `json:"max_output_tokens,omitempty"`
+	MaxToolCalls    *int64           `json:"max_tool_calls,omitempty"`
+	ReasoningEffort *ReasoningEffort `json:"reasoning_effort,omitempty"`
 }
 
 type Spec struct {
@@ -122,6 +136,12 @@ func ParseMap(raw map[string]any) (Spec, error) {
 		out.Provider = deriveOpenRouterProvider(raw)
 	}
 	out.Request = requestFromRaw(raw)
+	if err := applyMaxToolCalls(&out.Request, raw); err != nil {
+		return Spec{}, err
+	}
+	if err := applyReasoningEffort(&out.Request, raw); err != nil {
+		return Spec{}, err
+	}
 	if out.Endpoint == "openrouter" && len(out.Headers) == 0 {
 		out.Headers = map[string]string{openRouterMetadataHeader: "enabled"}
 	} else if out.Endpoint == "openrouter" {
@@ -196,6 +216,54 @@ func (s Spec) WithFallbackMaxOutputTokens(max int64) Spec {
 		s.Request.MaxOutputTokens = &max
 	}
 	return s
+}
+
+func (s Spec) WithMaxOutputTokens(max int64) Spec {
+	if max > 0 {
+		s.Request.MaxOutputTokens = &max
+	}
+	return s
+}
+
+func (s Spec) MaxToolCalls() *int64 {
+	return s.Request.MaxToolCalls
+}
+
+func (s Spec) WithMaxToolCalls(max int64) Spec {
+	if max > 0 {
+		s.Request.MaxToolCalls = &max
+	}
+	return s
+}
+
+func (s Spec) ReasoningEffort() string {
+	if s.Request.ReasoningEffort == nil {
+		return ""
+	}
+	return string(*s.Request.ReasoningEffort)
+}
+
+func (s Spec) WithReasoningEffort(effort ReasoningEffort) Spec {
+	if effort != "" {
+		s.Request.ReasoningEffort = &effort
+	}
+	return s
+}
+
+func ParseReasoningEffort(value string) (ReasoningEffort, error) {
+	effort := ReasoningEffort(strings.TrimSpace(value))
+	switch effort {
+	case ReasoningEffortNone,
+		ReasoningEffortMinimal,
+		ReasoningEffortLow,
+		ReasoningEffortMedium,
+		ReasoningEffortHigh,
+		ReasoningEffortXHigh,
+		ReasoningEffortMax:
+		return effort, nil
+	default:
+		return "", fmt.Errorf("reasoning effort %q must be one of none, minimal, low, medium, high, xhigh, or max", value)
+	}
 }
 
 // SupportsParameter reports whether endpoint metadata lists name and whether it contains a valid parameter list.
@@ -310,6 +378,56 @@ func applyRequestFields(request *RequestParameters, raw map[string]any) {
 	if value, ok := int64Field(raw, "max_output_tokens"); ok {
 		request.MaxOutputTokens = &value
 	}
+}
+
+func applyMaxToolCalls(request *RequestParameters, raw map[string]any) error {
+	if obj, ok := raw["request"].(map[string]any); ok {
+		if err := applyMaxToolCallsField(request, obj); err != nil {
+			return err
+		}
+	}
+	return applyMaxToolCallsField(request, raw)
+}
+
+func applyMaxToolCallsField(request *RequestParameters, raw map[string]any) error {
+	if _, exists := raw["max_tool_calls"]; !exists {
+		return nil
+	}
+	value, ok := int64Field(raw, "max_tool_calls")
+	if !ok {
+		return fmt.Errorf("max_tool_calls must be an integer")
+	}
+	if value <= 0 {
+		return fmt.Errorf("max_tool_calls must be positive")
+	}
+	request.MaxToolCalls = &value
+	return nil
+}
+
+func applyReasoningEffort(request *RequestParameters, raw map[string]any) error {
+	if obj, ok := raw["request"].(map[string]any); ok {
+		if err := applyReasoningEffortField(request, obj); err != nil {
+			return err
+		}
+	}
+	return applyReasoningEffortField(request, raw)
+}
+
+func applyReasoningEffortField(request *RequestParameters, raw map[string]any) error {
+	value, exists := raw["reasoning_effort"]
+	if !exists {
+		return nil
+	}
+	text, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("reasoning_effort must be a string")
+	}
+	effort, err := ParseReasoningEffort(text)
+	if err != nil {
+		return err
+	}
+	request.ReasoningEffort = &effort
+	return nil
 }
 
 func headersFromRaw(value any) map[string]string {

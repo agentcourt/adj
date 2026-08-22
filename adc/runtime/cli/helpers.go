@@ -10,8 +10,10 @@ import (
 	"strconv"
 	"strings"
 
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/runner"
 	"github.com/jsmorph/adj/common/cliio"
+	"github.com/jsmorph/adj/common/promptfile"
 )
 
 const (
@@ -26,6 +28,43 @@ func (f *stringListFlag) String() string {
 		return ""
 	}
 	return strings.Join([]string(*f), ",")
+}
+
+type promptFileFlag struct {
+	assignments promptfile.Assignments
+}
+
+func (f *promptFileFlag) String() string {
+	if f == nil {
+		return ""
+	}
+	return f.assignments.String()
+}
+
+func (f *promptFileFlag) Set(value string) error {
+	id, path, ok := strings.Cut(value, "=")
+	id = strings.TrimSpace(id)
+	path = strings.TrimSpace(path)
+	if !ok || id == "" || path == "" {
+		return fmt.Errorf("prompt file must use ID=PATH")
+	}
+	if !adcprompts.Known(id) {
+		return fmt.Errorf("unknown ADC prompt id %q", id)
+	}
+	return f.assignments.Set(id + "=" + path)
+}
+
+func copyPromptFiles(files promptFileFlag) map[string]string {
+	return files.assignments.Values()
+}
+
+func resolvePromptOptions(promptDir string, files promptFileFlag) (string, map[string]string, error) {
+	promptDir = strings.TrimSpace(promptDir)
+	promptFiles := copyPromptFiles(files)
+	if _, err := adcprompts.Load(adcprompts.Options{PromptDir: promptDir, PromptFiles: promptFiles}); err != nil {
+		return "", nil, err
+	}
+	return promptDir, promptFiles, nil
 }
 
 func (f *stringListFlag) Set(value string) error {
@@ -46,23 +85,6 @@ func parseFlagSet(fs *flag.FlagSet, args []string) (bool, error) {
 		return false, fmt.Errorf("flag output is not an error-tracking writer")
 	}
 	return cliio.Parse(fs, args, output)
-}
-
-func loadPromptText(prompt string, promptFile string) (string, error) {
-	if strings.TrimSpace(prompt) != "" && strings.TrimSpace(promptFile) != "" {
-		return "", fmt.Errorf("--prompt and --prompt-file are mutually exclusive")
-	}
-	if strings.TrimSpace(prompt) != "" {
-		return prompt, nil
-	}
-	if strings.TrimSpace(promptFile) == "" {
-		return "", nil
-	}
-	raw, err := os.ReadFile(promptFile)
-	if err != nil {
-		return "", fmt.Errorf("read prompt file: %w", err)
-	}
-	return string(raw), nil
 }
 
 func writeJSONFile(path string, v any) error {

@@ -11,6 +11,7 @@ The manual documents the core commands, case-owned HTTP APIs, outputs, and certi
 | [Agent Arbitration Manual](manual.md) | Core commands, case-owned APIs, outputs, failure behavior, and certificate verification. |
 | [Agent Arbitration Practice Guide](docs/practice.md) | Lawyer and council practice: phase work, evidence search, source preservation, technical reports, work notes, and council deliberation. |
 | [Agent Rules for Arbitration Procedure](docs/ARAP.md) | Governing AAR procedure. |
+| [Prompt Authoring Guide](../docs/prompt-authoring.md) | Prompt-file resolution, literal replacement, available tokens, and evaluation practice. |
 
 ## Requirements
 
@@ -30,7 +31,7 @@ make test
 make prove
 ```
 
-`make build` writes `.bin/aar` and `.bin/aarengine`.  `make test` rebuilds `.bin/aarengine` and then runs the Go runtime tests against that binary.  `make prove` builds the Lean proof tree.
+`make build` writes `.bin/aar`, `.bin/aar-mcp`, and `.bin/aarengine`.  `aar-mcp` exposes the running core's participant APIs to caller-owned lawyers and council members.  The [prompt-authoring guide](../docs/prompt-authoring.md#mcp-capabilities) documents MCP key creation, assignment capabilities, and server startup.  `make test` rebuilds `.bin/aarengine` and then runs the Go runtime tests against that binary.  `make prove` builds the Lean proof tree.
 
 ## First Run
 
@@ -40,10 +41,17 @@ Start one case process from `arb/`.  The command writes the private Lawyer and C
 export OPENROUTER_API_KEY=REPLACE_WITH_KEY
 
 .bin/aar case \
-  --complaint examples/ex01/complaint.md \
+  --complaint ../examples/ex01/complaint.md \
   --council-pool ../common/data/personas/pool.jsonl \
+  --prompt-dir ../prompts/arb \
   --out-dir out/ex01
 ```
+
+## Prompt Configuration
+
+AAR owns the complete prompt catalog used by its lawyers, council members, preflight checks, observer, repair turns, and tool descriptions.  A repeatable `--prompt-file ID=PATH` option replaces individual catalog entries, while `--prompt-dir DIR` supplies a complete prompt set.  The [manual](manual.md#prompt-configuration) lists every identifier, filename, and replacement token.
+
+The Lawyer and Council APIs belong to the case process and accept clients implemented in any harness.  An MCP adapter can act as one of those clients without changing the AAR core.  Running AAR requires no `adjservices` package or process.
 
 ## Layout
 
@@ -53,8 +61,8 @@ export OPENROUTER_API_KEY=REPLACE_WITH_KEY
 | `docs/` | Rules, practice guide, API/process specs, evidence handling, policy notes, and proof references. |
 | `engine/` | Lean arbitration engine and proofs. |
 | `runtime/` | Go CLI, case runtime, and case-owned HTTP APIs. |
-| `examples/` | Example complaints and case packets. |
-| `prompts/` | Prompt templates used by the case runtime. |
+| `../examples/` | Shared example complaints and case packets. |
+| `../prompts/arb/` | Complete editable AAR prompt set. |
 
 ## Output
 

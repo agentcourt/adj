@@ -104,7 +104,8 @@ func TestApplyJurorPersonaDefaultsAndOpportunityContext(t *testing.T) {
 	ctxModel, ctxPrompt := r.jurorOpportunityPromptContext(leanOpportunity{
 		ActorMessage: "Juror J1 should answer.",
 	})
-	if ctxModel != model || !strings.Contains(ctxPrompt, "You are J1.") {
+	assigned := r.jurorPersonaAssignments["J1"]
+	if ctxModel != model || ctxPrompt != strings.TrimSpace(assigned.PersonaText) {
 		t.Fatalf("jurorOpportunityPromptContext = (%q, %q)", ctxModel, ctxPrompt)
 	}
 	reqSpec := r.jurorOpportunityRequestSpec(leanOpportunity{ActorMessage: "Juror J1 should answer."})

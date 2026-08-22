@@ -8,6 +8,7 @@ build:
 	cd engine && lake build adcengine
 	install -m 755 engine/.lake/build/bin/adcengine $(BIN_DIR)/adcengine
 	cd runtime && $(GO_ENV) go build -o ../$(BIN_DIR)/adc ./cmd/adc
+	cd runtime && $(GO_ENV) go build -o ../$(BIN_DIR)/adc-mcp ./cmd/adc-mcp
 
 test:
 	cd runtime && $(GO_ENV) go test ./...

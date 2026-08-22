@@ -1,0 +1,1 @@
+Use this tool with a visible `file_id` from `list_case_files` when you need the model to inspect the raw case file.  The runner will attach the file to the next model turn using the provider's file or image input format.  After the file arrives, continue with the current opportunity.

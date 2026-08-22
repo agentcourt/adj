@@ -1,0 +1,1 @@
+Deliver the final instruction text in direct, neutral legal language.  Track the settled instruction set.  State the burden and elements clearly.  Do not add rhetoric, advocacy, or ceremonial address.

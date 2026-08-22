@@ -41,6 +41,10 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 		return Result{}, err
 	}
 	cfg.CouncilBackend = NormalizeCouncilBackend(cfg.CouncilBackend)
+	cfg, err = cfg.preparePrompts()
+	if err != nil {
+		return Result{}, err
+	}
 	outputDirClaimPath, err := prepareOutputDir(cfg.OutputDir)
 	if err != nil {
 		return Result{}, err

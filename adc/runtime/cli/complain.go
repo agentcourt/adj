@@ -25,7 +25,10 @@ func RunComplain(args []string, stdout io.Writer, stderr io.Writer) error {
 	outputPath := fs.String("out", "", "Output complaint path. Default: complaint.md beside the situation file")
 	courtRef := fs.String("court", courts.DefaultCourtName, "Court profile name or JSON path")
 	model := fs.String("model", casegen.DefaultPlannerModel(), "Model for complaint drafting")
+	promptDir := fs.String("prompt-dir", "", "ADC prompt catalog directory")
+	var promptFiles promptFileFlag
 	timeoutSeconds := fs.Int("timeout-seconds", defaultLLMTimeoutSeconds, "LLM HTTP timeout in seconds")
+	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	help, parseErr := parseFlagSet(fs, args)
 	if parseErr != nil {
 		return parseErr
@@ -38,6 +41,10 @@ func RunComplain(args []string, stdout io.Writer, stderr io.Writer) error {
 	}
 	if strings.TrimSpace(*situationPath) == "" {
 		return fmt.Errorf("--situation is required")
+	}
+	resolvedPromptDir, resolvedPromptFiles, err := resolvePromptOptions(*promptDir, promptFiles)
+	if err != nil {
+		return err
 	}
 
 	source, err := casegen.LoadSourceMarkdown(*situationPath)
@@ -65,7 +72,11 @@ func RunComplain(args []string, stdout io.Writer, stderr io.Writer) error {
 	temp := 0.2
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	complaintMarkdown, err := casegen.DraftComplaint(ctx, client, modelName, source, court, &temp)
+	complaintMarkdown, err := casegen.DraftComplaintWithOptions(ctx, client, modelName, source, court, casegen.ComplaintDraftOptions{
+		Temperature: &temp,
+		PromptDir:   resolvedPromptDir,
+		PromptFiles: resolvedPromptFiles,
+	})
 	if err != nil {
 		return err
 	}

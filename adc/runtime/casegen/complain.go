@@ -2,7 +2,6 @@ package casegen
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -10,11 +9,9 @@ import (
 	"strings"
 
 	"github.com/jsmorph/adj/adc/runtime/courts"
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/common/openai"
 )
-
-//go:embed prompts/complaint_draft_system.md
-var complaintDraftSystemPrompt string
 
 const maxComplaintDraftAttempts = 3
 
@@ -27,19 +24,30 @@ var requiredComplaintHeadings = []string{
 	"## Relief Requested",
 }
 
+type ComplaintDraftOptions struct {
+	Temperature *float64
+	PromptDir   string
+	PromptFiles map[string]string
+}
+
 func buildComplaintDraftPrompt(source ComplaintInput, court courts.Profile) (string, error) {
+	promptCatalog, err := adcprompts.Load(adcprompts.Options{})
+	if err != nil {
+		return "", err
+	}
+	return buildComplaintDraftPromptWithCatalog(promptCatalog, source, court)
+}
+
+func buildComplaintDraftPromptWithCatalog(promptCatalog *adcprompts.Catalog, source ComplaintInput, court courts.Profile) (string, error) {
 	courtContext, err := renderCourtContext(court)
 	if err != nil {
 		return "", err
 	}
-	var b strings.Builder
-	b.WriteString(courtContext)
-	b.WriteString("\n\n")
-	b.WriteString("Situation markdown follows.\n\n")
-	b.WriteString(source.Markdown)
-	b.WriteString("\n\nLinked local references:\n")
-	b.WriteString(renderLinkedFileContext(source.LinkedFiles))
-	return b.String(), nil
+	return promptCatalog.Render(adcprompts.ComplaintUserID, map[string]string{
+		"{{COURT}}":        courtContext,
+		"{{SOURCE}}":       source.Markdown,
+		"{{LINKED_FILES}}": renderLinkedFileContext(source.LinkedFiles),
+	})
 }
 
 func DraftComplaint(
@@ -50,6 +58,17 @@ func DraftComplaint(
 	court courts.Profile,
 	temperature *float64,
 ) (string, error) {
+	return DraftComplaintWithOptions(ctx, client, model, source, court, ComplaintDraftOptions{Temperature: temperature})
+}
+
+func DraftComplaintWithOptions(
+	ctx context.Context,
+	client *openai.Client,
+	model string,
+	source ComplaintInput,
+	court courts.Profile,
+	opts ComplaintDraftOptions,
+) (string, error) {
 	if client == nil {
 		return "", fmt.Errorf("complaint client is nil")
 	}
@@ -57,17 +76,25 @@ func DraftComplaint(
 	if model == "" {
 		return "", fmt.Errorf("complaint model is required")
 	}
-	prompt, err := buildComplaintDraftPrompt(source, court)
+	promptCatalog, err := adcprompts.Load(adcprompts.Options{PromptDir: opts.PromptDir, PromptFiles: opts.PromptFiles})
+	if err != nil {
+		return "", err
+	}
+	prompt, err := buildComplaintDraftPromptWithCatalog(promptCatalog, source, court)
+	if err != nil {
+		return "", err
+	}
+	systemPrompt, err := promptCatalog.Text(adcprompts.ComplaintSystemID)
 	if err != nil {
 		return "", err
 	}
 	baseMessages := []map[string]any{
-		{"role": "system", "content": strings.TrimSpace(complaintDraftSystemPrompt)},
+		{"role": "system", "content": systemPrompt},
 		{"role": "user", "content": prompt},
 	}
 	messages := append([]map[string]any(nil), baseMessages...)
 	for attempt := 1; attempt <= maxComplaintDraftAttempts; attempt++ {
-		resp, err := client.CreateResponse(ctx, model, messages, nil, "", temperature)
+		resp, err := client.CreateResponse(ctx, model, messages, nil, "", opts.Temperature)
 		if err != nil {
 			return "", fmt.Errorf("draft complaint: %w", err)
 		}
@@ -80,10 +107,14 @@ func DraftComplaint(
 		} else if attempt == maxComplaintDraftAttempts {
 			return "", fmt.Errorf("draft complaint: %w", err)
 		} else {
+			correctionPrompt, renderErr := promptCatalog.Render(adcprompts.ComplaintRepairID, map[string]string{"{{ERROR}}": err.Error()})
+			if renderErr != nil {
+				return "", renderErr
+			}
 			messages = append(
 				append([]map[string]any(nil), baseMessages...),
 				map[string]any{"role": "assistant", "content": text},
-				map[string]any{"role": "user", "content": buildComplaintDraftCorrectionPrompt(err)},
+				map[string]any{"role": "user", "content": correctionPrompt},
 			)
 		}
 	}
@@ -144,18 +175,6 @@ func validateComplaintDraftLinks(source []LinkedFile, draft []LinkedFile) error 
 		}
 	}
 	return nil
-}
-
-func buildComplaintDraftCorrectionPrompt(err error) string {
-	var b strings.Builder
-	b.WriteString("The prior complaint draft is not acceptable.\n")
-	b.WriteString("Reason: ")
-	b.WriteString(err.Error())
-	b.WriteString("\n\nRewrite the complaint in Markdown only.\n")
-	b.WriteString("Keep the required headings exactly.\n")
-	b.WriteString("Use ordinary Markdown links in the exact form [label](path), copying every listed reference_path exactly.\n")
-	b.WriteString("Do not add analysis or code fences.\n")
-	return b.String()
 }
 
 var citizenOfRE = regexp.MustCompile(`(?im)\b[A-Z][A-Za-z .'-]*\bis a citizen of\s+([A-Z][A-Za-z .'-]+)\b`)

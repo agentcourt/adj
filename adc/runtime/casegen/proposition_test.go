@@ -39,8 +39,13 @@ func TestCreatePropositionPlan(t *testing.T) {
 	if packet.Claim.LegalTheory != courts.PropositionAdjudicationBasis || packet.JurisdictionBasis != courts.PropositionAdjudicationBasis {
 		t.Fatalf("proposition basis = %+v", packet)
 	}
-	if !strings.Contains(plan.PlaintiffStrategy, proposition) || !strings.Contains(plan.DefenseStrategy, proposition) {
-		t.Fatalf("strategy omitted proposition")
+	wantPlaintiffStrategy := "# Proponent Strategy\n\nProposition:\n\nThe sky is blue.\n\nEvidence standard: `preponderance_of_the_evidence`.  The Proponent bears the burden to demonstrate the proposition.  Use the imported documents and the trial record to address the proposition, and seek declaratory judgment with no monetary damages."
+	if plan.PlaintiffStrategy != wantPlaintiffStrategy {
+		t.Fatalf("plaintiff strategy = %q, want %q", plan.PlaintiffStrategy, wantPlaintiffStrategy)
+	}
+	wantDefenseStrategy := "# Opponent Strategy\n\nProposition:\n\nThe sky is blue.\n\nEvidence standard: `preponderance_of_the_evidence`.  The Opponent may prevail by showing that the Proponent has not met the burden.  Use the imported documents and the trial record to address the proposition, and seek declaratory judgment with no monetary damages."
+	if plan.DefenseStrategy != wantDefenseStrategy {
+		t.Fatalf("defense strategy = %q, want %q", plan.DefenseStrategy, wantDefenseStrategy)
 	}
 }
 

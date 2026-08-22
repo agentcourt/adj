@@ -48,55 +48,46 @@ type AttorneyRunInfo struct {
 }
 
 type Options struct {
-	ComplaintPath                 string
-	CaseFiles                     []string
-	OutputDir                     string
-	PolicyPath                    string
-	CouncilSize                   int
-	JudgmentStandard              string
-	AttorneyInstructionsPath      string
-	PromptDir                     string
-	AttorneyCommonPromptPath      string
-	AttorneyOpeningPromptPath     string
-	AttorneyArgumentPromptPath    string
-	AttorneyRebuttalPromptPath    string
-	AttorneySurrebuttalPromptPath string
-	AttorneyClosingPromptPath     string
-	CommonRoot                    string
-	CouncilPoolPath               string
-	CaseAPIAddr                   string
-	CouncilBackend                string
-	CouncilTimeoutSeconds         int
-	LawyerTimeoutSeconds          int
-	EngineCallTimeoutSeconds      int
-	MaxResponseBytes              int
-	InvalidAttemptLimit           int
-	EnginePath                    string
-	RunID                         string
-	CaseID                        string
+	ComplaintPath            string
+	CaseFiles                []string
+	OutputDir                string
+	PolicyPath               string
+	CouncilSize              int
+	JudgmentStandard         string
+	PromptDir                string
+	PromptFiles              map[string]string
+	CommonRoot               string
+	CouncilPoolPath          string
+	CaseAPIAddr              string
+	CouncilBackend           string
+	CouncilTimeoutSeconds    int
+	LawyerTimeoutSeconds     int
+	EngineCallTimeoutSeconds int
+	MaxResponseBytes         int
+	InvalidAttemptLimit      int
+	EnginePath               string
+	RunID                    string
+	CaseID                   string
 }
 
 type Config struct {
-	CaseID                        string
-	RunID                         string
-	ComplaintPath                 string
-	CaseFilePaths                 []string
-	OutputDir                     string
-	CommonRoot                    string
-	CouncilPoolPath               string
-	AttorneyInstructionsPath      string
-	PromptDir                     string
-	AttorneyCommonPromptPath      string
-	AttorneyOpeningPromptPath     string
-	AttorneyArgumentPromptPath    string
-	AttorneyRebuttalPromptPath    string
-	AttorneySurrebuttalPromptPath string
-	AttorneyClosingPromptPath     string
-	CaseAPIAddr                   string
-	Policy                        Policy
-	Runtime                       RuntimeLimits
-	CouncilBackend                string
-	Engine                        lean.Engine
+	CaseID           string
+	RunID            string
+	ComplaintPath    string
+	CaseFilePaths    []string
+	OutputDir        string
+	CommonRoot       string
+	CouncilPoolPath  string
+	PromptDir        string
+	PromptFiles      map[string]string
+	CaseAPIAddr      string
+	Policy           Policy
+	Runtime          RuntimeLimits
+	CouncilBackend   string
+	Engine           lean.Engine
+	promptSources    map[string]string
+	toolDescriptions map[string]string
+	observerPrompt   string
 }
 
 type Result struct {

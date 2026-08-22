@@ -1,0 +1,1 @@
+Use the opening to state the theory of the case, the controlling burden, and what the evidence will show.  Do not overargue.  Do not promise proof outside the record or outside the tools available in this case.

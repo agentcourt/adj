@@ -20,7 +20,7 @@ func TestDispatchHelp(t *testing.T) {
 	if err := dispatch(context.Background(), []string{"help", "case"}, &stdout, &stderr); err != nil {
 		t.Fatalf("dispatch help: %v", err)
 	}
-	if !strings.Contains(stderr.String(), "--evidence-standard") || !strings.Contains(stderr.String(), "--max-document-files") || !strings.Contains(stderr.String(), "-parallel-council") || !strings.Contains(stderr.String(), "--allow-api-key") {
+	if !strings.Contains(stderr.String(), "--evidence-standard") || !strings.Contains(stderr.String(), "--max-document-files") || !strings.Contains(stderr.String(), "-parallel-council") || !strings.Contains(stderr.String(), "--allow-api-key") || !strings.Contains(stderr.String(), "-lawyer-web-search") || !strings.Contains(stderr.String(), "-lawyerapi-bearer-token-file") || !strings.Contains(stderr.String(), "-prompt-dir") || !strings.Contains(stderr.String(), "-prompt-file") || !strings.Contains(stderr.String(), "-common-root") {
 		t.Fatalf("help output omits required flags: %s", stderr.String())
 	}
 	if stdout.Len() != 0 {
@@ -49,16 +49,28 @@ func TestRunCasePassesParallelCouncilOption(t *testing.T) {
 		}, nil
 	}
 	root := t.TempDir()
+	commonRoot := filepath.Join(root, "common")
+	tokenPath := writeTestBearerToken(t, root)
 	var stdout bytes.Buffer
 	err := runCase(context.Background(), []string{
 		"--proposition", "p",
 		"--out-dir", filepath.Join(root, "out"),
-		"--council-pool", filepath.Join(root, "pool.jsonl"),
+		"--common-root", commonRoot,
 		"--council-size", "1",
 		"--required-votes", "1",
 		"--evidence-standard", "preponderance",
+		"--prompt-dir", "prompt-set",
+		"--prompt-file", "observer=observer.md",
+		"--prompt-file", "lawyer.common=lawyer.md",
+		"--prompt-file", "lawyer.proponent=for.md",
+		"--prompt-file", "lawyer.opponent=against.md",
+		"--prompt-file", "search.enabled=on.md",
+		"--prompt-file", "search.disabled=off.md",
+		"--prompt-file", "council.system=council.md",
+		"--lawyer-web-search=false",
 		"--case-id", "case",
 		"--run-id", "run",
+		"--lawyerapi-bearer-token-file", tokenPath,
 		"--max-document-files", "1",
 		"--max-document-file-bytes", "1",
 		"--max-documents-total-bytes", "1",
@@ -71,6 +83,18 @@ func TestRunCasePassesParallelCouncilOption(t *testing.T) {
 	decodeCommandResult(t, stdout.Bytes())
 	if !received.ParallelCouncil {
 		t.Fatal("parallel council option was false")
+	}
+	if received.CommonRoot != commonRoot || received.CouncilPoolPath != "" {
+		t.Fatalf("pool options = common root %q, council pool %q", received.CommonRoot, received.CouncilPoolPath)
+	}
+	if received.PromptDir != "prompt-set" || received.PromptFiles["observer"] != "observer.md" || received.PromptFiles["lawyer.common"] != "lawyer.md" || received.PromptFiles["lawyer.proponent"] != "for.md" || received.PromptFiles["lawyer.opponent"] != "against.md" || received.PromptFiles["search.enabled"] != "on.md" || received.PromptFiles["search.disabled"] != "off.md" || received.PromptFiles["council.system"] != "council.md" {
+		t.Fatalf("prompt paths = %#v", received)
+	}
+	if received.LawyerWebSearch == nil || *received.LawyerWebSearch {
+		t.Fatalf("lawyer web search = %v, want false", received.LawyerWebSearch)
+	}
+	if received.LawyerAPIBearerToken != "private-token" {
+		t.Fatalf("lawyer API bearer token was not loaded")
 	}
 }
 
@@ -97,6 +121,7 @@ func TestRunCaseRejectsMissingInputsBeforeProviderUse(t *testing.T) {
 
 func TestRunCaseReportsConfigurationErrorAsCompleteResult(t *testing.T) {
 	root := t.TempDir()
+	tokenPath := writeTestBearerToken(t, root)
 	var stdout bytes.Buffer
 	err := runCase(context.Background(), []string{
 		"--proposition", "p",
@@ -107,6 +132,7 @@ func TestRunCaseReportsConfigurationErrorAsCompleteResult(t *testing.T) {
 		"--evidence-standard", "preponderance",
 		"--case-id", "case",
 		"--run-id", "run",
+		"--lawyerapi-bearer-token-file", tokenPath,
 		"--max-document-files", "1",
 		"--max-document-file-bytes", "1",
 		"--max-documents-total-bytes", "1",
@@ -145,6 +171,7 @@ func TestWriteResultDetectsShortWrite(t *testing.T) {
 
 func TestRunCaseRedactsMalformedModelQueryFromOutput(t *testing.T) {
 	root := t.TempDir()
+	tokenPath := writeTestBearerToken(t, root)
 	secret := "command-secret"
 	poolPath := filepath.Join(root, "pool.jsonl")
 	pool := `{"endpoint":"openrouter","model":"model?token=` + secret + `#bad","persona":"persona.txt"}` + "\n"
@@ -161,6 +188,7 @@ func TestRunCaseRedactsMalformedModelQueryFromOutput(t *testing.T) {
 		"--evidence-standard", "preponderance",
 		"--case-id", "case",
 		"--run-id", "run",
+		"--lawyerapi-bearer-token-file", tokenPath,
 		"--max-document-files", "1",
 		"--max-document-file-bytes", "1",
 		"--max-documents-total-bytes", "1",
@@ -199,6 +227,15 @@ func decodeCommandResult(t *testing.T, raw []byte) quick.Result {
 }
 
 type shortWriter struct{}
+
+func writeTestBearerToken(t *testing.T, dir string) string {
+	t.Helper()
+	path := filepath.Join(dir, "lawyerapi-token")
+	if err := os.WriteFile(path, []byte("private-token\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
 
 func (shortWriter) Write(value []byte) (int, error) {
 	if len(value) == 0 {

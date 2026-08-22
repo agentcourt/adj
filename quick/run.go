@@ -59,6 +59,11 @@ func runConfigured(ctx context.Context, cfg Config, client responseClient) (Resu
 	if err := validateConfigured(cfg); err != nil {
 		return Result{}, err
 	}
+	prompts, err := loadQuickPrompts(cfg)
+	if err != nil {
+		return Result{}, err
+	}
+	cfg.prompts = prompts
 	if err := prepareOutputDir(cfg.OutputDir); err != nil {
 		return Result{}, err
 	}
@@ -85,10 +90,14 @@ func runConfigured(ctx context.Context, cfg Config, client responseClient) (Resu
 	if err := r.initializeFiles(); err != nil {
 		return r.finishWithoutAPI(err)
 	}
-	if preflighter, ok := client.(councilEndpointPreflighter); ok {
-		if err := preflighter.PreflightCouncilEndpoints(r.council); err != nil {
-			return r.finishWithoutAPI(fmt.Errorf("preflight selected council endpoints: %w", err))
-		}
+	if err := r.constituteCouncil(ctx); err != nil {
+		return r.finishWithoutAPI(err)
+	}
+	initial := r.result("", nil)
+	initial.Status = "running"
+	initial.Phase = "initializing"
+	if err := r.records.writeRun(initial); err != nil {
+		return r.finishWithoutAPI(err)
 	}
 
 	api, err := startCaseAPI(r)
@@ -174,6 +183,9 @@ func validateConfigured(cfg Config) error {
 	if strings.TrimSpace(cfg.CaseID) == "" || strings.TrimSpace(cfg.RunID) == "" || strings.TrimSpace(cfg.CaseAPIAddr) == "" {
 		return fmt.Errorf("case ID, run ID, and case API address are required")
 	}
+	if strings.TrimSpace(cfg.LawyerAPIBearerToken) == "" {
+		return fmt.Errorf("lawyer API bearer token is required")
+	}
 	if cfg.CouncilSize <= 0 || cfg.RequiredVotes <= cfg.CouncilSize/2 || cfg.RequiredVotes > cfg.CouncilSize {
 		return fmt.Errorf("invalid council size or required votes")
 	}
@@ -227,30 +239,36 @@ func (r *runner) initializeFiles() error {
 	if err := recordio.WriteJSON(filepath.Join(r.cfg.OutputDir, "documents.json"), r.documents); err != nil {
 		return err
 	}
-	council, err := loadCouncil(r.cfg.CouncilPoolPath, r.cfg.CouncilSize)
-	if err != nil {
-		return err
-	}
-	r.council = council
 	if err := r.records.writeTranscript(r.transcript); err != nil {
 		return err
 	}
-	initial := r.result("", nil)
-	initial.Status = "running"
-	initial.Phase = "initializing"
-	return r.records.writeRun(initial)
+	return nil
 }
 
 type randomIndex func(upperBound int) (int, error)
+
+type councilCandidate struct {
+	spec  persona.Spec
+	model modelrequest.ModelRef
+}
+
+type councilCandidateRejection struct {
+	MemberID    string
+	Unavailable CouncilMember
+	Replacement *CouncilMember
+	Cause       string
+	ErrorClass  string
+	err         error
+}
 
 func loadCouncil(path string, size int) ([]CouncilMember, error) {
 	return loadCouncilWithRandomIndex(path, size, cryptoRandomIndex)
 }
 
 func loadCouncilWithRandomIndex(path string, size int, choose randomIndex) ([]CouncilMember, error) {
-	specs, err := persona.LoadRecordsFile(path, filepath.Dir(path))
+	candidates, incompatible, err := loadEligibleCouncilCandidates(path)
 	if err != nil {
-		return nil, fmt.Errorf("load council pool: %w", sanitizeError(err))
+		return nil, err
 	}
 	if choose == nil {
 		return nil, fmt.Errorf("council random-index source is required")
@@ -258,23 +276,8 @@ func loadCouncilWithRandomIndex(path string, size int, choose randomIndex) ([]Co
 	if size <= 0 {
 		return nil, fmt.Errorf("council size must be positive")
 	}
-	if len(specs) < size {
-		return nil, fmt.Errorf("council size %d exceeds available pool %d", size, len(specs))
-	}
-	type councilCandidate struct {
-		spec  persona.Spec
-		model modelrequest.ModelRef
-	}
-	candidates := make([]councilCandidate, len(specs))
-	for index, spec := range specs {
-		if spec.RequestSpec == nil {
-			return nil, fmt.Errorf("council pool record %d must be a JSON request specification", index+1)
-		}
-		modelRef, err := modelrequest.ParseModelRef(spec.Model)
-		if err != nil {
-			return nil, fmt.Errorf("parse council pool record %d model: %w", index+1, sanitizeError(err))
-		}
-		candidates[index] = councilCandidate{spec: spec, model: modelRef}
+	if len(candidates) < size {
+		return nil, fmt.Errorf("council size %d exceeds compatible pool %d; %d record(s) omit required parameter tools", size, len(candidates), incompatible)
 	}
 	council := make([]CouncilMember, 0, size)
 	for index := 0; index < size; index++ {
@@ -287,17 +290,283 @@ func loadCouncilWithRandomIndex(path string, size int, choose randomIndex) ([]Co
 		}
 		candidate := candidates[candidateIndex]
 		candidates = append(candidates[:candidateIndex], candidates[candidateIndex+1:]...)
-		spec := candidate.spec
-		requestSpec := *spec.RequestSpec
-		council = append(council, CouncilMember{
-			MemberID:    fmt.Sprintf("C%d", index+1),
-			Model:       candidate.model.Endpoint + "://" + candidate.model.Model,
-			PersonaFile: spec.File,
-			RequestSpec: &requestSpec,
-			PersonaText: spec.Text,
-		})
+		council = append(council, councilMemberFromCandidate(candidate, fmt.Sprintf("C%d", index+1)))
 	}
 	return council, nil
+}
+
+func loadEligibleCouncilCandidates(path string) ([]councilCandidate, int, error) {
+	specs, err := persona.LoadRecordsFile(path, filepath.Dir(path))
+	if err != nil {
+		return nil, 0, fmt.Errorf("load council pool: %w", sanitizeError(err))
+	}
+	candidates := make([]councilCandidate, 0, len(specs))
+	incompatible := 0
+	for index, spec := range specs {
+		if spec.RequestSpec == nil {
+			return nil, 0, fmt.Errorf("council pool record %d must be a JSON request specification", index+1)
+		}
+		modelRef, err := modelrequest.ParseModelRef(spec.Model)
+		if err != nil {
+			return nil, 0, fmt.Errorf("parse council pool record %d model: %w", index+1, sanitizeError(err))
+		}
+		if supported, known := spec.RequestSpec.SupportsParameter("tools"); known && !supported {
+			incompatible++
+			continue
+		}
+		candidates = append(candidates, councilCandidate{spec: spec, model: modelRef})
+	}
+	return candidates, incompatible, nil
+}
+
+func shuffledCouncilCandidates(path string) ([]CouncilMember, error) {
+	candidates, _, err := loadEligibleCouncilCandidates(path)
+	if err != nil {
+		return nil, err
+	}
+	council := make([]CouncilMember, 0, len(candidates))
+	for len(candidates) > 0 {
+		candidateIndex, err := cryptoRandomIndex(len(candidates))
+		if err != nil {
+			return nil, fmt.Errorf("shuffle council candidates: %w", err)
+		}
+		candidate := candidates[candidateIndex]
+		candidates = append(candidates[:candidateIndex], candidates[candidateIndex+1:]...)
+		council = append(council, councilMemberFromCandidate(candidate, ""))
+	}
+	return council, nil
+}
+
+func councilMemberFromCandidate(candidate councilCandidate, memberID string) CouncilMember {
+	requestSpec := *candidate.spec.RequestSpec
+	member := CouncilMember{
+		MemberID:          memberID,
+		Model:             candidate.model.Endpoint + "://" + candidate.model.Model,
+		PersonaFile:       candidate.spec.File,
+		EndpointVariantID: requestSpecMetadataString(requestSpec, "endpoint_variant_id"),
+		ProviderName:      requestSpecMetadataString(requestSpec, "provider_name"),
+		EndpointTag:       requestSpecMetadataString(requestSpec, "endpoint_tag"),
+		Quantization:      requestSpecMetadataString(requestSpec, "quantization"),
+		RequestSpec:       &requestSpec,
+		PersonaText:       candidate.spec.Text,
+	}
+	if requestSpec.Provider != nil {
+		member.ProviderOnly = append([]string(nil), requestSpec.Provider.Only...)
+		member.ProviderQuantizations = append([]string(nil), requestSpec.Provider.Quantizations...)
+		member.ProviderAllowFallbacks = copyBool(requestSpec.Provider.AllowFallbacks)
+		member.ProviderRequireParameters = copyBool(requestSpec.Provider.RequireParameters)
+	}
+	return member
+}
+
+func copyBool(value *bool) *bool {
+	if value == nil {
+		return nil
+	}
+	result := *value
+	return &result
+}
+
+func requestSpecMetadataString(spec modelrequest.Spec, key string) string {
+	value, _ := spec.VariantMetadata[key].(string)
+	return strings.TrimSpace(value)
+}
+
+func (r *runner) constituteCouncil(ctx context.Context) error {
+	preflighter, ok := r.client.(councilCandidatePreflighter)
+	if !ok {
+		council, err := loadCouncil(r.cfg.CouncilPoolPath, r.cfg.CouncilSize)
+		if err != nil {
+			return err
+		}
+		r.council = council
+		return nil
+	}
+	candidates, err := shuffledCouncilCandidates(r.cfg.CouncilPoolPath)
+	if err != nil {
+		return err
+	}
+	check := func(ctx context.Context, member CouncilMember) error {
+		prompt, err := r.renderPrompt(
+			"council.preflight",
+			"{{MEMBER_ID}}", member.MemberID,
+			"{{MODEL}}", member.Model,
+			"{{PERSONA_FILE}}", member.PersonaFile,
+		)
+		if err != nil {
+			return err
+		}
+		requestCtx, cancel := context.WithTimeout(ctx, councilPreflightTimeout(r.cfg.CouncilTimeout))
+		defer cancel()
+		response, err := preflighter.PreflightCouncilCandidate(
+			requestCtx,
+			member,
+			[]map[string]any{{"role": "user", "content": prompt}},
+			councilTools(r.toolPrompt("council_vote")),
+		)
+		if err != nil {
+			return err
+		}
+		if _, err := parseVote(member, response, r.cfg.MaxResponseBytes); err != nil {
+			return &openaiapi.ProviderError{Class: openaiapi.ProviderErrorProtocol, Err: fmt.Errorf("invalid council preflight response: %w", err)}
+		}
+		return nil
+	}
+	council, rejections, err := selectAvailableCouncil(ctx, candidates, r.cfg.CouncilSize, check)
+	r.council = council
+	for _, rejection := range rejections {
+		if recordErr := r.recordEvent("council_candidate_rejected", "system", councilCandidateRejectionPayload(rejection)); recordErr != nil {
+			return errors.Join(err, recordErr)
+		}
+	}
+	return err
+}
+
+func councilCandidateRejectionPayload(rejection councilCandidateRejection) map[string]any {
+	payload := map[string]any{
+		"member_id":                rejection.MemberID,
+		"unavailable_model":        rejection.Unavailable.Model,
+		"unavailable_persona_file": rejection.Unavailable.PersonaFile,
+		"cause":                    rejection.Cause,
+		"error_class":              rejection.ErrorClass,
+	}
+	addCouncilRoutePayload(payload, "unavailable", rejection.Unavailable)
+	if rejection.Replacement != nil {
+		payload["replacement_model"] = rejection.Replacement.Model
+		payload["replacement_persona_file"] = rejection.Replacement.PersonaFile
+		addCouncilRoutePayload(payload, "replacement", *rejection.Replacement)
+	}
+	return payload
+}
+
+func addCouncilRoutePayload(payload map[string]any, prefix string, member CouncilMember) {
+	optional := map[string]string{
+		prefix + "_endpoint_variant_id": member.EndpointVariantID,
+		prefix + "_provider_name":       member.ProviderName,
+		prefix + "_endpoint_tag":        member.EndpointTag,
+		prefix + "_quantization":        member.Quantization,
+	}
+	for key, value := range optional {
+		if value != "" {
+			payload[key] = value
+		}
+	}
+	if len(member.ProviderOnly) > 0 {
+		payload[prefix+"_provider_only"] = append([]string(nil), member.ProviderOnly...)
+	}
+	if len(member.ProviderQuantizations) > 0 {
+		payload[prefix+"_provider_quantizations"] = append([]string(nil), member.ProviderQuantizations...)
+	}
+	if member.ProviderAllowFallbacks != nil {
+		payload[prefix+"_provider_allow_fallbacks"] = *member.ProviderAllowFallbacks
+	}
+	if member.ProviderRequireParameters != nil {
+		payload[prefix+"_provider_require_parameters"] = *member.ProviderRequireParameters
+	}
+}
+
+func selectAvailableCouncil(
+	ctx context.Context,
+	candidates []CouncilMember,
+	size int,
+	check func(context.Context, CouncilMember) error,
+) ([]CouncilMember, []councilCandidateRejection, error) {
+	if size <= 0 {
+		return nil, nil, fmt.Errorf("council size must be positive")
+	}
+	if size > len(candidates) {
+		return nil, nil, fmt.Errorf("council size %d exceeds compatible pool %d", size, len(candidates))
+	}
+	if check == nil {
+		return nil, nil, fmt.Errorf("council candidate check is required")
+	}
+	candidates = append([]CouncilMember(nil), candidates...)
+	seated := make([]CouncilMember, 0, size)
+	rejections := make([]councilCandidateRejection, 0)
+	authenticationFailures := make(map[string]error)
+	for seat := 1; seat <= size; seat++ {
+		if err := ctx.Err(); err != nil {
+			return seated, rejections, err
+		}
+		memberID := fmt.Sprintf("C%d", seat)
+		firstRejection := len(rejections)
+		for len(candidates) > 0 {
+			candidate := candidates[0]
+			candidates = candidates[1:]
+			candidate.MemberID = memberID
+			endpoint := councilMemberEndpoint(candidate)
+			candidateErr := authenticationFailures[endpoint]
+			if candidateErr != nil {
+				candidateErr = fmt.Errorf("authentication unavailable for council endpoint %s: %w", endpoint, candidateErr)
+			} else {
+				candidateErr = check(ctx, candidate)
+				if failedEndpoint, ok := endpointCredentialFailure(candidateErr); ok {
+					authenticationFailures[failedEndpoint] = candidateErr
+				}
+			}
+			if candidateErr != nil {
+				err := sanitizeError(candidateErr)
+				rejections = append(rejections, councilCandidateRejection{
+					MemberID:    memberID,
+					Unavailable: candidate,
+					Cause:       err.Error(),
+					ErrorClass:  string(openaiapi.ErrorClass(err)),
+					err:         err,
+				})
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return seated, rejections, ctxErr
+				}
+				continue
+			}
+			seated = append(seated, candidate)
+			replacement := candidate
+			for index := firstRejection; index < len(rejections); index++ {
+				rejections[index].Replacement = &replacement
+			}
+			break
+		}
+		if len(seated) != seat {
+			if len(rejections) == firstRejection {
+				return seated, rejections, fmt.Errorf("council preflight could not seat %s: no candidates remained", memberID)
+			}
+			last := rejections[len(rejections)-1]
+			return seated, rejections, fmt.Errorf("council preflight could not seat %s after %d rejected candidate(s): %w", memberID, len(rejections)-firstRejection, last.err)
+		}
+	}
+	return seated, rejections, nil
+}
+
+func endpointCredentialFailure(err error) (string, bool) {
+	if err == nil {
+		return "", false
+	}
+	var endpointErr *endpointCredentialError
+	if !errors.As(err, &endpointErr) {
+		return "", false
+	}
+	endpoint := strings.ToLower(strings.TrimSpace(endpointErr.endpoint))
+	return endpoint, endpoint != ""
+}
+
+func councilMemberEndpoint(member CouncilMember) string {
+	if member.RequestSpec != nil {
+		if endpoint := strings.ToLower(strings.TrimSpace(member.RequestSpec.Endpoint)); endpoint != "" {
+			return endpoint
+		}
+	}
+	model, err := modelrequest.ParseModelRef(member.Model)
+	if err != nil {
+		return ""
+	}
+	return strings.ToLower(strings.TrimSpace(model.Endpoint))
+}
+
+func councilPreflightTimeout(councilTimeout time.Duration) time.Duration {
+	const maximum = 20 * time.Second
+	if councilTimeout <= 0 || councilTimeout > maximum {
+		return maximum
+	}
+	return councilTimeout
 }
 
 func cryptoRandomIndex(upperBound int) (int, error) {

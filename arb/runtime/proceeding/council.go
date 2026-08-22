@@ -52,15 +52,19 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 		return err
 	}
 	rc.mu.Unlock()
+	requestPrompt, err := rc.councilDirectRequestPrompt(seat, opportunity)
+	if err != nil {
+		return err
+	}
 	inputItems := []map[string]any{
 		{"role": "system", "content": prompt},
-		{"role": "user", "content": "Call submit_council_vote exactly once for this opportunity."},
+		{"role": "user", "content": requestPrompt},
 	}
 	tools := []map[string]any{
 		{
 			"type":        "function",
 			"name":        "submit_council_vote",
-			"description": "Submit one council vote for the current deliberation opportunity.",
+			"description": rc.cfg.modelToolDescription("Submit one council vote for the current deliberation opportunity."),
 			"parameters":  submitCouncilVoteSchema(),
 		},
 	}
@@ -80,9 +84,13 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 			}
 			if isFunctionArgumentParseError(err) {
 				recordInvalidAttempt(err.Error())
+				repair, renderErr := rc.councilDirectRepairPrompt(seat, opportunity, "malformed_arguments", "", 0, 0)
+				if renderErr != nil {
+					return renderErr
+				}
 				inputItems = append(inputItems, map[string]any{
 					"role":    "user",
-					"content": "The previous tool call arguments were malformed. Call submit_council_vote exactly once with valid JSON arguments and keep the rationale brief.",
+					"content": repair,
 				})
 				continue
 			}
@@ -98,27 +106,39 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 			return err
 		} else if size > rc.cfg.Runtime.MaxResponseBytes {
 			recordInvalidAttempt(councilResponseOversizeReason(size, rc.cfg.Runtime.MaxResponseBytes))
+			repair, err := rc.councilDirectRepairPrompt(seat, opportunity, "response_too_large", "", size, rc.cfg.Runtime.MaxResponseBytes)
+			if err != nil {
+				return err
+			}
 			inputItems = append(inputItems, map[string]any{
 				"role":    "user",
-				"content": councilResponseOversizeCorrection(size, rc.cfg.Runtime.MaxResponseBytes),
+				"content": repair,
 			})
 			continue
 		}
 		prevID = resp.ResponseID
 		if len(resp.ToolCalls) != 1 {
 			recordInvalidAttempt("Call submit_council_vote exactly once.")
+			repair, err := rc.councilDirectRepairPrompt(seat, opportunity, "tool_call_count", "", 0, 0)
+			if err != nil {
+				return err
+			}
 			inputItems = append(inputItems, map[string]any{
 				"role":    "user",
-				"content": "Call submit_council_vote exactly once.",
+				"content": repair,
 			})
 			continue
 		}
 		call := resp.ToolCalls[0]
 		if call.Name != "submit_council_vote" {
 			recordInvalidAttempt("The only allowed tool is submit_council_vote.")
+			repair, err := rc.councilDirectRepairPrompt(seat, opportunity, "wrong_tool", "", 0, 0)
+			if err != nil {
+				return err
+			}
 			inputItems = append(inputItems, map[string]any{
 				"role":    "user",
-				"content": "The only allowed tool is submit_council_vote.",
+				"content": repair,
 			})
 			continue
 		}
@@ -126,9 +146,13 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 		if err := validateCouncilVotePayload(payload); err != nil {
 			reason := ensureTerminalPeriod(err.Error())
 			recordInvalidAttempt(reason)
+			repair, renderErr := rc.councilDirectRepairPrompt(seat, opportunity, "invalid_arguments", reason, 0, 0)
+			if renderErr != nil {
+				return renderErr
+			}
 			inputItems = append(inputItems, map[string]any{
 				"role":    "user",
-				"content": reason,
+				"content": repair,
 			})
 			continue
 		}
@@ -190,6 +214,48 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 	}
 	limitErr := formatInvalidAttemptLimitError(fmt.Sprintf("council member %s", memberID), invalidAttemptReasons)
 	return rc.removeInvalidResponseCouncilMember(caseCtx, turnDeadline, opportunity, seat, limitErr)
+}
+
+func (rc *runContext) councilDirectRequestPrompt(seat CouncilSeat, opportunity Opportunity) (string, error) {
+	return rc.cfg.renderPromptFile(promptCouncilDirectRequest, map[string]string{
+		"COUNCIL_TOOL":   "submit_council_vote",
+		"MEMBER_ID":      seat.MemberID,
+		"OPPORTUNITY_ID": opportunity.ID,
+	})
+}
+
+func (rc *runContext) councilDirectRepairPrompt(seat CouncilSeat, opportunity Opportunity, kind string, reason string, size int, limit int) (string, error) {
+	values := map[string]string{
+		"REPAIR_KIND":       kind,
+		"COUNCIL_TOOL":      "submit_council_vote",
+		"SUBMISSION_FIELDS": "vote and rationale",
+		"MEMBER_ID":         seat.MemberID,
+		"OPPORTUNITY_ID":    opportunity.ID,
+		"SIZE_BYTES":        fmt.Sprintf("%d", size),
+		"LIMIT_BYTES":       fmt.Sprintf("%d", limit),
+		"REASON":            reason,
+	}
+	componentID := ""
+	switch kind {
+	case "malformed_arguments":
+		componentID = promptCouncilRepairMalformed
+	case "response_too_large":
+		componentID = promptCouncilRepairOversize
+	case "tool_call_count":
+		componentID = promptCouncilRepairCallCount
+	case "wrong_tool":
+		componentID = promptCouncilRepairWrongTool
+	case "invalid_arguments":
+		componentID = promptCouncilRepairArguments
+	default:
+		return "", fmt.Errorf("unknown council direct repair kind %q", kind)
+	}
+	correction, err := rc.cfg.renderPromptFile(componentID, values)
+	if err != nil {
+		return "", err
+	}
+	values["CORRECTION"] = correction
+	return rc.cfg.renderPromptFile(promptCouncilDirectRepair, values)
 }
 
 func (rc *runContext) createCouncilResponse(
@@ -265,18 +331,30 @@ func councilMemberIDFromOpportunity(opportunity Opportunity) string {
 	return strings.TrimSpace(opportunity.MemberID)
 }
 
-func (rc *runContext) buildCouncilPrompt(seat CouncilSeat, _ Opportunity) (string, error) {
+func (rc *runContext) buildCouncilPrompt(seat CouncilSeat, opportunity Opportunity) (string, error) {
 	personaSection := ""
 	if strings.TrimSpace(seat.PersonaText) != "" {
-		personaSection = "Persona:\n" + strings.TrimSpace(seat.PersonaText) + "\n"
+		var err error
+		personaSection, err = rc.cfg.renderPromptFile(promptCouncilPersona, map[string]string{
+			"PERSONA":        strings.TrimSpace(seat.PersonaText),
+			"MEMBER_ID":      seat.MemberID,
+			"MODEL":          seat.Model,
+			"PERSONA_FILE":   seat.PersonaFile,
+			"OPPORTUNITY_ID": opportunity.ID,
+		})
+		if err != nil {
+			return "", err
+		}
 	}
-	return rc.cfg.renderPromptFile("council.md", map[string]string{
+	return rc.cfg.renderPromptFile(promptCouncilSystem, map[string]string{
 		"MEMBER_ID":          seat.MemberID,
 		"DELIBERATION_ROUND": fmt.Sprintf("%v", mapAny(rc.state["case"])["deliberation_round"]),
 		"PROPOSITION":        rc.complaint.Proposition,
 		"EVIDENCE_STANDARD":  currentEvidenceStandard(rc.state, rc.cfg.Policy),
 		"PERSONA_SECTION":    personaSection,
 		"RECORD":             rc.renderCouncilRecord(),
+		"OPPORTUNITY_ID":     opportunity.ID,
+		"OBJECTIVE":          opportunity.Objective,
 	})
 }
 
@@ -305,10 +383,6 @@ func isCouncilRequestError(err error) bool {
 
 func councilResponseOversizeReason(size int, limit int) string {
 	return fmt.Sprintf("council response exceeded byte limit of %d bytes (got %d)", limit, size)
-}
-
-func councilResponseOversizeCorrection(size int, limit int) string {
-	return fmt.Sprintf("Your response payload was %d bytes; the limit is %d bytes. Call submit_council_vote exactly once with only vote and a concise rationale. Do not include analysis outside the tool call.", size, limit)
 }
 
 func (rc *runContext) renderCouncilRecord() string {

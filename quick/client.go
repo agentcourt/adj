@@ -2,7 +2,6 @@ package quick
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -23,9 +22,19 @@ type responseClient interface {
 	Accounting() openaiapi.Accounting
 }
 
-type councilEndpointPreflighter interface {
-	PreflightCouncilEndpoints([]CouncilMember) error
+type councilCandidatePreflighter interface {
+	PreflightCouncilCandidate(context.Context, CouncilMember, []map[string]any, []map[string]any) (openaiapi.Response, error)
 }
+
+const councilPreflightMaxOutputTokens int64 = 1024
+
+type endpointCredentialError struct {
+	endpoint string
+	err      error
+}
+
+func (e *endpointCredentialError) Error() string { return e.err.Error() }
+func (e *endpointCredentialError) Unwrap() error { return e.err }
 
 type directClient struct {
 	timeout     time.Duration
@@ -52,6 +61,12 @@ func (c *directClient) CreateResponseWithRequestSpec(
 ) (openaiapi.Response, error) {
 	client, err := c.clientForEndpoint(spec.Endpoint)
 	if err != nil {
+		if openaiapi.ErrorClass(err) == openaiapi.ProviderErrorAuthentication {
+			return openaiapi.Response{}, &endpointCredentialError{
+				endpoint: strings.ToLower(strings.TrimSpace(spec.Endpoint)),
+				err:      err,
+			}
+		}
 		return openaiapi.Response{}, err
 	}
 	response, err := client.CreateResponseWithRequestSpec(ctx, spec, input, tools, previousResponseID)
@@ -88,28 +103,20 @@ func (c *directClient) Accounting() openaiapi.Accounting {
 	return c.accounting.Snapshot()
 }
 
-func (c *directClient) PreflightCouncilEndpoints(council []CouncilMember) error {
-	seen := make(map[string]struct{}, len(council))
-	var preflightErr error
-	for _, member := range council {
-		if member.RequestSpec == nil {
-			preflightErr = errors.Join(preflightErr, fmt.Errorf("council member %s has no request specification", member.MemberID))
-			continue
-		}
-		if supported, known := member.RequestSpec.SupportsParameter("tools"); known && !supported {
-			preflightErr = errors.Join(preflightErr, &openaiapi.ProviderError{
-				Class: openaiapi.ProviderErrorRequest,
-				Err:   fmt.Errorf("council member %s model %s metadata omits required parameter tools", member.MemberID, member.Model),
-			})
-		}
-		endpoint := strings.ToLower(strings.TrimSpace(member.RequestSpec.Endpoint))
-		if _, ok := seen[endpoint]; ok {
-			continue
-		}
-		seen[endpoint] = struct{}{}
-		if _, err := c.clientForEndpoint(endpoint); err != nil {
-			preflightErr = errors.Join(preflightErr, fmt.Errorf("initialize council endpoint %s: %w", endpoint, err))
+func (c *directClient) PreflightCouncilCandidate(ctx context.Context, member CouncilMember, input []map[string]any, tools []map[string]any) (openaiapi.Response, error) {
+	if member.RequestSpec == nil {
+		return openaiapi.Response{}, fmt.Errorf("council member %s has no request specification", member.MemberID)
+	}
+	if supported, known := member.RequestSpec.SupportsParameter("tools"); known && !supported {
+		return openaiapi.Response{}, &openaiapi.ProviderError{
+			Class: openaiapi.ProviderErrorRequest,
+			Err:   fmt.Errorf("council member %s model %s metadata omits required parameter tools", member.MemberID, member.Model),
 		}
 	}
-	return preflightErr
+	spec := councilPreflightRequestSpec(*member.RequestSpec)
+	return c.CreateResponseWithRequestSpec(ctx, spec, input, tools, "")
+}
+
+func councilPreflightRequestSpec(spec modelrequest.Spec) modelrequest.Spec {
+	return spec.WithMaxOutputTokens(councilPreflightMaxOutputTokens)
 }

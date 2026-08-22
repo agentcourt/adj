@@ -1,0 +1,1 @@
+Write a precise civil-trial digest from the supplied record.  Address each side's legal theory, burden framing, evidentiary support, vulnerabilities, and response to the opposing case.  Do not invent facts.

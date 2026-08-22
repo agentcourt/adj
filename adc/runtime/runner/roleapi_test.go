@@ -165,8 +165,11 @@ func TestWorkNotesStayOutOfTurnTranscript(t *testing.T) {
 }
 
 func TestJurorRoleAPISpecsIncludeRecordReaders(t *testing.T) {
-	r := &Runner{}
-	specs := r.roleAPIToolSpecs(spec.RoleSpec{Name: "juror"}, leanOpportunity{})
+	r := &Runner{prompts: testPromptCatalog(t)}
+	specs, err := r.roleAPIToolSpecs(spec.RoleSpec{Name: "juror"}, leanOpportunity{})
+	if err != nil {
+		t.Fatalf("roleAPIToolSpecs: %v", err)
+	}
 	names := map[string]bool{}
 	for _, toolSpec := range specs {
 		names[strings.TrimSpace(stringOrDefault(toolSpec["name"], ""))] = true
@@ -180,25 +183,35 @@ func TestJurorRoleAPISpecsIncludeRecordReaders(t *testing.T) {
 
 func TestRoleAPIPromptIncludesDeadlineAndBudgets(t *testing.T) {
 	r := &Runner{
+		prompts: testPromptCatalog(t),
 		state: map[string]any{
 			"case": map[string]any{"status": "active"},
 		},
 	}
 	deadline := time.Date(2026, 6, 6, 10, 30, 0, 0, time.UTC)
-	prompt := r.buildRoleAPIPrompt(
+	opportunity := leanOpportunity{
+		OpportunityID: "opp-1",
+		Objective:     "Submit a technical report.",
+		AllowedTools:  []string{"submit_technical_report"},
+		MayPass:       true,
+	}
+	availableToolSpecs, err := r.roleAPIToolSpecs(spec.RoleSpec{Name: "plaintiff"}, opportunity)
+	if err != nil {
+		t.Fatalf("roleAPIToolSpecs: %v", err)
+	}
+	prompt, err := r.buildRoleAPIPrompt(
 		spec.RoleSpec{Name: "plaintiff"},
 		map[string]any{"role": "plaintiff"},
-		leanOpportunity{
-			OpportunityID: "opp-1",
-			Objective:     "Submit a technical report.",
-			AllowedTools:  []string{"submit_technical_report"},
-			MayPass:       true,
-		},
+		opportunity,
 		deadline,
 		30*time.Minute,
 		3,
 		30,
+		availableToolSpecs,
 	)
+	if err != nil {
+		t.Fatalf("buildRoleAPIPrompt: %v", err)
+	}
 	for _, want := range []string{
 		"Deadline: submit this turn before 2026-06-06 10:30:00 UTC.",
 		"The remaining_time_ms field in each response is live.",
@@ -308,7 +321,8 @@ func testRoleAPIWithActiveTurn(t *testing.T) (*roleAPIServer, *externalOpportuni
 	t.Helper()
 
 	r := &Runner{
-		cfg: Config{CaseID: "case-1", ScenarioBaseDir: t.TempDir()},
+		cfg:     Config{CaseID: "case-1", ScenarioBaseDir: t.TempDir()},
+		prompts: testPromptCatalog(t),
 		state: map[string]any{
 			"case": map[string]any{"status": "active", "phase": "trial"},
 		},

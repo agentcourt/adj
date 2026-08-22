@@ -1,6 +1,6 @@
 # Adjudication Core
 
-This repository contains five one-case adjudication procedures: ADC, ARB, AARD, simple, and quick.  ADC, ARB, and AARD use Lean engines, replay proofs, Go runtimes, participant APIs, and certificate verification.  Simple and quick are smaller Go procedures for direct model decisions and one-round adversarial decisions.  Multi-case services, MCP adapters, local-agent launchers, deployment programs, and web applications live in the `adjservices` repository.
+This repository contains five one-case adjudication procedures: ADC, ARB, AARD, simple, and quick.  ADC, ARB, and AARD use Lean engines, replay proofs, Go runtimes, participant APIs, and certificate verification.  Simple and quick are smaller Go procedures for direct model decisions and one-round adversarial decisions.  The repository also provides standalone MCP adapters for every procedure with external participants.  Multi-case services, local-agent launchers, deployment programs, and web applications live in the `adjservices` repository.
 
 ## Procedures
 
@@ -16,16 +16,14 @@ The three formal procedures use Lean to control procedural phases, opportunities
 
 ## Build and Test
 
-Go 1.25 builds all five procedures, and Lean 4.32.0 builds the ADC, ARB, and AARD engines and proof trees.  The formal-procedure Makefiles build each command and engine into that procedure's `.bin/` directory.  Simple has a Go-only Makefile, while quick builds from the root Go module.
+Go 1.25 builds all five procedures, and Lean 4.32.0 builds the ADC, ARB, and AARD engines and proof trees.  Each procedure Makefile writes its commands beneath that procedure's `.bin/` directory.  The Simple and Quick Makefiles run only Go builds and tests, while the three formal-procedure Makefiles also build their Lean engines and proof trees.
 
 ```bash
 make -C adc build test prove
 make -C arb build test prove
 make -C arbd build test prove
 make -C simple build test
-mkdir -p .bin
-go build -o .bin/quick ./quick/cmd/quick
-go test ./quick/...
+make -C quick build test
 ```
 
 The shared `common/` tree contains document import and verification, record writing, case manifests, model requests, provider clients, and persona loading used across the procedures.  It also contains the default juror and council request-spec pool, the persona named by that pool, and a [persona corpus](common/etc/personas/README.md) for custom pools.  One root Go module keeps these shared packages and all five commands together.
@@ -43,7 +41,7 @@ examples/ex1/sign.sh
 .bin/adc case --complaint examples/ex1/complaint.md --out-dir out/ex1
 
 cd ../arb
-.bin/aar case --complaint examples/ex01/complaint.md --out-dir out/ex01
+.bin/aar case --complaint ../examples/ex01/complaint.md --out-dir out/ex01
 
 cd ../arbd
 .bin/aard case --complaint examples/ex1/complaint.md --out-dir out/ex1
@@ -60,10 +58,9 @@ cd ../simple
   --max-documents-bytes 8388608
 
 cd ..
-.bin/quick case \
+quick/.bin/quick case \
   --proposition "The sky is blue" \
   --out-dir quick/out/example \
-  --council-pool common/data/personas/pool.jsonl \
   --council-size 3 \
   --required-votes 2 \
   --evidence-standard preponderance_of_the_evidence \
@@ -72,6 +69,8 @@ cd ..
   --max-documents-total-bytes 8388608 \
   --allow-api-key
 ```
+
+Quick uses `./pool.jsonl` when present, then the shared `common/data/personas/pool.jsonl`.  `--council-pool` and `--common-root` override those paths.  The resolved pool path appears in `input.json`.
 
 ADC, ARB, AARD, and quick can expose live participant opportunities through case-owned HTTP APIs.  Callers select the listen address, external roles, or council backend through procedure flags where the procedure supports those choices.  The [core process interface](docs/service-interface.md) records the command, private HTTP, and artifact interface used by operational consumers.
 

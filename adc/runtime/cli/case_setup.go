@@ -31,6 +31,8 @@ type complaintSetupOptions struct {
 	JurorCount          int
 	MinimumConcurring   int
 	UnanimousRequired   *bool
+	PromptDir           string
+	PromptFiles         map[string]string
 }
 
 type caseSetupResult struct {
@@ -63,6 +65,8 @@ type propositionSetupOptions struct {
 	JurorCount          int
 	MinimumConcurring   int
 	UnanimousRequired   *bool
+	PromptDir           string
+	PromptFiles         map[string]string
 }
 
 func prepareComplaintScenario(ctx context.Context, client *openai.Client, opts complaintSetupOptions) (caseSetupResult, error) {
@@ -100,7 +104,10 @@ func prepareComplaintScenario(ctx context.Context, client *openai.Client, opts c
 		return caseSetupResult{}, err
 	}
 
-	plan, err := casegen.CreatePlan(ctx, client, resolvedPlannerModel, complaint, court)
+	plan, err := casegen.CreatePlanWithOptions(ctx, client, resolvedPlannerModel, complaint, court, casegen.PlanningOptions{
+		PromptDir:   opts.PromptDir,
+		PromptFiles: opts.PromptFiles,
+	})
 	if err != nil {
 		return caseSetupResult{}, err
 	}
@@ -118,6 +125,8 @@ func prepareComplaintScenario(ctx context.Context, client *openai.Client, opts c
 		JurorCount:          opts.JurorCount,
 		MinimumConcurring:   opts.MinimumConcurring,
 		UnanimousRequired:   opts.UnanimousRequired,
+		PromptDir:           opts.PromptDir,
+		PromptFiles:         opts.PromptFiles,
 	})
 	if err != nil {
 		return caseSetupResult{}, err
@@ -164,7 +173,10 @@ func preparePropositionScenario(opts propositionSetupOptions) (caseSetupResult, 
 	if trialMode == "" || trialMode == "auto" {
 		trialMode = "jury"
 	}
-	plan, err := casegen.CreatePropositionPlan(opts.Proposition, opts.EvidenceStandard, trialMode)
+	plan, err := casegen.CreatePropositionPlanWithOptions(opts.Proposition, opts.EvidenceStandard, trialMode, casegen.PlanningOptions{
+		PromptDir:   opts.PromptDir,
+		PromptFiles: opts.PromptFiles,
+	})
 	if err != nil {
 		return caseSetupResult{}, err
 	}
@@ -220,6 +232,8 @@ func preparePropositionScenario(opts propositionSetupOptions) (caseSetupResult, 
 		JurorCount:          opts.JurorCount,
 		MinimumConcurring:   opts.MinimumConcurring,
 		UnanimousRequired:   opts.UnanimousRequired,
+		PromptDir:           opts.PromptDir,
+		PromptFiles:         opts.PromptFiles,
 	})
 	if err != nil {
 		return caseSetupResult{}, err

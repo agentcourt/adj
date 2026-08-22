@@ -53,34 +53,6 @@ func TestResolveExplicitCaseFilesRejectsUnmatchedGlob(t *testing.T) {
 	}
 }
 
-func TestResolveAttorneyInstructionsPathUsesExplicitFile(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "instructions.md")
-	if err := os.WriteFile(path, []byte("be careful\n"), 0o644); err != nil {
-		t.Fatalf("write instructions: %v", err)
-	}
-
-	got, err := resolveAttorneyInstructionsPath(path)
-	if err != nil {
-		t.Fatalf("resolveAttorneyInstructionsPath returned error: %v", err)
-	}
-	want, err := filepath.Abs(path)
-	if err != nil {
-		t.Fatalf("filepath.Abs: %v", err)
-	}
-	if got != want {
-		t.Fatalf("resolveAttorneyInstructionsPath = %q, want %q", got, want)
-	}
-}
-
-func TestResolveAttorneyInstructionsPathRejectsMissingFile(t *testing.T) {
-	dir := t.TempDir()
-	_, err := resolveAttorneyInstructionsPath(filepath.Join(dir, "missing.md"))
-	if err == nil || !strings.Contains(err.Error(), "stat attorney instructions") {
-		t.Fatalf("resolveAttorneyInstructionsPath error = %v, want missing-file error", err)
-	}
-}
-
 func TestResolvePromptDirUsesExplicitDirectory(t *testing.T) {
 	dir := t.TempDir()
 	got, err := resolvePromptDir(dir)

@@ -12,6 +12,7 @@ aardengine:
 
 build: aardengine
 	cd runtime && $(GO_ENV) go build -o ../$(BIN_DIR)/aard ./cmd/aard
+	cd runtime && $(GO_ENV) go build -o ../$(BIN_DIR)/aard-mcp ./cmd/aard-mcp
 
 test: build
 	cd runtime && $(GO_ENV) go test -p 1 -parallel 1 ./...

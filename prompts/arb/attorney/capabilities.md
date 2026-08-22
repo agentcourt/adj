@@ -1,0 +1,1 @@
+Use the Lawyer API as role {{ROLE}}. GET returns the current prompt, available tools, opportunity id, live deadline, and attempts left. POST executes one tool call and must include the current turn.opportunity_id. For this turn, opportunity_id is {{OPPORTUNITY_ID}}.

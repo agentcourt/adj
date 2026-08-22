@@ -9,12 +9,14 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/jsmorph/adj/common/cliio"
 	"github.com/jsmorph/adj/common/documents"
 	openaiapi "github.com/jsmorph/adj/common/openai"
+	"github.com/jsmorph/adj/common/promptfile"
 	"github.com/jsmorph/adj/quick"
 )
 
@@ -27,11 +29,17 @@ func runCase(ctx context.Context, args []string, stdout, stderr io.Writer) error
 	proposition := fs.String("proposition", "", "Proposition to adjudicate")
 	documentsDir := fs.String("documents", "", "Directory of immutable case documents")
 	outDir := fs.String("out-dir", "", "Empty output directory")
-	councilPool := fs.String("council-pool", "", "Council JSONL request-spec pool")
+	commonRoot := fs.String("common-root", quick.DefaultCommonRoot(), "Path to the shared common directory")
+	councilPool := fs.String("council-pool", "", "Council JSONL request-spec pool. Default: ./pool.jsonl when present, else <common-root>/data/personas/pool.jsonl")
 	councilSize := fs.Int("council-size", 0, "Council member count")
 	requiredVotes := fs.Int("required-votes", 0, "Votes required for a decision")
 	evidenceStandard := fs.String("evidence-standard", "", "Standard the council applies to the proposition")
+	promptDir := fs.String("prompt-dir", "", "Directory containing the complete Quick prompt set")
+	var promptFiles promptfile.Assignments
+	fs.Var(&promptFiles, "prompt-file", "Prompt override as ID=PATH; may be repeated")
+	lawyerWebSearch := fs.Bool("lawyer-web-search", true, "Allow lawyer web search")
 	caseAPIAddr := fs.String("caseapi-addr", quick.DefaultCaseAPIAddr, "Private lawyer API listen address")
+	lawyerAPIBearerTokenFile := fs.String("lawyerapi-bearer-token-file", "", "Read the private lawyer API bearer token from PATH")
 	caseID := fs.String("case-id", "quick-1", "Case identifier")
 	runID := fs.String("run-id", "", "Run identifier")
 	lawyerTimeout := fs.Duration("lawyer-timeout", quick.DefaultLawyerTimeout, "Maximum duration of each lawyer turn")
@@ -46,7 +54,7 @@ func runCase(ctx context.Context, args []string, stdout, stderr io.Writer) error
 	parallelCouncil := fs.Bool("parallel-council", false, "Request all council votes concurrently")
 	allowAPIKey := fs.Bool("allow-api-key", false, "Authorize direct provider calls billed through configured API keys")
 	fs.Usage = func() {
-		fmt.Fprintln(fs.Output(), "Usage: quick case --proposition TEXT --out-dir DIR --council-pool FILE --council-size N --required-votes N --evidence-standard TEXT --max-document-files N --max-document-file-bytes N --max-documents-total-bytes N --allow-api-key")
+		fmt.Fprintln(fs.Output(), "Usage: quick case --proposition TEXT --out-dir DIR --council-size N --required-votes N --evidence-standard TEXT --max-document-files N --max-document-file-bytes N --max-documents-total-bytes N --allow-api-key")
 		fmt.Fprintln(fs.Output())
 		fs.PrintDefaults()
 	}
@@ -73,18 +81,27 @@ func runCase(ctx context.Context, args []string, stdout, stderr io.Writer) error
 	if fs.NArg() != 0 {
 		return reportCaseError(stdout, earlyResult(*proposition, *caseID, *runID, *councilSize, *requiredVotes, *evidenceStandard, startedAt), fmt.Errorf("quick case accepts no positional arguments"))
 	}
-	if strings.TrimSpace(*proposition) == "" || strings.TrimSpace(*outDir) == "" || strings.TrimSpace(*councilPool) == "" || strings.TrimSpace(*evidenceStandard) == "" {
-		return reportCaseError(stdout, earlyResult(*proposition, *caseID, *runID, *councilSize, *requiredVotes, *evidenceStandard, startedAt), fmt.Errorf("--proposition, --out-dir, --council-pool, and --evidence-standard are required"))
+	if strings.TrimSpace(*proposition) == "" || strings.TrimSpace(*outDir) == "" || strings.TrimSpace(*evidenceStandard) == "" || strings.TrimSpace(*lawyerAPIBearerTokenFile) == "" {
+		return reportCaseError(stdout, earlyResult(*proposition, *caseID, *runID, *councilSize, *requiredVotes, *evidenceStandard, startedAt), fmt.Errorf("--proposition, --out-dir, --evidence-standard, and --lawyerapi-bearer-token-file are required"))
+	}
+	lawyerAPIBearerToken, err := readBearerTokenFile(*lawyerAPIBearerTokenFile)
+	if err != nil {
+		return reportCaseError(stdout, earlyResult(*proposition, *caseID, *runID, *councilSize, *requiredVotes, *evidenceStandard, startedAt), err)
 	}
 	result, runErr := runProcedure(ctx, quick.Options{
 		Proposition:            *proposition,
 		DocumentsDir:           *documentsDir,
 		OutputDir:              *outDir,
+		CommonRoot:             *commonRoot,
 		CouncilPoolPath:        *councilPool,
 		CouncilSize:            *councilSize,
 		RequiredVotes:          *requiredVotes,
 		EvidenceStandard:       *evidenceStandard,
+		PromptDir:              *promptDir,
+		PromptFiles:            promptFiles.Values(),
+		LawyerWebSearch:        lawyerWebSearch,
 		CaseAPIAddr:            *caseAPIAddr,
+		LawyerAPIBearerToken:   lawyerAPIBearerToken,
 		CaseID:                 *caseID,
 		RunID:                  *runID,
 		LawyerTimeout:          *lawyerTimeout,
@@ -109,6 +126,29 @@ func runCase(ctx context.Context, args []string, stdout, stderr io.Writer) error
 	}
 	writeErr := writeResult(stdout, result)
 	return errors.Join(runErr, writeErr)
+}
+
+func readBearerTokenFile(path string) (string, error) {
+	path = strings.TrimSpace(path)
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("stat lawyer API bearer-token file: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return "", fmt.Errorf("lawyer API bearer-token file must be a regular file")
+	}
+	if info.Mode().Perm()&0o077 != 0 {
+		return "", fmt.Errorf("lawyer API bearer-token file permissions must exclude group and other access")
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read lawyer API bearer-token file: %w", err)
+	}
+	token := strings.TrimSpace(string(raw))
+	if token == "" {
+		return "", fmt.Errorf("lawyer API bearer-token file is empty")
+	}
+	return token, nil
 }
 
 func reportCaseError(stdout io.Writer, result quick.Result, runErr error) error {

@@ -12,6 +12,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 	"github.com/jsmorph/adj/common/modelrequest"
 	openaiapi "github.com/jsmorph/adj/common/openai"
@@ -51,9 +52,17 @@ func (r *Runner) executeTurn(
 	if err != nil {
 		return TurnLog{}, err
 	}
+	systemPrompt, err := r.buildSystemPrompt(role, view)
+	if err != nil {
+		return TurnLog{}, err
+	}
+	turnPrompt, err := r.buildTurnPrompt(role.Name, turn.Prompt, allowed)
+	if err != nil {
+		return TurnLog{}, err
+	}
 	conversation := []map[string]any{
-		{"role": "system", "content": buildSystemPrompt(role, view)},
-		{"role": "user", "content": r.buildTurnPrompt(role.Name, turn.Prompt, allowed)},
+		{"role": "system", "content": systemPrompt},
+		{"role": "user", "content": turnPrompt},
 	}
 	tools, err := r.buildTools(allowed)
 	if err != nil {
@@ -85,7 +94,10 @@ func (r *Runner) executeTurn(
 		issues := make([]correctionIssue, 0, len(resp.ToolCalls))
 		for _, call := range resp.ToolCalls {
 			if strings.TrimSpace(call.ArgumentsError) != "" {
-				issue := issueFromMalformedToolCall(call)
+				issue, err := r.issueFromMalformedToolCall(call)
+				if err != nil {
+					return TurnLog{}, err
+				}
 				out := malformedToolCallOutput(issue)
 				callOutputs = append(callOutputs, map[string]any{
 					"type":    "function_call_output",
@@ -175,11 +187,15 @@ func (r *Runner) executeTurn(
 			if invalidAttempts >= maxInvalidAttemptsPerTurn {
 				return TurnLog{}, formatInvalidAttemptLimitError(fmt.Sprintf("agent turn=%d role=%s", turnIndex, role.Name), invalidAttemptReasons)
 			}
+			correctionPrompt, err := r.buildCorrectionPrompt(role.Name, issues, allowed, false)
+			if err != nil {
+				return TurnLog{}, err
+			}
 			inputItems = append(
 				inputItems,
 				map[string]any{
 					"role":    "user",
-					"content": buildCorrectionPrompt(role.Name, issues, allowed, false),
+					"content": correctionPrompt,
 				},
 			)
 		}
@@ -214,14 +230,20 @@ func (r *Runner) executeOpportunityTurn(
 		return TurnLog{}, err
 	}
 	transcript := make([]map[string]any, 0)
-	systemPrompt := buildSystemPrompt(role, view)
+	systemPrompt, err := r.buildSystemPrompt(role, view)
+	if err != nil {
+		return TurnLog{}, err
+	}
 	activeModel := r.effectiveRoleModel(role)
 	responseClient := r.client
 	var activeRequestSpec *modelrequest.Spec
 	if role.Name == "juror" {
 		caseObj, _ := r.state["case"].(map[string]any)
 		jurorModel, jurorPersona := r.jurorOpportunityPromptContext(opportunity)
-		systemPrompt = buildJurorSystemPrompt(role, opportunity, jurorPersona, caseObj)
+		systemPrompt, err = r.buildJurorSystemPrompt(role, opportunity, jurorPersona, caseObj)
+		if err != nil {
+			return TurnLog{}, err
+		}
 		if strings.TrimSpace(jurorModel) != "" {
 			activeModel = jurorModel
 		}
@@ -231,9 +253,17 @@ func (r *Runner) executeOpportunityTurn(
 			return TurnLog{}, err
 		}
 	}
+	opportunityPrompt, err := r.buildOpportunityPrompt(role, opportunity)
+	if err != nil {
+		return TurnLog{}, err
+	}
+	turnPrompt, err := r.buildTurnPrompt(role.Name, opportunityPrompt, opportunityCallableTools(role, opportunity))
+	if err != nil {
+		return TurnLog{}, err
+	}
 	conversation := []map[string]any{
 		{"role": "system", "content": systemPrompt},
-		{"role": "user", "content": r.buildTurnPrompt(role.Name, buildOpportunityPrompt(role, opportunity), opportunityCallableTools(role, opportunity))},
+		{"role": "user", "content": turnPrompt},
 	}
 	referenceTools := referenceToolsForRole(role)
 	callableTools := opportunityCallableTools(role, opportunity)
@@ -303,19 +333,28 @@ func (r *Runner) executeOpportunityTurn(
 		resp = recoverLiteralToolCall(resp, appendOpportunityAllowedTools(opportunity.AllowedTools, referenceTools, opportunity.MayPass))
 		if len(resp.ToolCalls) == 0 {
 			decisionSteps++
+			actorMessage, err := r.prompts.Render(adcprompts.RuntimeCorrectionNoToolID, map[string]string{
+				"{{PASS_ACTION}}": passAction(opportunity.MayPass),
+			})
+			if err != nil {
+				return TurnLog{}, err
+			}
 			issue := correctionIssue{
 				Tool:         "none",
 				Error:        "no tool call returned",
-				ActorMessage: ternary(opportunity.MayPass, "Choose one allowed action, use a reference tool, or call pass_turn.", "Choose one allowed action or use a reference tool now."),
+				ActorMessage: actorMessage,
 			}
 			if err := recordCompletionResult(resp, "rejected", &issue, invalidAttempts+1); err != nil {
 				return TurnLog{}, err
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
+				inputItems, err = r.restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
-				inputItems = appendOpportunityCorrection(role.Name, nil, issue, opportunity, referenceTools)
+				inputItems, err = r.appendOpportunityCorrection(role.Name, nil, issue, opportunity, referenceTools)
+			}
+			if err != nil {
+				return TurnLog{}, err
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -324,17 +363,21 @@ func (r *Runner) executeOpportunityTurn(
 		}
 		if len(resp.ToolCalls) != 1 {
 			decisionSteps++
+			actorMessage, err := r.prompts.Text(adcprompts.RuntimeCorrectionMultipleID)
+			if err != nil {
+				return TurnLog{}, err
+			}
 			issue := correctionIssue{
 				Tool:         "multiple",
 				Error:        "multiple tool calls returned",
-				ActorMessage: "Call exactly one tool for this opportunity.",
+				ActorMessage: actorMessage,
 			}
 			callOutputs := make([]map[string]any, 0, len(resp.ToolCalls))
 			for _, call := range resp.ToolCalls {
 				out := map[string]any{
 					"ok":            false,
 					"error":         "multiple tool calls are not allowed",
-					"actor_message": "Call exactly one tool for this opportunity.",
+					"actor_message": actorMessage,
 					"tool":          call.Name,
 				}
 				callOutputs = append(callOutputs, map[string]any{
@@ -348,10 +391,13 @@ func (r *Runner) executeOpportunityTurn(
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
+				inputItems, err = r.restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
 				inputItems = nextInputItems(callOutputs)
-				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+				inputItems, err = r.appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+			}
+			if err != nil {
+				return TurnLog{}, err
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -361,13 +407,16 @@ func (r *Runner) executeOpportunityTurn(
 		call := resp.ToolCalls[0]
 		if strings.TrimSpace(call.ArgumentsError) != "" {
 			decisionSteps++
-			issue := issueFromMalformedToolCall(call)
+			issue, err := r.issueFromMalformedToolCall(call)
+			if err != nil {
+				return TurnLog{}, err
+			}
 			if err := recordCompletionResult(resp, "rejected", &issue, invalidAttempts+1); err != nil {
 				return TurnLog{}, err
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
+				inputItems, err = r.restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
 				callOutput := map[string]any{
 					"type":    "function_call_output",
@@ -375,7 +424,10 @@ func (r *Runner) executeOpportunityTurn(
 					"output":  marshalString(malformedToolCallOutput(issue)),
 				}
 				inputItems = nextInputItems([]map[string]any{callOutput})
-				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+				inputItems, err = r.appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+			}
+			if err != nil {
+				return TurnLog{}, err
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -384,18 +436,22 @@ func (r *Runner) executeOpportunityTurn(
 		}
 		if !contains(callableTools, call.Name) {
 			decisionSteps++
-			out := map[string]any{"ok": false, "error": "tool not allowed", "tool": call.Name, "actor_message": "Choose one allowed action for this opportunity, or use a listed reference tool."}
+			actorMessage, err := r.prompts.Text(adcprompts.RuntimeCorrectionDisallowedID)
+			if err != nil {
+				return TurnLog{}, err
+			}
+			out := map[string]any{"ok": false, "error": "tool not allowed", "tool": call.Name, "actor_message": actorMessage}
 			issue := correctionIssue{
 				Tool:         call.Name,
 				Error:        fmt.Sprintf("tool %s is not allowed in this opportunity", call.Name),
-				ActorMessage: "Choose one allowed action for this opportunity, or use a listed reference tool.",
+				ActorMessage: actorMessage,
 			}
 			if err := recordCompletionResult(resp, "rejected", &issue, invalidAttempts+1); err != nil {
 				return TurnLog{}, err
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
+				inputItems, err = r.restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
 				callOutput := map[string]any{
 					"type":    "function_call_output",
@@ -403,7 +459,10 @@ func (r *Runner) executeOpportunityTurn(
 					"output":  marshalString(out),
 				}
 				inputItems = nextInputItems([]map[string]any{callOutput})
-				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+				inputItems, err = r.appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+			}
+			if err != nil {
+				return TurnLog{}, err
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -412,10 +471,14 @@ func (r *Runner) executeOpportunityTurn(
 		}
 		if isReferenceTool(call.Name) {
 			if supportSteps >= supportBudget {
+				actorMessage, err := r.prompts.Text(adcprompts.RuntimeCorrectionSupportID)
+				if err != nil {
+					return TurnLog{}, err
+				}
 				issue := correctionIssue{
 					Tool:         call.Name,
 					Error:        "support-tool budget exhausted",
-					ActorMessage: "You have inspected enough record material for this opportunity.  Submit a legal decision now, or pass if passing is allowed.",
+					ActorMessage: actorMessage,
 				}
 				if err := recordCompletionResult(resp, "rejected", &issue, invalidAttempts+1); err != nil {
 					return TurnLog{}, err
@@ -430,7 +493,10 @@ func (r *Runner) executeOpportunityTurn(
 					}),
 				}
 				inputItems = nextInputItems([]map[string]any{callOutput})
-				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+				inputItems, err = r.appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+				if err != nil {
+					return TurnLog{}, err
+				}
 				if err := recordInvalidAttempt(issue); err != nil {
 					return TurnLog{}, err
 				}
@@ -459,7 +525,10 @@ func (r *Runner) executeOpportunityTurn(
 			if err := recordCompletionResult(resp, "rejected", &issue, invalidAttempts+1); err != nil {
 				return TurnLog{}, err
 			}
-			inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+			inputItems, err = r.appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+			if err != nil {
+				return TurnLog{}, err
+			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
 			}
@@ -473,14 +542,17 @@ func (r *Runner) executeOpportunityTurn(
 				"reason": strings.TrimSpace(stringOrDefault(call.Arguments["reason"], "")),
 			}
 		} else {
-			payload, issue := applyOpportunityPayloadDefaults(call.Name, call.Arguments, opportunity)
+			payload, issue, err := r.applyOpportunityPayloadDefaults(call.Name, call.Arguments, opportunity)
+			if err != nil {
+				return TurnLog{}, err
+			}
 			if issue != nil {
 				if err := recordCompletionResult(resp, "rejected", issue, invalidAttempts+1); err != nil {
 					return TurnLog{}, err
 				}
 				if supportSteps == 0 {
 					prevID = ""
-					inputItems = restartOpportunityCorrection(conversation, role.Name, *issue, opportunity, referenceTools)
+					inputItems, err = r.restartOpportunityCorrection(conversation, role.Name, *issue, opportunity, referenceTools)
 				} else {
 					callOutput := map[string]any{
 						"type":    "function_call_output",
@@ -488,7 +560,10 @@ func (r *Runner) executeOpportunityTurn(
 						"output":  marshalString(map[string]any{"ok": false, "error": issue.Error, "actor_message": issue.ActorMessage}),
 					}
 					inputItems = nextInputItems([]map[string]any{callOutput})
-					inputItems = appendOpportunityCorrection(role.Name, inputItems, *issue, opportunity, referenceTools)
+					inputItems, err = r.appendOpportunityCorrection(role.Name, inputItems, *issue, opportunity, referenceTools)
+				}
+				if err != nil {
+					return TurnLog{}, err
 				}
 				if err := recordInvalidAttempt(*issue); err != nil {
 					return TurnLog{}, err
@@ -513,7 +588,7 @@ func (r *Runner) executeOpportunityTurn(
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
+				inputItems, err = r.restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
 				callOutput := map[string]any{
 					"type":    "function_call_output",
@@ -521,7 +596,10 @@ func (r *Runner) executeOpportunityTurn(
 					"output":  marshalString(acceptResp),
 				}
 				inputItems = nextInputItems([]map[string]any{callOutput})
-				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+				inputItems, err = r.appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+			}
+			if err != nil {
+				return TurnLog{}, err
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -573,7 +651,7 @@ func (r *Runner) executeOpportunityTurn(
 			}
 			if supportSteps == 0 {
 				prevID = ""
-				inputItems = restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
+				inputItems, err = r.restartOpportunityCorrection(conversation, role.Name, issue, opportunity, referenceTools)
 			} else {
 				callOutput := map[string]any{
 					"type":    "function_call_output",
@@ -581,7 +659,10 @@ func (r *Runner) executeOpportunityTurn(
 					"output":  marshalString(res),
 				}
 				inputItems = nextInputItems([]map[string]any{callOutput})
-				inputItems = appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+				inputItems, err = r.appendOpportunityCorrection(role.Name, inputItems, issue, opportunity, referenceTools)
+			}
+			if err != nil {
+				return TurnLog{}, err
 			}
 			if err := recordInvalidAttempt(issue); err != nil {
 				return TurnLog{}, err
@@ -596,20 +677,24 @@ func (r *Runner) executeOpportunityTurn(
 	return TurnLog{}, fmt.Errorf("opportunity exhausted decision budget turn=%d role=%s opportunity_id=%s", turnIndex, role.Name, opportunity.OpportunityID)
 }
 
-func appendOpportunityCorrection(
+func (r *Runner) appendOpportunityCorrection(
 	roleName string,
 	inputItems []map[string]any,
 	issue correctionIssue,
 	opportunity leanOpportunity,
 	referenceTools []string,
-) []map[string]any {
+) ([]map[string]any, error) {
+	correctionPrompt, err := r.buildCorrectionPrompt(roleName, []correctionIssue{issue}, appendOpportunityAllowedTools(opportunity.AllowedTools, referenceTools, opportunity.MayPass), opportunity.MayPass)
+	if err != nil {
+		return nil, err
+	}
 	return append(
 		inputItems,
 		map[string]any{
 			"role":    "user",
-			"content": buildCorrectionPrompt(roleName, []correctionIssue{issue}, appendOpportunityAllowedTools(opportunity.AllowedTools, referenceTools, opportunity.MayPass), opportunity.MayPass),
+			"content": correctionPrompt,
 		},
-	)
+	), nil
 }
 
 func nextInputItems(items ...[]map[string]any) []map[string]any {
@@ -623,14 +708,14 @@ func nextInputItems(items ...[]map[string]any) []map[string]any {
 	return out
 }
 
-func restartOpportunityCorrection(
+func (r *Runner) restartOpportunityCorrection(
 	conversation []map[string]any,
 	roleName string,
 	issue correctionIssue,
 	opportunity leanOpportunity,
 	referenceTools []string,
-) []map[string]any {
-	return appendOpportunityCorrection(
+) ([]map[string]any, error) {
+	return r.appendOpportunityCorrection(
 		roleName,
 		append([]map[string]any{}, conversation...),
 		issue,
@@ -650,10 +735,10 @@ func appendOpportunityAllowedTools(allowed []string, reference []string, mayPass
 	return out
 }
 
-func applyOpportunityPayloadDefaults(toolName string, arguments map[string]any, opportunity leanOpportunity) (map[string]any, *correctionIssue) {
+func (r *Runner) applyOpportunityPayloadDefaults(toolName string, arguments map[string]any, opportunity leanOpportunity) (map[string]any, *correctionIssue, error) {
 	defaults := mapOrEmpty(opportunity.Constraints["payload_defaults"])
 	if len(defaults) == 0 {
-		return clonePayload(arguments), nil
+		return clonePayload(arguments), nil, nil
 	}
 	merged := clonePayload(arguments)
 	conflicts := make([]string, 0)
@@ -668,14 +753,21 @@ func applyOpportunityPayloadDefaults(toolName string, arguments map[string]any, 
 		}
 	}
 	if len(conflicts) == 0 {
-		return merged, nil
+		return merged, nil, nil
 	}
 	sort.Strings(conflicts)
+	fixedFields := strings.Join(conflicts, ", ")
+	actorMessage, err := r.prompts.Render(adcprompts.RuntimeCorrectionFixedID, map[string]string{
+		"{{FIXED_FIELDS}}": fixedFields,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
 	return nil, &correctionIssue{
 		Tool:         toolName,
-		Error:        "fixed opportunity field set incorrectly: " + strings.Join(conflicts, ", "),
-		ActorMessage: "This opportunity fixes " + strings.Join(conflicts, ", ") + ". Keep those values and supply only the remaining fields.",
-	}
+		Error:        "fixed opportunity field set incorrectly: " + fixedFields,
+		ActorMessage: actorMessage,
+	}, nil
 }
 
 func clonePayload(arguments map[string]any) map[string]any {
@@ -1021,7 +1113,7 @@ func issueFromResult(toolName string, result map[string]any) correctionIssue {
 	}
 }
 
-func issueFromMalformedToolCall(call openaiapi.ToolCall) correctionIssue {
+func (r *Runner) issueFromMalformedToolCall(call openaiapi.ToolCall) (correctionIssue, error) {
 	toolName := strings.TrimSpace(call.Name)
 	if toolName == "" {
 		toolName = "tool"
@@ -1030,11 +1122,15 @@ func issueFromMalformedToolCall(call openaiapi.ToolCall) correctionIssue {
 	if msg == "" {
 		msg = "invalid JSON arguments"
 	}
+	actorMessage, err := r.prompts.Text(adcprompts.RuntimeCorrectionMalformedID)
+	if err != nil {
+		return correctionIssue{}, err
+	}
 	return correctionIssue{
 		Tool:         toolName,
 		Error:        "malformed JSON arguments: " + msg,
-		ActorMessage: "Your previous tool call arguments were malformed. Call the tool again with valid JSON arguments.",
-	}
+		ActorMessage: actorMessage,
+	}, nil
 }
 
 func malformedToolCallOutput(issue correctionIssue) map[string]any {
@@ -1055,10 +1151,7 @@ func formatIssue(issue correctionIssue) string {
 	return fmt.Sprintf("%s failed: %s", issue.Tool, issue.Error)
 }
 
-func buildCorrectionPrompt(role string, issues []correctionIssue, allowed []string, mayPass bool) string {
-	lines := []string{
-		fmt.Sprintf("Your previous tool call was rejected. You are acting as %s.", role),
-	}
+func (r *Runner) buildCorrectionPrompt(role string, issues []correctionIssue, allowed []string, mayPass bool) (string, error) {
 	issueLines := make([]string, 0, len(issues))
 	requiredHints := map[string][]string{}
 	for _, issue := range issues {
@@ -1067,36 +1160,46 @@ func buildCorrectionPrompt(role string, issues []correctionIssue, allowed []stri
 			requiredHints[issue.Tool] = req
 		}
 	}
-	lines = append(lines, "Rejected actions:")
-	for _, issueLine := range issueLines {
-		lines = append(lines, "- "+issueLine)
+	for index := range issueLines {
+		issueLines[index] = "- " + issueLines[index]
 	}
-	if containsIssueCode(issues, "LOCAL_RULE_LIMIT_EXCEEDED") {
-		lines = append(lines, "A local-rule limit blocked that action. Pick a different legal action for this turn.")
-	}
-	if containsIssueText(issues, "property not found") || containsIssueText(issues, "missing required") {
-		lines = append(lines, "Provide every required argument exactly as defined for the tool.")
-	}
-	if containsIssueText(issues, "already") {
-		lines = append(lines, "That step is already complete in this case. Choose the next procedural step.")
-	}
+	requiredLines := make([]string, 0, len(requiredHints))
 	if len(requiredHints) > 0 {
 		tools := make([]string, 0, len(requiredHints))
 		for tool := range requiredHints {
 			tools = append(tools, tool)
 		}
 		sort.Strings(tools)
-		lines = append(lines, "Required fields reminder:")
 		for _, tool := range tools {
-			lines = append(lines, fmt.Sprintf("- %s: %s", tool, strings.Join(requiredHints[tool], ", ")))
+			requiredLines = append(requiredLines, fmt.Sprintf("- %s: %s", tool, strings.Join(requiredHints[tool], ", ")))
 		}
 	}
-	if mayPass {
-		lines = append(lines, "Call exactly one allowed action now, or call pass_turn if you decline this opportunity. Allowed actions: "+strings.Join(allowed, ", ")+".")
-	} else {
-		lines = append(lines, "Call exactly one allowed action now. Allowed actions: "+strings.Join(allowed, ", ")+".")
+	guidanceIDs := make([]string, 0, 3)
+	if containsIssueCode(issues, "LOCAL_RULE_LIMIT_EXCEEDED") {
+		guidanceIDs = append(guidanceIDs, adcprompts.RuntimeCorrectionLocalRuleID)
 	}
-	return strings.Join(lines, "\n")
+	if containsIssueText(issues, "property not found") || containsIssueText(issues, "missing required") {
+		guidanceIDs = append(guidanceIDs, adcprompts.RuntimeCorrectionFieldsID)
+	}
+	if containsIssueText(issues, "already") {
+		guidanceIDs = append(guidanceIDs, adcprompts.RuntimeCorrectionCompleteID)
+	}
+	guidance := make([]string, 0, len(guidanceIDs))
+	for _, id := range guidanceIDs {
+		text, err := r.prompts.Text(id)
+		if err != nil {
+			return "", err
+		}
+		guidance = append(guidance, text)
+	}
+	return r.prompts.Render(adcprompts.RuntimeCorrectionID, map[string]string{
+		"{{ROLE}}":            promptValue(role),
+		"{{ISSUES}}":          promptSections(issueLines),
+		"{{GUIDANCE}}":        promptSections(guidance),
+		"{{REQUIRED_FIELDS}}": promptSections(requiredLines),
+		"{{ALLOWED_ACTIONS}}": promptList(allowed),
+		"{{PASS_ACTION}}":     passAction(mayPass),
+	})
 }
 
 func containsIssueCode(issues []correctionIssue, code string) bool {

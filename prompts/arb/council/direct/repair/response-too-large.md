@@ -1,0 +1,1 @@
+Your response payload was {{SIZE_BYTES}} bytes; the limit is {{LIMIT_BYTES}} bytes.  Call {{COUNCIL_TOOL}} exactly once with only {{SUBMISSION_FIELDS}} and a concise rationale.  Do not include analysis outside the tool call.

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/jsmorph/adj/arbd/runtime/proceeding"
+	"github.com/jsmorph/adj/common/promptfile"
 )
 
 type caseRunSummary struct {
@@ -23,17 +24,15 @@ type caseRunSummary struct {
 func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {
 	fs := newCommandFlagSet("case", stderr)
 	var caseFiles explicitFileList
+	var promptFiles promptfile.Assignments
 	complaintPath := fs.String("complaint", "", "Complaint markdown file")
 	fs.Var(&caseFiles, "file", "Explicit case file path or glob. May be repeated. Overrides automatic complaint-directory scanning")
 	outDir := fs.String("out-dir", "", "Output directory")
 	policyPath := fs.String("policy", "", "Policy JSON file. Default: ./etc/policy.json when present")
 	councilSize := fs.Int("council-size", 0, "Override policy council_size")
 	judgmentStandard := fs.String("judgment-standard", "", "Override policy judgment_standard")
-	attorneyInstructionsPath := fs.String("attorney-instructions", "", "Attorney instructions markdown file. Default: ./attorney-instructions/default.md when present")
-	promptDir := fs.String("prompt-dir", "", "Prompt directory override. Files found here override ./prompts by matching filename")
-	attorneyCommonPrompt := fs.String("attorney-common-prompt", "", "Attorney common prompt file override")
-	attorneyArgumentPrompt := fs.String("attorney-arguments-prompt", "", "Attorney arguments prompt file override")
-	attorneyRebuttalPrompt := fs.String("attorney-rebuttals-prompt", "", "Attorney rebuttals prompt file override")
+	promptDir := fs.String("prompt-dir", "", "Complete prompt directory. Every non-overridden catalog file is required")
+	fs.Var(&promptFiles, "prompt-file", "Prompt file override as ID=PATH. May be repeated")
 	commonRoot := fs.String("common-root", proceeding.DefaultCommonRoot(), "Path to the sibling shared common directory")
 	councilPool := fs.String("council-pool", "", "Council JSONL request-spec pool file. Default: ./pool.jsonl when present, else <common-root>/data/personas/pool.jsonl")
 	caseAPIAddr := fs.String("caseapi-addr", proceeding.DefaultCaseAPIAddr, "Private case API listen address")
@@ -64,29 +63,26 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 		return reportCaseError(stdout, fmt.Errorf("--complaint and --out-dir are required"))
 	}
 	opts := proceeding.Options{
-		ComplaintPath:              *complaintPath,
-		CaseFiles:                  caseFiles.values,
-		OutputDir:                  *outDir,
-		PolicyPath:                 *policyPath,
-		CouncilSize:                *councilSize,
-		JudgmentStandard:           *judgmentStandard,
-		AttorneyInstructionsPath:   *attorneyInstructionsPath,
-		PromptDir:                  *promptDir,
-		AttorneyCommonPromptPath:   *attorneyCommonPrompt,
-		AttorneyArgumentPromptPath: *attorneyArgumentPrompt,
-		AttorneyRebuttalPromptPath: *attorneyRebuttalPrompt,
-		CommonRoot:                 strings.TrimSpace(*commonRoot),
-		CouncilPoolPath:            *councilPool,
-		CaseAPIAddr:                *caseAPIAddr,
-		CouncilBackend:             *councilBackend,
-		CouncilTimeoutSeconds:      *timeoutSeconds,
-		LawyerTimeoutSeconds:       *lawyerTimeoutSeconds,
-		EngineCallTimeoutSeconds:   *engineCallTimeoutSeconds,
-		MaxResponseBytes:           *maxResponseBytes,
-		InvalidAttemptLimit:        *invalidAttemptLimit,
-		EnginePath:                 *enginePath,
-		RunID:                      *runID,
-		CaseID:                     *caseID,
+		ComplaintPath:            *complaintPath,
+		CaseFiles:                caseFiles.values,
+		OutputDir:                *outDir,
+		PolicyPath:               *policyPath,
+		CouncilSize:              *councilSize,
+		JudgmentStandard:         *judgmentStandard,
+		PromptDir:                *promptDir,
+		PromptFiles:              promptFiles.Values(),
+		CommonRoot:               strings.TrimSpace(*commonRoot),
+		CouncilPoolPath:          *councilPool,
+		CaseAPIAddr:              *caseAPIAddr,
+		CouncilBackend:           *councilBackend,
+		CouncilTimeoutSeconds:    *timeoutSeconds,
+		LawyerTimeoutSeconds:     *lawyerTimeoutSeconds,
+		EngineCallTimeoutSeconds: *engineCallTimeoutSeconds,
+		MaxResponseBytes:         *maxResponseBytes,
+		InvalidAttemptLimit:      *invalidAttemptLimit,
+		EnginePath:               *enginePath,
+		RunID:                    *runID,
+		CaseID:                   *caseID,
 	}
 	result, err := proceeding.Run(ctx, opts)
 	if err != nil {

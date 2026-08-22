@@ -1,0 +1,1 @@
+Settle a neutral final charge.  State the elements, the burden of proof, and any defense issues actually supported by the record.  Remove argumentative phrasing and one-sided commentary.  The final charge should guide deliberation, not argue the case.

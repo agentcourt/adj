@@ -1,0 +1,1 @@
+Focus on the discovery failure actually shown on the record.  Decide whether the opposing party failed to answer, produce, admit, or supplement as required.  If relief is warranted, choose a proportionate remedy and explain why the response was inadequate.  Do not turn an ordinary discovery dispute into a merits ruling.  State the decisive reason in the `reasoning` field.

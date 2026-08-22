@@ -31,6 +31,12 @@ The Role API lives under `/roleapi/v1` on the address supplied through `--caseap
 
 An active response includes the current prompt, role-visible case view, opportunity identity, time remaining, attempts remaining, and support-operation budget.  It also reports the legal tools Lean permits for that turn and the schemas for legal and support operations.  The caller must return the active opportunity id with work notes, decisions, or failures.
 
+## Prompt construction
+
+Direct and external roles use the same resolved system, opportunity, juror, deliberation, correction, tool-description, and tool-guidance prompts.  The external-role prompt adds the Role API deadline, budgets, and submission instructions around those shared components.  Scenario role instructions and preambles remain case data inserted into the resolved wrappers.
+
+`adc case` and `adc scenario` accept a complete catalog through `--prompt-dir` or partial overrides through repeated `--prompt-file ID=PATH` flags.  The process resolves and validates the catalog before it serves or calls a role.  The [prompt authoring guide](prompts.md) defines the catalog IDs, paths, tokens, and precedence.
+
 ## Legal Decisions
 
 Legal acts use the `submit_decision` operation.  A legal-tool decision supplies `kind=tool`, `tool_name`, and `payload`, while an allowed pass supplies `kind=pass` and `reason`.  Lean validates the state version, opportunity id, role, permitted tool set, and payload before accepting the transition.

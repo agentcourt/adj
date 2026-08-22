@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	openaiapi "github.com/jsmorph/adj/common/openai"
+	"github.com/jsmorph/adj/common/promptfile"
 	"github.com/jsmorph/adj/simple/runtime/proceeding"
 )
 
@@ -33,8 +34,15 @@ func runCase(ctx context.Context, args []string, stdout, stderr io.Writer) error
 	runID := fs.String("run-id", "", "Run ID")
 	requestSpec := fs.String("request-spec", "", "Model request-spec JSON file")
 	model := fs.String("model", "", "Model as endpoint://model")
+	reasoningEffort := fs.String("reasoning-effort", "", "Reasoning effort: none, minimal, low, medium, high, xhigh, or max")
+	maxOutputTokens := fs.Int64("max-output-tokens", 0, "Maximum output tokens; zero uses the request specification or procedure default")
+	maxToolCalls := fs.Int64("max-tool-calls", 0, "Maximum built-in tool calls; zero uses the request specification or provider default")
 	evidenceStandard := fs.String("evidence-standard", "", "Evidence standard applied to the proposition")
+	promptDir := fs.String("prompt-dir", "", "Directory containing the complete Simple prompt set")
+	var promptFiles promptfile.Assignments
+	fs.Var(&promptFiles, "prompt-file", "Prompt override as ID=PATH; may be repeated")
 	allowAPIKey := fs.Bool("allow-api-key", false, "Allow provider authentication with an API key")
+	webSearch := fs.Bool("web-search", true, "Allow provider-hosted web search")
 	maxDocuments := fs.Int("max-documents", 0, "Maximum number of documents; required")
 	maxDocumentBytes := fs.Int64("max-document-bytes", 0, "Maximum bytes in one document; required")
 	maxDocumentsBytes := fs.Int64("max-documents-bytes", 0, "Maximum bytes across all documents; required")
@@ -60,8 +68,14 @@ func runCase(ctx context.Context, args []string, stdout, stderr io.Writer) error
 		RunID:             *runID,
 		RequestSpecPath:   *requestSpec,
 		Model:             *model,
+		ReasoningEffort:   *reasoningEffort,
+		MaxOutputTokens:   *maxOutputTokens,
+		MaxToolCalls:      *maxToolCalls,
 		EvidenceStandard:  *evidenceStandard,
+		PromptDir:         *promptDir,
+		PromptFiles:       promptFiles.Values(),
 		AllowAPIKey:       *allowAPIKey,
+		WebSearch:         webSearch,
 		MaxDocuments:      *maxDocuments,
 		MaxDocumentBytes:  *maxDocumentBytes,
 		MaxDocumentsBytes: *maxDocumentsBytes,
@@ -84,7 +98,7 @@ func runCase(ctx context.Context, args []string, stdout, stderr io.Writer) error
 
 func reportCaseError(stdout io.Writer, err error) error {
 	summary := caseErrorSummary{
-		SchemaVersion: "simple.run.v1",
+		SchemaVersion: proceeding.RunSchemaVersion,
 		Procedure:     "simple",
 		Status:        "error",
 		Error:         strings.TrimSpace(err.Error()),

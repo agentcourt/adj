@@ -1,0 +1,15 @@
+Peter's damages calculation:
+
+- Printing invoice: $85,000
+  Support: printing-invoice.txt
+  Basis: 1,000-copy commercial print run of the essay and briefing package.
+
+- Distribution work order: $15,000
+  Support: distribution-work-order.txt
+  Basis: bindery, packaging, and scheduled distribution tied to the same 1,000-copy run.
+
+- Wasted time and token spend: $8,000
+  Support: time-and-token-log.txt
+  Basis: Peter spent additional paid time and model usage on the failed engagement and cleanup work after Samantha falsely claimed to have read Stephenson's essay.
+
+Total damages sought: $108,000

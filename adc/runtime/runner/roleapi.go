@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 )
 
@@ -63,15 +64,16 @@ type externalOpportunityTurn struct {
 	deadline     time.Time
 	timeout      time.Duration
 
-	attemptsMax       int
-	attemptsRemaining int
-	invalidReasons    []string
-	supportBudget     int
-	supportUsed       int
-	stepsUsed         int
-	transcript        []map[string]any
-	completed         bool
-	done              chan externalOpportunityResult
+	attemptsMax        int
+	attemptsRemaining  int
+	invalidReasons     []string
+	supportBudget      int
+	supportUsed        int
+	availableToolSpecs []map[string]any
+	stepsUsed          int
+	transcript         []map[string]any
+	completed          bool
+	done               chan externalOpportunityResult
 }
 
 type externalOpportunityResult struct {
@@ -267,22 +269,30 @@ func (r *Runner) executeExternalOpportunityTurn(
 	deadline := time.Now().Add(timeout)
 	attemptsMax := r.cfg.Runtime.Normalized().InvalidAttemptLimit
 	supportBudget := supportToolBudget(r.state)
-	prompt := r.buildRoleAPIPrompt(role, view, opportunity, deadline, timeout, attemptsMax, supportBudget)
+	availableToolSpecs, err := r.roleAPIToolSpecs(role, opportunity)
+	if err != nil {
+		return TurnLog{}, err
+	}
+	prompt, err := r.buildRoleAPIPrompt(role, view, opportunity, deadline, timeout, attemptsMax, supportBudget, availableToolSpecs)
+	if err != nil {
+		return TurnLog{}, err
+	}
 	turn := &externalOpportunityTurn{
-		turnIndex:         turnIndex,
-		role:              role,
-		principalID:       principalIDForOpportunity(role.Name, opportunity),
-		opportunity:       opportunity,
-		rolesPayload:      rolesPayload,
-		stateVersion:      stateVersion,
-		prompt:            prompt,
-		view:              view,
-		deadline:          deadline,
-		timeout:           timeout,
-		attemptsMax:       attemptsMax,
-		attemptsRemaining: attemptsMax,
-		supportBudget:     supportBudget,
-		done:              make(chan externalOpportunityResult, 1),
+		turnIndex:          turnIndex,
+		role:               role,
+		principalID:        principalIDForOpportunity(role.Name, opportunity),
+		opportunity:        opportunity,
+		rolesPayload:       rolesPayload,
+		stateVersion:       stateVersion,
+		prompt:             prompt,
+		view:               view,
+		deadline:           deadline,
+		timeout:            timeout,
+		attemptsMax:        attemptsMax,
+		attemptsRemaining:  attemptsMax,
+		supportBudget:      supportBudget,
+		availableToolSpecs: availableToolSpecs,
+		done:               make(chan externalOpportunityResult, 1),
 	}
 	if err := r.roleAPI.startTurn(turn); err != nil {
 		return TurnLog{}, err
@@ -685,7 +695,7 @@ func (api *roleAPIServer) opportunityPayloadLocked(turn *externalOpportunityTurn
 	payload["may_pass"] = turn.opportunity.MayPass
 	payload["allowed_legal_tools"] = append([]string{}, turn.opportunity.AllowedTools...)
 	payload["legal_tool_specs"] = api.r.legalToolSpecs(turn.opportunity.AllowedTools)
-	payload["available_tool_specs"] = api.r.roleAPIToolSpecs(turn.role, turn.opportunity)
+	payload["available_tool_specs"] = append([]map[string]any(nil), turn.availableToolSpecs...)
 	payload["constraints"] = cloneJSONMap(turn.opportunity.Constraints)
 	payload["view"] = turn.view
 	if agent := api.r.jurorAgentPayload(turn); agent != nil {
@@ -808,10 +818,14 @@ func (api *roleAPIServer) executeSupportToolLocked(turn *externalOpportunityTurn
 		return map[string]any{"ok": false, "error": "tool is not available for this role", "tool": tool}, http.StatusForbidden
 	}
 	if turn.supportUsed >= turn.supportBudget {
+		actorMessage, err := api.r.prompts.Text(adcprompts.RuntimeCorrectionSupportID)
+		if err != nil {
+			return map[string]any{"ok": false, "error": err.Error()}, http.StatusInternalServerError
+		}
 		return map[string]any{
 			"ok":            false,
 			"error":         "support-tool budget exhausted",
-			"actor_message": "Submit a legal decision now, or pass if passing is allowed.",
+			"actor_message": actorMessage,
 		}, http.StatusOK
 	}
 	turn.supportUsed++
@@ -819,7 +833,11 @@ func (api *roleAPIServer) executeSupportToolLocked(turn *externalOpportunityTurn
 	var execRes ActionExecution
 	var err error
 	if tool == "read_case_file_bytes" {
-		execRes = ActionExecution{Result: api.r.readCaseFileBytes(turn.role.Name, strings.TrimSpace(stringOrDefault(args["file_id"], "")))}
+		result, readErr := api.r.readCaseFileBytes(turn.role.Name, strings.TrimSpace(stringOrDefault(args["file_id"], "")))
+		if readErr != nil {
+			return map[string]any{"ok": false, "error": readErr.Error()}, http.StatusInternalServerError
+		}
+		execRes = ActionExecution{Result: result}
 	} else {
 		execRes, err = api.r.executeAction(turn.turnIndex, turn.stepsUsed, turn.role.Name, tool, args)
 	}
@@ -847,7 +865,10 @@ func (api *roleAPIServer) submitDecisionLocked(turn *externalOpportunityTurn, ar
 	if strings.TrimSpace(stringOrDefault(decision["kind"], "")) == "tool" {
 		toolName := strings.TrimSpace(stringOrDefault(decision["tool_name"], ""))
 		payload, _ := decision["payload"].(map[string]any)
-		merged, issue := applyOpportunityPayloadDefaults(toolName, payload, turn.opportunity)
+		merged, issue, renderErr := api.r.applyOpportunityPayloadDefaults(toolName, payload, turn.opportunity)
+		if renderErr != nil {
+			return nil, map[string]any{"ok": false, "case_id": api.caseID(), "error": roleAPIError("prompt_render_failed", renderErr.Error())}
+		}
 		if issue != nil {
 			return nil, api.rejectDecisionLocked(turn, fmt.Errorf("%s", issueText(*issue)))
 		}
@@ -963,62 +984,54 @@ func roleAPIDecisionFromParams(params map[string]any) (map[string]any, error) {
 	}
 }
 
-func (r *Runner) buildRoleAPIPrompt(role spec.RoleSpec, view map[string]any, opportunity leanOpportunity, deadline time.Time, timeout time.Duration, attemptsMax int, supportBudget int) string {
-	systemPrompt := buildSystemPrompt(role, view)
+func (r *Runner) buildRoleAPIPrompt(role spec.RoleSpec, view map[string]any, opportunity leanOpportunity, deadline time.Time, timeout time.Duration, attemptsMax int, supportBudget int, availableToolSpecs []map[string]any) (string, error) {
+	systemPrompt, err := r.buildSystemPrompt(role, view)
+	if err != nil {
+		return "", err
+	}
 	if role.Name == "juror" {
 		caseObj, _ := r.state["case"].(map[string]any)
 		_, jurorPersona := r.jurorOpportunityPromptContext(opportunity)
-		systemPrompt = buildJurorSystemPrompt(role, opportunity, jurorPersona, caseObj)
+		systemPrompt, err = r.buildJurorSystemPrompt(role, opportunity, jurorPersona, caseObj)
+		if err != nil {
+			return "", err
+		}
 	}
-	lines := []string{
-		systemPrompt,
-		"",
-		buildOpportunityPrompt(role, opportunity),
-		"",
-		"Use the ADC role API tools for this opportunity.",
-		"Read the current case and case files through the tools when the facts matter.",
-		"Use send_work_notes to record your plan, work log, analysis, and journal notes before you submit a decision.",
-		"Submit the legal act through submit_decision.  For a legal tool, use kind=tool, tool_name, and payload.  Put legal tool arguments inside payload.",
+	opportunityPrompt, err := r.buildOpportunityPrompt(role, opportunity)
+	if err != nil {
+		return "", err
 	}
+	deadlineText := "(none)"
 	if !deadline.IsZero() {
-		lines = append(lines,
-			"Deadline: submit this turn before "+deadline.UTC().Format("2006-01-02 15:04:05 UTC")+". The turn started with "+timeout.String()+". The remaining_time_ms field in each response is live.",
-		)
+		deadlineText = deadline.UTC().Format("2006-01-02 15:04:05 UTC")
 	}
-	if attemptsMax > 0 {
-		lines = append(lines, fmt.Sprintf("Decision attempts: %d.", attemptsMax))
+	legalSchemaLines := r.legalToolSchemaLines(opportunity.AllowedTools)
+	cards, err := r.collectToolCards(role.Name, opportunity.AllowedTools)
+	if err != nil {
+		return "", err
 	}
-	if supportBudget > 0 {
-		lines = append(lines, fmt.Sprintf("Support tool calls: %d per turn.", supportBudget))
-	}
-	if len(opportunity.AllowedTools) > 0 {
-		lines = append(lines, "Allowed legal tools: "+strings.Join(opportunity.AllowedTools, ", "))
-	}
-	if len(opportunity.Constraints) > 0 {
-		lines = append(lines, "Opportunity constraints: "+marshalString(opportunity.Constraints))
-	}
-	if opportunity.MayPass {
-		lines = append(lines, "Passing is allowed with submit_decision kind=pass.")
-	} else {
-		lines = append(lines, "Passing is not allowed for this opportunity.")
-	}
-	if schemaLines := r.legalToolSchemaLines(opportunity.AllowedTools); len(schemaLines) > 0 {
-		lines = append(lines, "", "Legal tool payloads:")
-		lines = append(lines, schemaLines...)
-	}
-	if cards := collectToolCards(role.Name, opportunity.AllowedTools); len(cards) > 0 {
-		lines = append(lines, "", "Legal tool guidance:")
-		lines = append(lines, cards...)
-	}
-	lines = append(lines, "", "Available support tools:")
-	for _, spec := range r.roleAPIToolSpecs(role, opportunity) {
+	toolLines := make([]string, 0, len(availableToolSpecs))
+	for _, spec := range availableToolSpecs {
 		name := strings.TrimSpace(stringOrDefault(spec["name"], ""))
 		description := strings.TrimSpace(stringOrDefault(spec["description"], ""))
 		if name != "" && description != "" {
-			lines = append(lines, "- "+name+": "+description)
+			toolLines = append(toolLines, "- "+name+": "+description)
 		}
 	}
-	return strings.Join(lines, "\n")
+	return r.prompts.Render(adcprompts.RuntimeExternalRoleID, map[string]string{
+		"{{SYSTEM_PROMPT}}":       systemPrompt,
+		"{{OPPORTUNITY_PROMPT}}":  opportunityPrompt,
+		"{{DEADLINE}}":            deadlineText,
+		"{{TIMEOUT}}":             timeout.String(),
+		"{{DECISION_ATTEMPTS}}":   fmt.Sprintf("%d", attemptsMax),
+		"{{SUPPORT_BUDGET}}":      fmt.Sprintf("%d", supportBudget),
+		"{{LEGAL_TOOLS}}":         promptList(opportunity.AllowedTools),
+		"{{CONSTRAINTS}}":         promptJSON(opportunity.Constraints),
+		"{{PASS_ACTION}}":         passAction(opportunity.MayPass),
+		"{{LEGAL_TOOL_SCHEMAS}}":  promptSections(legalSchemaLines),
+		"{{LEGAL_TOOL_GUIDANCE}}": promptSections(cards),
+		"{{SUPPORT_TOOLS}}":       promptSections(toolLines),
+	})
 }
 
 func (r *Runner) jurorAgentPayload(turn *externalOpportunityTurn) map[string]any {
@@ -1044,7 +1057,7 @@ func (r *Runner) jurorAgentPayload(turn *externalOpportunityTurn) map[string]any
 	return payload
 }
 
-func (r *Runner) roleAPIToolSpecs(role spec.RoleSpec, opportunity leanOpportunity) []map[string]any {
+func (r *Runner) roleAPIToolSpecs(role spec.RoleSpec, opportunity leanOpportunity) ([]map[string]any, error) {
 	names := []string{"case_status", "send_work_notes"}
 	for _, name := range referenceToolsForRole(role) {
 		names = appendIfMissing(names, name)
@@ -1053,36 +1066,48 @@ func (r *Runner) roleAPIToolSpecs(role spec.RoleSpec, opportunity leanOpportunit
 	names = appendIfMissing(names, "submit_decision")
 	specs := make([]map[string]any, 0, len(names))
 	for _, name := range names {
-		specs = append(specs, roleAPIToolSpec(name, opportunity.MayPass))
+		spec, err := r.roleAPIToolSpec(name, opportunity.MayPass)
+		if err != nil {
+			return nil, err
+		}
+		specs = append(specs, spec)
 	}
-	return specs
+	return specs, nil
 }
 
-func roleAPIToolSpec(name string, mayPass bool) map[string]any {
+func (r *Runner) roleAPIToolSpec(name string, mayPass bool) (map[string]any, error) {
+	descriptionID, ok := adcprompts.RoleAPIToolDescriptionID(name)
+	if !ok {
+		return nil, fmt.Errorf("missing role API tool description prompt for %q", name)
+	}
+	descriptionValues := map[string]string{}
+	if name == "submit_decision" {
+		descriptionValues["{{PASS_ACTION}}"] = passAction(mayPass)
+	}
+	description, err := r.prompts.Render(descriptionID, descriptionValues)
+	if err != nil {
+		return nil, err
+	}
 	switch name {
 	case "case_status":
-		return simpleToolSpec(name, "Report the current case status and current active opportunity.", map[string]any{})
+		return simpleToolSpec(name, description, map[string]any{}), nil
 	case "send_work_notes":
-		return simpleToolSpec(name, "Send private work notes outside the case record.", map[string]any{"notes": map[string]any{"type": "string"}})
+		return simpleToolSpec(name, description, map[string]any{"notes": map[string]any{"type": "string"}}), nil
 	case "read_case_file_bytes":
-		return simpleToolSpec(name, "Read a visible case file as base64 bytes by file_id.", map[string]any{"file_id": map[string]any{"type": "string"}})
+		return simpleToolSpec(name, description, map[string]any{"file_id": map[string]any{"type": "string"}}), nil
 	case "submit_decision":
-		description := "Submit one legal decision for the current opportunity."
-		if mayPass {
-			description += " kind=pass is available."
-		}
 		return simpleToolSpec(name, description, map[string]any{
 			"kind":      map[string]any{"type": "string", "enum": []string{"tool", "pass"}},
 			"tool_name": map[string]any{"type": "string"},
 			"payload":   map[string]any{"type": "object"},
 			"reason":    map[string]any{"type": "string"},
-		})
+		}), nil
 	default:
 		schema := toolSchema(name)
 		if schema == nil {
 			schema = map[string]any{"type": "object", "properties": map[string]any{}, "additionalProperties": false}
 		}
-		return map[string]any{"name": name, "description": referenceToolDescription(name), "parameters": schema}
+		return map[string]any{"name": name, "description": description, "parameters": schema}, nil
 	}
 }
 
@@ -1103,25 +1128,6 @@ func simpleToolSpec(name string, description string, properties map[string]any) 
 			"required":             required,
 			"additionalProperties": false,
 		},
-	}
-}
-
-func referenceToolDescription(name string) string {
-	switch name {
-	case "get_case":
-		return "Fetch the current visible case view."
-	case "explain_decisions":
-		return "Fetch decision traces visible to this role."
-	case "list_case_files":
-		return "List visible case file identifiers and metadata."
-	case "read_case_text_file":
-		return "Read a visible text case file by file_id."
-	case "request_case_file":
-		return "Fetch a visible case file as model content items."
-	case "get_juror_context":
-		return "Fetch questionnaire and voir dire context for one juror."
-	default:
-		return "Execute " + name + "."
 	}
 }
 
@@ -1190,33 +1196,33 @@ func (r *Runner) workNotesPath() string {
 	return filepath.Join(r.cfg.ScenarioBaseDir, roleAPIWorkNotesFilename)
 }
 
-func (r *Runner) readCaseFileBytes(actorRole string, fileID string) map[string]any {
+func (r *Runner) readCaseFileBytes(actorRole string, fileID string) (map[string]any, error) {
 	if strings.TrimSpace(fileID) == "" {
-		return map[string]any{"ok": false, "error": "file_id is required"}
+		return map[string]any{"ok": false, "error": "file_id is required"}, nil
 	}
 	caseObj, _ := r.state["case"].(map[string]any)
 	if caseObj == nil {
-		return map[string]any{"ok": false, "error": "state.case missing"}
+		return map[string]any{"ok": false, "error": "state.case missing"}, nil
 	}
 	visibleFiles, err := r.visibleCaseFilesForRole(actorRole)
 	if err != nil {
-		return map[string]any{"ok": false, "error": err.Error()}
+		return map[string]any{"ok": false, "error": err.Error()}, nil
 	}
 	visibleFile := visibleCaseFileByID(visibleFiles, fileID)
 	if visibleFile == nil {
-		return unknownCaseFileResult(fileID, visibleFiles)
+		return r.unknownCaseFileResult(fileID, visibleFiles)
 	}
 	internalFile := findCaseFile(caseObj, fileID)
 	if internalFile == nil {
-		return map[string]any{"ok": false, "error": "internal case file missing for visible file_id=" + fileID}
+		return map[string]any{"ok": false, "error": "internal case file missing for visible file_id=" + fileID}, nil
 	}
 	storedPath := strings.TrimSpace(stringOrDefault(internalFile["storage_relpath"], ""))
 	if storedPath == "" {
-		return map[string]any{"ok": false, "error": "stored path missing for case file"}
+		return map[string]any{"ok": false, "error": "stored path missing for case file"}, nil
 	}
 	raw, err := r.readCaseFile(internalFile)
 	if err != nil {
-		return map[string]any{"ok": false, "error": err.Error()}
+		return map[string]any{"ok": false, "error": err.Error()}, nil
 	}
 	return map[string]any{
 		"ok":             true,
@@ -1224,7 +1230,7 @@ func (r *Runner) readCaseFileBytes(actorRole string, fileID string) map[string]a
 		"content_base64": base64.StdEncoding.EncodeToString(raw),
 		"size_bytes":     len(raw),
 		"mime_type":      caseFileMIMEType(internalFile),
-	}
+	}, nil
 }
 
 func principalIDForOpportunity(role string, opportunity leanOpportunity) string {

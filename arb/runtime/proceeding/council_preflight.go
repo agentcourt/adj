@@ -72,7 +72,7 @@ func sampleAvailableCouncil(ctx context.Context, cfg Config, client councilRespo
 	}
 	check := func(ctx context.Context, seat CouncilSeat) error {
 		requireTools := NormalizeCouncilBackend(cfg.CouncilBackend) == DefaultCouncilBackend
-		return checkCouncilSeatAvailable(ctx, cfg.Runtime, client, seat, requireTools)
+		return checkCouncilSeatAvailableWithConfig(ctx, cfg, client, seat, requireTools)
 	}
 	return preflightCouncilCandidates(ctx, candidates, cfg.Policy.CouncilSize, check)
 }
@@ -176,28 +176,53 @@ func newCouncilPreflightError(memberID string, failed []councilPreflightReplacem
 }
 
 func checkCouncilSeatAvailable(ctx context.Context, limits RuntimeLimits, client councilResponseClient, seat CouncilSeat, requireTools bool) error {
+	return checkCouncilSeatAvailableWithConfig(ctx, Config{Runtime: limits}, client, seat, requireTools)
+}
+
+func checkCouncilSeatAvailableWithConfig(ctx context.Context, cfg Config, client councilResponseClient, seat CouncilSeat, requireTools bool) error {
 	if requireTools && seat.RequestSpec != nil {
 		if supported, known := seat.RequestSpec.SupportsParameter("tools"); known && !supported {
 			return fmt.Errorf("council model %s pinned endpoint metadata omits required parameter tools", seat.Model)
 		}
 	}
-	ctx, cancel := withTimeout(ctx, councilPreflightTimeout(limits))
+	ctx, cancel := withTimeout(ctx, councilPreflightTimeout(cfg.Runtime))
 	defer cancel()
+	inputItems, err := cfg.councilPreflightInput(seat)
+	if err != nil {
+		return err
+	}
 	maxOutputTokens := int64(16)
-	_, err := createCouncilAvailabilityResponse(
+	_, err = createCouncilAvailabilityResponse(
 		ctx,
 		client,
 		seat,
-		[]map[string]any{
-			{"role": "system", "content": "You are being checked for availability as an Agent Arbitration council member. Reply with the exact word ready."},
-			{"role": "user", "content": "Availability check. Reply ready."},
-		},
+		inputItems,
 		&maxOutputTokens,
 	)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (cfg Config) councilPreflightInput(seat CouncilSeat) ([]map[string]any, error) {
+	values := map[string]string{
+		"MEMBER_ID":    seat.MemberID,
+		"MODEL":        seat.Model,
+		"PERSONA_FILE": seat.PersonaFile,
+	}
+	systemPrompt, err := cfg.renderPromptFile(promptCouncilPreflightSystem, values)
+	if err != nil {
+		return nil, err
+	}
+	userPrompt, err := cfg.renderPromptFile(promptCouncilPreflightUser, values)
+	if err != nil {
+		return nil, err
+	}
+	return []map[string]any{
+		{"role": "system", "content": systemPrompt},
+		{"role": "user", "content": userPrompt},
+	}, nil
 }
 
 func createCouncilAvailabilityResponse(

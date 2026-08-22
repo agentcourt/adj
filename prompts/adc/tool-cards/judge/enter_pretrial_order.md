@@ -1,0 +1,1 @@
+Use the pretrial order to define the issues, claims, and exhibits that will control trial.  Keep it procedural and concrete.  Do not use the order to decide the merits or to add theories not already present in the record.

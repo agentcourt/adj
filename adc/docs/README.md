@@ -23,6 +23,7 @@ These documents cover ADC rules, practice, runtime records, and proofs.  The [Ag
 | [Agents](agents.md) | Direct and external role execution. |
 | [Events](events.md) | Durable event and work-note records. |
 | [Logic](logic.md) | Go and Lean execution boundary. |
+| [Prompt Authoring](prompts.md) | Prompt IDs, paths, tokens, precedence, and overrides. |
 
 ## Proofs
 

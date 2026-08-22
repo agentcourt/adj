@@ -24,11 +24,16 @@ type Options struct {
 	Proposition            string
 	DocumentsDir           string
 	OutputDir              string
+	CommonRoot             string
 	CouncilPoolPath        string
 	CouncilSize            int
 	RequiredVotes          int
 	EvidenceStandard       string
+	PromptDir              string
+	PromptFiles            map[string]string
+	LawyerWebSearch        *bool
 	CaseAPIAddr            string
+	LawyerAPIBearerToken   string
 	CaseID                 string
 	RunID                  string
 	LawyerTimeout          time.Duration
@@ -52,7 +57,11 @@ type Config struct {
 	CouncilSize            int
 	RequiredVotes          int
 	EvidenceStandard       string
+	PromptDir              string
+	PromptFiles            map[string]string
+	LawyerWebSearchEnabled bool
 	CaseAPIAddr            string
+	LawyerAPIBearerToken   string
 	CaseID                 string
 	RunID                  string
 	LawyerTimeout          time.Duration
@@ -64,6 +73,7 @@ type Config struct {
 	CouncilRequestAttempts int
 	ParallelCouncil        bool
 	AllowAPIKey            bool
+	prompts                quickPromptSet
 }
 
 type Argument struct {
@@ -74,11 +84,19 @@ type Argument struct {
 }
 
 type CouncilMember struct {
-	MemberID    string             `json:"member_id"`
-	Model       string             `json:"model"`
-	PersonaFile string             `json:"persona_file"`
-	RequestSpec *modelrequest.Spec `json:"-"`
-	PersonaText string             `json:"-"`
+	MemberID                  string             `json:"member_id"`
+	Model                     string             `json:"model"`
+	PersonaFile               string             `json:"persona_file"`
+	EndpointVariantID         string             `json:"endpoint_variant_id,omitempty"`
+	ProviderName              string             `json:"provider_name,omitempty"`
+	EndpointTag               string             `json:"endpoint_tag,omitempty"`
+	Quantization              string             `json:"quantization,omitempty"`
+	ProviderOnly              []string           `json:"provider_only,omitempty"`
+	ProviderQuantizations     []string           `json:"provider_quantizations,omitempty"`
+	ProviderAllowFallbacks    *bool              `json:"provider_allow_fallbacks,omitempty"`
+	ProviderRequireParameters *bool              `json:"provider_require_parameters,omitempty"`
+	RequestSpec               *modelrequest.Spec `json:"-"`
+	PersonaText               string             `json:"-"`
 }
 
 type Vote struct {
@@ -148,6 +166,7 @@ type inputRecord struct {
 	CouncilSize            int              `json:"council_size"`
 	RequiredVotes          int              `json:"required_votes"`
 	EvidenceStandard       string           `json:"evidence_standard"`
+	LawyerWebSearchEnabled bool             `json:"lawyer_web_search_enabled"`
 	CaseAPIAddr            string           `json:"case_api_addr"`
 	LawyerTimeout          string           `json:"lawyer_timeout"`
 	CouncilTimeout         string           `json:"council_timeout"`

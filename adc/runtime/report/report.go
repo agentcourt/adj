@@ -11,9 +11,17 @@ import (
 	"time"
 	"unicode/utf8"
 
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/runner"
 	"github.com/jsmorph/adj/common/openai"
 )
+
+type DigestOptions struct {
+	Model       string
+	Client      *openai.Client
+	PromptDir   string
+	PromptFiles map[string]string
+}
 
 func WriteTranscript(path string, result runner.Result) error {
 	if strings.TrimSpace(path) == "" {
@@ -62,16 +70,24 @@ func WriteTranscript(path string, result runner.Result) error {
 }
 
 func WriteDigest(path string, result runner.Result) error {
-	return WriteDigestWithClient(path, result, "", nil)
+	return WriteDigestWithOptions(path, result, DigestOptions{})
 }
 
 func WriteDigestWithModel(path string, result runner.Result, model string) error {
-	return WriteDigestWithClient(path, result, model, nil)
+	return WriteDigestWithOptions(path, result, DigestOptions{Model: model})
 }
 
 func WriteDigestWithClient(path string, result runner.Result, model string, client *openai.Client) error {
+	return WriteDigestWithOptions(path, result, DigestOptions{Model: model, Client: client})
+}
+
+func WriteDigestWithOptions(path string, result runner.Result, opts DigestOptions) error {
 	if strings.TrimSpace(path) == "" {
 		return nil
+	}
+	promptCatalog, err := adcprompts.Load(adcprompts.Options{PromptDir: opts.PromptDir, PromptFiles: opts.PromptFiles})
+	if err != nil {
+		return err
 	}
 	state := result.FinalState
 	caseObj := getMap(state["case"])
@@ -160,7 +176,7 @@ func WriteDigestWithClient(path string, result runner.Result, model string, clie
 	}
 
 	b.WriteString("\n## Side Argument Summaries\n\n")
-	summary, err := summarizeArgumentsBySide(caseObj, docket, model, client)
+	summary, err := summarizeArgumentsBySide(caseObj, docket, opts.Model, opts.Client, promptCatalog)
 	if err != nil {
 		return fmt.Errorf("generate side argument summaries: %w", err)
 	}
@@ -237,7 +253,7 @@ type sideSummaryResult struct {
 	Source    string
 }
 
-func summarizeArgumentsBySide(caseObj map[string]any, docket []any, model string, client *openai.Client) (sideSummaryResult, error) {
+func summarizeArgumentsBySide(caseObj map[string]any, docket []any, model string, client *openai.Client, promptCatalog *adcprompts.Catalog) (sideSummaryResult, error) {
 	plaintiffText, defendantText := collectSideArguments(docket)
 	courtroomContext := collectCourtroomContext(docket)
 	evidenceContext := collectEvidenceContext(caseObj, docket)
@@ -250,7 +266,7 @@ func summarizeArgumentsBySide(caseObj map[string]any, docket []any, model string
 		}, nil
 	}
 
-	plaintiffLLM, defendantLLM, err := summarizeArgumentsBySideLLM(plaintiffText, defendantText, courtroomContext, evidenceContext, model, client)
+	plaintiffLLM, defendantLLM, err := summarizeArgumentsBySideLLM(plaintiffText, defendantText, courtroomContext, evidenceContext, model, client, promptCatalog)
 	if err == nil {
 		return sideSummaryResult{
 			Plaintiff: plaintiffLLM,
@@ -337,7 +353,7 @@ func collectEvidenceContext(caseObj map[string]any, docket []any) string {
 	return strings.Join(lines, "\n")
 }
 
-func summarizeArgumentsBySideLLM(plaintiffText, defendantText, courtroomContext, evidenceContext, model string, client *openai.Client) (string, string, error) {
+func summarizeArgumentsBySideLLM(plaintiffText, defendantText, courtroomContext, evidenceContext, model string, client *openai.Client, promptCatalog *adcprompts.Catalog) (string, string, error) {
 	var err error
 	if client == nil {
 		client, err = openai.NewFromEnv(false, 90*time.Second)
@@ -350,14 +366,27 @@ func summarizeArgumentsBySideLLM(plaintiffText, defendantText, courtroomContext,
 
 	model = resolveSummaryModel(model)
 	temp := 0.2
+	systemPrompt, err := promptCatalog.Text(adcprompts.ReportSummarySystemID)
+	if err != nil {
+		return "", "", err
+	}
+	userPrompt, err := promptCatalog.Render(adcprompts.ReportSummaryUserID, map[string]string{
+		"{{COURTROOM_CONTEXT}}": promptReportValue(shortenAtWord(courtroomContext, 22000)),
+		"{{EVIDENCE_CONTEXT}}":  promptReportValue(shortenAtWord(evidenceContext, 5000)),
+		"{{PLAINTIFF_TEXT}}":    promptReportValue(shortenAtWord(plaintiffText, 12000)),
+		"{{DEFENDANT_TEXT}}":    promptReportValue(shortenAtWord(defendantText, 12000)),
+	})
+	if err != nil {
+		return "", "", err
+	}
 	input := []map[string]any{
 		{
 			"role":    "system",
-			"content": "You write high-quality civil trial digests. Summarize argument content precisely, with concrete issues, burdens, evidentiary references, and vulnerabilities. Do not invent facts.",
+			"content": systemPrompt,
 		},
 		{
 			"role":    "user",
-			"content": buildSummaryPrompt(plaintiffText, defendantText, courtroomContext, evidenceContext),
+			"content": userPrompt,
 		},
 	}
 	resp, err := client.CreateResponse(ctx, model, input, nil, "", &temp)
@@ -366,14 +395,22 @@ func summarizeArgumentsBySideLLM(plaintiffText, defendantText, courtroomContext,
 	}
 	out, err := parseSideSummaryPayload(strings.TrimSpace(resp.Text))
 	if err != nil {
+		repairSystem, promptErr := promptCatalog.Text(adcprompts.ReportRepairSystemID)
+		if promptErr != nil {
+			return "", "", promptErr
+		}
+		repairUser, promptErr := promptCatalog.Render(adcprompts.ReportRepairUserID, map[string]string{"{{MODEL_OUTPUT}}": strings.TrimSpace(resp.Text)})
+		if promptErr != nil {
+			return "", "", promptErr
+		}
 		fixPrompt := []map[string]any{
 			{
 				"role":    "system",
-				"content": "Convert the provided text into strict JSON only. Do not include any prose outside JSON.",
+				"content": repairSystem,
 			},
 			{
 				"role":    "user",
-				"content": "Return strict JSON with keys plaintiff_summary and defendant_summary from this text. Keep citation anchors in square brackets.\n\n" + strings.TrimSpace(resp.Text),
+				"content": repairUser,
 			},
 		}
 		fixResp, fixErr := client.CreateResponse(ctx, model, fixPrompt, nil, "", &temp)
@@ -399,45 +436,12 @@ func summarizeArgumentsBySideLLM(plaintiffText, defendantText, courtroomContext,
 	return out.PlaintiffSummary, out.DefendantSummary, nil
 }
 
-func buildSummaryPrompt(plaintiffText, defendantText, courtroomContext, evidenceContext string) string {
-	var b strings.Builder
-	b.WriteString("Summarize each side's courtroom arguments from this trial record.\n")
-	b.WriteString("Output requirements:\n")
-	b.WriteString("1. Return strict JSON only with keys plaintiff_summary and defendant_summary.\n")
-	b.WriteString("2. Each value should be 1 to 2 detailed paragraphs.\n")
-	b.WriteString("3. Cover legal theory, burden framing, strongest support, weaknesses, and treatment of opposing points.\n")
-	b.WriteString("4. Use only the provided text.\n")
-	b.WriteString("5. For each major point, include a citation anchor in square brackets using a docket title exactly as given, for example [Opening statement - plaintiff].\n\n")
-	b.WriteString("Full courtroom record context:\n")
-	if strings.TrimSpace(courtroomContext) == "" {
-		b.WriteString("(none)\n")
-	} else {
-		b.WriteString(shortenAtWord(courtroomContext, 22000))
-		b.WriteString("\n")
+func promptReportValue(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "(none)"
 	}
-	b.WriteString("\nEvidence and exhibit context:\n")
-	if strings.TrimSpace(evidenceContext) == "" {
-		b.WriteString("(none)\n")
-	} else {
-		b.WriteString(shortenAtWord(evidenceContext, 5000))
-		b.WriteString("\n")
-	}
-	b.WriteString("\nPrimary side texts:\n")
-	b.WriteString("Plaintiff courtroom text:\n")
-	if strings.TrimSpace(plaintiffText) == "" {
-		b.WriteString("(none)\n")
-	} else {
-		b.WriteString(shortenAtWord(plaintiffText, 12000))
-		b.WriteString("\n")
-	}
-	b.WriteString("\nDefendant courtroom text:\n")
-	if strings.TrimSpace(defendantText) == "" {
-		b.WriteString("(none)\n")
-	} else {
-		b.WriteString(shortenAtWord(defendantText, 12000))
-		b.WriteString("\n")
-	}
-	return b.String()
+	return value
 }
 
 func extractJSONObject(s string) string {

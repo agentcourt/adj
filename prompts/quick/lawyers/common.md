@@ -1,0 +1,1 @@
+Address each required part of the proposition and identify the evidence supporting it. Support factual claims with case documents or identified sources. Address authentication when relevant. Use an available method when it can resolve a material question, and report the method and result.

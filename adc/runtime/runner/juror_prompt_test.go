@@ -43,7 +43,11 @@ func TestBuildJurorSystemPromptForVoteRound(t *testing.T) {
 		},
 	}
 
-	prompt := buildJurorSystemPrompt(role, opportunity, "You are skeptical of unsigned drafts.", caseObj)
+	r := &Runner{prompts: testPromptCatalog(t)}
+	prompt, err := r.buildJurorSystemPrompt(role, opportunity, "You are skeptical of unsigned drafts.", caseObj)
+	if err != nil {
+		t.Fatalf("buildJurorSystemPrompt: %v", err)
+	}
 	want := []string{
 		"Role: juror",
 		"Role prompt preamble: Take the record seriously.",
@@ -79,12 +83,16 @@ func TestBuildJurorSystemPromptForVoteRound(t *testing.T) {
 func TestBuildJurorSystemPromptForNonVoteOmitsTranscript(t *testing.T) {
 	t.Parallel()
 
-	prompt := buildJurorSystemPrompt(
+	r := &Runner{prompts: testPromptCatalog(t)}
+	prompt, err := r.buildJurorSystemPrompt(
 		spec.RoleSpec{Name: "juror", Instructions: "Answer the question.", AllowedActions: []string{"answer_questionnaire"}},
 		leanOpportunity{AllowedTools: []string{"submit_voir_dire_answer"}},
 		"Identity text",
 		map[string]any{"docket": []any{map[string]any{"title": "Opening statement by plaintiff", "description": "Should not appear"}}},
 	)
+	if err != nil {
+		t.Fatalf("buildJurorSystemPrompt: %v", err)
+	}
 	if strings.Contains(prompt, "Trial transcript:") || strings.Contains(prompt, "Judge's instructions:") {
 		t.Fatalf("non-vote prompt included deliberation material\n%s", prompt)
 	}

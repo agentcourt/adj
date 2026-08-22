@@ -1004,7 +1004,7 @@ func (api *councilAPIServer) statusResponseLocked(caseID string, memberID string
 	}
 	response["status"] = "ready"
 	response["prompt"] = turn.prompt
-	response["tools"] = councilToolSpecs()
+	response["tools"] = api.rc.cfg.councilToolSpecs()
 	response["limits"] = api.councilLimitsLocked(turn)
 	return response
 }
@@ -1115,12 +1115,20 @@ func (api *councilAPIServer) evidenceReadLimitsLocked(turn *councilTurn) map[str
 }
 
 func councilToolSpecs() []map[string]any {
+	return councilToolSpecsWithDescription(func(description string) string { return description })
+}
+
+func (cfg Config) councilToolSpecs() []map[string]any {
+	return councilToolSpecsWithDescription(cfg.modelToolDescription)
+}
+
+func councilToolSpecsWithDescription(describe func(string) string) []map[string]any {
 	return []map[string]any{
-		httpToolSpec("get_case", "Return the current visible arbitration record for this council member.", emptyObjectSchema(), true),
-		httpToolSpec("list_evidence", "List visible immutable record evidence.", emptyObjectSchema(), true),
-		httpToolSpec("stat_evidence", "Return metadata and read limits for one visible evidence item.", evidenceIDSchema(), true),
-		httpToolSpec("read_evidence_range", "Read a bounded byte range from one visible evidence item as base64.", readEvidenceRangeSchema(), true),
-		httpToolSpec("submit_council_answer", "Submit one council answer for the current deliberation opportunity.", submitCouncilAnswerSchema(), false),
+		httpToolSpec("get_case", describe("Return the current visible arbitration record for this council member."), emptyObjectSchema(), true),
+		httpToolSpec("list_evidence", describe("List visible immutable record evidence."), emptyObjectSchema(), true),
+		httpToolSpec("stat_evidence", describe("Return metadata and read limits for one visible evidence item."), evidenceIDSchema(), true),
+		httpToolSpec("read_evidence_range", describe("Read a bounded byte range from one visible evidence item as base64."), readEvidenceRangeSchema(), true),
+		httpToolSpec("submit_council_answer", describe("Submit one council answer for the current deliberation opportunity."), submitCouncilAnswerSchema(), false),
 	}
 }
 
@@ -1164,9 +1172,11 @@ func (rc *runContext) buildCouncilAPIPrompt(seat CouncilSeat, opportunity Opport
 	if err != nil {
 		return "", err
 	}
-	return base + "\n\nCouncil API instructions:\n" +
-		"You are a council member. Answer the question from the admitted record.\n" +
-		"You may examine admitted evidence through read-only tools when exact bytes, metadata, or exhibit contents matter.\n" +
-		"Do not search the web, introduce new facts, create new evidence, or upload evidence.\n" +
-		"When ready, call submit_council_answer exactly once with answer as an integer from 0 through 100 and a concise rationale.\n", nil
+	return rc.cfg.renderPromptFile(promptCouncilAPI, map[string]string{
+		"COUNCIL_SYSTEM":    base,
+		"COUNCIL_TOOL":      "submit_council_answer",
+		"SUBMISSION_FIELDS": "answer as an integer from 0 through 100",
+		"MEMBER_ID":         seat.MemberID,
+		"OPPORTUNITY_ID":    opportunity.ID,
+	})
 }

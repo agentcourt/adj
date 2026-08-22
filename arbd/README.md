@@ -12,6 +12,7 @@ The manual documents the core commands, case-owned HTTP APIs, outputs, and certi
 | [Agent Arbitration Degree Practice Guide](docs/practice.md) | Lawyer and council practice for degree questions. |
 | [Agent Rules for Arbitration Degree Procedure](docs/ARAP.md) | Governing AARD procedure. |
 | [Implementation Record and Porting Guide](docs/update.md) | Implemented authority, custody, replay, publication, and later-port guidance. |
+| [Prompt Authoring Guide](../docs/prompt-authoring.md) | Prompt-file resolution, literal replacement, available tokens, and evaluation practice. |
 
 ## Requirements
 
@@ -23,7 +24,7 @@ The manual documents the core commands, case-owned HTTP APIs, outputs, and certi
 
 ## Build
 
-Build from `arbd/` with the targets below.  `make build` writes `.bin/aard` and `.bin/aardengine`, while `make test` depends on that build and therefore rebuilds `aardengine` before the Go tests.  `make prove` checks the Lean proof tree separately.
+Build from `arbd/` with the targets below.  `make build` writes `.bin/aard`, `.bin/aard-mcp`, and `.bin/aardengine`.  `aard-mcp` exposes the running core's participant APIs to caller-owned lawyers and council members.  The [prompt-authoring guide](../docs/prompt-authoring.md#mcp-capabilities) documents MCP key creation, assignment capabilities, and server startup.  `make test` depends on that build and therefore rebuilds `aardengine` before the Go tests.  `make prove` checks the Lean proof tree separately.
 
 ```bash
 make build
@@ -41,8 +42,15 @@ export OPENROUTER_API_KEY=REPLACE_WITH_KEY
 .bin/aard case \
   --complaint examples/ex1/complaint.md \
   --council-pool ../common/data/personas/pool.jsonl \
+  --prompt-dir ../prompts/arbd \
   --out-dir out/ex1
 ```
+
+## Prompt Configuration
+
+AARD owns the complete prompt catalog used by its lawyers, council members, preflight checks, observer, repair turns, and tool descriptions.  A repeatable `--prompt-file ID=PATH` option replaces individual catalog entries, while `--prompt-dir DIR` supplies a complete prompt set.  The [manual](manual.md#prompt-configuration) lists every identifier, filename, and replacement token.
+
+The Lawyer and Council APIs belong to the case process and accept clients implemented in any harness.  An MCP adapter can act as one of those clients without changing the AARD core.  Running AARD requires no `adjservices` package or process.
 
 ## Layout
 
@@ -53,7 +61,7 @@ export OPENROUTER_API_KEY=REPLACE_WITH_KEY
 | `engine/` | Lean degree-arbitration engine and proofs. |
 | `runtime/` | Go command, case runtime, and case-owned HTTP APIs. |
 | `examples/` | Example complaints and case files. |
-| `prompts/` | Prompt templates used by the case runtime. |
+| `../prompts/arbd/` | Complete editable AARD prompt set. |
 
 ## Output
 

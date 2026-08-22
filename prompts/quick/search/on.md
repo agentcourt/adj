@@ -1,0 +1,1 @@
+Web search is enabled. Search when a material public fact is missing from the case record, and identify the source for each fact used. Use available browser or computer tools when they help assess relevant source content.

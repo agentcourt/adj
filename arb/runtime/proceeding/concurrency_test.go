@@ -419,7 +419,7 @@ func TestRoleAPIHTTPWritesDoNotHoldCaseMutex(t *testing.T) {
 
 func TestDirectCouncilProviderCallDoesNotHoldCaseMutex(t *testing.T) {
 	rc := newCouncilOpportunityTestContext(t, "")
-	rc.cfg.PromptDir = filepath.Join("..", "..", "prompts")
+	rc.cfg.PromptDir = testPromptDir()
 	client := &blockingCouncilResponseClient{
 		entered: make(chan struct{}),
 		release: make(chan struct{}),

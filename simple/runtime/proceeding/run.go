@@ -13,6 +13,7 @@ import (
 	"github.com/jsmorph/adj/common/documents"
 	"github.com/jsmorph/adj/common/modelrequest"
 	openaiapi "github.com/jsmorph/adj/common/openai"
+	"github.com/jsmorph/adj/common/promptfile"
 	"github.com/jsmorph/adj/common/recordio"
 )
 
@@ -50,6 +51,10 @@ func RunWithClientFactory(ctx context.Context, opts Options, factory ClientFacto
 	if err := recordio.WriteJSON(filepath.Join(resolved.OutputDir, "runtime.json"), runtime); err != nil {
 		return Result{}, err
 	}
+	webSearch := runtime.WebSearchEnabled
+	reasoningEffort := runtime.ReasoningEffort
+	maxOutputTokens := runtime.MaxOutputTokens
+	maxToolCalls := runtime.MaxToolCalls
 
 	recorder := &eventRecorder{path: filepath.Join(resolved.OutputDir, "events.ndjson")}
 	documentManifest, err := importDocuments(resolved)
@@ -59,11 +64,15 @@ func RunWithClientFactory(ctx context.Context, opts Options, factory ClientFacto
 		requestRecord := ModelRequestRecord{
 			SchemaVersion:    RequestSchemaVersion,
 			RequestSpec:      redactRequestSpec(spec),
-			DeveloperPrompt:  developerPrompt(resolved.EvidenceStandard),
+			DeveloperPrompt:  resolved.developerPrompt,
 			Proposition:      resolved.Proposition,
 			EvidenceStandard: resolved.EvidenceStandard,
 			Documents:        documentManifest.Files,
-			Tools:            decisionTools(),
+			WebSearchEnabled: webSearch,
+			ReasoningEffort:  reasoningEffort,
+			MaxOutputTokens:  maxOutputTokens,
+			MaxToolCalls:     maxToolCalls,
+			Tools:            decisionTools(webSearch, resolved.prompts),
 			Error:            err.Error(),
 		}
 		writeErr = errors.Join(writeErr, recordio.WriteJSON(filepath.Join(resolved.OutputDir, "model-request.json"), requestRecord))
@@ -77,22 +86,30 @@ func RunWithClientFactory(ctx context.Context, opts Options, factory ClientFacto
 		return Result{}, err
 	}
 	if err := recorder.append("run_initialized", map[string]any{
-		"case_id":        resolved.CaseID,
-		"run_id":         resolved.RunID,
-		"document_count": len(documentManifest.Files),
+		"case_id":            resolved.CaseID,
+		"run_id":             resolved.RunID,
+		"document_count":     len(documentManifest.Files),
+		"web_search_enabled": webSearch,
+		"reasoning_effort":   reasoningEffort,
+		"max_output_tokens":  maxOutputTokens,
+		"max_tool_calls":     maxToolCalls,
 	}); err != nil {
 		return Result{}, err
 	}
 
-	tools := decisionTools()
-	inputItems, requestErr := buildInputItems(resolved.Proposition, resolved.EvidenceStandard, filepath.Join(resolved.OutputDir, "documents"), documentManifest)
+	tools := decisionTools(webSearch, resolved.prompts)
+	inputItems, requestErr := buildInputItems(resolved.Proposition, resolved.EvidenceStandard, resolved.developerPrompt, filepath.Join(resolved.OutputDir, "documents"), documentManifest, resolved.prompts)
 	requestRecord := ModelRequestRecord{
 		SchemaVersion:    RequestSchemaVersion,
 		RequestSpec:      redactRequestSpec(spec),
-		DeveloperPrompt:  developerPrompt(resolved.EvidenceStandard),
+		DeveloperPrompt:  resolved.developerPrompt,
 		Proposition:      resolved.Proposition,
 		EvidenceStandard: resolved.EvidenceStandard,
 		Documents:        documentManifest.Files,
+		WebSearchEnabled: webSearch,
+		ReasoningEffort:  reasoningEffort,
+		MaxOutputTokens:  maxOutputTokens,
+		MaxToolCalls:     maxToolCalls,
 		Tools:            tools,
 	}
 	if requestErr != nil {
@@ -125,7 +142,13 @@ func RunWithClientFactory(ctx context.Context, opts Options, factory ClientFacto
 		}
 		return finishError(resolved, startedAt, documentManifest, openaiapi.Response{}, openaiapi.Accounting{}, "", err, recorder)
 	}
-	if err := recorder.append("provider_request_started", map[string]any{"model": spec.RuntimeModel()}); err != nil {
+	if err := recorder.append("provider_request_started", map[string]any{
+		"model":              spec.RuntimeModel(),
+		"web_search_enabled": webSearch,
+		"reasoning_effort":   reasoningEffort,
+		"max_output_tokens":  maxOutputTokens,
+		"max_tool_calls":     maxToolCalls,
+	}); err != nil {
 		writeErr := recordio.WriteJSON(filepath.Join(resolved.OutputDir, "model-response.json"), ModelResponseRecord{SchemaVersion: ResponseSchemaVersion, Status: "not_sent", Error: err.Error(), ErrorClass: "storage"})
 		if writeErr != nil {
 			return Result{}, errors.Join(err, writeErr)
@@ -142,7 +165,10 @@ func RunWithClientFactory(ctx context.Context, opts Options, factory ClientFacto
 		return finishError(resolved, startedAt, documentManifest, response, provider, errorClass(providerErr), providerErr, recorder)
 	}
 	responseEvent := map[string]any{
-		"response_id": response.ResponseID,
+		"response_id":               response.ResponseID,
+		"web_search_call_count":     len(response.WebSearchCalls),
+		"web_search_source_count":   webSearchSourceCount(response.WebSearchCalls),
+		"web_search_citation_count": len(response.URLCitations),
 	}
 	if usage := response.TokenUsage(); usage != nil {
 		responseEvent["provider_usage"] = usage
@@ -175,7 +201,9 @@ func resolveOptions(opts Options, now time.Time) (Options, modelrequest.Spec, Ru
 	opts.RunID = strings.TrimSpace(opts.RunID)
 	opts.RequestSpecPath = strings.TrimSpace(opts.RequestSpecPath)
 	opts.Model = strings.TrimSpace(opts.Model)
+	opts.ReasoningEffort = strings.TrimSpace(opts.ReasoningEffort)
 	opts.EvidenceStandard = strings.TrimSpace(opts.EvidenceStandard)
+	opts.PromptDir = strings.TrimSpace(opts.PromptDir)
 	if opts.Proposition == "" {
 		return Options{}, modelrequest.Spec{}, Runtime{}, fmt.Errorf("proposition is required")
 	}
@@ -203,6 +231,20 @@ func resolveOptions(opts Options, now time.Time) (Options, modelrequest.Spec, Ru
 	if opts.TimeoutSeconds < 0 {
 		return Options{}, modelrequest.Spec{}, Runtime{}, fmt.Errorf("--timeout-seconds must be positive when set")
 	}
+	if opts.MaxOutputTokens < 0 {
+		return Options{}, modelrequest.Spec{}, Runtime{}, fmt.Errorf("--max-output-tokens must be positive when set")
+	}
+	if opts.MaxToolCalls < 0 {
+		return Options{}, modelrequest.Spec{}, Runtime{}, fmt.Errorf("--max-tool-calls must be positive when set")
+	}
+	var explicitReasoningEffort modelrequest.ReasoningEffort
+	if opts.ReasoningEffort != "" {
+		var err error
+		explicitReasoningEffort, err = modelrequest.ParseReasoningEffort(opts.ReasoningEffort)
+		if err != nil {
+			return Options{}, modelrequest.Spec{}, Runtime{}, err
+		}
+	}
 	if opts.TimeoutSeconds == 0 {
 		opts.TimeoutSeconds = DefaultTimeoutSeconds
 	}
@@ -212,18 +254,83 @@ func resolveOptions(opts Options, now time.Time) (Options, modelrequest.Spec, Ru
 	if opts.RunID == "" {
 		opts.RunID = fmt.Sprintf("run-%d", now.UnixNano())
 	}
+	promptOverrides := make(map[string]string, len(opts.PromptFiles))
+	for rawID, path := range opts.PromptFiles {
+		id := strings.TrimSpace(rawID)
+		if _, exists := promptOverrides[id]; exists {
+			return Options{}, modelrequest.Spec{}, Runtime{}, fmt.Errorf("prompt ID %q is repeated after trimming", id)
+		}
+		promptOverrides[id] = strings.TrimSpace(path)
+	}
+	var err error
+	if opts.PromptDir != "" {
+		opts.PromptDir, err = filepath.Abs(opts.PromptDir)
+		if err != nil {
+			return Options{}, modelrequest.Spec{}, Runtime{}, fmt.Errorf("resolve prompt directory: %w", err)
+		}
+	}
+	for id, path := range promptOverrides {
+		if path == "" {
+			continue
+		}
+		resolvedPath, pathErr := filepath.Abs(path)
+		if pathErr != nil {
+			return Options{}, modelrequest.Spec{}, Runtime{}, fmt.Errorf("resolve prompt file %q: %w", id, pathErr)
+		}
+		promptOverrides[id] = resolvedPath
+	}
+	opts.PromptFiles = promptOverrides
+	opts.prompts, err = promptfile.Resolve(simplePromptSpecs, promptOverrides, opts.PromptDir)
+	if err != nil {
+		return Options{}, modelrequest.Spec{}, Runtime{}, err
+	}
+	webSearch := true
+	if opts.WebSearch != nil {
+		webSearch = *opts.WebSearch
+	}
+	opts.WebSearch = &webSearch
+	developerPrompt, err := resolveDeveloperPrompt(opts, webSearch)
+	if err != nil {
+		return Options{}, modelrequest.Spec{}, Runtime{}, err
+	}
+	opts.developerPrompt = developerPrompt
 	spec, err := loadRequestSpec(opts)
 	if err != nil {
 		return Options{}, modelrequest.Spec{}, Runtime{}, err
+	}
+	if explicitReasoningEffort != "" {
+		spec = spec.WithReasoningEffort(explicitReasoningEffort)
+	}
+	if opts.MaxOutputTokens > 0 {
+		spec = spec.WithMaxOutputTokens(opts.MaxOutputTokens)
+	}
+	if opts.MaxToolCalls > 0 {
+		spec = spec.WithMaxToolCalls(opts.MaxToolCalls)
+	}
+	if maxOutputTokens := spec.MaxOutputTokens(); maxOutputTokens != nil && *maxOutputTokens <= 0 {
+		return Options{}, modelrequest.Spec{}, Runtime{}, fmt.Errorf("request spec max_output_tokens must be positive")
+	}
+	if maxToolCalls := spec.MaxToolCalls(); maxToolCalls != nil && *maxToolCalls <= 0 {
+		return Options{}, modelrequest.Spec{}, Runtime{}, fmt.Errorf("request spec max_tool_calls must be positive")
 	}
 	if supported, known := spec.SupportsParameter("tools"); known && !supported {
 		return Options{}, modelrequest.Spec{}, Runtime{}, fmt.Errorf("request spec endpoint metadata omits required parameter tools")
 	}
 	spec = spec.WithFallbackMaxOutputTokens(DefaultMaxOutputTokens)
+	opts.ReasoningEffort = spec.ReasoningEffort()
+	opts.MaxOutputTokens = *spec.MaxOutputTokens()
+	opts.MaxToolCalls = 0
+	if maxToolCalls := spec.MaxToolCalls(); maxToolCalls != nil {
+		opts.MaxToolCalls = *maxToolCalls
+	}
 	runtime := Runtime{
 		SchemaVersion:          RuntimeSchemaVersion,
 		EvidenceStandard:       opts.EvidenceStandard,
 		AllowAPIKey:            opts.AllowAPIKey,
+		WebSearchEnabled:       webSearch,
+		ReasoningEffort:        opts.ReasoningEffort,
+		MaxOutputTokens:        opts.MaxOutputTokens,
+		MaxToolCalls:           opts.MaxToolCalls,
 		MaxDocuments:           opts.MaxDocuments,
 		MaxDocumentBytes:       opts.MaxDocumentBytes,
 		MaxDocumentsBytes:      opts.MaxDocumentsBytes,
@@ -323,6 +430,8 @@ func modelResponseRecord(response openaiapi.Response, err error) ModelResponseRe
 		ResponseID:              response.ResponseID,
 		Text:                    response.Text,
 		ToolCalls:               recordedToolCalls(response.ToolCalls),
+		WebSearchCalls:          response.WebSearchCalls,
+		URLCitations:            response.URLCitations,
 		RawResponse:             response.RawJSON,
 		ProviderMetadata:        response.OpenRouterMetadata,
 		ProviderGeneration:      response.OpenRouterGeneration,
@@ -332,6 +441,14 @@ func modelResponseRecord(response openaiapi.Response, err error) ModelResponseRe
 		Error:                   errorText(err),
 		ErrorClass:              errorClass(err),
 	}
+}
+
+func webSearchSourceCount(calls []openaiapi.WebSearchCall) int {
+	count := 0
+	for _, call := range calls {
+		count += len(call.Sources)
+	}
+	return count
 }
 
 func recordedToolCalls(calls []openaiapi.ToolCall) []ToolCallRecord {

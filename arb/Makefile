@@ -12,6 +12,7 @@ aarengine:
 
 build: aarengine
 	cd runtime && $(GO_ENV) go build -o ../$(BIN_DIR)/aar ./cmd/aar
+	cd runtime && $(GO_ENV) go build -o ../$(BIN_DIR)/aar-mcp ./cmd/aar-mcp
 
 test: aarengine
 	cd runtime && $(GO_ENV) go test ./...
@@ -22,7 +23,7 @@ prove:
 install: build
 
 demo: build
-	@echo ".bin/aar case --complaint examples/ex01/complaint.md --out-dir out/ex01 --caseapi-addr 127.0.0.1:19771"
+	@echo ".bin/aar case --complaint ../examples/ex01/complaint.md --out-dir out/ex01 --caseapi-addr 127.0.0.1:19771"
 
 clean:
 	rm -rf $(BIN_DIR) engine/.lake/build out

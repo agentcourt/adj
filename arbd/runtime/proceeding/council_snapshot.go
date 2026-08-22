@@ -64,7 +64,7 @@ func (rc *runContext) writeCouncilTurnSnapshot(turn *councilTurn, prompt string)
 		Complaint:        rc.complaint,
 		State:            state,
 		Prompt:           prompt,
-		Tools:            councilToolSpecs(),
+		Tools:            rc.cfg.councilToolSpecs(),
 		Limits:           councilTurnLimits(rc.cfg.Policy, rc.cfg.Runtime, turn),
 		CaseView:         rc.councilView(turn.seat, turn.opportunity),
 		Evidence:         rc.listVisibleEvidence(),

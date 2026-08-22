@@ -1661,7 +1661,7 @@ func (api *lawyerAPIServer) statusResponseLocked(caseID string, roleID string) m
 			response["status"] = "done"
 		}
 		response["prompt"] = ""
-		response["tools"] = []map[string]any{caseStatusHTTPToolSpec()}
+		response["tools"] = []map[string]any{api.rc.cfg.caseStatusHTTPToolSpec()}
 		if api.rc.terminalReason != "" {
 			response["final_reason"] = api.rc.terminalReason
 		}
@@ -1670,8 +1670,8 @@ func (api *lawyerAPIServer) statusResponseLocked(caseID string, roleID string) m
 	if roleID == "observer" {
 		response := api.responseBaseLocked(caseID, roleID)
 		response["status"] = "observing"
-		response["prompt"] = "Observe the arbitration record. Observer tools are read-only."
-		response["tools"] = observerToolSpecs()
+		response["prompt"] = api.rc.cfg.observerPrompt
+		response["tools"] = api.rc.cfg.observerToolSpecs()
 		response["limits"] = observerLimits(api.rc)
 		return response
 	}
@@ -1680,12 +1680,12 @@ func (api *lawyerAPIServer) statusResponseLocked(caseID string, roleID string) m
 	if turn == nil || turn.completed || turn.opportunity.Role != roleID {
 		response["status"] = "waiting"
 		response["prompt"] = ""
-		response["tools"] = []map[string]any{caseStatusHTTPToolSpec()}
+		response["tools"] = []map[string]any{api.rc.cfg.caseStatusHTTPToolSpec()}
 		return response
 	}
 	response["status"] = "ready"
 	response["prompt"] = turn.prompt
-	response["tools"] = lawyerToolSpecs(turn.opportunity)
+	response["tools"] = api.rc.cfg.lawyerToolSpecs(turn.opportunity)
 	response["limits"] = api.lawyerLimitsLocked(turn)
 	return response
 }
@@ -1860,44 +1860,68 @@ func optionalIntParam(params map[string]any, key string, fallback int) (int, err
 }
 
 func lawyerToolSpecs(opportunity Opportunity) []map[string]any {
+	return lawyerToolSpecsWithDescription(opportunity, func(description string) string { return description })
+}
+
+func (cfg Config) lawyerToolSpecs(opportunity Opportunity) []map[string]any {
+	return lawyerToolSpecsWithDescription(opportunity, cfg.modelToolDescription)
+}
+
+func lawyerToolSpecsWithDescription(opportunity Opportunity, describe func(string) string) []map[string]any {
 	specs := []map[string]any{
-		caseStatusHTTPToolSpec(),
-		httpToolSpec("get_case", "Return the current visible arbitration record.", emptyObjectSchema(), true),
-		httpToolSpec("send_work_notes", "Send private work notes for off-record operator analysis. This does not create evidence, a filing, a technical report, or a case event.", workNotesSchema(), false),
+		caseStatusHTTPToolSpecWithDescription(describe),
+		httpToolSpec("get_case", describe("Return the current visible arbitration record."), emptyObjectSchema(), true),
+		httpToolSpec("send_work_notes", describe("Send private work notes for off-record operator analysis. This does not create evidence, a filing, a technical report, or a case event."), workNotesSchemaWithDescription(describe), false),
 	}
 	if evidenceReadAllowed(opportunity) {
 		specs = append(specs,
-			httpToolSpec("list_evidence", "List visible immutable record evidence.", emptyObjectSchema(), true),
-			httpToolSpec("stat_evidence", "Return metadata and read limits for one visible evidence item.", evidenceIDSchema(), true),
-			httpToolSpec("read_evidence_range", "Read a bounded byte range from one visible evidence item as base64.", readEvidenceRangeSchema(), true),
+			httpToolSpec("list_evidence", describe("List visible immutable record evidence."), emptyObjectSchema(), true),
+			httpToolSpec("stat_evidence", describe("Return metadata and read limits for one visible evidence item."), evidenceIDSchema(), true),
+			httpToolSpec("read_evidence_range", describe("Read a bounded byte range from one visible evidence item as base64."), readEvidenceRangeSchema(), true),
 		)
 	}
 	if evidenceSubmissionAllowed(opportunity) {
 		specs = append(specs,
-			httpToolSpec("begin_evidence_upload", "Begin a chunked evidence upload.", beginEvidenceUploadSchema(), false),
-			httpToolSpec("write_evidence_chunk", "Write one base64 chunk into an upload session.", writeEvidenceChunkSchema(), false),
-			httpToolSpec("commit_evidence_upload", "Verify and admit a completed evidence upload.", commitEvidenceUploadSchema(), false),
-			httpToolSpec("submit_evidence", "Submit source evidence with provenance.", submittedEvidenceSchema(), false),
+			httpToolSpec("begin_evidence_upload", describe("Begin a chunked evidence upload."), beginEvidenceUploadSchema(), false),
+			httpToolSpec("write_evidence_chunk", describe("Write one base64 chunk into an upload session."), writeEvidenceChunkSchema(), false),
+			httpToolSpec("commit_evidence_upload", describe("Verify and admit a completed evidence upload."), commitEvidenceUploadSchema(), false),
+			httpToolSpec("submit_evidence", describe("Submit source evidence with provenance."), submittedEvidenceSchema(), false),
 		)
 	}
-	specs = append(specs, httpToolSpec("submit_decision", "Submit the legal act for the current opportunity.", submitDecisionHTTPSchema(opportunity.AllowedTools), false))
+	specs = append(specs, httpToolSpec("submit_decision", describe("Submit the legal act for the current opportunity."), submitDecisionHTTPSchema(opportunity.AllowedTools), false))
 	return specs
 }
 
 func observerToolSpecs() []map[string]any {
+	return observerToolSpecsWithDescription(func(description string) string { return description })
+}
+
+func (cfg Config) observerToolSpecs() []map[string]any {
+	return observerToolSpecsWithDescription(cfg.modelToolDescription)
+}
+
+func observerToolSpecsWithDescription(describe func(string) string) []map[string]any {
 	return []map[string]any{
-		caseStatusHTTPToolSpec(),
-		httpToolSpec("get_case", "Return the current arbitration record.", emptyObjectSchema(), true),
-		httpToolSpec("get_turn", "Return the current turn role, phase, deadline, and attempts.", emptyObjectSchema(), true),
-		httpToolSpec("list_events", "List recorded case events.", listEventsSchema(), true),
-		httpToolSpec("list_evidence", "List visible immutable record evidence.", emptyObjectSchema(), true),
-		httpToolSpec("stat_evidence", "Return metadata for one visible evidence item.", evidenceIDSchema(), true),
-		httpToolSpec("read_evidence_range", "Read a bounded byte range from one visible evidence item as base64.", readEvidenceRangeSchema(), true),
+		caseStatusHTTPToolSpecWithDescription(describe),
+		httpToolSpec("get_case", describe("Return the current arbitration record."), emptyObjectSchema(), true),
+		httpToolSpec("get_turn", describe("Return the current turn role, phase, deadline, and attempts."), emptyObjectSchema(), true),
+		httpToolSpec("list_events", describe("List recorded case events."), listEventsSchema(), true),
+		httpToolSpec("list_evidence", describe("List visible immutable record evidence."), emptyObjectSchema(), true),
+		httpToolSpec("stat_evidence", describe("Return metadata for one visible evidence item."), evidenceIDSchema(), true),
+		httpToolSpec("read_evidence_range", describe("Read a bounded byte range from one visible evidence item as base64."), readEvidenceRangeSchema(), true),
 	}
 }
 
 func caseStatusHTTPToolSpec() map[string]any {
-	return httpToolSpec("case_status", "Return the current case phase, active turn, role status, and case counts.", emptyObjectSchema(), true)
+	return caseStatusHTTPToolSpecWithDescription(func(description string) string { return description })
+}
+
+func (cfg Config) caseStatusHTTPToolSpec() map[string]any {
+	return caseStatusHTTPToolSpecWithDescription(cfg.modelToolDescription)
+}
+
+func caseStatusHTTPToolSpecWithDescription(describe func(string) string) map[string]any {
+	return httpToolSpec("case_status", describe("Return the current case phase, active turn, role status, and case counts."), emptyObjectSchema(), true)
 }
 
 func httpToolSpec(name string, description string, schema map[string]any, readOnly bool) map[string]any {
@@ -1938,12 +1962,16 @@ func readEvidenceRangeSchema() map[string]any {
 }
 
 func workNotesSchema() map[string]any {
+	return workNotesSchemaWithDescription(func(description string) string { return description })
+}
+
+func workNotesSchemaWithDescription(describe func(string) string) map[string]any {
 	return map[string]any{
 		"type": "object",
 		"properties": map[string]any{
 			"notes": map[string]any{
 				"type":        "string",
-				"description": "Accumulated private work notes for this lawyer turn.",
+				"description": describe("Accumulated private work notes for this lawyer turn."),
 			},
 		},
 		"required":             []string{"notes"},

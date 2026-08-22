@@ -197,3 +197,76 @@ func TestSupportsParameterReportsMissingOrMalformedMetadataUnknown(t *testing.T)
 		})
 	}
 }
+
+func TestReasoningEffortValidationAndRequestParsing(t *testing.T) {
+	t.Parallel()
+
+	for _, value := range []string{"none", "minimal", "low", "medium", "high", "xhigh", "max"} {
+		effort, err := ParseReasoningEffort(value)
+		if err != nil {
+			t.Fatalf("ParseReasoningEffort(%q): %v", value, err)
+		}
+		if string(effort) != value {
+			t.Fatalf("ParseReasoningEffort(%q) = %q", value, effort)
+		}
+	}
+	for _, value := range []string{"", "HIGH", "extreme"} {
+		if _, err := ParseReasoningEffort(value); err == nil {
+			t.Fatalf("ParseReasoningEffort(%q) accepted invalid value", value)
+		}
+	}
+
+	spec, err := ParseJSON([]byte(`{
+		"endpoint":"openai",
+		"model":"gpt-5.4-mini",
+		"request":{"reasoning_effort":"low"},
+		"reasoning_effort":"xhigh"
+	}`))
+	if err != nil {
+		t.Fatalf("ParseJSON error = %v", err)
+	}
+	if spec.ReasoningEffort() != "xhigh" {
+		t.Fatalf("ReasoningEffort = %q, want xhigh", spec.ReasoningEffort())
+	}
+	if _, err := ParseJSON([]byte(`{"endpoint":"openai","model":"gpt-5","reasoning_effort":"extreme"}`)); err == nil {
+		t.Fatal("ParseJSON accepted invalid reasoning_effort")
+	}
+	if _, err := ParseJSON([]byte(`{"endpoint":"openai","model":"gpt-5","reasoning_effort":1}`)); err == nil {
+		t.Fatal("ParseJSON accepted non-string reasoning_effort")
+	}
+}
+
+func TestMaxToolCallsRequestParsing(t *testing.T) {
+	t.Parallel()
+
+	spec, err := ParseJSON([]byte(`{
+		"endpoint":"openai",
+		"model":"gpt-5.4-mini",
+		"request":{"max_tool_calls":6},
+		"max_tool_calls":8
+	}`))
+	if err != nil {
+		t.Fatalf("ParseJSON error = %v", err)
+	}
+	if spec.MaxToolCalls() == nil || *spec.MaxToolCalls() != 8 {
+		t.Fatalf("MaxToolCalls = %v, want 8", spec.MaxToolCalls())
+	}
+	withOverride := spec.WithMaxToolCalls(10)
+	if withOverride.MaxToolCalls() == nil || *withOverride.MaxToolCalls() != 10 {
+		t.Fatalf("overridden MaxToolCalls = %v, want 10", withOverride.MaxToolCalls())
+	}
+	if unchanged := spec.WithMaxToolCalls(0); unchanged.MaxToolCalls() == nil || *unchanged.MaxToolCalls() != 8 {
+		t.Fatalf("zero override changed MaxToolCalls to %v", unchanged.MaxToolCalls())
+	}
+}
+
+func TestMaxToolCallsRejectsInvalidConfiguredValues(t *testing.T) {
+	t.Parallel()
+
+	for _, value := range []string{"0", "-1", "1.5", `"8"`, "null"} {
+		_, err := ParseJSON([]byte(`{"endpoint":"openai","model":"gpt-5.4-mini","request":{"max_tool_calls":` + value + `}}`))
+		if err == nil || !strings.Contains(err.Error(), "max_tool_calls") {
+			t.Fatalf("max_tool_calls %s error = %v", value, err)
+		}
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jsmorph/adj/adc/runtime/courts"
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 	"github.com/jsmorph/adj/common/documents"
 )
@@ -18,6 +19,10 @@ const (
 )
 
 func CreatePropositionPlan(proposition, evidenceStandard, trialMode string) (Plan, error) {
+	return CreatePropositionPlanWithOptions(proposition, evidenceStandard, trialMode, PlanningOptions{})
+}
+
+func CreatePropositionPlanWithOptions(proposition, evidenceStandard, trialMode string, opts PlanningOptions) (Plan, error) {
 	proposition = strings.TrimSpace(proposition)
 	if proposition == "" {
 		return Plan{}, fmt.Errorf("proposition is required")
@@ -60,11 +65,27 @@ func CreatePropositionPlan(proposition, evidenceStandard, trialMode string) (Pla
 	if err := validateCasePacket(packet, courts.PropositionTribunal()); err != nil {
 		return Plan{}, err
 	}
+	promptCatalog, err := adcprompts.Load(adcprompts.Options{PromptDir: opts.PromptDir, PromptFiles: opts.PromptFiles})
+	if err != nil {
+		return Plan{}, err
+	}
+	strategyValues := map[string]string{
+		"{{PROPOSITION}}":       proposition,
+		"{{EVIDENCE_STANDARD}}": evidenceStandard,
+	}
+	proponentStrategy, err := promptCatalog.Render(adcprompts.PropositionProponentStrategyID, strategyValues)
+	if err != nil {
+		return Plan{}, err
+	}
+	opponentStrategy, err := promptCatalog.Render(adcprompts.PropositionOpponentStrategyID, strategyValues)
+	if err != nil {
+		return Plan{}, err
+	}
 
 	return Plan{
 		Packet:            packet,
-		PlaintiffStrategy: propositionStrategy("Proponent", proposition, evidenceStandard, true),
-		DefenseStrategy:   propositionStrategy("Opponent", proposition, evidenceStandard, false),
+		PlaintiffStrategy: proponentStrategy,
+		DefenseStrategy:   opponentStrategy,
 	}, nil
 }
 
@@ -92,16 +113,6 @@ func ValidateEvidenceStandard(standard string) error {
 	default:
 		return fmt.Errorf("evidence standard must be %s or %s", EvidenceStandardPreponderance, EvidenceStandardClearConvincing)
 	}
-}
-
-func propositionStrategy(role, proposition, evidenceStandard string, bearsBurden bool) string {
-	var burden string
-	if bearsBurden {
-		burden = "The Proponent bears the burden to demonstrate the proposition."
-	} else {
-		burden = "The Opponent may prevail by showing that the Proponent has not met the burden."
-	}
-	return fmt.Sprintf("# %s Strategy\n\nProposition:\n\n%s\n\nEvidence standard: `%s`.  %s  Use the imported documents and the trial record to address the proposition, and seek declaratory judgment with no monetary damages.", role, proposition, evidenceStandard, burden)
 }
 
 func propositionAttachments(manifest documents.Manifest, documentsRoot, documentsRelPath string) ([]spec.ComplaintAttachmentSpec, error) {

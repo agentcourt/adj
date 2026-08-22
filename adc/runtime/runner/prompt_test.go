@@ -5,8 +5,18 @@ import (
 	"strings"
 	"testing"
 
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 	"github.com/jsmorph/adj/adc/runtime/spec"
 )
+
+func testPromptCatalog(t *testing.T) *adcprompts.Catalog {
+	t.Helper()
+	catalog, err := adcprompts.Load(adcprompts.Options{})
+	if err != nil {
+		t.Fatalf("load prompt catalog: %v", err)
+	}
+	return catalog
+}
 
 func TestEffectiveRoleTemperatureUsesJurorOverrideOnlyForJurors(t *testing.T) {
 	t.Parallel()

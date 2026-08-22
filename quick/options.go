@@ -10,15 +10,34 @@ import (
 )
 
 func configure(opts Options) (Config, error) {
+	lawyerWebSearch := true
+	if opts.LawyerWebSearch != nil {
+		lawyerWebSearch = *opts.LawyerWebSearch
+	}
+	commonRoot := strings.TrimSpace(opts.CommonRoot)
+	if commonRoot == "" {
+		commonRoot = DefaultCommonRoot()
+	}
+	commonRoot, err := filepath.Abs(commonRoot)
+	if err != nil {
+		return Config{}, fmt.Errorf("resolve common root: %w", err)
+	}
+	councilPoolPath := strings.TrimSpace(opts.CouncilPoolPath)
+	if councilPoolPath == "" {
+		councilPoolPath = defaultCouncilPoolPath(commonRoot)
+	}
 	cfg := Config{
 		Proposition:            strings.TrimSpace(opts.Proposition),
 		DocumentsDir:           strings.TrimSpace(opts.DocumentsDir),
 		OutputDir:              strings.TrimSpace(opts.OutputDir),
-		CouncilPoolPath:        strings.TrimSpace(opts.CouncilPoolPath),
+		CouncilPoolPath:        councilPoolPath,
 		CouncilSize:            opts.CouncilSize,
 		RequiredVotes:          opts.RequiredVotes,
 		EvidenceStandard:       strings.TrimSpace(opts.EvidenceStandard),
+		PromptDir:              strings.TrimSpace(opts.PromptDir),
+		LawyerWebSearchEnabled: lawyerWebSearch,
 		CaseAPIAddr:            strings.TrimSpace(opts.CaseAPIAddr),
+		LawyerAPIBearerToken:   strings.TrimSpace(opts.LawyerAPIBearerToken),
 		CaseID:                 strings.TrimSpace(opts.CaseID),
 		RunID:                  strings.TrimSpace(opts.RunID),
 		LawyerTimeout:          opts.LawyerTimeout,
@@ -36,9 +55,6 @@ func configure(opts Options) (Config, error) {
 	if cfg.OutputDir == "" {
 		return Config{}, fmt.Errorf("output directory is required")
 	}
-	if cfg.CouncilPoolPath == "" {
-		return Config{}, fmt.Errorf("council pool path is required")
-	}
 	if cfg.CouncilSize <= 0 {
 		return Config{}, fmt.Errorf("council size must be positive")
 	}
@@ -53,6 +69,9 @@ func configure(opts Options) (Config, error) {
 	}
 	if cfg.CaseAPIAddr == "" {
 		cfg.CaseAPIAddr = DefaultCaseAPIAddr
+	}
+	if cfg.LawyerAPIBearerToken == "" {
+		return Config{}, fmt.Errorf("lawyer API bearer token is required")
 	}
 	if cfg.CaseID == "" {
 		cfg.CaseID = "quick-1"
@@ -109,7 +128,6 @@ func configure(opts Options) (Config, error) {
 	cfg.DocumentLimits.MaxFiles = opts.MaxDocumentFiles
 	cfg.DocumentLimits.MaxFileBytes = opts.MaxDocumentFileBytes
 	cfg.DocumentLimits.MaxTotalBytes = opts.MaxDocumentsTotal
-	var err error
 	cfg.OutputDir, err = absolutePath(cfg.OutputDir)
 	if err != nil {
 		return Config{}, err
@@ -124,7 +142,81 @@ func configure(opts Options) (Config, error) {
 			return Config{}, err
 		}
 	}
+	promptOverrides := make(map[string]string, len(opts.PromptFiles))
+	for rawID, rawPath := range opts.PromptFiles {
+		id := strings.TrimSpace(rawID)
+		if _, exists := promptOverrides[id]; exists {
+			return Config{}, fmt.Errorf("prompt ID %q is repeated after trimming", id)
+		}
+		promptOverrides[id] = strings.TrimSpace(rawPath)
+	}
+	if cfg.PromptDir != "" {
+		cfg.PromptDir, err = absolutePath(cfg.PromptDir)
+		if err != nil {
+			return Config{}, fmt.Errorf("resolve prompt directory: %w", err)
+		}
+	}
+	for id, path := range promptOverrides {
+		if path == "" {
+			continue
+		}
+		promptOverrides[id], err = absolutePath(path)
+		if err != nil {
+			return Config{}, fmt.Errorf("resolve prompt file %q: %w", id, err)
+		}
+	}
+	cfg.PromptFiles = promptOverrides
 	return cfg, nil
+}
+
+func DefaultCommonRoot() string {
+	cwd, err := os.Getwd()
+	if err == nil {
+		return locateCommonRootFrom(cwd)
+	}
+	return filepath.FromSlash("../common")
+}
+
+func defaultCouncilPoolPath(commonRoot string) string {
+	if cwd, err := os.Getwd(); err == nil {
+		localPool := filepath.Join(cwd, "pool.jsonl")
+		if fileExists(localPool) {
+			return localPool
+		}
+	}
+	return filepath.Join(commonRoot, "data", "personas", "pool.jsonl")
+}
+
+func locateCommonRootFrom(start string) string {
+	base := filepath.Clean(strings.TrimSpace(start))
+	if base == "" {
+		return filepath.FromSlash("../common")
+	}
+	if !filepath.IsAbs(base) {
+		if absolute, err := filepath.Abs(base); err == nil {
+			base = absolute
+		}
+	}
+	for {
+		candidate := filepath.Join(base, "common")
+		if fileExists(filepath.Join(candidate, "etc", "personas.csv")) || fileExists(filepath.Join(candidate, "data", "personas", "pool.jsonl")) {
+			return candidate
+		}
+		if filepath.Base(base) == "common" && (fileExists(filepath.Join(base, "etc", "personas.csv")) || fileExists(filepath.Join(base, "data", "personas", "pool.jsonl"))) {
+			return base
+		}
+		next := filepath.Dir(base)
+		if next == base {
+			break
+		}
+		base = next
+	}
+	return filepath.Clean(filepath.Join(start, filepath.FromSlash("../common")))
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }
 
 func prepareOutputDir(path string) error {

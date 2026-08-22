@@ -1,0 +1,1 @@
+Grant summary judgment only if there is no genuine dispute of material fact and the movant is entitled to judgment as a matter of law.  Do not weigh credibility.  Do not resolve competing inferences.  If the record leaves a real factual dispute on an element or defense, deny the motion and identify that dispute.  State the decisive reason in the `reasoning` field.

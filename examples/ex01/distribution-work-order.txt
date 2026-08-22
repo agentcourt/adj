@@ -1,0 +1,19 @@
+Vendor: Midway Distribution Services
+Work order: MDS-2026-0312-118
+Work order date: 2026-03-12
+Customer: Peter
+Project: "Claws" essay and client briefing package
+
+Scope:
+- bindery handoff and intake for 1,000 printed sets
+- labeling and packaging for commercial distribution
+- scheduled outbound distribution batch
+
+Charges:
+- intake and bindery coordination: $4,500
+- packaging and labeling: $3,500
+- warehouse handling and staging: $2,000
+- distribution scheduling deposit: $5,000
+
+Total due: $15,000
+Status: work order accepted and deposit posted

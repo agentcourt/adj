@@ -16,10 +16,10 @@ import (
 
 	"github.com/jsmorph/adj/common/modelrequest"
 
-	openai "github.com/openai/openai-go"
-	"github.com/openai/openai-go/option"
-	"github.com/openai/openai-go/responses"
-	"github.com/openai/openai-go/shared"
+	openai "github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/option"
+	"github.com/openai/openai-go/v3/responses"
+	"github.com/openai/openai-go/v3/shared"
 )
 
 type ToolCall struct {
@@ -30,9 +30,33 @@ type ToolCall struct {
 	ArgumentsError string
 }
 
+type WebSearchCall struct {
+	ID      string            `json:"id"`
+	Status  string            `json:"status"`
+	Action  string            `json:"action"`
+	Queries []string          `json:"queries,omitempty"`
+	URL     string            `json:"url,omitempty"`
+	Pattern string            `json:"pattern,omitempty"`
+	Sources []WebSearchSource `json:"sources,omitempty"`
+}
+
+type WebSearchSource struct {
+	Type string `json:"type"`
+	URL  string `json:"url"`
+}
+
+type URLCitation struct {
+	URL        string `json:"url"`
+	Title      string `json:"title"`
+	StartIndex int64  `json:"start_index"`
+	EndIndex   int64  `json:"end_index"`
+}
+
 type Response struct {
 	Text                      string
 	ToolCalls                 []ToolCall
+	WebSearchCalls            []WebSearchCall
+	URLCitations              []URLCitation
 	ResponseID                string
 	RawJSON                   string
 	Usage                     Usage
@@ -328,6 +352,9 @@ func responseParams(
 		},
 		Tools: tools,
 	}
+	if hasWebSearchTool(tools) {
+		params.Include = []responses.ResponseIncludable{responses.ResponseIncludableWebSearchCallActionSources}
+	}
 	effectiveTemperature := temperature
 	if effectiveTemperature == nil {
 		effectiveTemperature = defaultTemperature
@@ -338,6 +365,11 @@ func responseParams(
 	if spec != nil && spec.Request.TopP != nil {
 		params.TopP = openai.Float(*spec.Request.TopP)
 	}
+	if spec != nil && spec.Request.ReasoningEffort != nil {
+		params.Reasoning = shared.ReasoningParam{
+			Effort: shared.ReasoningEffort(*spec.Request.ReasoningEffort),
+		}
+	}
 	if previousResponseID != "" {
 		params.PreviousResponseID = openai.String(previousResponseID)
 	}
@@ -345,6 +377,9 @@ func responseParams(
 		params.MaxOutputTokens = openai.Int(*maxOutputTokens)
 	}
 	if spec != nil {
+		if maxToolCalls := spec.MaxToolCalls(); maxToolCalls != nil && *maxToolCalls > 0 {
+			params.MaxToolCalls = openai.Int(*maxToolCalls)
+		}
 		extra := map[string]any{}
 		if provider := spec.ProviderBody(); provider != nil {
 			extra["provider"] = provider
@@ -480,28 +515,67 @@ func parseResponse(res *responses.Response) (Response, error) {
 		}
 	}
 	calls := make([]ToolCall, 0)
+	searchCalls := make([]WebSearchCall, 0)
+	citations := make([]URLCitation, 0)
 	for _, item := range res.Output {
-		if item.Type != "function_call" {
-			continue
-		}
-		args := map[string]any{}
-		rawArguments := strings.TrimSpace(item.Arguments)
-		argumentsError := ""
-		if rawArguments != "" {
-			if err := json.Unmarshal([]byte(rawArguments), &args); err != nil {
-				argumentsError = err.Error()
-				args = nil
+		switch item.Type {
+		case "function_call":
+			args := map[string]any{}
+			rawArguments := strings.TrimSpace(item.Arguments.OfString)
+			argumentsError := ""
+			if rawArguments != "" {
+				if err := json.Unmarshal([]byte(rawArguments), &args); err != nil {
+					argumentsError = err.Error()
+					args = nil
+				}
+			}
+			calls = append(calls, ToolCall{
+				CallID:         item.CallID,
+				Name:           item.Name,
+				Arguments:      args,
+				RawArguments:   rawArguments,
+				ArgumentsError: argumentsError,
+			})
+		case "web_search_call":
+			queries := append([]string(nil), item.Action.Queries...)
+			if len(queries) == 0 && strings.TrimSpace(item.Action.Query) != "" {
+				queries = []string{strings.TrimSpace(item.Action.Query)}
+			}
+			sources := make([]WebSearchSource, 0, len(item.Action.Sources))
+			for _, source := range item.Action.Sources {
+				sources = append(sources, WebSearchSource{Type: string(source.Type), URL: source.URL})
+			}
+			searchCalls = append(searchCalls, WebSearchCall{
+				ID:      item.ID,
+				Status:  item.Status,
+				Action:  item.Action.Type,
+				Queries: queries,
+				URL:     item.Action.URL,
+				Pattern: item.Action.Pattern,
+				Sources: sources,
+			})
+		case "message":
+			for _, content := range item.Content {
+				if content.Type != "output_text" {
+					continue
+				}
+				for _, annotation := range content.Annotations {
+					if annotation.Type != "url_citation" {
+						continue
+					}
+					citations = append(citations, URLCitation{
+						URL:        annotation.URL,
+						Title:      annotation.Title,
+						StartIndex: annotation.StartIndex,
+						EndIndex:   annotation.EndIndex,
+					})
+				}
 			}
 		}
-		calls = append(calls, ToolCall{
-			CallID:         item.CallID,
-			Name:           item.Name,
-			Arguments:      args,
-			RawArguments:   rawArguments,
-			ArgumentsError: argumentsError,
-		})
 	}
 	out.ToolCalls = calls
+	out.WebSearchCalls = searchCalls
+	out.URLCitations = citations
 	return out, nil
 }
 
@@ -617,22 +691,32 @@ func convertTools(tools []map[string]any, online bool) ([]responses.ToolUnionPar
 			if name == "" {
 				return nil, fmt.Errorf("function tool missing name")
 			}
+			strict, _ := t["strict"].(bool)
 			parameters := map[string]any{}
 			if raw, ok := t["parameters"].(map[string]any); ok {
 				parameters = raw
 			}
-			out = append(out, responses.ToolParamOfFunction(name, parameters, false))
+			out = append(out, responses.ToolParamOfFunction(name, parameters, strict))
 		case "web_search":
 			hasWebSearch = true
-			out = append(out, responses.ToolParamOfWebSearchPreview(responses.WebSearchToolTypeWebSearchPreview))
+			out = append(out, responses.ToolParamOfWebSearch(responses.WebSearchToolTypeWebSearch))
 		default:
 			return nil, fmt.Errorf("unsupported tool type: %s", typ)
 		}
 	}
 	if online && !hasWebSearch {
-		out = append(out, responses.ToolParamOfWebSearchPreview(responses.WebSearchToolTypeWebSearchPreview))
+		out = append(out, responses.ToolParamOfWebSearch(responses.WebSearchToolTypeWebSearch))
 	}
 	return out, nil
+}
+
+func hasWebSearchTool(tools []responses.ToolUnionParam) bool {
+	for _, tool := range tools {
+		if tool.OfWebSearch != nil {
+			return true
+		}
+	}
+	return false
 }
 
 func toMessageRole(role string) (responses.EasyInputMessageRole, error) {

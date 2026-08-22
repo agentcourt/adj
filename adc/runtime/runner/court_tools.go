@@ -3,6 +3,8 @@ package runner
 import (
 	"fmt"
 	"strings"
+
+	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
 )
 
 func (r *Runner) rule12Grounds() []string {
@@ -28,7 +30,7 @@ func (r *Runner) toolSchema(name string) map[string]any {
 	if base == nil {
 		return nil
 	}
-	schema := cloneJSONMap(base)
+	schema := toolSchemaWithDescriptions(name, base, r.schemaDescriptions)
 	switch name {
 	case "file_rule12_motion", "decide_rule12_motion":
 		properties, _ := schema["properties"].(map[string]any)
@@ -56,10 +58,18 @@ func (r *Runner) buildTools(allowed []string) ([]map[string]any, error) {
 			missing = append(missing, name)
 			continue
 		}
+		descriptionID, ok := adcprompts.DirectToolDescriptionID(name)
+		if !ok {
+			return nil, fmt.Errorf("missing direct tool description prompt for %q", name)
+		}
+		description, err := r.prompts.Text(descriptionID)
+		if err != nil {
+			return nil, err
+		}
 		tools = append(tools, map[string]any{
 			"type":        "function",
 			"name":        name,
-			"description": "Execute " + name,
+			"description": description,
 			"parameters":  params,
 		})
 	}

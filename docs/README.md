@@ -8,3 +8,4 @@ This directory contains interfaces and formal-method notes spanning more than on
 | --- | --- |
 | [Proof Work Status](proof-notes.md) | Current proof surface, certificate status, remaining proof direction, and proof limits. |
 | [Core Process Interface](service-interface.md) | Core commands, private case APIs, durable records, and interface tests used by services. |
+| [Prompt Authoring](prompt-authoring.md) | Prompt-file precedence, literal tokens, command-line options, and evaluation practice. |

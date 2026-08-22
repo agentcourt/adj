@@ -2,6 +2,7 @@ package quick
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -88,6 +89,11 @@ func startCaseAPI(runner *runner) (*caseAPI, error) {
 	mux.HandleFunc(lawyerAPIBasePath+"/do", api.handleDo)
 	mux.HandleFunc(lawyerAPIBasePath+"/fail", api.handleFail)
 	api.server = &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if (req.URL.Path == lawyerAPIBasePath || strings.HasPrefix(req.URL.Path, lawyerAPIBasePath+"/")) && !api.authorized(req) {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			writeJSON(w, http.StatusUnauthorized, errorResponse("unauthorized", "valid bearer token required"))
+			return
+		}
 		mux.ServeHTTP(&responseErrorWriter{ResponseWriter: w, api: api}, req)
 	})}
 	go func() {
@@ -100,6 +106,19 @@ func startCaseAPI(runner *runner) (*caseAPI, error) {
 		api.serveDone <- err
 	}()
 	return api, nil
+}
+
+func (api *caseAPI) authorized(req *http.Request) bool {
+	values := req.Header.Values("Authorization")
+	if len(values) != 1 || !strings.HasPrefix(values[0], "Bearer ") {
+		return false
+	}
+	candidate := strings.TrimPrefix(values[0], "Bearer ")
+	if candidate == "" || strings.TrimSpace(candidate) != candidate {
+		return false
+	}
+	expected := api.runner.cfg.LawyerAPIBearerToken
+	return subtle.ConstantTimeCompare([]byte(candidate), []byte(expected)) == 1
 }
 
 func displayAddress(addr net.Addr) string {
@@ -243,13 +262,14 @@ func (api *caseAPI) handleWait(w http.ResponseWriter, req *http.Request) {
 	if hasAfterVersion {
 		baseline = afterVersion
 	}
+	timedOut := false
 	timer := time.AfterFunc(timeout, func() {
 		runner.mu.Lock()
+		timedOut = true
 		runner.cond.Broadcast()
 		runner.mu.Unlock()
 	})
 	defer timer.Stop()
-	deadline := time.Now().Add(timeout)
 	if done := req.Context().Done(); done != nil {
 		go func() {
 			<-done
@@ -277,7 +297,7 @@ func (api *caseAPI) handleWait(w http.ResponseWriter, req *http.Request) {
 			ready, reason = true, "ready"
 		} else if runner.version != baseline {
 			ready, reason = true, "changed"
-		} else if !time.Now().Before(deadline) {
+		} else if timedOut {
 			ready, reason = true, "timeout"
 		}
 		if ready {
@@ -423,20 +443,20 @@ func (api *caseAPI) statusResponseLocked(caseID, role string) map[string]any {
 	}
 	if role == "observer" {
 		response["status"] = "observing"
-		response["prompt"] = "Observe the quick adjudication record."
-		response["tools"] = observerToolSpecs()
+		response["prompt"] = runner.observerPrompt()
+		response["tools"] = observerToolSpecs(runner)
 		return response
 	}
 	turn := runner.active
 	if turn == nil || turn.completed || turn.role != role {
 		response["status"] = "waiting"
 		response["prompt"] = ""
-		response["tools"] = []map[string]any{caseStatusToolSpec()}
+		response["tools"] = []map[string]any{caseStatusToolSpec(runner)}
 		return response
 	}
 	response["status"] = "ready"
 	response["prompt"] = turn.prompt
-	response["tools"] = lawyerToolSpecs()
+	response["tools"] = lawyerToolSpecs(runner)
 	response["limits"] = map[string]any{
 		"max_response_bytes":      runner.cfg.MaxResponseBytes,
 		"max_argument_chars":      runner.cfg.MaxArgumentChars,
@@ -684,10 +704,15 @@ func (r *runner) runLawyerTurn(ctx context.Context, role string) error {
 		r.mu.Unlock()
 		return fmt.Errorf("a lawyer turn is already active")
 	}
+	prompt, err := r.lawyerPromptLocked(role)
+	if err != nil {
+		r.mu.Unlock()
+		return err
+	}
 	turn := &lawyerTurn{
 		role:              role,
 		opportunityID:     "arguments:" + role,
-		prompt:            r.lawyerPromptLocked(role),
+		prompt:            prompt,
 		attemptsMax:       r.cfg.InvalidAttemptLimit,
 		attemptsRemaining: r.cfg.InvalidAttemptLimit,
 		done:              make(chan error, 1),
@@ -712,7 +737,7 @@ func (r *runner) runLawyerTurn(ctx context.Context, role string) error {
 	stopCancellation := context.AfterFunc(ctx, func() {
 		r.completeLawyerTurn(turn, ctx.Err())
 	})
-	err := <-turn.done
+	turnErr := <-turn.done
 	timer.Stop()
 	stopCancellation()
 	r.mu.Lock()
@@ -722,7 +747,7 @@ func (r *runner) runLawyerTurn(ctx context.Context, role string) error {
 		r.cond.Broadcast()
 	}
 	r.mu.Unlock()
-	return err
+	return turnErr
 }
 
 func (r *runner) completeLawyerTurn(turn *lawyerTurn, err error) bool {
@@ -753,34 +778,10 @@ func lawyerTurnTimeoutError(turn *lawyerTurn, timeout time.Duration) error {
 	return fmt.Errorf("%s lawyer turn timed out after %s", turn.role, timeout)
 }
 
-func (r *runner) lawyerPromptLocked(role string) string {
-	var prompt strings.Builder
-	prompt.WriteString("Quick adjudication case\n\nProposition:\n")
-	prompt.WriteString(r.cfg.Proposition)
-	prompt.WriteString("\n\nEvidence standard:\n")
-	prompt.WriteString(r.cfg.EvidenceStandard)
-	prompt.WriteString("\n\n")
-	if role == "plaintiff" {
-		prompt.WriteString("You represent the proponent. Submit one argument supporting the proposition. You will have no later argument.\n")
-	} else {
-		prompt.WriteString("You represent the opponent. Submit one argument opposing the proposition. You will have no later argument.\n")
-		if len(r.transcript.Arguments) > 0 {
-			prompt.WriteString("\nProponent argument:\n")
-			prompt.WriteString(r.transcript.Arguments[0].Text)
-			prompt.WriteByte('\n')
-		}
-	}
-	if len(r.documents.Files) > 0 {
-		prompt.WriteString("\nThe immutable case documents are available through list_evidence, stat_evidence, and read_evidence_range.\n")
-	}
-	prompt.WriteString("\nCall submit_decision exactly once with kind=tool, tool_name=submit_argument, and payload.text containing your argument.")
-	return prompt.String()
-}
-
-func lawyerToolSpecs() []map[string]any {
-	return append(lawyerSupportToolSpecs(), map[string]any{
+func lawyerToolSpecs(runner *runner) []map[string]any {
+	return append(lawyerSupportToolSpecs(runner), map[string]any{
 		"name":        "submit_decision",
-		"description": "Submit the one argument allowed for this quick adjudication turn.",
+		"description": runner.toolPrompt("submit_argument"),
 		"input_schema": map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -800,25 +801,25 @@ func lawyerToolSpecs() []map[string]any {
 	})
 }
 
-func lawyerSupportToolSpecs() []map[string]any {
-	return append(observerToolSpecs(),
-		httpToolSpec("send_work_notes", "Record private lawyer work notes.", map[string]any{"type": "object", "properties": map[string]any{"notes": map[string]any{"type": "string"}}, "required": []string{"notes"}, "additionalProperties": false}, false),
+func lawyerSupportToolSpecs(runner *runner) []map[string]any {
+	return append(observerToolSpecs(runner),
+		httpToolSpec("send_work_notes", runner.toolPrompt("send_work_notes"), map[string]any{"type": "object", "properties": map[string]any{"notes": map[string]any{"type": "string"}}, "required": []string{"notes"}, "additionalProperties": false}, false),
 	)
 }
 
-func observerToolSpecs() []map[string]any {
+func observerToolSpecs(runner *runner) []map[string]any {
 	return []map[string]any{
-		caseStatusToolSpec(),
-		httpToolSpec("get_case", "Return the visible quick adjudication record.", emptySchema(), true),
-		httpToolSpec("get_case_result", "Return the final result or pending status.", emptySchema(), true),
-		httpToolSpec("list_evidence", "List immutable case documents.", emptySchema(), true),
-		httpToolSpec("stat_evidence", "Return document metadata.", evidenceIDSchema(), true),
-		httpToolSpec("read_evidence_range", "Read a document byte range as base64.", evidenceRangeSchema(), true),
+		caseStatusToolSpec(runner),
+		httpToolSpec("get_case", runner.toolPrompt("get_case"), emptySchema(), true),
+		httpToolSpec("get_case_result", runner.toolPrompt("get_case_result"), emptySchema(), true),
+		httpToolSpec("list_evidence", runner.toolPrompt("list_evidence"), emptySchema(), true),
+		httpToolSpec("stat_evidence", runner.toolPrompt("stat_evidence"), evidenceIDSchema(), true),
+		httpToolSpec("read_evidence_range", runner.toolPrompt("read_evidence_range"), evidenceRangeSchema(), true),
 	}
 }
 
-func caseStatusToolSpec() map[string]any {
-	return httpToolSpec("case_status", "Return the current case phase and turn.", emptySchema(), true)
+func caseStatusToolSpec(runner *runner) map[string]any {
+	return httpToolSpec("case_status", runner.toolPrompt("case_status"), emptySchema(), true)
 }
 
 func httpToolSpec(name, description string, schema map[string]any, readOnly bool) map[string]any {

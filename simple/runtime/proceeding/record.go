@@ -56,8 +56,25 @@ func terminalResult(opts Options, startedAt time.Time, manifest documents.Manife
 		Error:            strings.TrimSpace(errorMessage),
 		ErrorClass:       strings.TrimSpace(errorClass),
 		ResponseID:       response.ResponseID,
+		WebSearch:        summarizeWebSearch(opts, response),
+		ReasoningEffort:  opts.ReasoningEffort,
+		MaxOutputTokens:  opts.MaxOutputTokens,
+		MaxToolCalls:     opts.MaxToolCalls,
 		Provider:         provider,
 		Documents:        manifest,
+	}
+}
+
+func summarizeWebSearch(opts Options, response openaiapi.Response) WebSearchSummary {
+	enabled := true
+	if opts.WebSearch != nil {
+		enabled = *opts.WebSearch
+	}
+	return WebSearchSummary{
+		Enabled:       enabled,
+		CallCount:     len(response.WebSearchCalls),
+		SourceCount:   webSearchSourceCount(response.WebSearchCalls),
+		CitationCount: len(response.URLCitations),
 	}
 }
 
@@ -90,6 +107,10 @@ func writeTerminalRecords(outputDir string, result Result) error {
 		Decision:         result.Decision,
 		Error:            result.Error,
 		ErrorClass:       result.ErrorClass,
+		WebSearch:        result.WebSearch,
+		ReasoningEffort:  result.ReasoningEffort,
+		MaxOutputTokens:  result.MaxOutputTokens,
+		MaxToolCalls:     result.MaxToolCalls,
 	}
 	if err := recordio.WriteJSON(filepath.Join(outputDir, "state.json"), state); err != nil {
 		return err
@@ -127,6 +148,8 @@ func renderTranscript(result Result) string {
 	} else {
 		fmt.Fprintf(&b, "Status: `%s`\n\nError: %s\n", result.Status, result.Error)
 	}
+	fmt.Fprintf(&b, "\n## Web Search\n\nEnabled: `%t`\n\nCalls: %d\n\nSources: %d\n\nCitations: %d\n", result.WebSearch.Enabled, result.WebSearch.CallCount, result.WebSearch.SourceCount, result.WebSearch.CitationCount)
+	fmt.Fprintf(&b, "\n## Model Request\n\nReasoning effort: `%s`\n\nMaximum output tokens: %d\n\nMaximum tool calls: %s\n", displayReasoningEffort(result.ReasoningEffort), result.MaxOutputTokens, displayMaxToolCalls(result.MaxToolCalls))
 	return b.String()
 }
 
@@ -144,5 +167,21 @@ func renderDigest(result Result) string {
 	} else {
 		fmt.Fprintf(&b, "Error class: `%s`\n\nError: %s\n", result.ErrorClass, result.Error)
 	}
+	fmt.Fprintf(&b, "\n\n## Web Search\n\nEnabled: `%t`\n\nCalls: %d\n\nSources: %d\n\nCitations: %d\n", result.WebSearch.Enabled, result.WebSearch.CallCount, result.WebSearch.SourceCount, result.WebSearch.CitationCount)
+	fmt.Fprintf(&b, "\n\n## Model Request\n\nReasoning effort: `%s`\n\nMaximum output tokens: %d\n\nMaximum tool calls: %s\n", displayReasoningEffort(result.ReasoningEffort), result.MaxOutputTokens, displayMaxToolCalls(result.MaxToolCalls))
 	return b.String()
+}
+
+func displayReasoningEffort(value string) string {
+	if value == "" {
+		return "provider default"
+	}
+	return value
+}
+
+func displayMaxToolCalls(value int64) string {
+	if value == 0 {
+		return "provider default"
+	}
+	return fmt.Sprintf("%d", value)
 }
