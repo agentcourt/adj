@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/common/documents"
-	openaiapi "github.com/jsmorph/adj/common/openai"
-	"github.com/jsmorph/adj/common/recordio"
+	"github.com/agentcourt/adj/common/documents"
+	openaiapi "github.com/agentcourt/adj/common/openai"
+	"github.com/agentcourt/adj/common/recordio"
 )
 
 func finishSuccess(opts Options, startedAt time.Time, manifest documents.Manifest, response openaiapi.Response, decision Decision, recorder *eventRecorder) (Result, error) {

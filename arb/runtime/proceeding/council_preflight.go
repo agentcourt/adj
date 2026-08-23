@@ -8,9 +8,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/jsmorph/adj/common/modelrequest"
-	openaiapi "github.com/jsmorph/adj/common/openai"
-	"github.com/jsmorph/adj/common/persona"
+	"github.com/agentcourt/adj/common/modelrequest"
+	openaiapi "github.com/agentcourt/adj/common/openai"
+	"github.com/agentcourt/adj/common/persona"
 )
 
 type councilResponseClient interface {

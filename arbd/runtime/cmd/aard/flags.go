@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/jsmorph/adj/common/cliio"
+	"github.com/agentcourt/adj/common/cliio"
 )
 
 func newCommandFlagSet(name string, stderr io.Writer) *flag.FlagSet {

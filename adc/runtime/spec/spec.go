@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jsmorph/adj/adc/runtime/courts"
+	"github.com/agentcourt/adj/adc/runtime/courts"
 )
 
 type ClaimSpec struct {

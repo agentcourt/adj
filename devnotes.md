@@ -303,3 +303,9 @@ Quick now applies ARB's council-member failure rule.  A provider failure, member
 - [x] Repeat the interrupted OpenClaw GPT-5.6 Quick condition with a fresh output directory.
 
 Review found that a provider could return a successful response after parent cancellation or the member deadline and Quick could record that late vote.  Quick now checks the parent and member request contexts after every provider return, before returning a parsed vote, and before committing an outcome.  Timeout classification now matches ARB by recognizing request-context deadlines, wrapped deadline errors, `net.Error` timeouts, and standard timeout messages.  Tests cover success returned after parent cancellation, success returned after the member deadline, plain network timeouts, and provider-wrapped network timeouts.  The removal event also supplies ARB's `cause` field while retaining the structured failure record's `message` field.
+
+## Canonical repository location
+
+The canonical repository is `github.com/agentcourt/adj`.  The Go module declaration and every internal import use that path.  A tracked-file search found no remaining reference to the former module path.
+
+`../verification/go-test -count=1 ./...`, `go vet -p=1 ./...`, and `go build -p=1 ./...` passed after the module-path change.  Go printed the existing warning that `GOPATH` and `GOROOT` both name `/home/somebody/go`.  Source formatting and `git diff --check` complete the repository verification.

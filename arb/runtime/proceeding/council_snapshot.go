@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jsmorph/adj/arb/runtime/spec"
+	"github.com/agentcourt/adj/arb/runtime/spec"
 )
 
 const councilTurnSnapshotSchemaVersion = "aar.council-turn-snapshot.v0"

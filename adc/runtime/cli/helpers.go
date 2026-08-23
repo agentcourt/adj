@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"strings"
 
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
-	"github.com/jsmorph/adj/adc/runtime/runner"
-	"github.com/jsmorph/adj/common/cliio"
-	"github.com/jsmorph/adj/common/promptfile"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
+	"github.com/agentcourt/adj/adc/runtime/runner"
+	"github.com/agentcourt/adj/common/cliio"
+	"github.com/agentcourt/adj/common/promptfile"
 )
 
 const (

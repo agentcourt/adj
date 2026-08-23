@@ -11,14 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/adc/runtime/casegen"
-	"github.com/jsmorph/adj/adc/runtime/courts"
-	"github.com/jsmorph/adj/adc/runtime/lean"
-	"github.com/jsmorph/adj/adc/runtime/report"
-	"github.com/jsmorph/adj/adc/runtime/runner"
-	"github.com/jsmorph/adj/adc/runtime/store"
-	"github.com/jsmorph/adj/common/documents"
-	"github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/adc/runtime/casegen"
+	"github.com/agentcourt/adj/adc/runtime/courts"
+	"github.com/agentcourt/adj/adc/runtime/lean"
+	"github.com/agentcourt/adj/adc/runtime/report"
+	"github.com/agentcourt/adj/adc/runtime/runner"
+	"github.com/agentcourt/adj/adc/runtime/store"
+	"github.com/agentcourt/adj/common/documents"
+	"github.com/agentcourt/adj/common/openai"
 )
 
 func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) (returnErr error) {

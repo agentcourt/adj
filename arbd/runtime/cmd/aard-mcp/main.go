@@ -11,10 +11,10 @@ import (
 	"strings"
 	"syscall"
 
-	arbdmcp "github.com/jsmorph/adj/arbd/runtime/mcp"
-	"github.com/jsmorph/adj/common/cliio"
-	"github.com/jsmorph/adj/common/mcpbridge"
-	"github.com/jsmorph/adj/common/mcpcli"
+	arbdmcp "github.com/agentcourt/adj/arbd/runtime/mcp"
+	"github.com/agentcourt/adj/common/cliio"
+	"github.com/agentcourt/adj/common/mcpbridge"
+	"github.com/agentcourt/adj/common/mcpcli"
 )
 
 func main() {

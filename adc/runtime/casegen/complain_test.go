@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/adc/runtime/courts"
+	"github.com/agentcourt/adj/adc/runtime/courts"
 )
 
 func testUSDistrictProfile() courts.Profile {

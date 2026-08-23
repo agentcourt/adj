@@ -11,9 +11,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
-	"github.com/jsmorph/adj/adc/runtime/runner"
-	"github.com/jsmorph/adj/common/openai"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
+	"github.com/agentcourt/adj/adc/runtime/runner"
+	"github.com/agentcourt/adj/common/openai"
 )
 
 type DigestOptions struct {

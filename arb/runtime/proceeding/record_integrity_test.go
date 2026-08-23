@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/arb/runtime/lean"
+	"github.com/agentcourt/adj/arb/runtime/lean"
 )
 
 func TestInitialEvidenceCatalogUsesStoredSnapshots(t *testing.T) {

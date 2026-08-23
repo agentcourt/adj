@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jsmorph/adj/common/documents"
-	"github.com/jsmorph/adj/common/modelinput"
-	"github.com/jsmorph/adj/common/promptfile"
+	"github.com/agentcourt/adj/common/documents"
+	"github.com/agentcourt/adj/common/modelinput"
+	"github.com/agentcourt/adj/common/promptfile"
 )
 
 const (

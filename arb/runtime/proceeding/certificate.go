@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/arb/runtime/lean"
+	"github.com/agentcourt/adj/arb/runtime/lean"
 )
 
 const (

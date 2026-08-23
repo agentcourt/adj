@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/jsmorph/adj/arbd/runtime/spec"
+	"github.com/agentcourt/adj/arbd/runtime/spec"
 )
 
 func runValidate(args []string, stdout io.Writer, stderr io.Writer) error {

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jsmorph/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/adc/runtime/spec"
 )
 
 type leanOpportunity struct {

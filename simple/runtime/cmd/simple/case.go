@@ -9,9 +9,9 @@ import (
 	"io"
 	"strings"
 
-	openaiapi "github.com/jsmorph/adj/common/openai"
-	"github.com/jsmorph/adj/common/promptfile"
-	"github.com/jsmorph/adj/simple/runtime/proceeding"
+	openaiapi "github.com/agentcourt/adj/common/openai"
+	"github.com/agentcourt/adj/common/promptfile"
+	"github.com/agentcourt/adj/simple/runtime/proceeding"
 )
 
 type caseErrorSummary struct {

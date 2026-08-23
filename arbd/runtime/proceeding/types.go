@@ -3,9 +3,9 @@ package proceeding
 import (
 	"sync"
 
-	"github.com/jsmorph/adj/arbd/runtime/lean"
-	"github.com/jsmorph/adj/arbd/runtime/spec"
-	"github.com/jsmorph/adj/common/modelrequest"
+	"github.com/agentcourt/adj/arbd/runtime/lean"
+	"github.com/agentcourt/adj/arbd/runtime/spec"
+	"github.com/agentcourt/adj/common/modelrequest"
 )
 
 type Policy struct {

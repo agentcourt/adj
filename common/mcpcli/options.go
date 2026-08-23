@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jsmorph/adj/common/cliio"
-	"github.com/jsmorph/adj/common/mcpbridge"
+	"github.com/agentcourt/adj/common/cliio"
+	"github.com/agentcourt/adj/common/mcpbridge"
 )
 
 type Origins struct {

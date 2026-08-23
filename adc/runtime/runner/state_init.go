@@ -3,8 +3,8 @@ package runner
 import (
 	"time"
 
-	"github.com/jsmorph/adj/adc/runtime/courts"
-	"github.com/jsmorph/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/adc/runtime/courts"
+	"github.com/agentcourt/adj/adc/runtime/spec"
 )
 
 func buildInitialState(scenario spec.FormalScenario, courtProfile courts.Profile) map[string]any {

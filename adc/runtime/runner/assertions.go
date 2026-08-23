@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jsmorph/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/adc/runtime/spec"
 )
 
 func evaluateAssertions(assertions []spec.AssertionSpec, state map[string]any, turnLogs []TurnLog) []map[string]any {

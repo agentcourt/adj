@@ -5,7 +5,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/jsmorph/adj/common/mcpbridge"
+	"github.com/agentcourt/adj/common/mcpbridge"
 )
 
 func TestQuickToolProfiles(t *testing.T) {

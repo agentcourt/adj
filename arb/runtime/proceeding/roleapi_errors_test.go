@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jsmorph/adj/arb/runtime/lean"
+	"github.com/agentcourt/adj/arb/runtime/lean"
 )
 
 func TestRoleAPIParticipantInputConsumesOneAttempt(t *testing.T) {

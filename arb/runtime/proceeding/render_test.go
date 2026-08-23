@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jsmorph/adj/arb/runtime/spec"
+	"github.com/agentcourt/adj/arb/runtime/spec"
 )
 
 func (rc *runContext) recordEventAtTurn(turn int, eventType string, role string, phase string, payload map[string]any) error {

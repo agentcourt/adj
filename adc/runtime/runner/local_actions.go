@@ -12,7 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
 )
 
 func publicJurorRecord(raw map[string]any) map[string]any {

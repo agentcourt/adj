@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jsmorph/adj/common/promptfile"
+	"github.com/agentcourt/adj/common/promptfile"
 )
 
 type PromptDefinition struct {

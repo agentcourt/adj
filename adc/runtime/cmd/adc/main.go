@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/jsmorph/adj/adc/runtime/cli"
+	"github.com/agentcourt/adj/adc/runtime/cli"
 )
 
 func main() {

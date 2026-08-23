@@ -1,4 +1,4 @@
-module github.com/jsmorph/adj
+module github.com/agentcourt/adj
 
 go 1.25.0
 

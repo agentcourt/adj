@@ -3,8 +3,8 @@ package runner
 import (
 	"strings"
 
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
-	"github.com/jsmorph/adj/adc/runtime/spec"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
+	"github.com/agentcourt/adj/adc/runtime/spec"
 )
 
 func (r *Runner) roleSpec(roleName string) spec.RoleSpec {

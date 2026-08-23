@@ -11,10 +11,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/jsmorph/adj/common/cliio"
-	"github.com/jsmorph/adj/common/mcpbridge"
-	"github.com/jsmorph/adj/common/mcpcli"
-	quickmcp "github.com/jsmorph/adj/quick/mcp"
+	"github.com/agentcourt/adj/common/cliio"
+	"github.com/agentcourt/adj/common/mcpbridge"
+	"github.com/agentcourt/adj/common/mcpcli"
+	quickmcp "github.com/agentcourt/adj/quick/mcp"
 )
 
 var runServer = quickmcp.Run

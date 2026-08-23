@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jsmorph/adj/common/mcpcli"
-	quickmcp "github.com/jsmorph/adj/quick/mcp"
+	"github.com/agentcourt/adj/common/mcpcli"
+	quickmcp "github.com/agentcourt/adj/quick/mcp"
 )
 
 func TestCommandArguments(t *testing.T) {

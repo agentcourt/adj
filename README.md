@@ -1,6 +1,6 @@
 # Adjudication Core
 
-This repository contains five one-case adjudication procedures: ADC, ARB, AARD, simple, and quick.  ADC, ARB, and AARD use Lean engines, replay proofs, Go runtimes, participant APIs, and certificate verification.  Simple and quick are smaller Go procedures for direct model decisions and one-round adversarial decisions.  The repository also provides standalone MCP adapters for every procedure with external participants.  Multi-case services, local-agent launchers, deployment programs, and web applications live in the `adjservices` repository.
+The [`agentcourt/adj`](https://github.com/agentcourt/adj) repository contains five one-case adjudication procedures: ADC, ARB, AARD, simple, and quick.  ADC, ARB, and AARD use Lean engines, replay proofs, Go runtimes, participant APIs, and certificate verification.  Simple and quick are smaller Go procedures for direct model decisions and one-round adversarial decisions.  The repository also provides standalone MCP adapters for every procedure with external participants.  Multi-case services, local-agent launchers, deployment programs, and web applications live in the [`agentcourt/adjservices`](https://github.com/agentcourt/adjservices) repository.
 
 ## Procedures
 

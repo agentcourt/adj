@@ -17,10 +17,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/jsmorph/adj/adc/runtime/courts"
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
-	"github.com/jsmorph/adj/adc/runtime/spec"
-	"github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/adc/runtime/courts"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
+	"github.com/agentcourt/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/common/openai"
 )
 
 var markdownLinkPattern = regexp.MustCompile(`!?\[([^\]]*)\]\(([^)]+)\)`)

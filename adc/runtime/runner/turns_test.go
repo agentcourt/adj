@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	openaiapi "github.com/jsmorph/adj/common/openai"
+	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
 func TestChooseRandomCandidateJurorIDs(t *testing.T) {

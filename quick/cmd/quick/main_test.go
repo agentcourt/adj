@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/common/documents"
-	"github.com/jsmorph/adj/quick"
+	"github.com/agentcourt/adj/common/documents"
+	"github.com/agentcourt/adj/quick"
 )
 
 func TestDispatchHelp(t *testing.T) {

@@ -3,8 +3,8 @@ package runner
 import (
 	"testing"
 
-	"github.com/jsmorph/adj/adc/runtime/courts"
-	"github.com/jsmorph/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/adc/runtime/courts"
+	"github.com/agentcourt/adj/adc/runtime/spec"
 )
 
 func TestBuildSingleClaimDefaultsToCivilDamages(t *testing.T) {

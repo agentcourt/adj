@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	openaiapi "github.com/jsmorph/adj/common/openai"
+	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
 type decisionArguments struct {

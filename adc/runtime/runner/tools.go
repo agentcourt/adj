@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
 )
 
 var actionSchemas = buildActionSchemas()

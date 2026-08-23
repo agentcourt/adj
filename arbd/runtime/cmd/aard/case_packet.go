@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/jsmorph/adj/arbd/runtime/proceeding"
+	"github.com/agentcourt/adj/arbd/runtime/proceeding"
 )
 
 func runCasePacket(_ context.Context, args []string, stdout io.Writer, stderr io.Writer) error {

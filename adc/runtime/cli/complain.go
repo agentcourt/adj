@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/adc/runtime/casegen"
-	"github.com/jsmorph/adj/adc/runtime/courts"
-	"github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/adc/runtime/casegen"
+	"github.com/agentcourt/adj/adc/runtime/courts"
+	"github.com/agentcourt/adj/common/openai"
 )
 
 func RunComplain(args []string, stdout io.Writer, stderr io.Writer) error {

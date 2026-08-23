@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	openaiapi "github.com/jsmorph/adj/common/openai"
+	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
 func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client councilResponseClient, opportunity Opportunity) error {

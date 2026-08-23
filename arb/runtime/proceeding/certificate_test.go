@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jsmorph/adj/arb/runtime/lean"
+	"github.com/agentcourt/adj/arb/runtime/lean"
 )
 
 func (rc *runContext) stepForCertificate(opportunity Opportunity, actionType string, actorRole string, payload map[string]any) (map[string]any, error) {

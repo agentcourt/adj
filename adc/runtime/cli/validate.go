@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/jsmorph/adj/adc/runtime/runner"
+	"github.com/agentcourt/adj/adc/runtime/runner"
 )
 
 func RunValidate(args []string, stdout io.Writer, stderr io.Writer) error {

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jsmorph/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/adc/runtime/spec"
 )
 
 func TestCaseAPIHealthIdentifiesRun(t *testing.T) {

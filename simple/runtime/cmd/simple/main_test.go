@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/simple/runtime/proceeding"
+	"github.com/agentcourt/adj/simple/runtime/proceeding"
 )
 
 func TestDispatchHelp(t *testing.T) {

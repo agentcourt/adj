@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jsmorph/adj/adc/runtime/courts"
-	"github.com/jsmorph/adj/adc/runtime/lean"
-	"github.com/jsmorph/adj/adc/runtime/spec"
-	"github.com/jsmorph/adj/adc/runtime/store"
+	"github.com/agentcourt/adj/adc/runtime/courts"
+	"github.com/agentcourt/adj/adc/runtime/lean"
+	"github.com/agentcourt/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/adc/runtime/store"
 )
 
 type stubTimeoutError struct{}

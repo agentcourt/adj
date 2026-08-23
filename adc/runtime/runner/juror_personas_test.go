@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/common/modelrequest"
-	"github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/common/modelrequest"
+	"github.com/agentcourt/adj/common/openai"
 )
 
 func TestLoadJurorPersonaPoolAndSample(t *testing.T) {

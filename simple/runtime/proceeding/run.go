@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/common/casemanifest"
-	"github.com/jsmorph/adj/common/documents"
-	"github.com/jsmorph/adj/common/modelrequest"
-	openaiapi "github.com/jsmorph/adj/common/openai"
-	"github.com/jsmorph/adj/common/promptfile"
-	"github.com/jsmorph/adj/common/recordio"
+	"github.com/agentcourt/adj/common/casemanifest"
+	"github.com/agentcourt/adj/common/documents"
+	"github.com/agentcourt/adj/common/modelrequest"
+	openaiapi "github.com/agentcourt/adj/common/openai"
+	"github.com/agentcourt/adj/common/promptfile"
+	"github.com/agentcourt/adj/common/recordio"
 )
 
 func Run(ctx context.Context, opts Options) (Result, error) {

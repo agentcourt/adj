@@ -18,9 +18,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jsmorph/adj/common/documents"
-	"github.com/jsmorph/adj/common/modelrequest"
-	openaiapi "github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/common/documents"
+	"github.com/agentcourt/adj/common/modelrequest"
+	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
 const testLawyerAPIBearerToken = "test-quick-lawyer-api-token"

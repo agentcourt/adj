@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/adc/runtime/spec"
 )
 
 func TestBuildJurorSystemPromptForVoteRound(t *testing.T) {

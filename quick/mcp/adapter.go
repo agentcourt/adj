@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/common/mcpbridge"
+	"github.com/agentcourt/adj/common/mcpbridge"
 )
 
 const lawyerAPIPath = "/lawyerapi/v1"

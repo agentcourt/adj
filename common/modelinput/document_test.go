@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/common/documents"
+	"github.com/agentcourt/adj/common/documents"
 )
 
 func TestDocumentContentItem(t *testing.T) {

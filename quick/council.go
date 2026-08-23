@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/common/documents"
-	"github.com/jsmorph/adj/common/modelinput"
-	openaiapi "github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/common/documents"
+	"github.com/agentcourt/adj/common/modelinput"
+	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
 const (

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/arbd/runtime/lean"
-	"github.com/jsmorph/adj/arbd/runtime/spec"
+	"github.com/agentcourt/adj/arbd/runtime/lean"
+	"github.com/agentcourt/adj/arbd/runtime/spec"
 )
 
 func Run(ctx context.Context, opts Options) (Result, error) {

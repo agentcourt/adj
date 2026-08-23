@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jsmorph/adj/common/mcpbridge"
+	"github.com/agentcourt/adj/common/mcpbridge"
 )
 
 func TestADCAssignmentProfiles(t *testing.T) {

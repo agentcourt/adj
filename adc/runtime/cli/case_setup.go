@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jsmorph/adj/adc/runtime/casegen"
-	"github.com/jsmorph/adj/adc/runtime/courts"
-	"github.com/jsmorph/adj/common/documents"
-	"github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/adc/runtime/casegen"
+	"github.com/agentcourt/adj/adc/runtime/courts"
+	"github.com/agentcourt/adj/common/documents"
+	"github.com/agentcourt/adj/common/openai"
 )
 
 type complaintSetupOptions struct {

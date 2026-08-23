@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/arb/runtime/proceeding"
-	openaiapi "github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/arb/runtime/proceeding"
+	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
 func TestFinalVoteCountsUsesFinalRound(t *testing.T) {

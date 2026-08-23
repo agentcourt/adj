@@ -3,7 +3,7 @@ package casegen
 import (
 	"testing"
 
-	"github.com/jsmorph/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/adc/runtime/spec"
 )
 
 func TestValidateCasePacketAllowsGeneralCivilInInternationalClaw(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/adc/runtime/courts"
-	"github.com/jsmorph/adj/common/documents"
+	"github.com/agentcourt/adj/adc/runtime/courts"
+	"github.com/agentcourt/adj/common/documents"
 )
 
 func TestCreatePropositionPlan(t *testing.T) {

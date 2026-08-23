@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/common/cliio"
-	"github.com/jsmorph/adj/common/documents"
-	openaiapi "github.com/jsmorph/adj/common/openai"
-	"github.com/jsmorph/adj/common/promptfile"
-	"github.com/jsmorph/adj/quick"
+	"github.com/agentcourt/adj/common/cliio"
+	"github.com/agentcourt/adj/common/documents"
+	openaiapi "github.com/agentcourt/adj/common/openai"
+	"github.com/agentcourt/adj/common/promptfile"
+	"github.com/agentcourt/adj/quick"
 )
 
 var runProcedure = quick.Run

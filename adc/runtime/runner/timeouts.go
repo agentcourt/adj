@@ -7,7 +7,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/jsmorph/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/adc/runtime/spec"
 )
 
 func isTimeoutError(err error) bool {

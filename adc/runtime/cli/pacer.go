@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/jsmorph/adj/adc/runtime/store"
+	"github.com/agentcourt/adj/adc/runtime/store"
 )
 
 func RunPacer(args []string, stdout io.Writer, stderr io.Writer) error {

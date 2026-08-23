@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jsmorph/adj/arbd/runtime/lean"
+	"github.com/agentcourt/adj/arbd/runtime/lean"
 )
 
 func TestLawyerDoRequiresActiveOpportunityID(t *testing.T) {

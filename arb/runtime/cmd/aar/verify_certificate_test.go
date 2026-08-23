@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/arb/runtime/proceeding"
+	"github.com/agentcourt/adj/arb/runtime/proceeding"
 )
 
 func TestRunVerifyCertificatePrintsJSON(t *testing.T) {

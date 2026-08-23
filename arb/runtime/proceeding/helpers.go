@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/common/persona"
+	"github.com/agentcourt/adj/common/persona"
 )
 
 func loadCaseFiles(dir string, complaintPath string) ([]CaseFile, error) {

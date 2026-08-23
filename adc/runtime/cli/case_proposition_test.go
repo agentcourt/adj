@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/adc/runtime/casegen"
-	"github.com/jsmorph/adj/adc/runtime/courts"
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
-	"github.com/jsmorph/adj/adc/runtime/spec"
-	"github.com/jsmorph/adj/common/documents"
+	"github.com/agentcourt/adj/adc/runtime/casegen"
+	"github.com/agentcourt/adj/adc/runtime/courts"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
+	"github.com/agentcourt/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/common/documents"
 )
 
 func TestValidateCaseInputFlags(t *testing.T) {

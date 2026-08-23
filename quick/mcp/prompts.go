@@ -1,6 +1,6 @@
 package mcp
 
-import "github.com/jsmorph/adj/common/mcpbridge"
+import "github.com/agentcourt/adj/common/mcpbridge"
 
 const PromptSessionInstructions = "mcp.session.instructions"
 

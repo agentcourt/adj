@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/adc/runtime/courts"
-	"github.com/jsmorph/adj/adc/runtime/lean"
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
-	"github.com/jsmorph/adj/adc/runtime/spec"
-	"github.com/jsmorph/adj/adc/runtime/store"
-	"github.com/jsmorph/adj/common/casemanifest"
-	"github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/adc/runtime/courts"
+	"github.com/agentcourt/adj/adc/runtime/lean"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
+	"github.com/agentcourt/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/adc/runtime/store"
+	"github.com/agentcourt/adj/common/casemanifest"
+	"github.com/agentcourt/adj/common/openai"
 )
 
 type Config struct {

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/arb/runtime/lean"
-	"github.com/jsmorph/adj/arb/runtime/spec"
-	"github.com/jsmorph/adj/common/casemanifest"
+	"github.com/agentcourt/adj/arb/runtime/lean"
+	"github.com/agentcourt/adj/arb/runtime/spec"
+	"github.com/agentcourt/adj/common/casemanifest"
 )
 
 const (

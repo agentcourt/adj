@@ -3,7 +3,7 @@ package runner
 import (
 	"strings"
 
-	"github.com/jsmorph/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/adc/runtime/spec"
 )
 
 var referenceToolSet = map[string]bool{

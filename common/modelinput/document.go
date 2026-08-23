@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/jsmorph/adj/common/documents"
+	"github.com/agentcourt/adj/common/documents"
 )
 
 func DocumentContentItem(document documents.File, raw []byte) (map[string]any, error) {

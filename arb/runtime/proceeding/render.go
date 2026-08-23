@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/arb/runtime/spec"
+	"github.com/agentcourt/adj/arb/runtime/spec"
 )
 
 func (rc *runContext) recordEventLocked(eventType string, role string, phase string, payload map[string]any) error {

@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/jsmorph/adj/adc/runtime/lean"
+	"github.com/agentcourt/adj/adc/runtime/lean"
 )
 
 const (

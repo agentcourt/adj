@@ -15,11 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jsmorph/adj/arb/runtime/lean"
-	"github.com/jsmorph/adj/arb/runtime/spec"
-	"github.com/jsmorph/adj/common/casemanifest"
-	"github.com/jsmorph/adj/common/modelrequest"
-	openaiapi "github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/arb/runtime/lean"
+	"github.com/agentcourt/adj/arb/runtime/spec"
+	"github.com/agentcourt/adj/common/casemanifest"
+	"github.com/agentcourt/adj/common/modelrequest"
+	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
 func TestLoadCaseFiles(t *testing.T) {

@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/common/modelrequest"
+	"github.com/agentcourt/adj/common/modelrequest"
 
 	openai "github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"

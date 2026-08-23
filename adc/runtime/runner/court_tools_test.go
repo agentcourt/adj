@@ -3,7 +3,7 @@ package runner
 import (
 	"testing"
 
-	"github.com/jsmorph/adj/adc/runtime/courts"
+	"github.com/agentcourt/adj/adc/runtime/courts"
 )
 
 func TestRule12ToolSchemaOmitsJurisdictionGroundInInternationalClaw(t *testing.T) {

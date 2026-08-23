@@ -12,10 +12,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
-	"github.com/jsmorph/adj/adc/runtime/spec"
-	"github.com/jsmorph/adj/common/modelrequest"
-	openaiapi "github.com/jsmorph/adj/common/openai"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
+	"github.com/agentcourt/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/common/modelrequest"
+	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
 func (r *Runner) executeTurn(

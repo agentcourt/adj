@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jsmorph/adj/common/modelrequest"
+	"github.com/agentcourt/adj/common/modelrequest"
 )
 
 type Spec struct {

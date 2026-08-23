@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jsmorph/adj/adc/runtime/courts"
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
-	"github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/adc/runtime/courts"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
+	"github.com/agentcourt/adj/common/openai"
 )
 
 const maxComplaintDraftAttempts = 3

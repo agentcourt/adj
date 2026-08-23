@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jsmorph/adj/adc/runtime/store"
-	"github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/adc/runtime/store"
+	"github.com/agentcourt/adj/common/openai"
 )
 
 func TestPersistAgentEventWritesNDJSONAndSQLite(t *testing.T) {

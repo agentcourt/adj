@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jsmorph/adj/arb/runtime/lean"
-	"github.com/jsmorph/adj/arb/runtime/proceeding"
+	"github.com/agentcourt/adj/arb/runtime/lean"
+	"github.com/agentcourt/adj/arb/runtime/proceeding"
 )
 
 func runVerifyCertificate(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) error {

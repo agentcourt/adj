@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/jsmorph/adj/arb/runtime/spec"
+	"github.com/agentcourt/adj/arb/runtime/spec"
 )
 
 func runComplain(args []string, stdout io.Writer, stderr io.Writer) error {

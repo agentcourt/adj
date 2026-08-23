@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
 )
 
 func (r *Runner) buildTurnPrompt(roleName string, basePrompt string, allowedTools []string) (string, error) {

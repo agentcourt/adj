@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jsmorph/adj/adc/runtime/spec"
-	"github.com/jsmorph/adj/common/documents"
+	"github.com/agentcourt/adj/adc/runtime/spec"
+	"github.com/agentcourt/adj/common/documents"
 )
 
 func (r *Runner) readCaseFile(fileObj map[string]any) ([]byte, error) {

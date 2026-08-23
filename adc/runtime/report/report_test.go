@@ -7,7 +7,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/jsmorph/adj/adc/runtime/runner"
+	"github.com/agentcourt/adj/adc/runtime/runner"
 )
 
 func TestRenderJurorRoundsIncludesRoundSummaries(t *testing.T) {

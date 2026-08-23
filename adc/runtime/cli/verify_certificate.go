@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jsmorph/adj/adc/runtime/lean"
-	"github.com/jsmorph/adj/adc/runtime/runner"
+	"github.com/agentcourt/adj/adc/runtime/lean"
+	"github.com/agentcourt/adj/adc/runtime/runner"
 )
 
 func RunVerifyCertificate(args []string, stdout io.Writer, stderr io.Writer) error {

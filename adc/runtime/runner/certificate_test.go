@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/jsmorph/adj/adc/runtime/lean"
+	"github.com/agentcourt/adj/adc/runtime/lean"
 )
 
 func TestStepForCertificateRecordsOnlyAcceptedSteps(t *testing.T) {

@@ -7,9 +7,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/jsmorph/adj/arb/runtime/proceeding"
-	openaiapi "github.com/jsmorph/adj/common/openai"
-	"github.com/jsmorph/adj/common/promptfile"
+	"github.com/agentcourt/adj/arb/runtime/proceeding"
+	openaiapi "github.com/agentcourt/adj/common/openai"
+	"github.com/agentcourt/adj/common/promptfile"
 )
 
 type caseRunSummary struct {

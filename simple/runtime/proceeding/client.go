@@ -3,8 +3,8 @@ package proceeding
 import (
 	"time"
 
-	"github.com/jsmorph/adj/common/modelrequest"
-	openaiapi "github.com/jsmorph/adj/common/openai"
+	"github.com/agentcourt/adj/common/modelrequest"
+	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
 type directClientFactory struct{}

@@ -8,8 +8,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/jsmorph/adj/arbd/runtime/proceeding"
-	"github.com/jsmorph/adj/common/promptfile"
+	"github.com/agentcourt/adj/arbd/runtime/proceeding"
+	"github.com/agentcourt/adj/common/promptfile"
 )
 
 type caseRunSummary struct {

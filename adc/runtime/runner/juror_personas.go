@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jsmorph/adj/common/modelrequest"
-	"github.com/jsmorph/adj/common/openai"
-	"github.com/jsmorph/adj/common/persona"
+	"github.com/agentcourt/adj/common/modelrequest"
+	"github.com/agentcourt/adj/common/openai"
+	"github.com/agentcourt/adj/common/persona"
 )
 
 type jurorPersonaPair struct {

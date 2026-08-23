@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	adcprompts "github.com/jsmorph/adj/adc/runtime/prompts"
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
 )
 
 func TestToolSchemasAndPromptCatalog(t *testing.T) {
