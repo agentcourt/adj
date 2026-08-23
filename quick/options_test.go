@@ -60,6 +60,9 @@ func TestConfigureCouncilPoolResolution(t *testing.T) {
 	if cfg.CouncilPoolPath != explicitPool {
 		t.Fatalf("explicit council pool = %q, want %q", cfg.CouncilPoolPath, explicitPool)
 	}
+	if cfg.InvalidAttemptLimit != 3 {
+		t.Fatalf("default invalid attempt limit = %d, want 3", cfg.InvalidAttemptLimit)
+	}
 
 	base.CouncilPoolPath = ""
 	cfg, err = configure(base)

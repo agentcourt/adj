@@ -86,7 +86,7 @@ Core writes each durable adjudication record beneath the selected output directo
 | `evidence-manifest.json` and `evidence-store/` | Formal-procedure evidence identifiers, metadata, hashes, and stored bytes. |
 | `documents.json` and `documents/` | Simple and quick imported-document metadata, hashes, and bytes. |
 | `model-request.json`, `model-response.json`, and `decision.json` | Simple request controls, provider response, parsed decision, normalized web-search actions and sources, and URL citations. |
-| `transcript.json` | Quick arguments and council votes. |
+| `transcript.json` | Quick arguments, council votes, and council-member failures. |
 | `transcript.md` and `digest.md` | Human-readable records written by the procedures that define them. |
 | `runtime.json` | Procedure runtime configuration, including Simple's resolved web-search, reasoning-effort, output-token, and built-in-tool-call settings, and the bound private API address where present. |
 | `run.db` | ADC runtime database when the selected ADC path writes it. |

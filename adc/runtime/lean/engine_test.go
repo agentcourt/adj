@@ -8,14 +8,14 @@ import (
 	"testing"
 )
 
-func writeEngineScript(t *testing.T, body string) string {
+func engineScriptCommand(t *testing.T, body string, args ...string) []string {
 	t.Helper()
 
 	path := filepath.Join(t.TempDir(), "engine.sh")
-	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
-	return path
+	return append([]string{"/bin/sh", path}, args...)
 }
 
 func readCapturedRequest(t *testing.T, path string) map[string]any {
@@ -45,8 +45,8 @@ func TestCallWritesRequestAndParsesResponse(t *testing.T) {
 	t.Parallel()
 
 	requestPath := filepath.Join(t.TempDir(), "request.json")
-	script := writeEngineScript(t, "#!/bin/sh\ncat >\"$1\"\nprintf '%s' '{\"ok\":true}'\n")
-	engine := New([]string{script, requestPath})
+	command := engineScriptCommand(t, "#!/bin/sh\ncat >\"$1\"\nprintf '%s' '{\"ok\":true}'\n", requestPath)
+	engine := New(command)
 
 	out, err := engine.Call(map[string]any{"request_type": "ping"})
 	if err != nil {
@@ -79,8 +79,7 @@ func TestCallRejectsBadProcessOutput(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			script := writeEngineScript(t, tt.body)
-			engine := New([]string{script})
+			engine := New(engineScriptCommand(t, tt.body))
 			_, err := engine.Call(map[string]any{"request_type": "ping"})
 			if err == nil {
 				t.Fatalf("Call error = nil, want %q", tt.want)
@@ -177,8 +176,8 @@ func TestHelperMethodsBuildExpectedRequests(t *testing.T) {
 			t.Parallel()
 
 			requestPath := filepath.Join(t.TempDir(), "request.json")
-			script := writeEngineScript(t, "#!/bin/sh\ncat >\"$1\"\nprintf '%s' '{}'\n")
-			engine := New([]string{script, requestPath})
+			command := engineScriptCommand(t, "#!/bin/sh\ncat >\"$1\"\nprintf '%s' '{}'\n", requestPath)
+			engine := New(command)
 			if _, err := tt.call(engine); err != nil {
 				t.Fatalf("%s error = %v", tt.name, err)
 			}

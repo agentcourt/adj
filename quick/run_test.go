@@ -95,6 +95,37 @@ func TestCaseAPIWaitReturnsAtTimeoutWithoutStateChange(t *testing.T) {
 	}
 }
 
+func TestCaseResultIncludesCouncilFailures(t *testing.T) {
+	runner := newLawyerTestRunner(t, time.Minute)
+	runner.cfg.CouncilSize = 3
+	runner.cfg.RequiredVotes = 2
+	runner.phase = "complete"
+	runner.transcript.Votes = []Vote{
+		{MemberID: "C1", Vote: "not_demonstrated"},
+		{MemberID: "C3", Vote: "not_demonstrated"},
+	}
+	runner.transcript.CouncilFailures = []CouncilMemberFailure{{
+		MemberID:      "C2",
+		Model:         "openrouter://model-2",
+		Status:        "failed",
+		FailureReason: councilFailureRequestFailed,
+		Message:       "provider unavailable",
+		ErrorClass:    string(openaiapi.ProviderErrorTransient),
+		FailedAt:      time.Now().UTC(),
+	}}
+	result, err := (&caseAPI{runner: runner}).executeTool(doRequest{Tool: "get_case_result"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["resolution"] != "not_demonstrated" {
+		t.Fatalf("result = %#v", result)
+	}
+	failures, ok := result["council_failures"].([]CouncilMemberFailure)
+	if !ok || len(failures) != 1 || failures[0].MemberID != "C2" {
+		t.Fatalf("council failures = %#v", result["council_failures"])
+	}
+}
+
 type capturedRequest struct {
 	Spec               modelrequest.Spec
 	Input              []map[string]any
@@ -105,6 +136,7 @@ type capturedRequest struct {
 type fakeResponseClient struct {
 	mu         sync.Mutex
 	responses  []openaiapi.Response
+	outcomes   []councilClientOutcome
 	requests   []capturedRequest
 	accounting openaiapi.AccountingRecorder
 }
@@ -119,6 +151,12 @@ func (c *fakeResponseClient) CreateResponseWithRequestSpec(
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.requests = append(c.requests, capturedRequest{Spec: spec, Input: input, Tools: tools, PreviousResponseID: previousResponseID})
+	if len(c.outcomes) > 0 {
+		outcome := c.outcomes[0]
+		c.outcomes = c.outcomes[1:]
+		c.accounting.Record(outcome.response)
+		return outcome.response, outcome.err
+	}
 	if len(c.responses) == 0 {
 		return openaiapi.Response{}, fmt.Errorf("unexpected council request")
 	}
@@ -167,12 +205,39 @@ func (c *timedCouncilClient) CreateResponseWithRequestSpec(
 
 func (c *timedCouncilClient) Accounting() openaiapi.Accounting { return openaiapi.Accounting{} }
 
+type successAfterContextClient struct {
+	started chan struct{}
+}
+
+func (c *successAfterContextClient) CreateResponseWithRequestSpec(
+	ctx context.Context,
+	_ modelrequest.Spec,
+	_ []map[string]any,
+	_ []map[string]any,
+	_ string,
+) (openaiapi.Response, error) {
+	close(c.started)
+	<-ctx.Done()
+	return voteResponse("response-after-context", "demonstrated", "late response"), nil
+}
+
+func (c *successAfterContextClient) Accounting() openaiapi.Accounting {
+	return openaiapi.Accounting{}
+}
+
+type councilTimeoutTestError struct{}
+
+func (councilTimeoutTestError) Error() string   { return "transport timed out" }
+func (councilTimeoutTestError) Timeout() bool   { return true }
+func (councilTimeoutTestError) Temporary() bool { return true }
+
 type controlledCouncilClient struct {
 	started   chan string
 	completed chan string
 	release   map[string]chan struct{}
 	failModel string
 	fail      chan struct{}
+	failErr   error
 	canceled  chan string
 }
 
@@ -187,6 +252,9 @@ func (c *controlledCouncilClient) CreateResponseWithRequestSpec(
 	if spec.Model == c.failModel {
 		select {
 		case <-c.fail:
+			if c.failErr != nil {
+				return openaiapi.Response{}, c.failErr
+			}
 			return openaiapi.Response{}, &openaiapi.ProviderError{
 				Class: openaiapi.ProviderErrorRequest,
 				Err:   fmt.Errorf("request rejected for %s", spec.Model),
@@ -206,6 +274,38 @@ func (c *controlledCouncilClient) CreateResponseWithRequestSpec(
 }
 
 func (c *controlledCouncilClient) Accounting() openaiapi.Accounting { return openaiapi.Accounting{} }
+
+type councilClientOutcome struct {
+	response openaiapi.Response
+	err      error
+}
+
+type scriptedCouncilClient struct {
+	mu       sync.Mutex
+	outcomes map[string]councilClientOutcome
+	models   []string
+}
+
+func (c *scriptedCouncilClient) CreateResponseWithRequestSpec(
+	_ context.Context,
+	spec modelrequest.Spec,
+	_ []map[string]any,
+	_ []map[string]any,
+	_ string,
+) (openaiapi.Response, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.models = append(c.models, spec.Model)
+	outcome, ok := c.outcomes[spec.Model]
+	if !ok {
+		return openaiapi.Response{}, fmt.Errorf("no scripted outcome for %s", spec.Model)
+	}
+	return outcome.response, outcome.err
+}
+
+func (c *scriptedCouncilClient) Accounting() openaiapi.Accounting {
+	return openaiapi.Accounting{}
+}
 
 func TestRunQuickCase(t *testing.T) {
 	root := t.TempDir()
@@ -328,6 +428,8 @@ func TestRunQuickCase(t *testing.T) {
 			"The document reports blue.",
 			"The report may not establish the whole sky.",
 			"preponderance of the evidence",
+			"Use demonstrated only when the proposition satisfies that standard for every required part",
+			"Use vote=demonstrated only if the proposition satisfies the stated evidence standard",
 			"record.txt",
 			"The measured value is blue.",
 		} {
@@ -337,6 +439,10 @@ func TestRunQuickCase(t *testing.T) {
 		}
 		if !reflect.DeepEqual(request.Tools, councilTools(defaultCouncilVoteToolPrompt)) {
 			t.Errorf("request %d tools = %#v", index, request.Tools)
+		}
+		description, ok := request.Tools[0]["description"].(string)
+		if !ok || !strings.Contains(description, "Use demonstrated only when the proposition satisfies the stated evidence standard") {
+			t.Errorf("request %d council tool description = %#v", index, request.Tools[0]["description"])
 		}
 		if strict, ok := request.Tools[0]["strict"].(bool); !ok || !strict {
 			t.Errorf("request %d council tool strict = %#v", index, request.Tools[0]["strict"])
@@ -371,6 +477,86 @@ func TestRunQuickCase(t *testing.T) {
 	}
 }
 
+func TestRunQuickCaseCompletesAfterCouncilProviderFailure(t *testing.T) {
+	root := t.TempDir()
+	poolPath := writeCouncilPool(t, root, 3)
+	outputDir := filepath.Join(root, "out")
+	client := &fakeResponseClient{outcomes: []councilClientOutcome{
+		{response: voteResponse("response-1", "not_demonstrated", "record insufficient")},
+		{err: &openaiapi.ProviderError{Class: openaiapi.ProviderErrorTransient, Err: fmt.Errorf("provider unavailable")}},
+		{response: voteResponse("response-3", "not_demonstrated", "record insufficient")},
+	}}
+	cfg := Config{
+		Proposition:            "The proposition is supported.",
+		OutputDir:              outputDir,
+		CouncilPoolPath:        poolPath,
+		CouncilSize:            3,
+		RequiredVotes:          2,
+		EvidenceStandard:       "preponderance of the evidence",
+		CaseAPIAddr:            "127.0.0.1:0",
+		LawyerAPIBearerToken:   testLawyerAPIBearerToken,
+		CaseID:                 "quick-council-failure",
+		RunID:                  "run-council-failure",
+		LawyerTimeout:          5 * time.Second,
+		CouncilTimeout:         5 * time.Second,
+		MaxResponseBytes:       1 << 20,
+		MaxArgumentChars:       10_000,
+		InvalidAttemptLimit:    1,
+		DocumentLimits:         documents.Limits{MaxFiles: 4, MaxFileBytes: 1024, MaxTotalBytes: 4096},
+		CouncilRequestAttempts: 1,
+		AllowAPIKey:            true,
+	}
+	type runOutcome struct {
+		result Result
+		err    error
+	}
+	done := make(chan runOutcome, 1)
+	go func() {
+		result, err := runConfigured(context.Background(), cfg, client)
+		done <- runOutcome{result: result, err: err}
+	}()
+	runtime := waitForRuntime(t, filepath.Join(outputDir, "runtime.json"))
+	submitLawyerArgument(t, runtime.CaseAPIBase, cfg.CaseID, "plaintiff", "arguments:plaintiff", "The record supports the proposition.")
+	submitLawyerArgument(t, runtime.CaseAPIBase, cfg.CaseID, "defendant", "arguments:defendant", "The record does not support the proposition.")
+	select {
+	case outcome := <-done:
+		if outcome.err != nil {
+			t.Fatalf("run quick case: %v", outcome.err)
+		}
+		if outcome.result.Status != "ok" || outcome.result.Phase != "complete" || outcome.result.Resolution != "not_demonstrated" {
+			t.Fatalf("result = %#v", outcome.result)
+		}
+		if len(outcome.result.Council) != 3 || len(outcome.result.Votes) != 2 || len(outcome.result.CouncilFailures) != 1 {
+			t.Fatalf("council records = roster %d, votes %d, failures %d", len(outcome.result.Council), len(outcome.result.Votes), len(outcome.result.CouncilFailures))
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("quick case did not finish")
+	}
+	var durable Result
+	raw, err := os.ReadFile(filepath.Join(outputDir, "run.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(raw, &durable); err != nil {
+		t.Fatal(err)
+	}
+	if durable.SchemaVersion != ResultSchemaVersion || durable.Status != "ok" || durable.Resolution != "not_demonstrated" || len(durable.CouncilFailures) != 1 {
+		t.Fatalf("durable result = %#v", durable)
+	}
+	if durable.Error != "" || durable.ErrorClass != "" {
+		t.Fatalf("durable case error = %q, class %q", durable.Error, durable.ErrorClass)
+	}
+	foundFailureEvent := false
+	for _, event := range durable.Events {
+		if event.Type == "council_member_removed" && stringValue(event.Payload["member_id"]) == durable.CouncilFailures[0].MemberID {
+			foundFailureEvent = true
+		}
+	}
+	if !foundFailureEvent {
+		t.Fatalf("durable events omit council failure: %#v", durable.Events)
+	}
+}
+
 func TestCouncilRequestsAreSequentialByDefault(t *testing.T) {
 	client := &timedCouncilClient{delay: 10 * time.Millisecond}
 	runner := newCouncilTestRunner(t, false, client, 3)
@@ -389,6 +575,187 @@ func TestCouncilRequestsAreSequentialByDefault(t *testing.T) {
 	}
 	if got := voteMemberIDs(runner.transcript.Votes); !reflect.DeepEqual(got, []string{"C1", "C2", "C3"}) {
 		t.Fatalf("vote order = %#v", got)
+	}
+}
+
+func TestSequentialCouncilContinuesAfterProviderFailure(t *testing.T) {
+	outcomes := map[string]councilClientOutcome{}
+	for index := 1; index <= 4; index++ {
+		model := fmt.Sprintf("model-%d", index)
+		outcomes[model] = councilClientOutcome{response: voteResponse("response-"+model, "not_demonstrated", "record insufficient")}
+	}
+	outcomes["model-5"] = councilClientOutcome{err: &openaiapi.ProviderError{
+		Class: openaiapi.ProviderErrorTransient,
+		Err:   fmt.Errorf("temporary provider failure"),
+	}}
+	for index := 6; index <= 7; index++ {
+		model := fmt.Sprintf("model-%d", index)
+		outcomes[model] = councilClientOutcome{response: voteResponse("response-"+model, "demonstrated", "record sufficient")}
+	}
+	client := &scriptedCouncilClient{outcomes: outcomes}
+	runner := newCouncilTestRunner(t, false, client, 7)
+	runner.cfg.CouncilSize = 7
+	runner.cfg.RequiredVotes = 4
+	if err := runner.runCouncil(context.Background()); err != nil {
+		t.Fatalf("run council: %v", err)
+	}
+	runner.setTerminal(nil)
+	result := runner.result("", nil)
+	if result.Status != "ok" || result.Resolution != "not_demonstrated" || result.VotesFor != 2 || result.VotesAgainst != 4 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(result.Council) != 7 || len(result.Votes) != 6 || len(result.CouncilFailures) != 1 {
+		t.Fatalf("council records = roster %d, votes %d, failures %d", len(result.Council), len(result.Votes), len(result.CouncilFailures))
+	}
+	failure := result.CouncilFailures[0]
+	if failure.MemberID != "C5" || failure.Status != "failed" || failure.FailureReason != councilFailureRequestFailed || failure.ErrorClass != string(openaiapi.ProviderErrorTransient) || failure.Message != "temporary provider failure" || failure.FailedAt.IsZero() {
+		t.Fatalf("failure = %#v", failure)
+	}
+	client.mu.Lock()
+	models := append([]string(nil), client.models...)
+	client.mu.Unlock()
+	if want := []string{"model-1", "model-2", "model-3", "model-4", "model-5", "model-6", "model-7"}; !reflect.DeepEqual(models, want) {
+		t.Fatalf("request order = %#v, want %#v", models, want)
+	}
+	var transcript Transcript
+	raw, err := os.ReadFile(filepath.Join(runner.cfg.OutputDir, "transcript.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(raw, &transcript); err != nil {
+		t.Fatal(err)
+	}
+	if transcript.SchemaVersion != transcriptSchema || len(transcript.Votes) != 6 || len(transcript.CouncilFailures) != 1 {
+		t.Fatalf("transcript = %#v", transcript)
+	}
+}
+
+func TestSequentialCouncilReturnsNoMajorityAfterMemberFailure(t *testing.T) {
+	outcomes := map[string]councilClientOutcome{}
+	for index := 1; index <= 3; index++ {
+		model := fmt.Sprintf("model-%d", index)
+		outcomes[model] = councilClientOutcome{response: voteResponse("response-"+model, "demonstrated", "record sufficient")}
+	}
+	outcomes["model-4"] = councilClientOutcome{err: &openaiapi.ProviderError{
+		Class: openaiapi.ProviderErrorRequest,
+		Err:   fmt.Errorf("provider rejected request"),
+	}}
+	for index := 5; index <= 7; index++ {
+		model := fmt.Sprintf("model-%d", index)
+		outcomes[model] = councilClientOutcome{response: voteResponse("response-"+model, "not_demonstrated", "record insufficient")}
+	}
+	runner := newCouncilTestRunner(t, false, &scriptedCouncilClient{outcomes: outcomes}, 7)
+	runner.cfg.CouncilSize = 7
+	runner.cfg.RequiredVotes = 4
+	if err := runner.runCouncil(context.Background()); err != nil {
+		t.Fatalf("run council: %v", err)
+	}
+	if got := runner.resolution(); got != "no_majority" {
+		t.Fatalf("resolution = %q, want no_majority", got)
+	}
+}
+
+func TestCouncilParentCancellationFailsRun(t *testing.T) {
+	runner := newCouncilTestRunner(t, false, &timedCouncilClient{delay: time.Second}, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err := runner.runCouncil(ctx)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("run council error = %v, want context cancellation", err)
+	}
+	if len(runner.transcript.CouncilFailures) != 0 {
+		t.Fatalf("parent cancellation produced council failure records: %#v", runner.transcript.CouncilFailures)
+	}
+}
+
+func TestCouncilRejectsSuccessfulResponseAfterParentCancellation(t *testing.T) {
+	client := &successAfterContextClient{started: make(chan struct{})}
+	runner := newCouncilTestRunner(t, false, client, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- runner.runCouncil(ctx) }()
+	select {
+	case <-client.started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("council request did not start")
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("run council error = %v, want context cancellation", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("council did not return after cancellation")
+	}
+	if len(runner.transcript.Votes) != 0 || len(runner.transcript.CouncilFailures) != 0 {
+		t.Fatalf("canceled council recorded votes or failures: %#v", runner.transcript)
+	}
+}
+
+func TestRecordCouncilOutcomeReturnsCancellationDuringRecord(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	called := false
+	err := recordCouncilOutcome(ctx, func() error {
+		called = true
+		cancel()
+		return nil
+	})
+	if !called {
+		t.Fatal("record function was not called")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("record outcome error = %v, want context cancellation", err)
+	}
+}
+
+func TestCouncilDeadlineRecordsMemberFailure(t *testing.T) {
+	client := &successAfterContextClient{started: make(chan struct{})}
+	runner := newCouncilTestRunner(t, false, client, 1)
+	runner.cfg.CouncilSize = 1
+	runner.cfg.RequiredVotes = 1
+	runner.cfg.CouncilTimeout = 10 * time.Millisecond
+	if err := runner.runCouncil(context.Background()); err != nil {
+		t.Fatalf("run council: %v", err)
+	}
+	if got := runner.resolution(); got != "no_majority" {
+		t.Fatalf("resolution = %q, want no_majority", got)
+	}
+	if len(runner.transcript.CouncilFailures) != 1 || runner.transcript.CouncilFailures[0].FailureReason != councilFailureDeadline {
+		t.Fatalf("council failures = %#v", runner.transcript.CouncilFailures)
+	}
+	if len(runner.transcript.Votes) != 0 {
+		t.Fatalf("expired council member recorded a vote: %#v", runner.transcript.Votes)
+	}
+}
+
+func TestCouncilNetTimeoutRecordsMemberFailure(t *testing.T) {
+	for _, outcome := range []councilClientOutcome{
+		{err: councilTimeoutTestError{}},
+		{err: &openaiapi.ProviderError{Class: openaiapi.ProviderErrorTransient, Err: councilTimeoutTestError{}}},
+	} {
+		client := &scriptedCouncilClient{outcomes: map[string]councilClientOutcome{"model-1": outcome}}
+		runner := newCouncilTestRunner(t, false, client, 1)
+		runner.cfg.CouncilSize = 1
+		runner.cfg.RequiredVotes = 1
+		if err := runner.runCouncil(context.Background()); err != nil {
+			t.Fatalf("run council: %v", err)
+		}
+		if len(runner.transcript.CouncilFailures) != 1 || runner.transcript.CouncilFailures[0].FailureReason != councilFailureDeadline {
+			t.Fatalf("council failures = %#v", runner.transcript.CouncilFailures)
+		}
+	}
+}
+
+func TestCouncilLocalErrorFailsRun(t *testing.T) {
+	runner := newCouncilTestRunner(t, false, &fakeResponseClient{}, 1)
+	runner.council[0].RequestSpec = nil
+	err := runner.runCouncil(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "request specification is required") {
+		t.Fatalf("run council error = %v", err)
+	}
+	if len(runner.transcript.CouncilFailures) != 0 {
+		t.Fatalf("local error produced council failure records: %#v", runner.transcript.CouncilFailures)
 	}
 }
 
@@ -433,31 +800,105 @@ func TestParallelCouncilStartsTogetherAndRecordsRosterOrder(t *testing.T) {
 	}
 }
 
-func TestParallelCouncilCancelsOutstandingRequestsAfterFailure(t *testing.T) {
+func TestParallelCouncilRecordsProviderFailureAndCompletesSiblings(t *testing.T) {
 	client := newControlledCouncilClient(3)
 	client.failModel = "model-2"
 	client.fail = make(chan struct{})
 	runner := newCouncilTestRunner(t, true, client, 3)
+	runner.cfg.CouncilSize = 3
+	runner.cfg.RequiredVotes = 2
 	done := make(chan error, 1)
 	go func() { done <- runner.runCouncil(context.Background()) }()
 	if started := receiveModels(t, client.started, 3); !sameStrings(started, []string{"model-1", "model-2", "model-3"}) {
 		t.Fatalf("started models = %#v", started)
 	}
 	close(client.fail)
+	for _, model := range []string{"model-3", "model-1"} {
+		close(client.release[model])
+		select {
+		case completed := <-client.completed:
+			if completed != model {
+				t.Fatalf("completed model = %q, want %q", completed, model)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("request for %s did not complete", model)
+		}
+	}
 	select {
 	case err := <-done:
-		if err == nil || !strings.Contains(err.Error(), "council member C2") {
+		if err != nil {
 			t.Fatalf("parallel council error = %v", err)
 		}
-		if got := openaiapi.ErrorClass(err); got != openaiapi.ProviderErrorRequest {
-			t.Fatalf("provider error class = %q, error = %v", got, err)
+	case <-time.After(2 * time.Second):
+		t.Fatal("parallel council did not finish")
+	}
+	select {
+	case model := <-client.canceled:
+		t.Fatalf("provider failure canceled %s", model)
+	default:
+	}
+	if got := voteMemberIDs(runner.transcript.Votes); !reflect.DeepEqual(got, []string{"C1", "C3"}) {
+		t.Fatalf("vote members = %#v", got)
+	}
+	if len(runner.transcript.CouncilFailures) != 1 {
+		t.Fatalf("council failures = %#v", runner.transcript.CouncilFailures)
+	}
+	failure := runner.transcript.CouncilFailures[0]
+	if failure.MemberID != "C2" || failure.Status != "failed" || failure.FailureReason != councilFailureRequestFailed || failure.ErrorClass != string(openaiapi.ProviderErrorRequest) {
+		t.Fatalf("council failure = %#v", failure)
+	}
+	events := readEvents(t, filepath.Join(runner.cfg.OutputDir, "events.ndjson"))
+	gotEvents := make([]string, 0, len(events))
+	for _, event := range events {
+		gotEvents = append(gotEvents, event.Type+":"+stringValue(event.Payload["member_id"]))
+	}
+	if want := []string{"council_vote:C1", "council_member_removed:C2", "council_vote:C3"}; !reflect.DeepEqual(gotEvents, want) {
+		t.Fatalf("events = %#v, want %#v", gotEvents, want)
+	}
+}
+
+func TestParallelCouncilPreservesCompletedVoteAndCancelsOutstandingRequestsAfterInternalFailure(t *testing.T) {
+	client := newControlledCouncilClient(3)
+	client.failModel = "model-2"
+	client.fail = make(chan struct{})
+	client.failErr = fmt.Errorf("local request construction failed")
+	runner := newCouncilTestRunner(t, true, client, 3)
+	done := make(chan error, 1)
+	go func() { done <- runner.runCouncil(context.Background()) }()
+	if started := receiveModels(t, client.started, 3); !sameStrings(started, []string{"model-1", "model-2", "model-3"}) {
+		t.Fatalf("started models = %#v", started)
+	}
+	close(client.release["model-1"])
+	select {
+	case completed := <-client.completed:
+		if completed != "model-1" {
+			t.Fatalf("completed model = %q, want model-1", completed)
 		}
 	case <-time.After(2 * time.Second):
-		t.Fatal("parallel council did not finish after request failure")
+		t.Fatal("model-1 did not complete before the internal failure")
 	}
-	canceled := receiveModels(t, client.canceled, 2)
-	if !sameStrings(canceled, []string{"model-1", "model-3"}) {
+	close(client.fail)
+	select {
+	case err := <-done:
+		if err == nil || !strings.Contains(err.Error(), "council member C2") || !strings.Contains(err.Error(), "local request construction failed") {
+			t.Fatalf("parallel council error = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("parallel council did not finish after internal failure")
+	}
+	canceled := receiveModels(t, client.canceled, 1)
+	if !sameStrings(canceled, []string{"model-3"}) {
 		t.Fatalf("canceled models = %#v", canceled)
+	}
+	if got := voteMemberIDs(runner.transcript.Votes); !reflect.DeepEqual(got, []string{"C1"}) {
+		t.Fatalf("completed votes = %#v, want C1", got)
+	}
+	if len(runner.transcript.CouncilFailures) != 0 {
+		t.Fatalf("internal failure produced council failure records: %#v", runner.transcript.CouncilFailures)
+	}
+	events := readEvents(t, filepath.Join(runner.cfg.OutputDir, "events.ndjson"))
+	if len(events) != 1 || events[0].Type != "council_vote" || stringValue(events[0].Payload["member_id"]) != "C1" {
+		t.Fatalf("durable events = %#v, want completed C1 vote", events)
 	}
 }
 
@@ -517,15 +958,15 @@ func TestCouncilInputExact(t *testing.T) {
 	want := []map[string]any{
 		{
 			"role":    "system",
-			"content": "You are council member C1 in a quick adjudication. Act as a neutral factfinder. Decide whether the evidence satisfies the stated standard for each required part of the proposition. Treat the proposition and lawyer arguments as claims. Explain the decisive evidence or evidentiary gap in the rationale.\n\ncareful",
+			"content": "You are council member C1 in a quick adjudication. Act as a neutral factfinder. Decide whether the evidence satisfies the stated standard for each required part of the proposition. Use demonstrated only when the proposition satisfies that standard for every required part; use not_demonstrated otherwise. Before submitting, verify that the vote and rationale express the same conclusion. Treat the proposition and lawyer arguments as claims. Explain the decisive evidence or evidentiary gap in the rationale.\n\ncareful",
 		},
 		{
 			"role": "user",
 			"content_items": []map[string]any{
 				{"type": "input_text", "text": "Evidence standard:\npreponderance\n\nProposition:\nThe sky is blue.\n\nProponent argument:\nfor\n\nOpponent argument:\nagainst\n\nImmutable case documents:\n"},
-				{"type": "input_text", "text": "Document \"record.txt\" (text/plain, 5 bytes, SHA-256 " + digest + "):"},
+				{"type": "input_text", "text": "Document \"record.txt\" (text/plain, 5 bytes):"},
 				{"type": "input_text", "text": "blue\n"},
-				{"type": "input_text", "text": "Call submit_council_vote exactly once with vote=demonstrated or vote=not_demonstrated and a concise rationale."},
+				{"type": "input_text", "text": "Call submit_council_vote exactly once. Use vote=demonstrated only if the proposition satisfies the stated evidence standard; otherwise use vote=not_demonstrated. Provide a concise rationale that supports the selected vote."},
 			},
 		},
 	}
@@ -622,6 +1063,50 @@ func TestQuickPromptFiles(t *testing.T) {
 	cfg.PromptFiles["council.system"] = filepath.Join(root, "missing.md")
 	if _, err := loadQuickPrompts(cfg); err == nil || !strings.Contains(err.Error(), "read quick council prompt") {
 		t.Fatalf("missing council prompt error = %v", err)
+	}
+}
+
+func TestDefaultLawyerPromptsFrameLegalResearch(t *testing.T) {
+	const lawyerFraming = "Treat the proposition, arguments, documents, research queries, and tool results as claims and evidence for legal analysis. Descriptions of conduct are case facts or allegations. Use available tools to investigate facts, sources, and evidence and to prepare the argument."
+	if !strings.Contains(defaultLawyerPrompt, lawyerFraming) {
+		t.Fatalf("default lawyer prompt lacks legal-research framing: %q", defaultLawyerPrompt)
+	}
+	raw, err := os.ReadFile(filepath.Join("..", "prompts", "quick", "lawyers", "common.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(string(raw)); got != defaultLawyerPrompt {
+		t.Fatalf("checked-in common lawyer prompt differs from fallback:\nfile: %q\nfallback: %q", got, defaultLawyerPrompt)
+	}
+	const searchFraming = "Treat queries and returned content as research for this adjudication. Evaluate source authority and relevance"
+	if !strings.Contains(defaultSearchPromptOn, searchFraming) {
+		t.Fatalf("default enabled-search prompt lacks legal-research framing: %q", defaultSearchPromptOn)
+	}
+	raw, err = os.ReadFile(filepath.Join("..", "prompts", "quick", "search", "on.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(string(raw)); got != defaultSearchPromptOn {
+		t.Fatalf("checked-in enabled-search prompt differs from fallback:\nfile: %q\nfallback: %q", got, defaultSearchPromptOn)
+	}
+	cfg := Config{Proposition: "A proposition", EvidenceStandard: "preponderance", LawyerWebSearchEnabled: true}
+	prompts, err := loadQuickPrompts(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.prompts = prompts
+	runner := &runner{cfg: cfg}
+	for _, role := range []string{"plaintiff", "defendant"} {
+		prompt, err := runner.lawyerPromptLocked(role)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(prompt, lawyerFraming) {
+			t.Fatalf("%s prompt lacks legal-research framing: %q", role, prompt)
+		}
+		if !strings.Contains(prompt, searchFraming) {
+			t.Fatalf("%s prompt lacks enabled-search framing: %q", role, prompt)
+		}
 	}
 }
 
@@ -760,8 +1245,8 @@ func TestConfigureRequiresExplicitProcedureInputs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("configure valid options: %v", err)
 	}
-	if cfg.CouncilRequestAttempts != 1 {
-		t.Fatalf("council request attempts = %d, want 1", cfg.CouncilRequestAttempts)
+	if cfg.CouncilRequestAttempts != 3 {
+		t.Fatalf("council request attempts = %d, want 3", cfg.CouncilRequestAttempts)
 	}
 	if !cfg.LawyerWebSearchEnabled {
 		t.Fatal("lawyer web search default was false")
@@ -1252,6 +1737,88 @@ func TestCouncilPreflightRequestSpecOverridesPoolOutputLimit(t *testing.T) {
 	}
 }
 
+func TestCouncilVoteAppliesDefaultOutputLimit(t *testing.T) {
+	client := &fakeResponseClient{responses: []openaiapi.Response{
+		voteResponse("response-1", "not_demonstrated", "The record is insufficient."),
+	}}
+	runner := &runner{
+		cfg: Config{
+			CouncilTimeout:      time.Second,
+			InvalidAttemptLimit: 1,
+			MaxResponseBytes:    1024,
+		},
+		client: client,
+		transcript: Transcript{Arguments: []Argument{
+			{Role: "plaintiff", Text: "for"},
+			{Role: "defendant", Text: "against"},
+		}},
+	}
+	member := CouncilMember{MemberID: "C1", Model: "openrouter://model", RequestSpec: &modelrequest.Spec{Endpoint: "openrouter", Model: "model"}}
+	if _, err := runner.requestVote(context.Background(), member); err != nil {
+		t.Fatal(err)
+	}
+	client.mu.Lock()
+	request := client.requests[0]
+	client.mu.Unlock()
+	if got := request.Spec.MaxOutputTokens(); got == nil || *got != DefaultCouncilMaxOutputTokens {
+		t.Fatalf("council maximum output tokens = %v, want %d", got, DefaultCouncilMaxOutputTokens)
+	}
+	if got := member.RequestSpec.MaxOutputTokens(); got != nil {
+		t.Fatalf("pool request specification changed to %d", *got)
+	}
+}
+
+func TestCouncilVotePreservesExplicitOutputLimitAcrossRepair(t *testing.T) {
+	limit := int64(8192)
+	malformed := openaiapi.Response{
+		ResponseID: "malformed-response",
+		RawJSON:    `{}`,
+		ToolCalls: []openaiapi.ToolCall{{
+			Name:           "submit_council_vote",
+			ArgumentsError: "malformed arguments",
+		}},
+	}
+	client := &fakeResponseClient{responses: []openaiapi.Response{
+		malformed,
+		voteResponse("response-2", "not_demonstrated", "The record is insufficient."),
+	}}
+	runner := &runner{
+		cfg: Config{
+			CouncilTimeout:      time.Second,
+			InvalidAttemptLimit: 2,
+			MaxResponseBytes:    1024,
+		},
+		client: client,
+		transcript: Transcript{Arguments: []Argument{
+			{Role: "plaintiff", Text: "for"},
+			{Role: "defendant", Text: "against"},
+		}},
+	}
+	member := CouncilMember{
+		MemberID: "C1",
+		Model:    "openrouter://model",
+		RequestSpec: &modelrequest.Spec{
+			Endpoint: "openrouter",
+			Model:    "model",
+			Request:  modelrequest.RequestParameters{MaxOutputTokens: &limit},
+		},
+	}
+	if _, err := runner.requestVote(context.Background(), member); err != nil {
+		t.Fatal(err)
+	}
+	client.mu.Lock()
+	requests := append([]capturedRequest(nil), client.requests...)
+	client.mu.Unlock()
+	if len(requests) != 2 {
+		t.Fatalf("request count = %d, want 2", len(requests))
+	}
+	for index, request := range requests {
+		if got := request.Spec.MaxOutputTokens(); got == nil || *got != limit {
+			t.Fatalf("request %d maximum output tokens = %v, want %d", index+1, got, limit)
+		}
+	}
+}
+
 func TestExpiredLawyerTurnRejectsSubmission(t *testing.T) {
 	runner := newLawyerTestRunner(t, time.Second)
 	turn := &lawyerTurn{
@@ -1469,6 +2036,116 @@ func TestMalformedCouncilResponseHasProtocolClass(t *testing.T) {
 	if got := openaiapi.ErrorClass(err); got != openaiapi.ProviderErrorProtocol {
 		t.Fatalf("error class = %q, error = %v", got, err)
 	}
+	if got, ok := councilMemberFailureReason(err); !ok || got != councilFailureAttemptsExhausted {
+		t.Fatalf("failure reason = %q, present %v", got, ok)
+	}
+}
+
+func TestCouncilVoteRepairsMalformedArguments(t *testing.T) {
+	malformed := openaiapi.Response{
+		ResponseID: "malformed-response",
+		RawJSON:    `{}`,
+		ToolCalls: []openaiapi.ToolCall{{
+			CallID:         "call-malformed",
+			Name:           "submit_council_vote",
+			RawArguments:   `{"vote":"not_demonstrated","rationale":"reason" syntax}`,
+			ArgumentsError: `invalid character 's' after object key:value pair`,
+		}},
+	}
+	client := &fakeResponseClient{responses: []openaiapi.Response{
+		malformed,
+		voteResponse("valid-response", "not_demonstrated", "The record is insufficient."),
+	}}
+	runner := &runner{
+		cfg: Config{
+			CouncilTimeout:      time.Second,
+			InvalidAttemptLimit: 3,
+			MaxResponseBytes:    1024,
+		},
+		client: client,
+		transcript: Transcript{Arguments: []Argument{
+			{Role: "plaintiff", Text: "for"},
+			{Role: "defendant", Text: "against"},
+		}},
+	}
+	member := CouncilMember{MemberID: "C1", Model: "openrouter://model", RequestSpec: &modelrequest.Spec{Endpoint: "openrouter", Model: "model"}}
+	vote, err := runner.requestVote(context.Background(), member)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vote.Vote != "not_demonstrated" || vote.Rationale != "The record is insufficient." {
+		t.Fatalf("vote = %#v", vote)
+	}
+	client.mu.Lock()
+	requests := append([]capturedRequest(nil), client.requests...)
+	client.mu.Unlock()
+	if len(requests) != 2 {
+		t.Fatalf("request count = %d, want 2", len(requests))
+	}
+	for index, request := range requests {
+		if got := request.Spec.MaxOutputTokens(); got == nil || *got != DefaultCouncilMaxOutputTokens {
+			t.Fatalf("request %d maximum output tokens = %v, want %d", index+1, got, DefaultCouncilMaxOutputTokens)
+		}
+	}
+	if requests[1].PreviousResponseID != "malformed-response" {
+		t.Fatalf("repair previous response = %q, want malformed-response", requests[1].PreviousResponseID)
+	}
+	if len(requests[1].Input) != 3 {
+		t.Fatalf("repair input = %#v", requests[1].Input)
+	}
+	repair, _ := requests[1].Input[2]["content"].(string)
+	if !strings.Contains(repair, "invalid character 's' after object key:value pair") || !strings.Contains(repair, "Call submit_council_vote exactly once") {
+		t.Fatalf("repair prompt = %q", repair)
+	}
+}
+
+func TestCouncilVoteExhaustsInvalidAttemptLimit(t *testing.T) {
+	malformed := func(id string) openaiapi.Response {
+		return openaiapi.Response{
+			ResponseID: id,
+			RawJSON:    `{}`,
+			ToolCalls: []openaiapi.ToolCall{{
+				Name:           "submit_council_vote",
+				ArgumentsError: "malformed arguments " + id,
+			}},
+		}
+	}
+	client := &fakeResponseClient{responses: []openaiapi.Response{
+		malformed("response-1"),
+		malformed("response-2"),
+		malformed("response-3"),
+	}}
+	runner := &runner{
+		cfg: Config{
+			CouncilTimeout:      time.Second,
+			InvalidAttemptLimit: 3,
+			MaxResponseBytes:    1024,
+		},
+		client: client,
+		transcript: Transcript{Arguments: []Argument{
+			{Role: "plaintiff", Text: "for"},
+			{Role: "defendant", Text: "against"},
+		}},
+	}
+	member := CouncilMember{MemberID: "C1", Model: "openrouter://model", RequestSpec: &modelrequest.Spec{Endpoint: "openrouter", Model: "model"}}
+	_, err := runner.requestVote(context.Background(), member)
+	if err == nil {
+		t.Fatal("requestVote succeeded")
+	}
+	if got := openaiapi.ErrorClass(err); got != openaiapi.ProviderErrorProtocol {
+		t.Fatalf("error class = %q, error = %v", got, err)
+	}
+	for _, reason := range []string{"malformed arguments response-1", "malformed arguments response-2", "malformed arguments response-3"} {
+		if !strings.Contains(err.Error(), reason) {
+			t.Fatalf("error %q omits %q", err, reason)
+		}
+	}
+	client.mu.Lock()
+	requestCount := len(client.requests)
+	client.mu.Unlock()
+	if requestCount != 3 {
+		t.Fatalf("request count = %d, want 3", requestCount)
+	}
 }
 
 func TestCouncilVoteRecordsProviderManagementData(t *testing.T) {
@@ -1652,6 +2329,36 @@ func TestResolutionRequiresConfiguredMajority(t *testing.T) {
 	}
 }
 
+func TestCouncilCompletionCountsVotesAndFailures(t *testing.T) {
+	transcript := Transcript{
+		Votes: []Vote{
+			{Vote: "demonstrated"},
+			{Vote: "demonstrated"},
+			{Vote: "not_demonstrated"},
+		},
+		CouncilFailures: []CouncilMemberFailure{
+			{MemberID: "C4", Status: "failed"},
+			{MemberID: "C5", Status: "failed"},
+			{MemberID: "C6", Status: "failed"},
+			{MemberID: "C7", Status: "failed"},
+		},
+	}
+	if !councilComplete(transcript, 7) {
+		t.Fatal("council was incomplete after all seven seats produced votes or failures")
+	}
+	forVotes, againstVotes := countVotes(transcript.Votes)
+	if got := resolutionFor(forVotes, againstVotes, 4, councilComplete(transcript, 7)); got != "no_majority" {
+		t.Fatalf("resolution = %q, want no_majority", got)
+	}
+	transcript.CouncilFailures = transcript.CouncilFailures[:3]
+	if councilComplete(transcript, 7) {
+		t.Fatal("council was complete with one seat unresolved")
+	}
+	if got := resolutionFor(forVotes, againstVotes, 4, councilComplete(transcript, 7)); got != "" {
+		t.Fatalf("pending resolution = %q, want empty", got)
+	}
+}
+
 func newLawyerTestRunner(t *testing.T, timeout time.Duration) *runner {
 	t.Helper()
 	dir := t.TempDir()
@@ -1669,11 +2376,12 @@ func newLawyerTestRunner(t *testing.T, timeout time.Duration) *runner {
 		records: records{dir: dir},
 		phase:   "initializing",
 		transcript: Transcript{
-			SchemaVersion: transcriptSchema,
-			CaseID:        "case",
-			Proposition:   "p",
-			Arguments:     []Argument{},
-			Votes:         []Vote{},
+			SchemaVersion:   transcriptSchema,
+			CaseID:          "case",
+			Proposition:     "p",
+			Arguments:       []Argument{},
+			Votes:           []Vote{},
+			CouncilFailures: []CouncilMemberFailure{},
 		},
 	}
 	runner.cond = sync.NewCond(&runner.mu)
@@ -1721,7 +2429,8 @@ func newCouncilTestRunner(t *testing.T, parallel bool, client responseClient, co
 				{Role: "plaintiff", Text: "for"},
 				{Role: "defendant", Text: "against"},
 			},
-			Votes: []Vote{},
+			Votes:           []Vote{},
+			CouncilFailures: []CouncilMemberFailure{},
 		},
 	}
 	runner.cond = sync.NewCond(&runner.mu)

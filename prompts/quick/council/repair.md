@@ -1,1 +1,1 @@
-The previous response was invalid: {{ERROR}}. Call submit_council_vote exactly once with a valid vote and concise rationale.
+The previous response was invalid: {{ERROR}}. Call submit_council_vote exactly once. Use vote=demonstrated only if the proposition satisfies the stated evidence standard; otherwise use vote=not_demonstrated. Provide a concise rationale that supports the selected vote.

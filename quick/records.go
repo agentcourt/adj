@@ -13,7 +13,7 @@ import (
 const (
 	inputSchema      = "adj.quick.input.v2"
 	runtimeSchema    = "adj.quick.runtime.v1"
-	transcriptSchema = "adj.quick.transcript.v1"
+	transcriptSchema = "adj.quick.transcript.v2"
 	resultSchema     = ResultSchemaVersion
 )
 

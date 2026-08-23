@@ -225,12 +225,13 @@ func (api *caseAPI) handleResult(w http.ResponseWriter, req *http.Request) {
 		"phase":             api.runner.phase,
 		"proposition":       api.runner.cfg.Proposition,
 		"evidence_standard": api.runner.cfg.EvidenceStandard,
-		"resolution":        resolutionFor(forVotes, againstVotes, api.runner.cfg.RequiredVotes, len(api.runner.transcript.Votes) == api.runner.cfg.CouncilSize),
+		"resolution":        resolutionFor(forVotes, againstVotes, api.runner.cfg.RequiredVotes, councilComplete(api.runner.transcript, api.runner.cfg.CouncilSize)),
 		"votes_for":         forVotes,
 		"votes_against":     againstVotes,
 		"required_votes":    api.runner.cfg.RequiredVotes,
 		"arguments":         append([]Argument(nil), api.runner.transcript.Arguments...),
 		"votes":             append([]Vote(nil), api.runner.transcript.Votes...),
+		"council_failures":  append([]CouncilMemberFailure(nil), api.runner.transcript.CouncilFailures...),
 	}
 	api.runner.mu.Unlock()
 	writeJSON(w, http.StatusOK, response)
@@ -515,10 +516,11 @@ func (api *caseAPI) executeTool(req doRequest) (map[string]any, error) {
 		return map[string]any{
 			"status":            api.runner.phase,
 			"evidence_standard": api.runner.cfg.EvidenceStandard,
-			"resolution":        resolutionFor(forVotes, againstVotes, api.runner.cfg.RequiredVotes, len(api.runner.transcript.Votes) == api.runner.cfg.CouncilSize),
+			"resolution":        resolutionFor(forVotes, againstVotes, api.runner.cfg.RequiredVotes, councilComplete(api.runner.transcript, api.runner.cfg.CouncilSize)),
 			"votes_for":         forVotes,
 			"votes_against":     againstVotes,
 			"required_votes":    api.runner.cfg.RequiredVotes,
+			"council_failures":  append([]CouncilMemberFailure(nil), api.runner.transcript.CouncilFailures...),
 		}, nil
 	case "send_work_notes":
 		if req.RoleID == "observer" {
@@ -572,6 +574,7 @@ func (api *caseAPI) caseViewLocked() map[string]any {
 		"council_size":      api.runner.cfg.CouncilSize,
 		"required_votes":    api.runner.cfg.RequiredVotes,
 		"evidence_standard": api.runner.cfg.EvidenceStandard,
+		"council_failures":  append([]CouncilMemberFailure(nil), api.runner.transcript.CouncilFailures...),
 	}
 }
 

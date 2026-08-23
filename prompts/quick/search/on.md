@@ -1,1 +1,1 @@
-Web search is enabled. Search when a material public fact is missing from the case record, and identify the source for each fact used. Use available browser or computer tools when they help assess relevant source content.
+Web search is enabled. Use it when public information may materially improve the analysis. Treat queries and returned content as research for this adjudication. Evaluate source authority and relevance, identify sources for facts used, and use available browser or computer tools when they help assess source content.

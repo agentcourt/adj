@@ -76,11 +76,12 @@ func runConfigured(ctx context.Context, cfg Config, client responseClient) (Resu
 	}
 	r.cond = sync.NewCond(&r.mu)
 	r.transcript = Transcript{
-		SchemaVersion: transcriptSchema,
-		CaseID:        cfg.CaseID,
-		Proposition:   cfg.Proposition,
-		Arguments:     []Argument{},
-		Votes:         []Vote{},
+		SchemaVersion:   transcriptSchema,
+		CaseID:          cfg.CaseID,
+		Proposition:     cfg.Proposition,
+		Arguments:       []Argument{},
+		Votes:           []Vote{},
+		CouncilFailures: []CouncilMemberFailure{},
 	}
 	manifest := casemanifest.New(Procedure, cfg.CaseID, cfg.RunID, r.startedAt)
 	if err := casemanifest.WriteAtomic(cfg.OutputDir, manifest); err != nil {
@@ -440,11 +441,17 @@ func councilCandidateRejectionPayload(rejection councilCandidateRejection) map[s
 }
 
 func addCouncilRoutePayload(payload map[string]any, prefix string, member CouncilMember) {
+	key := func(name string) string {
+		if prefix == "" {
+			return name
+		}
+		return prefix + "_" + name
+	}
 	optional := map[string]string{
-		prefix + "_endpoint_variant_id": member.EndpointVariantID,
-		prefix + "_provider_name":       member.ProviderName,
-		prefix + "_endpoint_tag":        member.EndpointTag,
-		prefix + "_quantization":        member.Quantization,
+		key("endpoint_variant_id"): member.EndpointVariantID,
+		key("provider_name"):       member.ProviderName,
+		key("endpoint_tag"):        member.EndpointTag,
+		key("quantization"):        member.Quantization,
 	}
 	for key, value := range optional {
 		if value != "" {
@@ -452,16 +459,16 @@ func addCouncilRoutePayload(payload map[string]any, prefix string, member Counci
 		}
 	}
 	if len(member.ProviderOnly) > 0 {
-		payload[prefix+"_provider_only"] = append([]string(nil), member.ProviderOnly...)
+		payload[key("provider_only")] = append([]string(nil), member.ProviderOnly...)
 	}
 	if len(member.ProviderQuantizations) > 0 {
-		payload[prefix+"_provider_quantizations"] = append([]string(nil), member.ProviderQuantizations...)
+		payload[key("provider_quantizations")] = append([]string(nil), member.ProviderQuantizations...)
 	}
 	if member.ProviderAllowFallbacks != nil {
-		payload[prefix+"_provider_allow_fallbacks"] = *member.ProviderAllowFallbacks
+		payload[key("provider_allow_fallbacks")] = *member.ProviderAllowFallbacks
 	}
 	if member.ProviderRequireParameters != nil {
-		payload[prefix+"_provider_require_parameters"] = *member.ProviderRequireParameters
+		payload[key("provider_require_parameters")] = *member.ProviderRequireParameters
 	}
 }
 
@@ -607,14 +614,29 @@ func (r *runner) runCouncil(ctx context.Context) error {
 	}
 	for _, member := range r.council {
 		vote, err := r.requestVote(ctx, member)
-		if err != nil {
-			return fmt.Errorf("council member %s: %w", member.MemberID, err)
+		if cause := context.Cause(ctx); cause != nil {
+			return cause
 		}
-		if err := r.recordCouncilVote(vote); err != nil {
+		if err != nil {
+			reason, ok := councilMemberFailureReason(err)
+			if !ok {
+				return fmt.Errorf("council member %s: %w", member.MemberID, err)
+			}
+			if recordErr := recordCouncilOutcome(ctx, func() error {
+				if err := r.recordCouncilFailure(member, reason, err); err != nil {
+					return fmt.Errorf("record council member %s failure: %w", member.MemberID, err)
+				}
+				return nil
+			}); recordErr != nil {
+				return recordErr
+			}
+			continue
+		}
+		if err := recordCouncilOutcome(ctx, func() error { return r.recordCouncilVote(vote) }); err != nil {
 			return err
 		}
 	}
-	return nil
+	return context.Cause(ctx)
 }
 
 type councilVoteResult struct {
@@ -634,13 +656,15 @@ func (r *runner) runCouncilParallel(ctx context.Context) error {
 		}()
 	}
 
-	votes := make([]*Vote, len(r.council))
+	outcomes := make([]councilVoteResult, len(r.council))
 	var requestErr error
 	for range r.council {
 		result := <-results
+		outcomes[result.index] = result
 		if result.err == nil {
-			vote := result.vote
-			votes[result.index] = &vote
+			continue
+		}
+		if _, ok := councilMemberFailureReason(result.err); ok {
 			continue
 		}
 		memberErr := fmt.Errorf("council member %s: %w", r.council[result.index].MemberID, result.err)
@@ -653,17 +677,76 @@ func (r *runner) runCouncilParallel(ctx context.Context) error {
 			requestErr = errors.Join(requestErr, memberErr)
 		}
 	}
+	if cause := context.Cause(ctx); cause != nil {
+		requestErr = errors.Join(requestErr, cause)
+	}
 	var recordErr error
-	for _, vote := range votes {
-		if vote == nil {
+	for index, outcome := range outcomes {
+		if outcome.err != nil {
+			reason, ok := councilMemberFailureReason(outcome.err)
+			if !ok {
+				continue
+			}
+			if err := recordCouncilOutcome(ctx, func() error {
+				if err := r.recordCouncilFailure(r.council[index], reason, outcome.err); err != nil {
+					return fmt.Errorf("record council member %s failure: %w", r.council[index].MemberID, err)
+				}
+				return nil
+			}); err != nil {
+				recordErr = errors.Join(recordErr, err)
+				break
+			}
 			continue
 		}
-		if err := r.recordCouncilVote(*vote); err != nil {
+		if err := recordCouncilOutcome(ctx, func() error { return r.recordCouncilVote(outcome.vote) }); err != nil {
 			recordErr = errors.Join(recordErr, err)
 			break
 		}
 	}
-	return errors.Join(requestErr, recordErr)
+	return errors.Join(requestErr, recordErr, context.Cause(ctx))
+}
+
+func recordCouncilOutcome(ctx context.Context, record func() error) error {
+	if cause := context.Cause(ctx); cause != nil {
+		return cause
+	}
+	recordErr := record()
+	return errors.Join(recordErr, context.Cause(ctx))
+}
+
+func (r *runner) recordCouncilFailure(member CouncilMember, reason string, cause error) error {
+	failure := CouncilMemberFailure{
+		MemberID:      member.MemberID,
+		Model:         member.Model,
+		PersonaFile:   member.PersonaFile,
+		Status:        "failed",
+		FailureReason: strings.TrimSpace(reason),
+		Message:       sanitizeText(cause.Error()),
+		ErrorClass:    string(openaiapi.ErrorClass(cause)),
+		FailedAt:      time.Now().UTC(),
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.transcript.CouncilFailures = append(r.transcript.CouncilFailures, failure)
+	if err := r.records.writeTranscript(cloneTranscript(r.transcript)); err != nil {
+		r.transcript.CouncilFailures = r.transcript.CouncilFailures[:len(r.transcript.CouncilFailures)-1]
+		return err
+	}
+	payload := map[string]any{
+		"member_id":      failure.MemberID,
+		"model":          failure.Model,
+		"persona_file":   failure.PersonaFile,
+		"status":         failure.Status,
+		"failure_reason": failure.FailureReason,
+		"message":        failure.Message,
+		"cause":          failure.Message,
+		"failed_at":      failure.FailedAt,
+	}
+	if failure.ErrorClass != "" {
+		payload["error_class"] = failure.ErrorClass
+	}
+	addCouncilRoutePayload(payload, "", member)
+	return r.appendEventLocked("council_member_removed", "system", payload)
 }
 
 func (r *runner) recordCouncilVote(vote Vote) error {
@@ -750,7 +833,7 @@ func (r *runner) result(caseAPIBase string, runErr error) Result {
 		Status:           status,
 		Phase:            r.phase,
 		Proposition:      r.cfg.Proposition,
-		Resolution:       resolutionFor(votesFor, votesAgainst, r.cfg.RequiredVotes, len(r.transcript.Votes) == r.cfg.CouncilSize),
+		Resolution:       resolutionFor(votesFor, votesAgainst, r.cfg.RequiredVotes, councilComplete(r.transcript, r.cfg.CouncilSize)),
 		CouncilSize:      r.cfg.CouncilSize,
 		RequiredVotes:    r.cfg.RequiredVotes,
 		EvidenceStandard: r.cfg.EvidenceStandard,
@@ -763,6 +846,7 @@ func (r *runner) result(caseAPIBase string, runErr error) Result {
 		Council:          append([]CouncilMember(nil), r.council...),
 		Arguments:        append([]Argument(nil), r.transcript.Arguments...),
 		Votes:            append([]Vote(nil), r.transcript.Votes...),
+		CouncilFailures:  append([]CouncilMemberFailure(nil), r.transcript.CouncilFailures...),
 		Events:           append([]Event(nil), r.events...),
 		Provider:         r.client.Accounting(),
 	}
@@ -777,7 +861,11 @@ func (r *runner) resolution() string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	forVotes, againstVotes := countVotes(r.transcript.Votes)
-	return resolutionFor(forVotes, againstVotes, r.cfg.RequiredVotes, len(r.transcript.Votes) == r.cfg.CouncilSize)
+	return resolutionFor(forVotes, againstVotes, r.cfg.RequiredVotes, councilComplete(r.transcript, r.cfg.CouncilSize))
+}
+
+func councilComplete(transcript Transcript, councilSize int) bool {
+	return len(transcript.Votes)+len(transcript.CouncilFailures) == councilSize
 }
 
 func countVotes(votes []Vote) (int, int) {
@@ -809,5 +897,6 @@ func resolutionFor(forVotes, againstVotes, requiredVotes int, complete bool) str
 func cloneTranscript(value Transcript) Transcript {
 	value.Arguments = append([]Argument(nil), value.Arguments...)
 	value.Votes = append([]Vote(nil), value.Votes...)
+	value.CouncilFailures = append([]CouncilMemberFailure(nil), value.CouncilFailures...)
 	return value
 }

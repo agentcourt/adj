@@ -421,7 +421,7 @@ func waitForTestProcessTermination(t *testing.T, pid int) {
 	deadline := time.Now().Add(3 * time.Second)
 	for {
 		state, err := testProcessState(pid)
-		if errors.Is(err, os.ErrNotExist) {
+		if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ESRCH) {
 			return
 		}
 		if err != nil {

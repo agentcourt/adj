@@ -74,6 +74,93 @@ func TestClientRecordsLogicalProviderRequest(t *testing.T) {
 	}
 }
 
+func TestClientRetriesOpenRouterInvalidPrompt(t *testing.T) {
+	t.Setenv("OPENROUTER_API_KEY", "")
+
+	client, err := New("key", "https://openrouter.ai/api/v1", false, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := client.SetMaxAttempts(2); err != nil {
+		t.Fatal(err)
+	}
+	attempts := 0
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		attempts++
+		if attempts == 1 {
+			return &http.Response{
+				StatusCode: http.StatusBadRequest,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`{"error":{"code":"invalid_prompt","message":"Invalid Responses API request"}}`)),
+				Request:    request,
+			}, nil
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body: io.NopCloser(strings.NewReader(`{
+  "id":"resp-2",
+  "object":"response",
+  "status":"completed",
+  "output":[],
+  "usage":{"input_tokens":10,"output_tokens":5,"total_tokens":15}
+}`)),
+			Request: request,
+		}, nil
+	})
+	client.client = openaisdk.NewClient(
+		option.WithAPIKey("key"),
+		option.WithBaseURL("https://openrouter.ai/api/v1"),
+		option.WithHTTPClient(&http.Client{Transport: transport}),
+	)
+	if _, err := client.CreateResponse(context.Background(), "model", []map[string]any{{"role": "user", "content": "test"}}, nil, "", nil); err != nil {
+		t.Fatal(err)
+	}
+	if attempts != 2 {
+		t.Fatalf("attempts = %d, want 2", attempts)
+	}
+}
+
+func TestClientExhaustsOpenRouterInvalidPromptAttempts(t *testing.T) {
+	client, err := New("key", "https://openrouter.ai/api/v1", false, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := client.SetMaxAttempts(2); err != nil {
+		t.Fatal(err)
+	}
+	attempts := 0
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		attempts++
+		return &http.Response{
+			StatusCode: http.StatusBadRequest,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       io.NopCloser(strings.NewReader(`{"error":{"code":"invalid_prompt","message":"Invalid Responses API request"}}`)),
+			Request:    request,
+		}, nil
+	})
+	client.client = openaisdk.NewClient(
+		option.WithAPIKey("key"),
+		option.WithBaseURL("https://openrouter.ai/api/v1"),
+		option.WithHTTPClient(&http.Client{Transport: transport}),
+	)
+	_, err = client.CreateResponse(context.Background(), "model", []map[string]any{{"role": "user", "content": "test"}}, nil, "", nil)
+	if err == nil {
+		t.Fatal("CreateResponse error = nil")
+	}
+	if attempts != 2 {
+		t.Fatalf("attempts = %d, want 2", attempts)
+	}
+	if got := ErrorClass(err); got != ProviderErrorTransient {
+		t.Fatalf("ErrorClass = %q, want %q", got, ProviderErrorTransient)
+	}
+	for _, text := range []string{"400 Bad Request", `"code":"invalid_prompt"`} {
+		if !strings.Contains(err.Error(), text) {
+			t.Fatalf("error %q omits %q", err, text)
+		}
+	}
+}
+
 func TestNewParsesDefaultTemperatureFromEnv(t *testing.T) {
 	t.Setenv("OPENAI_TEMPERATURE", "0.7")
 
@@ -246,7 +333,7 @@ func TestConvertTools(t *testing.T) {
 	t.Parallel()
 
 	tools, err := convertTools([]map[string]any{
-		{"type": "function", "name": "issue_order", "parameters": map[string]any{"type": "object"}, "strict": true},
+		{"type": "function", "name": "issue_order", "description": "Issue the selected order.", "parameters": map[string]any{"type": "object"}, "strict": true},
 		{"type": "function", "name": "read_record", "parameters": map[string]any{"type": "object"}},
 	}, true)
 	if err != nil {
@@ -260,7 +347,7 @@ func TestConvertTools(t *testing.T) {
 		t.Fatalf("json.Marshal error = %v", err)
 	}
 	text := string(raw)
-	for _, needle := range []string{"issue_order", "read_record", `"strict":true`, `"strict":false`, `"type":"web_search"`} {
+	for _, needle := range []string{"issue_order", "Issue the selected order.", "read_record", `"strict":true`, `"strict":false`, `"type":"web_search"`} {
 		if !strings.Contains(text, needle) {
 			t.Fatalf("convertTools JSON missing %q\n%s", needle, text)
 		}
@@ -557,6 +644,42 @@ func TestRetryHelpers(t *testing.T) {
 	}
 	if retryStatusCode(apiErr) != "429" {
 		t.Fatalf("retryStatusCode = %q", retryStatusCode(apiErr))
+	}
+	invalidPrompt := &openaisdk.Error{
+		Code:       "invalid_prompt",
+		Message:    "Invalid Responses API request",
+		StatusCode: http.StatusBadRequest,
+		Request:    &http.Request{Method: http.MethodPost, URL: &url.URL{Scheme: "https", Host: "openrouter.ai", Path: "/api/v1/responses"}},
+		Response:   &http.Response{StatusCode: http.StatusBadRequest},
+	}
+	client.baseURL = "https://openrouter.ai/api/v1"
+	if !client.shouldRetry(invalidPrompt, 0, 3) {
+		t.Fatal("shouldRetry OpenRouter invalid_prompt = false, want true")
+	}
+	if got := client.providerFailureClass(invalidPrompt); got != ProviderErrorTransient {
+		t.Fatalf("providerFailureClass OpenRouter invalid_prompt = %q, want %q", got, ProviderErrorTransient)
+	}
+	if got := client.providerFailureClass(errors.Join(context.Canceled, invalidPrompt)); got != "" {
+		t.Fatalf("providerFailureClass canceled OpenRouter invalid_prompt = %q, want empty", got)
+	}
+	client.baseURL = "https://api.openai.com/v1"
+	if client.shouldRetry(invalidPrompt, 0, 3) {
+		t.Fatal("shouldRetry OpenAI invalid_prompt = true, want false")
+	}
+	client.baseURL = "https://openrouter.ai/api/v1"
+	invalidPrompt.Code = "invalid_request_error"
+	if client.shouldRetry(invalidPrompt, 0, 3) {
+		t.Fatal("shouldRetry OpenRouter invalid_request_error = true, want false")
+	}
+	invalidPrompt.Code = "invalid_prompt"
+	invalidPrompt.Message = "Invalid request"
+	if client.shouldRetry(invalidPrompt, 0, 3) {
+		t.Fatal("shouldRetry OpenRouter invalid_prompt with different message = true, want false")
+	}
+	invalidPrompt.Message = "Invalid Responses API request"
+	invalidPrompt.Request.URL.Path = "/api/v1/chat/completions"
+	if client.shouldRetry(invalidPrompt, 0, 3) {
+		t.Fatal("shouldRetry OpenRouter invalid_prompt outside Responses API = true, want false")
 	}
 
 	var netErr net.Error = timeoutError{}

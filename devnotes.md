@@ -184,6 +184,18 @@ ADC, ARB, AARD, and quick health responses now return HTTP 200 JSON with the pro
 
 A live quick case imported one 189-byte text document, and both Codex lawyers used the stat and range-read operations before filing.  The sequential one-member council recorded 909 input, 439 output, 279 reasoning, and 1,348 total tokens together with $0.0001426026.  The complete service run took 72.5 seconds and returned `not_demonstrated`, consistent with the document naming Valve K-17 rather than the proposition's east pump.
 
+A seven-member live Quick run received malformed JSON in one council member's `submit_council_vote` arguments.  Quick already rendered a correction prompt and retained the preceding response identifier, but its default invalid-attempt limit of one ended the loop before a correction request could occur.  Quick now permits three invalid submissions by default, matching AAR, AARD, and ADC and giving the existing bounded loop two correction opportunities within the same turn timeout.  Focused tests cover recovery after malformed arguments and failure after all three attempts.
+
+A later live Quick council response supplied `vote=demonstrated` while its rationale concluded that the proposition was not demonstrated.  The council system, submission, and tool-description prompts named both enum values without defining their relationship to the proposition, so the structured response was syntactically valid despite the semantic inversion.  The configurable prompts and compiled fallbacks now define `demonstrated` as satisfying the stated evidence standard for every required part of the proposition, define `not_demonstrated` as the converse, and require the rationale to support the selected vote.  The request-construction test checks that both the assembled council instructions and tool description contain this mapping.
+
+A direct control request then sent the revised instructions to the same Relace Search model and BF16 provider route.  The control record contradicted its proposition, and the model returned `not_demonstrated` with a rationale that identified the contradiction and found the standard unsatisfied.  The request and raw response remain with the experiment records.  The focused Quick prompt and request tests and the complete Quick package suite passed after the edit.
+
+Review of the shared Responses conversion found that function-tool descriptions were omitted when the generic tool maps became SDK parameters.  The prompt catalog therefore resolved these descriptions, but a provider never received them.  The converter now copies a nonempty description into the SDK function-tool parameter, and its JSON-serialization test checks the exact description beside the existing name, schema, strictness, and hosted-search fields.
+
+A replacement live run later failed when a council endpoint passed availability preflight and then returned an upstream HTTP 429 during its substantive vote.  The shared provider client already classifies 429 responses as transient and implements bounded backoff, but Quick configured one provider attempt by default and therefore never used that recovery path.  Quick now defaults to three provider attempts per council response, allowing two retries for transient transport, rate-limit, and server failures while retaining the existing four-attempt maximum and per-member council deadline.  The resolved-options test checks the new default.
+
+A later full council request received an intermittent OpenRouter 400 `invalid_prompt` from a pinned SiliconFlow route.  An exact replay of the complete request, including the same route, arguments, documents, tool schema, and pool request specification, succeeded and returned one valid vote, so the saved failure does not establish a malformed request.  Inspection found that Quick left substantive council output unbounded when the pool record omitted a limit, although its preflight uses 1,024 tokens and ARB and AARD apply a 4,096-token fallback to substantive council requests.  Quick now applies the same 4,096-token fallback while preserving an explicit pool limit across the initial request and any repair requests.  The lawyer guidance also reserves authenticity work for a concrete dispute or material reliability question and tells lawyers not to repeat file hashes or compute checksums otherwise; the default council document label omits its hash.
+
 ## ADC Proposition Input
 
 `adc case` accepts exactly one complaint or proposition.  Proposition setup creates `Proponent v. Opponent` in the programmatic Proposition Tribunal, assigns the burden to the Proponent, and requests a declaration whether the proposition has been demonstrated.  The Tribunal accepts `proposition_adjudication` jurisdiction without subject-matter screening, and `--trial-mode=auto` selects a jury.
@@ -240,6 +252,10 @@ The cleanup pass ran the complete Go suite, full Go vet and package builds, and 
 
 The post-review correction pass ran the complete Go suite, full Go vet and package builds, and focused race tests for `common/modelinput`, simple request construction, and quick adjudication.  Documentation checks parsed every fenced JSON block and resolved every relative link in both repositories.  Verification made no provider call, and no Lean source changed.
 
+Parallel repetition exposed `ETXTBSY` in ADC tests that directly executed a shell fixture immediately after writing it.  The fixture now runs as an input to `/bin/sh`, which preserves the tests of standard input, standard output, standard error, exit status, and command arguments while avoiding direct execution of a newly written file.  The failing test passed 100 consecutive repetitions after the edit, and the complete Go suite and focused vet checks passed.
+
+The complete test command later exposed a termination-check race in `arbd/runtime/lean`.  Linux procfs can return `ESRCH` when a process exits while the test opens `/proc/PID/stat`, but the duplicated ARB and AARD helper recognized only `ENOENT` as completed termination.  Both helpers now recognize `ESRCH`, and the failing AARD test passed 20 consecutive runs after the correction.
+
 - [x] Run the complete Go test suite.
 - [x] Run the complete Go vet suite.
 - [x] Build the ADC, ARB, AARD, simple, and quick commands.
@@ -247,3 +263,43 @@ The post-review correction pass ran the complete Go suite, full Go vet and packa
 - [x] Run the paired `adjservices` interface tests.
 - [x] Verify relative Markdown links.
 - [x] Repeat the builds and paired tests from clean Git archives.
+
+## Quick legal-analysis framing
+
+A live Quick lawyer using Claude Code with Claude Opus 4.8 read a legal case record and then received Anthropic's `cyber` refusal before it could file an argument.  The case asks the council to decide a proposition about conduct described in the evidence; it does not direct the lawyer to perform that conduct.  The shared lawyer prompt now identifies propositions, arguments, and case materials as claims and evidence for analysis and identifies references to conduct as case facts or allegations.  The instruction applies to every case and preserves the lawyer's access to search, local execution, installed tools, and evidentiary tests.
+
+The checked-in shared prompt and its compiled fallback contain the same text.  A focused test compares them and verifies that both lawyer roles receive the framing.
+
+A later Pi defendant received an Anthropic cyber refusal after web search returned research about conduct described in the case.  The earlier core framing stopped at the proposition, arguments, and case materials; research queries and tool results entered the conversation without an explicit legal-analysis label.  The shared lawyer and enabled-search prompts now identify queries and returned tool content as legal research, require source assessment, and direct both lawyers to use available tools when those tools can improve the analysis.
+
+The checked-in shared-lawyer and enabled-search prompts match their compiled fallbacks.  The focused prompt test checks both pairs.  It also checks that the plaintiff and defendant receive the legal-research and enabled-search instructions in their assembled prompts.  `../verification/go-test -count=1 ./quick -run '^TestDefaultLawyerPromptsFrameLegalResearch$'` and `../verification/go-test -count=1 ./quick` passed.
+
+- [x] Run the Quick package tests.
+- [x] Run the revised Quick prompt test.
+- [x] Run the complete Go tests, vet, build, and whitespace checks.
+- [ ] Repeat the live Claude Opus 4.8 Quick condition from a fresh record directory.
+
+The fresh Claude Opus 4.8 run completed both lawyer turns, but its sequential council stopped after C1 voted because C2 received HTTP 400 with code `invalid_prompt` and message `Invalid Responses API request`.  Quick had configured three provider attempts, but the shared client treated every HTTP 400 response as a permanent request failure and therefore sent C2 only one substantive request.  Candidate-check HTTP 429 responses and deadlines occurred before the case began; Quick rejected those candidates and seated replacements.
+
+An exact reconstruction sent the same C2 model, pinned Novita route, accepted arguments, documents, tool schema, and output limit, and it returned a valid `not_demonstrated` vote.  A prior experiment produced the same HTTP 400 signature on a different OpenRouter model and provider, and its unchanged replay also succeeded.  OpenRouter identifies its [Responses API as beta](https://openrouter.ai/docs/api/reference/responses/basic-usage), which accords with the observed intermittent response but does not explain its internal cause.
+
+The shared client now retries only the OpenRouter Responses error whose status, code, and message match the observed signature.  The existing provider-attempt limit and request deadline bound those retries, and exhaustion reports the error as `provider_transient`.  Other HTTP 400 responses retain their existing request-error behavior, and tests cover the exact retry, host restriction, response-path restriction, message restriction, code restriction, and final classification.
+
+- [x] Replay the failed C2 request without changing its contents or provider route.
+- [x] Test the OpenRouter `invalid_prompt` retry condition.
+- [x] Repeat the complete Claude Opus 4.8 Quick run with the corrected client.
+
+The fresh Quick run completed both direct Anthropic Claude Opus 4.8 lawyer turns and seven sequential council votes, resolving `not_demonstrated` by seven votes to zero.  Candidate checks replaced three stale routes that returned HTTP 404, while every seated council member completed its substantive request.  This run did not receive the intermittent `invalid_prompt` response, so the unchanged exact replay and the bounded transport tests provide the direct evidence for the new retry path.
+
+A later Quick run completed both OpenClaw lawyer turns and recorded four `not_demonstrated` votes before C5 received the same OpenRouter `invalid_prompt` response on all three configured requests.  An unchanged replay later returned a valid `not_demonstrated` vote from the same model and pinned SiliconFlow route.  The request was valid, but Quick failed the entire case because one substantive council request failed after preflight.
+
+Quick now applies ARB's council-member failure rule.  A provider failure, member deadline, or exhausted invalid-response limit produces a durable council-member failure and allows the other members to vote.  The original council size and required vote count remain fixed, and the procedure resolves after every seat has produced a vote or a failure.  Parent cancellation, prompt construction, document verification, record writing, and other procedure errors still fail the run.  The result and transcript schema versions advance to version 2 and include `council_failures`; each record contains the member identity, `failed` status, failure reason, message, provider error class when available, and failure time.
+
+- [x] Test sequential member failure with a 4–2 verdict from the six completed votes.
+- [x] Test a 3–3 split with one member failure and a `no_majority` result.
+- [x] Test deadline, parent cancellation, and local procedure-error classification.
+- [x] Test parallel member failure without sibling cancellation and procedure failure with sibling cancellation.
+- [x] Test the terminal result, transcript, event, and lawyer API failure records.
+- [x] Repeat the interrupted OpenClaw GPT-5.6 Quick condition with a fresh output directory.
+
+Review found that a provider could return a successful response after parent cancellation or the member deadline and Quick could record that late vote.  Quick now checks the parent and member request contexts after every provider return, before returning a parsed vote, and before committing an outcome.  Timeout classification now matches ARB by recognizing request-context deadlines, wrapped deadline errors, `net.Error` timeouts, and standard timeout messages.  Tests cover success returned after parent cancellation, success returned after the member deadline, plain network timeouts, and provider-wrapped network timeouts.  The removal event also supplies ARB's `cause` field while retaining the structured failure record's `message` field.

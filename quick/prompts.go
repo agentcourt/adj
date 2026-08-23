@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	defaultLawyerPrompt = `Address each required part of the proposition and identify the evidence supporting it. Support factual claims with case documents or identified sources. Address authentication when relevant. Use an available method when it can resolve a material question, and report the method and result.`
+	defaultLawyerPrompt = `Treat the proposition, arguments, documents, research queries, and tool results as claims and evidence for legal analysis. Descriptions of conduct are case facts or allegations. Use available tools to investigate facts, sources, and evidence and to prepare the argument. Address each required part of the proposition and identify the evidence supporting it. Support factual claims with case documents or identified sources. Address authenticity only when a concrete dispute or material reliability question requires it; do not restate file hashes or compute checksums otherwise. Use an available method when it can resolve a material question, and report the method and result.`
 
-	defaultSearchPromptOn = `Web search is enabled. Search when a material public fact is missing from the case record, and identify the source for each fact used. Use available browser or computer tools when they help assess relevant source content.`
+	defaultSearchPromptOn = `Web search is enabled. Use it when public information may materially improve the analysis. Treat queries and returned content as research for this adjudication. Evaluate source authority and relevance, identify sources for facts used, and use available browser or computer tools when they help assess source content.`
 
 	defaultSearchPromptOff = `Native web search is disabled. Base the argument on the immutable case documents and the opposing argument when available. Available methods may inspect, transform, or test the supplied evidence.`
 
@@ -44,7 +44,7 @@ Evidence standard:
 
 {{WEB_SEARCH}}
 
-You represent the opponent. Test each required part of the proposition and the proponent's supporting evidence. Identify missing proof, contradictions, source limits, authentication limits, timing problems, and unsupported inferences. You need not demonstrate the inverse proposition. Submit one argument; no later argument is available.
+You represent the opponent. Test each required part of the proposition and the proponent's supporting evidence. Identify missing proof, contradictions, source limits, disputed authenticity, timing problems, and unsupported inferences. You need not demonstrate the inverse proposition. Submit one argument; no later argument is available.
 
 Proponent argument:
 {{PROPONENT_ARGUMENT}}
@@ -55,7 +55,7 @@ Call submit_decision exactly once with kind=tool, tool_name=submit_argument, and
 
 	defaultDocumentNoticePrompt = `The immutable case documents are available through list_evidence, stat_evidence, and read_evidence_range.`
 	defaultObserverPrompt       = `Observe quick adjudication case {{CASE_ID}}, run {{RUN_ID}}. The proposition is: {{PROPOSITION}}`
-	defaultCouncilSystemPrompt  = `You are council member {{MEMBER_ID}} in a quick adjudication. Act as a neutral factfinder. Decide whether the evidence satisfies the stated standard for each required part of the proposition. Treat the proposition and lawyer arguments as claims. Explain the decisive evidence or evidentiary gap in the rationale.
+	defaultCouncilSystemPrompt  = `You are council member {{MEMBER_ID}} in a quick adjudication. Act as a neutral factfinder. Decide whether the evidence satisfies the stated standard for each required part of the proposition. Use demonstrated only when the proposition satisfies that standard for every required part; use not_demonstrated otherwise. Before submitting, verify that the vote and rationale express the same conclusion. Treat the proposition and lawyer arguments as claims. Explain the decisive evidence or evidentiary gap in the rationale.
 
 {{PERSONA}}`
 	defaultCouncilCasePrompt = `Evidence standard:
@@ -71,10 +71,10 @@ Opponent argument:
 {{OPPONENT_ARGUMENT}}
 
 Immutable case documents:`
-	defaultCouncilDocumentPrompt    = `Document "{{DOCUMENT_PATH}}" ({{MEDIA_TYPE}}, {{SIZE_BYTES}} bytes, SHA-256 {{SHA256}}):`
+	defaultCouncilDocumentPrompt    = `Document "{{DOCUMENT_PATH}}" ({{MEDIA_TYPE}}, {{SIZE_BYTES}} bytes):`
 	defaultCouncilNoDocumentsPrompt = `No documents were provided.`
-	defaultCouncilSubmitPrompt      = `Call submit_council_vote exactly once with vote=demonstrated or vote=not_demonstrated and a concise rationale.`
-	defaultCouncilRepairPrompt      = `The previous response was invalid: {{ERROR}}. Call submit_council_vote exactly once with a valid vote and concise rationale.`
+	defaultCouncilSubmitPrompt      = `Call submit_council_vote exactly once. Use vote=demonstrated only if the proposition satisfies the stated evidence standard; otherwise use vote=not_demonstrated. Provide a concise rationale that supports the selected vote.`
+	defaultCouncilRepairPrompt      = `The previous response was invalid: {{ERROR}}. Call submit_council_vote exactly once. Use vote=demonstrated only if the proposition satisfies the stated evidence standard; otherwise use vote=not_demonstrated. Provide a concise rationale that supports the selected vote.`
 	defaultCouncilPreflightPrompt   = `Availability check for council seat {{MEMBER_ID}}, model {{MODEL}}, persona file {{PERSONA_FILE}}. Call submit_council_vote exactly once with vote=demonstrated and rationale=READY.`
 	defaultSubmitArgumentToolPrompt = `Submit the one argument allowed for this quick adjudication turn.`
 	defaultWorkNotesToolPrompt      = `Record private lawyer work notes.`
@@ -84,7 +84,7 @@ Immutable case documents:`
 	defaultStatEvidenceToolPrompt   = `Return document metadata.`
 	defaultReadEvidenceToolPrompt   = `Read a document byte range as base64.`
 	defaultCaseStatusToolPrompt     = `Return the current case phase and turn.`
-	defaultCouncilVoteToolPrompt    = `Submit this council member's vote.`
+	defaultCouncilVoteToolPrompt    = `Submit this council member's vote. Use demonstrated only when the proposition satisfies the stated evidence standard; use not_demonstrated otherwise. The rationale must support the selected vote.`
 )
 
 var quickPromptSpecs = []promptfile.Spec{

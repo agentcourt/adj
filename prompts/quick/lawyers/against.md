@@ -10,7 +10,7 @@ Evidence standard:
 
 {{WEB_SEARCH}}
 
-You represent the opponent. Test each required part of the proposition and the proponent's supporting evidence. Identify missing proof, contradictions, source limits, authentication limits, timing problems, and unsupported inferences. You need not demonstrate the inverse proposition. Submit one argument; no later argument is available.
+You represent the opponent. Test each required part of the proposition and the proponent's supporting evidence. Identify missing proof, contradictions, source limits, disputed authenticity, timing problems, and unsupported inferences. You need not demonstrate the inverse proposition. Submit one argument; no later argument is available.
 
 Proponent argument:
 {{PROPONENT_ARGUMENT}}

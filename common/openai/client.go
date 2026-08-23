@@ -327,10 +327,10 @@ func (c *Client) createResponse(
 			}
 			continue
 		}
-		return Response{}, &ProviderError{Class: providerFailureClass(err), Err: fmt.Errorf("responses request failed: %w", err)}
+		return Response{}, &ProviderError{Class: c.providerFailureClass(err), Err: fmt.Errorf("responses request failed: %w", err)}
 	}
 	if lastErr != nil {
-		return Response{}, &ProviderError{Class: providerFailureClass(lastErr), Err: fmt.Errorf("responses failed after retries: %w", lastErr)}
+		return Response{}, &ProviderError{Class: c.providerFailureClass(lastErr), Err: fmt.Errorf("responses failed after retries: %w", lastErr)}
 	}
 	return Response{}, &ProviderError{Class: ProviderErrorTransient, Err: fmt.Errorf("responses failed after retries")}
 }
@@ -696,7 +696,11 @@ func convertTools(tools []map[string]any, online bool) ([]responses.ToolUnionPar
 			if raw, ok := t["parameters"].(map[string]any); ok {
 				parameters = raw
 			}
-			out = append(out, responses.ToolParamOfFunction(name, parameters, strict))
+			tool := responses.ToolParamOfFunction(name, parameters, strict)
+			if description, _ := t["description"].(string); strings.TrimSpace(description) != "" {
+				tool.OfFunction.Description = openai.String(description)
+			}
+			out = append(out, tool)
 		case "web_search":
 			hasWebSearch = true
 			out = append(out, responses.ToolParamOfWebSearch(responses.WebSearchToolTypeWebSearch))
@@ -744,6 +748,9 @@ func (c *Client) shouldRetry(err error, attempt int, maxAttempts int) bool {
 		if code == 408 || code == 409 || code == 429 {
 			return true
 		}
+		if code == http.StatusBadRequest && c.isOpenRouterInvalidPrompt(apiErr) {
+			return true
+		}
 		return code >= 500 && code <= 599
 	}
 	var netErr net.Error
@@ -758,6 +765,29 @@ func (c *Client) shouldRetry(err error, attempt int, maxAttempts int) bool {
 		return true
 	}
 	return false
+}
+
+func (c *Client) isOpenRouterInvalidPrompt(apiErr *openai.Error) bool {
+	if apiErr == nil || apiErr.StatusCode != http.StatusBadRequest ||
+		!strings.EqualFold(strings.TrimSpace(apiErr.Code), "invalid_prompt") ||
+		!strings.EqualFold(strings.TrimSpace(apiErr.Message), "Invalid Responses API request") ||
+		apiErr.Request == nil || apiErr.Request.URL == nil ||
+		!strings.HasSuffix(strings.TrimRight(apiErr.Request.URL.Path, "/"), "/responses") {
+		return false
+	}
+	baseURL, err := url.Parse(strings.TrimSpace(c.baseURL))
+	return err == nil && strings.EqualFold(baseURL.Hostname(), "openrouter.ai")
+}
+
+func (c *Client) providerFailureClass(err error) ProviderErrorClass {
+	if errors.Is(err, context.Canceled) {
+		return ""
+	}
+	var apiErr *openai.Error
+	if errors.As(err, &apiErr) && c.isOpenRouterInvalidPrompt(apiErr) {
+		return ProviderErrorTransient
+	}
+	return providerFailureClass(err)
 }
 
 func providerFailureClass(err error) ProviderErrorClass {

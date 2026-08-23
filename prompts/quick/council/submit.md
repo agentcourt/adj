@@ -1,1 +1,1 @@
-Call submit_council_vote exactly once with vote=demonstrated or vote=not_demonstrated and a concise rationale.
+Call submit_council_vote exactly once. Use vote=demonstrated only if the proposition satisfies the stated evidence standard; otherwise use vote=not_demonstrated. Provide a concise rationale that supports the selected vote.

@@ -3,7 +3,9 @@ package quick
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"path/filepath"
 	"strings"
 	"time"
@@ -13,10 +15,25 @@ import (
 	openaiapi "github.com/jsmorph/adj/common/openai"
 )
 
+const (
+	councilFailureDeadline          = "deadline_expired"
+	councilFailureAttemptsExhausted = "attempts_exhausted"
+	councilFailureRequestFailed     = "request_failed"
+)
+
+type councilMemberFailureError struct {
+	reason string
+	err    error
+}
+
+func (e *councilMemberFailureError) Error() string { return e.err.Error() }
+func (e *councilMemberFailureError) Unwrap() error { return e.err }
+
 func (r *runner) requestVote(ctx context.Context, member CouncilMember) (Vote, error) {
 	if member.RequestSpec == nil {
 		return Vote{}, fmt.Errorf("request specification is required")
 	}
+	requestSpec := member.RequestSpec.WithFallbackMaxOutputTokens(DefaultCouncilMaxOutputTokens)
 	input, err := r.councilInput(member)
 	if err != nil {
 		return Vote{}, err
@@ -27,13 +44,25 @@ func (r *runner) requestVote(ctx context.Context, member CouncilMember) (Vote, e
 	previousResponseID := ""
 	invalidReasons := make([]string, 0, r.cfg.InvalidAttemptLimit)
 	for attempt := 0; attempt < r.cfg.InvalidAttemptLimit; attempt++ {
-		response, err := r.client.CreateResponseWithRequestSpec(requestCtx, *member.RequestSpec, input, tools, previousResponseID)
+		response, err := r.client.CreateResponseWithRequestSpec(requestCtx, requestSpec, input, tools, previousResponseID)
+		if contextErr := councilRequestContextError(ctx, requestCtx, err); contextErr != nil {
+			return Vote{}, contextErr
+		}
 		if err != nil {
+			if isCouncilTimeoutError(err) {
+				return Vote{}, &councilMemberFailureError{reason: councilFailureDeadline, err: err}
+			}
+			if openaiapi.ErrorClass(err) != "" {
+				return Vote{}, &councilMemberFailureError{reason: councilFailureRequestFailed, err: err}
+			}
 			return Vote{}, err
 		}
 		previousResponseID = response.ResponseID
 		vote, err := parseVote(member, response, r.cfg.MaxResponseBytes)
 		if err == nil {
+			if contextErr := councilRequestContextError(ctx, requestCtx, nil); contextErr != nil {
+				return Vote{}, contextErr
+			}
 			return vote, nil
 		}
 		invalidReasons = append(invalidReasons, err.Error())
@@ -46,10 +75,56 @@ func (r *runner) requestVote(ctx context.Context, member CouncilMember) (Vote, e
 			"content": repair,
 		})
 	}
-	return Vote{}, &openaiapi.ProviderError{
-		Class: openaiapi.ProviderErrorProtocol,
-		Err:   fmt.Errorf("invalid response limit reached: %s", strings.Join(invalidReasons, "; ")),
+	if contextErr := councilRequestContextError(ctx, requestCtx, nil); contextErr != nil {
+		return Vote{}, contextErr
 	}
+	return Vote{}, &councilMemberFailureError{
+		reason: councilFailureAttemptsExhausted,
+		err: &openaiapi.ProviderError{
+			Class: openaiapi.ProviderErrorProtocol,
+			Err:   fmt.Errorf("invalid response limit reached: %s", strings.Join(invalidReasons, "; ")),
+		},
+	}
+}
+
+func councilRequestContextError(parentCtx, requestCtx context.Context, requestErr error) error {
+	if cause := context.Cause(parentCtx); cause != nil {
+		return cause
+	}
+	cause := context.Cause(requestCtx)
+	if cause == nil {
+		return nil
+	}
+	if errors.Is(cause, context.DeadlineExceeded) {
+		if requestErr == nil {
+			requestErr = cause
+		}
+		return &councilMemberFailureError{reason: councilFailureDeadline, err: requestErr}
+	}
+	return cause
+}
+
+func isCouncilTimeoutError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "deadline exceeded") || strings.Contains(message, "timeout") || strings.Contains(message, "timed out")
+}
+
+func councilMemberFailureReason(err error) (string, bool) {
+	var failure *councilMemberFailureError
+	if !errors.As(err, &failure) || failure == nil || strings.TrimSpace(failure.reason) == "" {
+		return "", false
+	}
+	return failure.reason, true
 }
 
 func parseVote(member CouncilMember, response openaiapi.Response, maxResponseBytes int) (Vote, error) {

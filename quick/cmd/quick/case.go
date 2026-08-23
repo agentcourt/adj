@@ -175,6 +175,7 @@ func earlyResult(proposition, caseID, runID string, councilSize, requiredVotes i
 		Council:          []quick.CouncilMember{},
 		Arguments:        []quick.Argument{},
 		Votes:            []quick.Vote{},
+		CouncilFailures:  []quick.CouncilMemberFailure{},
 		Events:           []quick.Event{},
 	}
 }

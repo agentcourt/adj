@@ -9,15 +9,16 @@ import (
 )
 
 const (
-	Procedure               = "quick"
-	ResultSchemaVersion     = "adj.quick.result.v1"
-	DefaultCaseAPIAddr      = "127.0.0.1:0"
-	DefaultLawyerTimeout    = 15 * time.Minute
-	DefaultCouncilTimeout   = 3 * time.Minute
-	DefaultMaxResponseBytes = 1 << 20
-	DefaultMaxArgumentChars = 40_000
-	DefaultInvalidAttempts  = 1
-	DefaultProviderAttempts = 1
+	Procedure                           = "quick"
+	ResultSchemaVersion                 = "adj.quick.result.v2"
+	DefaultCaseAPIAddr                  = "127.0.0.1:0"
+	DefaultLawyerTimeout                = 15 * time.Minute
+	DefaultCouncilTimeout               = 3 * time.Minute
+	DefaultMaxResponseBytes             = 1 << 20
+	DefaultMaxArgumentChars             = 40_000
+	DefaultInvalidAttempts              = 3
+	DefaultProviderAttempts             = 3
+	DefaultCouncilMaxOutputTokens int64 = 4096
 )
 
 type Options struct {
@@ -112,6 +113,17 @@ type Vote struct {
 	SubmittedAt           time.Time        `json:"submitted_at"`
 }
 
+type CouncilMemberFailure struct {
+	MemberID      string    `json:"member_id"`
+	Model         string    `json:"model"`
+	PersonaFile   string    `json:"persona_file"`
+	Status        string    `json:"status"`
+	FailureReason string    `json:"failure_reason"`
+	Message       string    `json:"message"`
+	ErrorClass    string    `json:"error_class,omitempty"`
+	FailedAt      time.Time `json:"failed_at"`
+}
+
 type Event struct {
 	Sequence  int            `json:"sequence"`
 	Timestamp time.Time      `json:"timestamp"`
@@ -121,38 +133,40 @@ type Event struct {
 }
 
 type Transcript struct {
-	SchemaVersion string     `json:"schema_version"`
-	CaseID        string     `json:"case_id"`
-	Proposition   string     `json:"proposition"`
-	Arguments     []Argument `json:"arguments"`
-	Votes         []Vote     `json:"votes"`
+	SchemaVersion   string                 `json:"schema_version"`
+	CaseID          string                 `json:"case_id"`
+	Proposition     string                 `json:"proposition"`
+	Arguments       []Argument             `json:"arguments"`
+	Votes           []Vote                 `json:"votes"`
+	CouncilFailures []CouncilMemberFailure `json:"council_failures"`
 }
 
 type Result struct {
-	SchemaVersion    string               `json:"schema_version"`
-	Procedure        string               `json:"procedure"`
-	CaseID           string               `json:"case_id"`
-	RunID            string               `json:"run_id"`
-	Status           string               `json:"status"`
-	Phase            string               `json:"phase"`
-	Proposition      string               `json:"proposition"`
-	Resolution       string               `json:"resolution,omitempty"`
-	CouncilSize      int                  `json:"council_size"`
-	RequiredVotes    int                  `json:"required_votes"`
-	EvidenceStandard string               `json:"evidence_standard"`
-	VotesFor         int                  `json:"votes_for"`
-	VotesAgainst     int                  `json:"votes_against"`
-	Error            string               `json:"error,omitempty"`
-	ErrorClass       string               `json:"error_class,omitempty"`
-	CaseAPIBase      string               `json:"case_api_base,omitempty"`
-	StartedAt        time.Time            `json:"started_at"`
-	FinishedAt       time.Time            `json:"finished_at,omitempty"`
-	Documents        documents.Manifest   `json:"documents"`
-	Council          []CouncilMember      `json:"council"`
-	Arguments        []Argument           `json:"arguments"`
-	Votes            []Vote               `json:"votes"`
-	Events           []Event              `json:"events"`
-	Provider         openaiapi.Accounting `json:"provider"`
+	SchemaVersion    string                 `json:"schema_version"`
+	Procedure        string                 `json:"procedure"`
+	CaseID           string                 `json:"case_id"`
+	RunID            string                 `json:"run_id"`
+	Status           string                 `json:"status"`
+	Phase            string                 `json:"phase"`
+	Proposition      string                 `json:"proposition"`
+	Resolution       string                 `json:"resolution,omitempty"`
+	CouncilSize      int                    `json:"council_size"`
+	RequiredVotes    int                    `json:"required_votes"`
+	EvidenceStandard string                 `json:"evidence_standard"`
+	VotesFor         int                    `json:"votes_for"`
+	VotesAgainst     int                    `json:"votes_against"`
+	Error            string                 `json:"error,omitempty"`
+	ErrorClass       string                 `json:"error_class,omitempty"`
+	CaseAPIBase      string                 `json:"case_api_base,omitempty"`
+	StartedAt        time.Time              `json:"started_at"`
+	FinishedAt       time.Time              `json:"finished_at,omitempty"`
+	Documents        documents.Manifest     `json:"documents"`
+	Council          []CouncilMember        `json:"council"`
+	Arguments        []Argument             `json:"arguments"`
+	Votes            []Vote                 `json:"votes"`
+	CouncilFailures  []CouncilMemberFailure `json:"council_failures"`
+	Events           []Event                `json:"events"`
+	Provider         openaiapi.Accounting   `json:"provider"`
 }
 
 type inputRecord struct {
