@@ -17,7 +17,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TIMEOUT_EXIT_CODE = 124
-STOP_EXIT_CODE = 130
 
 
 @dataclass(frozen=True)
@@ -152,8 +151,6 @@ def terminate_process(proc: subprocess.Popen, grace_seconds: int = 10) -> int:
 def run_command(
     cmd: list[str],
     cwd: Path,
-    active_pid: Path,
-    stop_file: Path,
     raw_path: Path,
     log_path: Path,
     expected_rows: int,
@@ -179,7 +176,6 @@ def run_command(
             text=True,
             start_new_session=True,
         )
-        active_pid.write_text(str(proc.pid) + "\n")
         while True:
             code = proc.poll()
             now = time.monotonic()
@@ -207,10 +203,6 @@ def run_command(
                     )
                     return CommandResult(int(code), "command_failed", None, elapsed)
                 return CommandResult(0, "finished", None, elapsed)
-
-            if stop_file.exists():
-                terminate_process(proc)
-                return CommandResult(STOP_EXIT_CODE, "stopped", None, round(now - started, 1))
 
             elapsed_seconds = now - started
             seconds_since_progress = now - last_activity
@@ -267,10 +259,6 @@ def run_command(
             time.sleep(2)
     finally:
         log_handle.close()
-        try:
-            active_pid.unlink()
-        except FileNotFoundError:
-            pass
 
 
 def main() -> int:
@@ -291,6 +279,8 @@ def main() -> int:
     out_dir = Path(args.out)
     if not out_dir.is_absolute():
         out_dir = ROOT / out_dir
+    if out_dir.exists() and (not out_dir.is_dir() or any(out_dir.iterdir())):
+        raise SystemExit(f"{display_path(out_dir)} must be absent or an empty directory")
     questions_path = Path(args.questions)
     if not questions_path.is_absolute():
         questions_path = ROOT / questions_path
@@ -314,34 +304,12 @@ def main() -> int:
     specs_dir.mkdir(parents=True, exist_ok=True)
     runs_dir.mkdir(parents=True, exist_ok=True)
 
-    stop_file = out_dir / "STOP"
-    active_pid = out_dir / "ACTIVE_PID"
-    state_path = out_dir / "progress.jsonl"
     summary_csv = out_dir / "variant_summary.csv"
-    try:
-        active_pid.unlink()
-    except FileNotFoundError:
-        pass
-
-    prior_by_index: dict[int, dict] = {}
-    if state_path.exists():
-        for line in state_path.read_text().splitlines():
-            if not line.strip():
-                continue
-            try:
-                row = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            index = row.get("index")
-            if isinstance(index, int):
-                prior_by_index[index] = row
 
     send_event(
         "run_started",
         run_dir=display_path(out_dir),
-        stop_file=display_path(stop_file),
         total_variants=len(variants),
-        already_completed_variants=len(prior_by_index),
         expected_rows_per_variant=expected_rows,
         questions=display_path(questions_path),
         prompt=args.prompt,
@@ -351,32 +319,17 @@ def main() -> int:
         variant_timeout=args.variant_timeout,
     )
 
-    completed = len(prior_by_index)
-    succeeded = sum(1 for row in prior_by_index.values() if row.get("run_exit_code") == 0)
-    failed = sum(1 for row in prior_by_index.values() if row.get("run_exit_code") not in (None, 0))
-    summaries: list[dict] = [prior_by_index[i] for i in sorted(prior_by_index)]
+    completed = 0
+    succeeded = 0
+    failed = 0
+    summaries: list[dict] = []
 
     for index, spec in enumerate(variants, 1):
-        if index in prior_by_index:
-            continue
-
         provider = spec.get("provider_name") or "unknown-provider"
         tag = spec.get("endpoint_tag") or "unknown-endpoint"
         quant = spec.get("quantization") or "unknown"
         model_id = spec.get("openrouter_model_id") or "unknown-model"
         variant_label = f"{index:02d}/{len(variants)} {model_id} @ {provider} ({tag}, {quant})"
-
-        if stop_file.exists():
-            send_event(
-                "run_stopped",
-                completed_variants=completed,
-                total_variants=len(variants),
-                succeeded=succeeded,
-                failed=failed,
-                next_variant=variant_label,
-                stop_file=display_path(stop_file),
-            )
-            break
 
         spec_path = specs_dir / f"{index:02d}-{safe_part(model_id)}-{safe_part(provider)}-{safe_part(tag)}.json"
         spec_path.write_text(json.dumps(spec, indent=2, sort_keys=True) + "\n")
@@ -390,7 +343,6 @@ def main() -> int:
             total_variants=len(variants),
             current_variant=variant_label,
             variant_run_dir=display_path(variant_dir),
-            stop_file=display_path(stop_file),
         )
 
         cmd = [
@@ -413,8 +365,6 @@ def main() -> int:
         result = run_command(
             cmd,
             ROOT,
-            active_pid,
-            stop_file,
             raw_path,
             log_path,
             expected_rows,
@@ -426,17 +376,6 @@ def main() -> int:
         )
         code = result.exit_code
         variant_status = result.status
-        if code == STOP_EXIT_CODE:
-            send_event(
-                "run_stopped",
-                completed_variants=completed,
-                total_variants=len(variants),
-                succeeded=succeeded,
-                failed=failed,
-                stopped_during=variant_label,
-                stop_file=display_path(stop_file),
-            )
-            break
 
         if code == 0:
             score_cmd = ["uv", "run", "tools/score_eval.py", "score", "--run", display_path(variant_dir), "--questions", display_path(questions_path)]
@@ -467,8 +406,6 @@ def main() -> int:
             **summarize_variant(variant_dir),
         }
         summaries.append(summary)
-        with state_path.open("a") as f:
-            f.write(json.dumps(summary, sort_keys=True) + "\n")
         send_event(
             "variant_finished",
             completed_variants=completed,
@@ -496,15 +433,11 @@ def main() -> int:
         "timed_out": sum(1 for row in summaries if row_timed_out(row)),
         "score_failed": sum(1 for row in summaries if row_score_failed(row)),
         "command_failed": sum(1 for row in summaries if row_command_failed(row)),
-        "stopped": stop_file.exists() and completed < len(variants),
-        "stop_file": display_path(stop_file),
         "prompt": args.prompt,
         "summary_csv": display_path(summary_csv),
     }
     (out_dir / "summary.json").write_text(json.dumps(final, indent=2, sort_keys=True) + "\n")
     send_event("run_finished", **final)
-    if final["stopped"]:
-        return STOP_EXIT_CODE
     return 1 if final["command_failed"] or final["score_failed"] else 0
 
 

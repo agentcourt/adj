@@ -6,15 +6,8 @@
   "outputs": [
     "endpoint_variants.jsonl",
     "endpoint_variants.csv",
-    "variant_summary.jsonl",
-    "manifest.jsonl",
-    "specs/*.json",
     "summary.json"
   ],
-  "source_directory": "results/model-roots-20-combined-variants-and-evals-20260529T1518Z",
-  "source_eval_summary_file": "results/model-roots-20-combined-variants-and-evals-20260529T1518Z/evals/variant_summary.jsonl",
-  "source_manifest_file": "results/model-roots-20-combined-variants-and-evals-20260529T1518Z/evals/manifest.jsonl",
-  "source_variant_file": "results/model-roots-20-combined-variants-and-evals-20260529T1518Z/variants/endpoint_variants.jsonl",
   "survivor_combined_indexes": [
     1,
     2,

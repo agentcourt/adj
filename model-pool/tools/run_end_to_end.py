@@ -8,7 +8,6 @@ import csv
 import datetime as dt
 import json
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -77,27 +76,13 @@ def command_env() -> dict[str, str]:
     return env
 
 
-def append_command_record(commands_path: Path, record: dict[str, Any]) -> None:
-    with commands_path.open("a") as handle:
-        handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
-
-
 def run_command(
     cmd: list[str],
     *,
     cwd: Path,
-    commands_path: Path,
     stage: str,
     stdout_path: Path | None = None,
 ) -> None:
-    record = {
-        "at": utc_now(),
-        "stage": stage,
-        "cmd": cmd,
-        "cwd": display_path(cwd),
-        "stdout_path": display_path(stdout_path) if stdout_path else None,
-    }
-    append_command_record(commands_path, record)
     event("command_started", stage=stage, cmd=cmd)
 
     stdout_handle = None
@@ -116,34 +101,21 @@ def run_command(
             bufsize=1,
         )
         assert process.stdout is not None
-        tail: list[str] = []
         for line in process.stdout:
             print(line, end="")
             if stdout_handle is not None:
                 stdout_handle.write(line)
-            tail.append(line.rstrip())
-            tail = tail[-20:]
         code = process.wait()
     finally:
         if stdout_handle is not None:
             stdout_handle.close()
 
-    append_command_record(
-        commands_path,
-        {
-            "at": utc_now(),
-            "stage": stage,
-            "cmd": cmd,
-            "exit_code": code,
-            "tail": tail[-8:],
-        },
-    )
     if code != 0:
         raise RuntimeError(f"{stage} command failed with exit code {code}: {' '.join(cmd)}")
     event("command_finished", stage=stage, exit_code=code)
 
 
-def run_inventory(args: argparse.Namespace, run_dir: Path, commands_path: Path) -> Path:
+def run_inventory(args: argparse.Namespace, run_dir: Path) -> Path:
     out_dir = run_dir / "inventory"
     cmd = [
         "uv",
@@ -168,11 +140,11 @@ def run_inventory(args: argparse.Namespace, run_dir: Path, commands_path: Path) 
         cmd.extend(["--sample-models", str(args.root_count)])
     if args.inventory_sleep:
         cmd.extend(["--sleep", str(args.inventory_sleep)])
-    run_command(cmd, cwd=ROOT, commands_path=commands_path, stage="inventory")
+    run_command(cmd, cwd=ROOT, stage="inventory")
     return out_dir
 
 
-def run_eval(args: argparse.Namespace, run_dir: Path, inventory_dir: Path, commands_path: Path) -> Path:
+def run_eval(args: argparse.Namespace, run_dir: Path, inventory_dir: Path) -> Path:
     out_dir = run_dir / "eval"
     cmd = [
         "uv",
@@ -196,7 +168,7 @@ def run_eval(args: argparse.Namespace, run_dir: Path, inventory_dir: Path, comma
     ]
     if args.eval_variant_timeout is not None:
         cmd.extend(["--variant-timeout", str(args.eval_variant_timeout)])
-    run_command(cmd, cwd=ROOT, commands_path=commands_path, stage="eval")
+    run_command(cmd, cwd=ROOT, stage="eval")
     return out_dir
 
 
@@ -224,30 +196,18 @@ def load_eval_summary(path: Path) -> list[dict[str, Any]]:
     return load_jsonl(path)
 
 
-def copy_spec_for_index(specs_dir: Path, out_specs_dir: Path, index: int) -> None:
-    matches = sorted(specs_dir.glob(f"{index:02d}-*.json"))
-    if len(matches) != 1:
-        raise RuntimeError(f"expected one spec for variant index {index}, found {len(matches)}")
-    shutil.copy2(matches[0], out_specs_dir / matches[0].name)
-
-
 def filter_variants(args: argparse.Namespace, run_dir: Path, inventory_dir: Path, eval_dir: Path) -> Path:
     out_dir = run_dir / "filtered"
     summary_path = out_dir / "summary.json"
-    variants_out = out_dir / "endpoint_variants.jsonl"
     variant_path = inventory_dir / "endpoint_variants.jsonl"
     eval_summary_path = eval_dir / "variant_summary.csv"
-    specs_dir = eval_dir / "specs"
-    out_specs_dir = out_dir / "specs"
-    out_specs_dir.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     variants = load_jsonl(variant_path)
     summaries = load_eval_summary(eval_summary_path)
     summary_by_index = {row_index(row, position): row for position, row in enumerate(summaries, start=1)}
 
     survivor_variants: list[dict[str, Any]] = []
-    survivor_summaries: list[dict[str, Any]] = []
-    survivor_manifest: list[dict[str, Any]] = []
     removed_variants: list[dict[str, Any]] = []
     for position, variant in enumerate(variants, start=1):
         index = row_index(variant, position)
@@ -305,30 +265,10 @@ def filter_variants(args: argparse.Namespace, run_dir: Path, inventory_dir: Path
         survivor["filter_deliberation_score"] = score
         survivor_variants.append(survivor)
 
-        summary_row = dict(eval_row)
-        summary_row["combined_index"] = index
-        summary_row["provider_error_count"] = provider_errors
-        summary_row["deliberation_score"] = score
-        survivor_summaries.append(summary_row)
-        survivor_manifest.append(
-            {
-                "combined_index": index,
-                "endpoint_variant_id": survivor.get("endpoint_variant_id"),
-                "openrouter_model_id": survivor.get("openrouter_model_id"),
-                "provider_name": survivor.get("provider_name"),
-                "endpoint_tag": survivor.get("endpoint_tag"),
-                "quantization": survivor.get("quantization"),
-                "run_dir": eval_row.get("variant_run_dir") or eval_row.get("run_dir"),
-            }
-        )
-        copy_spec_for_index(specs_dir, out_specs_dir, index)
-
     if not survivor_variants:
         raise RuntimeError("filter produced zero survivor variants")
 
     write_jsonl(out_dir / "endpoint_variants.jsonl", survivor_variants)
-    write_jsonl(out_dir / "variant_summary.jsonl", survivor_summaries)
-    write_jsonl(out_dir / "manifest.jsonl", survivor_manifest)
     write_jsonl(out_dir / "removed_variants.jsonl", removed_variants)
 
     fields = [
@@ -350,23 +290,19 @@ def filter_variants(args: argparse.Namespace, run_dir: Path, inventory_dir: Path
         "created_at": utc_now(),
         "source_variant_file": display_path(variant_path),
         "source_eval_summary_file": display_path(eval_summary_path),
-        "source_specs_dir": display_path(specs_dir),
         "filter_criteria": {
             "provider_error_count": args.filter_provider_error_count,
             "deliberation_score_minimum": args.filter_min_deliberation_score,
         },
         "total_variants": len(variants),
         "survivor_count": len(survivor_variants),
-        "survivor_combined_indexes": [row["combined_index"] for row in survivor_summaries],
+        "survivor_combined_indexes": [row["combined_index"] for row in survivor_variants],
         "removed_count": len(removed_variants),
         "removed_variant_indexes": [row["combined_index"] for row in removed_variants],
         "outputs": [
             "endpoint_variants.jsonl",
             "endpoint_variants.csv",
-            "variant_summary.jsonl",
-            "manifest.jsonl",
             "removed_variants.jsonl",
-            "specs/*.json",
             "summary.json",
         ],
     }
@@ -387,7 +323,7 @@ def selected_gene_indexes(args: argparse.Namespace) -> list[int]:
     return list(range(args.gene_count))
 
 
-def run_genes(args: argparse.Namespace, run_dir: Path, filtered_dir: Path, commands_path: Path) -> dict[int, Path]:
+def run_genes(args: argparse.Namespace, run_dir: Path, filtered_dir: Path) -> dict[int, Path]:
     out: dict[int, Path] = {}
     for gene_index in selected_gene_indexes(args):
         gene_dir = run_dir / "genes" / f"gene-{gene_index}"
@@ -425,7 +361,7 @@ def run_genes(args: argparse.Namespace, run_dir: Path, filtered_dir: Path, comma
             "--retry-sleep",
             str(args.retry_sleep),
         ]
-        run_command(cmd, cwd=ROOT, commands_path=commands_path, stage=f"genes:{gene_index}")
+        run_command(cmd, cwd=ROOT, stage=f"genes:{gene_index}")
     return out
 
 
@@ -436,24 +372,13 @@ def validate_gene_summaries(args: argparse.Namespace, gene_dirs: dict[int, Path]
         summary = load_json(inference_dir / "summary.json")
         completion_errors = int(summary.get("completion_error_count") or 0)
         embedding_errors = int(summary.get("embedding_error_count") or 0)
-        if args.strict_gene_completions and (completion_errors or embedding_errors):
+        if completion_errors or embedding_errors:
             raise RuntimeError(f"gene {gene_index}: completion or embedding errors present")
         if summary.get("records_written") != expected:
             raise RuntimeError(f"gene {gene_index}: expected {expected} records, found {summary.get('records_written')}")
         embedding_count = int(summary.get("embedding_count") or 0)
-        if args.strict_gene_completions and embedding_count != expected:
+        if embedding_count != expected:
             raise RuntimeError(f"gene {gene_index}: expected {expected} embeddings, found {summary.get('embedding_count')}")
-        if embedding_count < 1:
-            raise RuntimeError(f"gene {gene_index}: no usable embeddings")
-        if completion_errors or embedding_errors:
-            event(
-                "gene_errors_allowed",
-                gene_index=gene_index,
-                completion_error_count=completion_errors,
-                embedding_error_count=embedding_errors,
-                embedding_count=embedding_count,
-                expected_records=expected,
-            )
         embedding_counts.append(embedding_count)
     if not embedding_counts:
         raise RuntimeError("no gene runs selected")
@@ -463,7 +388,7 @@ def validate_gene_summaries(args: argparse.Namespace, gene_dirs: dict[int, Path]
     return min(args.pca_dimensions, min_embeddings)
 
 
-def run_pca(args: argparse.Namespace, run_dir: Path, gene_dirs: dict[int, Path], pca_dimensions: int, commands_path: Path) -> dict[int, Path]:
+def run_pca(args: argparse.Namespace, run_dir: Path, gene_dirs: dict[int, Path], pca_dimensions: int) -> dict[int, Path]:
     out: dict[int, Path] = {}
     for gene_index, inference_dir in sorted(gene_dirs.items()):
         pca_dir = run_dir / "genes" / f"gene-{gene_index}" / "pca"
@@ -480,7 +405,7 @@ def run_pca(args: argparse.Namespace, run_dir: Path, gene_dirs: dict[int, Path],
             "--dimensions",
             str(pca_dimensions),
         ]
-        run_command(cmd, cwd=ROOT, commands_path=commands_path, stage=f"pca:{gene_index}")
+        run_command(cmd, cwd=ROOT, stage=f"pca:{gene_index}")
     return out
 
 
@@ -490,7 +415,6 @@ def run_clustering(
     pca_dirs: dict[int, Path],
     survivor_count: int,
     pca_dimensions: int,
-    commands_path: Path,
 ) -> Path:
     out_dir = run_dir / "clusters"
     expected_rows = survivor_count * args.samples_per_gene
@@ -508,24 +432,23 @@ def run_clustering(
         "--max-k",
         str(args.max_k),
     ]
-    if args.strict_gene_completions:
-        cmd.extend(
-            [
-                "--expected-rows-per-gene",
-                str(expected_rows),
-                "--expected-variants-per-gene",
-                str(survivor_count),
-                "--expected-samples-per-variant",
-                str(args.samples_per_gene),
-            ]
-        )
+    cmd.extend(
+        [
+            "--expected-rows-per-gene",
+            str(expected_rows),
+            "--expected-variants-per-gene",
+            str(survivor_count),
+            "--expected-samples-per-variant",
+            str(args.samples_per_gene),
+        ]
+    )
     for _, pca_dir in sorted(pca_dirs.items()):
         cmd.extend(["--pca-records", display_path(pca_dir / "pca-records.jsonl")])
-    run_command(cmd, cwd=ROOT, commands_path=commands_path, stage="clusters")
+    run_command(cmd, cwd=ROOT, stage="clusters")
     return out_dir
 
 
-def run_aggregate(args: argparse.Namespace, run_dir: Path, filtered_dir: Path, clusters_dir: Path, commands_path: Path) -> Path:
+def run_aggregate(args: argparse.Namespace, run_dir: Path, filtered_dir: Path, clusters_dir: Path) -> Path:
     out_dir = run_dir / "variant-persona-clusters"
     cmd = [
         "uv",
@@ -541,15 +464,12 @@ def run_aggregate(args: argparse.Namespace, run_dir: Path, filtered_dir: Path, c
         "--out",
         display_path(out_dir),
     ]
-    if args.strict_gene_completions:
-        cmd.extend(["--expected-samples-per-gene", str(args.samples_per_gene)])
-    else:
-        cmd.append("--allow-missing-gene-samples")
-    run_command(cmd, cwd=ROOT, commands_path=commands_path, stage="aggregate")
+    cmd.extend(["--expected-samples-per-gene", str(args.samples_per_gene)])
+    run_command(cmd, cwd=ROOT, stage="aggregate")
     return out_dir
 
 
-def run_pool(args: argparse.Namespace, run_dir: Path, aggregate_dir: Path, commands_path: Path) -> Path:
+def run_pool(args: argparse.Namespace, run_dir: Path, aggregate_dir: Path) -> Path:
     out_dir = run_dir / "pool"
     pool_path = out_dir / "pool.jsonl"
     cmd = [
@@ -571,7 +491,7 @@ def run_pool(args: argparse.Namespace, run_dir: Path, aggregate_dir: Path, comma
     ]
     if args.no_dedupe_equivalent_endpoints:
         cmd.append("--no-dedupe-equivalent-endpoints")
-    run_command(cmd, cwd=ROOT, commands_path=commands_path, stage="pool", stdout_path=out_dir / "sample.log")
+    run_command(cmd, cwd=ROOT, stage="pool", stdout_path=out_dir / "sample.log")
     return out_dir
 
 
@@ -621,43 +541,6 @@ def collect_summary(run_dir: Path, pca_dimensions: int | None = None) -> dict[st
     return summary
 
 
-def build_manifest(args: argparse.Namespace, run_id: str, run_dir: Path) -> dict[str, Any]:
-    return {
-        "created_at": utc_now(),
-        "run_id": run_id,
-        "run_dir": display_path(run_dir),
-        "stages": STAGES,
-        "parameters": {
-            "root_count": args.root_count,
-            "root_seed": args.root_seed,
-            "model_id": args.model_id,
-            "questions": args.questions,
-            "prompt": args.prompt,
-            "eval_trials": args.eval_trials,
-            "filter_provider_error_count": args.filter_provider_error_count,
-            "filter_min_deliberation_score": args.filter_min_deliberation_score,
-            "genes": args.genes,
-            "gene_count": args.gene_count,
-            "gene_index": args.gene_index,
-            "persona": args.persona,
-            "samples_per_gene": args.samples_per_gene,
-            "completion_attempts": args.completion_attempts,
-            "retry_sleep": args.retry_sleep,
-            "strict_gene_completions": args.strict_gene_completions,
-            "pca_dimensions": args.pca_dimensions,
-            "strict_pca_dimensions": args.strict_pca_dimensions,
-            "min_k": args.min_k,
-            "max_k": args.max_k,
-            "pool_size": args.pool_size,
-            "pool_seed": args.pool_seed,
-            "no_dedupe_equivalent_endpoints": args.no_dedupe_equivalent_endpoints,
-            "timeout": args.timeout,
-            "eval_no_progress_timeout": args.eval_no_progress_timeout,
-            "eval_variant_timeout": args.eval_variant_timeout,
-        },
-    }
-
-
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the adj endpoint-variant model-pool pipeline.")
     parser.add_argument("--run-id", default=None, help="Run id under --out-root. Default: e2e-<UTC timestamp>.")
@@ -684,7 +567,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--completion-attempts", type=int, default=3)
     parser.add_argument("--retry-sleep", type=float, default=2.0)
-    parser.add_argument("--strict-gene-completions", action="store_true")
     parser.add_argument("--pca-dimensions", type=int, default=3)
     parser.add_argument("--strict-pca-dimensions", action="store_true")
     parser.add_argument("--min-k", type=int, default=2)
@@ -737,23 +619,21 @@ def main(argv: list[str]) -> int:
     args = parse_args(argv)
     run_id = args.run_id or f"e2e-{timestamp()}"
     run_dir = resolve_path(args.out_root) / run_id
-    commands_path = run_dir / "commands.jsonl"
     summary_path = run_dir / "summary.json"
 
     if run_dir.exists():
         raise SystemExit(f"{display_path(run_dir)} already exists; use a different --run-id")
     run_dir.mkdir(parents=True, exist_ok=True)
-    write_json(run_dir / "manifest.json", build_manifest(args, run_id, run_dir))
     event("run_started", run_id=run_id, run_dir=display_path(run_dir))
 
     pca_dimensions: int | None = None
     try:
-        inventory_dir = run_inventory(args, run_dir, commands_path)
+        inventory_dir = run_inventory(args, run_dir)
         if should_stop(args, "inventory"):
             write_json(summary_path, collect_summary(run_dir))
             return 0
 
-        eval_dir = run_eval(args, run_dir, inventory_dir, commands_path)
+        eval_dir = run_eval(args, run_dir, inventory_dir)
         if should_stop(args, "eval"):
             write_json(summary_path, collect_summary(run_dir))
             return 0
@@ -764,30 +644,30 @@ def main(argv: list[str]) -> int:
             return 0
 
         survivor_count = int(load_json(filtered_dir / "summary.json")["survivor_count"])
-        gene_dirs = run_genes(args, run_dir, filtered_dir, commands_path)
+        gene_dirs = run_genes(args, run_dir, filtered_dir)
+        pca_dimensions = validate_gene_summaries(args, gene_dirs, survivor_count)
         if should_stop(args, "genes"):
-            write_json(summary_path, collect_summary(run_dir))
+            write_json(summary_path, collect_summary(run_dir, pca_dimensions))
             return 0
 
-        pca_dimensions = validate_gene_summaries(args, gene_dirs, survivor_count)
         if pca_dimensions != args.pca_dimensions:
             event("pca_dimensions_capped", requested=args.pca_dimensions, selected=pca_dimensions)
-        pca_dirs = run_pca(args, run_dir, gene_dirs, pca_dimensions, commands_path)
+        pca_dirs = run_pca(args, run_dir, gene_dirs, pca_dimensions)
         if should_stop(args, "pca"):
             write_json(summary_path, collect_summary(run_dir, pca_dimensions))
             return 0
 
-        clusters_dir = run_clustering(args, run_dir, pca_dirs, survivor_count, pca_dimensions, commands_path)
+        clusters_dir = run_clustering(args, run_dir, pca_dirs, survivor_count, pca_dimensions)
         if should_stop(args, "clusters"):
             write_json(summary_path, collect_summary(run_dir, pca_dimensions))
             return 0
 
-        aggregate_dir = run_aggregate(args, run_dir, filtered_dir, clusters_dir, commands_path)
+        aggregate_dir = run_aggregate(args, run_dir, filtered_dir, clusters_dir)
         if should_stop(args, "aggregate"):
             write_json(summary_path, collect_summary(run_dir, pca_dimensions))
             return 0
 
-        run_pool(args, run_dir, aggregate_dir, commands_path)
+        run_pool(args, run_dir, aggregate_dir)
         write_json(summary_path, collect_summary(run_dir, pca_dimensions))
         event("run_finished", run_id=run_id, run_dir=display_path(run_dir), summary=display_path(summary_path))
         return 0

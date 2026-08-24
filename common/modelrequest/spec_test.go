@@ -28,7 +28,6 @@ func TestParseJSONDerivesOpenRouterProviderFromInventoryRow(t *testing.T) {
 		"endpoint_tag":"deepinfra/fp4",
 		"provider_name":"DeepInfra",
 		"quantization":"fp4",
-		"raw_endpoint_sha256":"abc123",
 		"equivalence_key":{"openrouter_model_id":"deepseek/deepseek-v4-flash","quantization":"fp4"},
 		"equivalence_class_size":2,
 		"representative_endpoint_variant_id":"variant-1",
@@ -70,9 +69,6 @@ func TestParseJSONDerivesOpenRouterProviderFromInventoryRow(t *testing.T) {
 	}
 	if spec.Headers[openRouterMetadataHeader] != "enabled" {
 		t.Fatalf("metadata header = %q", spec.Headers[openRouterMetadataHeader])
-	}
-	if spec.VariantMetadata["raw_endpoint_sha256"] != "abc123" {
-		t.Fatalf("variant metadata did not preserve raw_endpoint_sha256: %#v", spec.VariantMetadata)
 	}
 	equivalenceClassSize, ok := spec.VariantMetadata["equivalence_class_size"].(json.Number)
 	if !ok || equivalenceClassSize.String() != "2" {

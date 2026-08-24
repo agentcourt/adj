@@ -62,15 +62,6 @@ def audit_schemas() -> list[dict]:
     pattern = item_schema.get("properties", {}).get("id", {}).get("pattern", "")
     if "deliberation" not in pattern:
         issues.append(issue("item_schema_missing_deliberation_id", "schemas/item.schema.json", pattern))
-    result_schema = json.loads((ROOT / "schemas/result.schema.json").read_text())
-    props = result_schema.get("properties", {})
-    if "prompt" not in props or "prompt" not in result_schema.get("required", []):
-        issues.append(issue("result_schema_missing_prompt", "schemas/result.schema.json", None))
-    if "trials" not in props:
-        issues.append(issue("result_schema_missing_trials", "schemas/result.schema.json", None))
-    row_props = props.get("results", {}).get("items", {}).get("properties", {})
-    if "trial_index" not in row_props:
-        issues.append(issue("result_schema_missing_trial_index", "schemas/result.schema.json", None))
     response_schema = json.loads((ROOT / "schemas/response.schema.json").read_text())
     ordinary = response_schema.get("oneOf", [{}])[0]
     answer_type = ordinary.get("properties", {}).get("answer", {}).get("type")

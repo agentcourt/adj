@@ -20,10 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 IDENTITY_KEYS = [
-    "run_id",
     "gene_index",
     "gene",
-    "gene_sha256",
     "persona_id",
     "persona_path",
     "variant_order",

@@ -1,32 +1,10 @@
 # Sampling Runbook
 
-This runbook starts with OpenRouter root-model sampling and ends with a JSONL pool sampled from variant/persona cluster vectors.  Run every command from `model-pool/`.
-
-## Scope
-
-The sampling frame is the OpenRouter model catalog from `/api/v1/models`.  A root model is an OpenRouter model ID, such as `deepseek/deepseek-v4-flash`.  A model variant is one provider endpoint row from `/api/v1/models/{author}/{slug}/endpoints`.
-
-Endpoint variants remain separate evaluation units.  Preserve provider, endpoint tag, quantization, context limits, supported parameters, pricing, status fields, and raw OpenRouter JSON.  Treat `quantization: "unknown"` as endpoint-specific unknown state, because two unknown-quantization endpoints can differ in provider, serving engine, limits, wrappers, or behavior.
-
-This runbook uses `tools/sample-tuple-pool.py` for the final pool.  Other pool samplers are outside this procedure.  The runbook assumes `OPENROUTER_API_KEY` and `OPENAI_API_KEY` are available through the environment or ignored files under `secrets/`.
-
-## Output Names
-
-Use timestamped run IDs and write all generated run artifacts under `results/`.  Keep stable, human-readable prefixes so downstream paths make the stage clear.
-
-```bash
-ROOT_SAMPLE_RUN=results/model-roots-10-YYYYMMDDTHHMMSSZ
-EVAL_RUN=results/model-roots-10-eval-YYYYMMDDTHHMMSSZ
-FILTERED_DIR=variants/filtered-20260529
-GENE_PREFIX=results/gene
-CLUSTER_RUN=results/gene-clusters-YYYYMMDDTHHMMSSZ
-VECTOR_RUN=results/variant-persona-clusters-YYYYMMDDTHHMMSSZ
-POOL_RUN=results/sample-tuple-pool-YYYYMMDDTHHMMSSZ
-```
+This procedure starts with OpenRouter model IDs and produces a JSONL pool of provider-endpoint and persona records.  Run each command from `model-pool/`, and place generated files under `results/`.  OpenRouter requests require `OPENROUTER_API_KEY`, while gene-response embeddings require `OPENAI_API_KEY`.
 
 ## End-To-End Runner
 
-Use `tools/run_end_to_end.py` when the whole pipeline should run as one job.  The runner copies the question file, referenced evidence records, prompt, gene file, and persona into `inputs/`, records normalized result parameters and source paths in an immutable `manifest.json`, records every command in `commands.jsonl`, and writes a final `summary.json`.  It supports `--stop-after`.
+`tools/run_end_to_end.py` runs inventory, endpoint eval, filtering, gene inference, PCA, clustering, cluster aggregation, and tuple sampling in order.  It accepts explicit repeated `--model-id` values or samples `--root-count` catalog models with `--root-seed`.  Each stage writes beneath `results/<run-id>/`, and the top-level `summary.json` identifies the completed stages and their summaries.
 
 ```bash
 uv run --script tools/run_end_to_end.py \
@@ -43,42 +21,17 @@ uv run --script tools/run_end_to_end.py \
   --pool-size 5
 ```
 
-The default runner shape is a small test run.  Increase `--eval-trials`, `--gene-count`, `--samples-per-gene`, and `--pool-size` for a production pool.  The runner caps PCA dimensions to the available embedding rows unless `--strict-pca-dimensions` is set.  The eval stage uses `--timeout` per request and `--eval-no-progress-timeout` per variant child process.
+The default sizes support a bounded test of the procedure.  Set the model IDs or root sample, question file, prompt, trial count, filter criteria, genes, sample count, PCA dimensions, cluster range, pool size, and seeds for the intended pool.  `--stop-after` accepts `inventory`, `eval`, `filter`, `genes`, `pca`, `clusters`, `aggregate`, or `pool` and returns after writing that stage's summary.
 
-## Root Sampling
+The eval stage applies a per-request `--timeout` and a per-child `--eval-no-progress-timeout`.  `--eval-variant-timeout` adds an absolute limit for one endpoint eval and must be at least the no-progress timeout.  The runner rejects an incomplete gene stage before PCA, including missing records, completion errors, embedding errors, or missing embeddings.
 
-Fetch or reuse a saved OpenRouter `/api/v1/models` catalog.  Sort model IDs lexicographically, choose roots with a deterministic `random.Random(seed).sample(...)`, and record the seed, source catalog, exclusion set, selected roots, command, run ID, and output files.  For incremental samples, exclude roots already present in the active combined root-model catalog unless the run requires overlap.
+## Staged Procedure
 
-Use explicit `--model-id` arguments for the inventory run after selecting roots.  `tools/model_inventory.py --sample-models` can sample roots, but it does not accept an exclusion set.  Explicit IDs make incremental sampling reproducible.
+The following commands expose each data-producing tool for inspection and focused runs.  The end-to-end runner provides the filter stage because the repository has no separate filter command.  Paths in later commands must refer to outputs from the same selection run.
 
-```bash
-uv run python - <<'PY'
-import json
-import random
-from pathlib import Path
+### Endpoint Inventory
 
-catalog_path = Path("results/PRIOR-RUN/raw/models.json")
-exclude_summary_path = Path("results/ACTIVE-COMBINED-CATALOG/summary.json")
-sample_size = 10
-seed = 2
-
-models = json.loads(catalog_path.read_text())["data"]
-exclude = set(json.loads(exclude_summary_path.read_text())["model_roots"])
-ordered = sorted(model["id"] for model in models)
-eligible = [model_id for model_id in ordered if model_id not in exclude]
-
-sample = sorted(random.Random(seed).sample(eligible, sample_size))
-print("\n".join(sample))
-PY
-```
-
-If the exclusion source is a single inventory run rather than a combined catalog, use `selected_model_ids` instead of `model_roots`.
-
-Record the exact source catalog path, excluded roots, seed, selected roots, and reason that overlap was or was not allowed.  That record is the audit trail for the random choice.
-
-## Endpoint Inventory
-
-Run a static OpenRouter endpoint inventory over the selected root model IDs.  The inventory fetches the catalog, fetches endpoint metadata for each selected root, preserves raw JSON, and emits one normalized row per endpoint variant.  The inventory step does not run inference.
+Inventory explicit model IDs when the root set has already been chosen.  The script fetches the model catalog and the endpoint response for every selected model, writes raw responses, and normalizes one row per provider endpoint.  A failed catalog or endpoint request aborts the inventory after the configured retries.
 
 ```bash
 uv run --script tools/model_inventory.py \
@@ -87,27 +40,11 @@ uv run --script tools/model_inventory.py \
   --model-id root/model-b
 ```
 
-Expected files:
+The inventory directory contains `raw/models.json`, percent-encoded files under `raw/endpoints/`, `endpoint_variants.jsonl`, `endpoint_variants.csv`, and `summary.json`.  Keep unknown-quantization endpoints separate because the provider, endpoint tag, limits, pricing, supported parameters, and runtime behavior can differ.  Inspect `summary.json` for the selected IDs and endpoint count before starting evals.
 
-| File | Purpose |
-| --- | --- |
-| `raw/models.json` | Raw `/api/v1/models` response for the snapshot. |
-| `raw/endpoints/*.json` | Raw endpoint responses for selected roots. |
-| `endpoint_variants.jsonl` | Canonical normalized endpoint-variant rows. |
-| `endpoint_variants.csv` | Tabular inspection view. |
-| `summary.json` | Counts, selected root IDs, provider counts, and errors. |
-| `summary.md` | Human-readable inventory summary. |
+### Endpoint Evals
 
-Verify the inventory before using it.  The root count should equal the selected root count, and endpoint fetch errors should be zero or explicitly documented.  Unknown quantization rows are valid endpoint variants, not errors.
-
-```bash
-jq '{selected_model_count, endpoint_variant_count, endpoint_fetch_error_count, selected_model_ids}' \
-  results/model-roots-10-YYYYMMDDTHHMMSSZ/summary.json
-```
-
-## Variant Evals
-
-Evaluate endpoint variants with exact OpenRouter routing constraints.  Each variant row must become the request spec for that variant: `provider.only`, `allow_fallbacks: false`, `require_parameters: true`, and `provider.quantizations` when quantization is known.  `tools/run_eval.py` handles that policy when called through `tools/run_variant_batch.py`.
+The batch runner creates one exact request spec and one eval directory for each endpoint variant.  It pins the endpoint route, disables fallback, requires supported parameters, and includes a known quantization constraint.  The output directory must be absent or empty.
 
 ```bash
 uv run --script tools/run_variant_batch.py \
@@ -119,263 +56,19 @@ uv run --script tools/run_variant_batch.py \
   --timeout 90
 ```
 
-The batch runner writes one model-spec file per variant and one run directory per attempted variant.  A new run refuses a nonempty output directory and saves exact copies of the endpoint inventory, questions, referenced evidence records, and prompt under `inputs/`.  A timed-out variant stays in the eval records, and the filtering stage removes it before gene inference.
+A successful directory under `variant-runs/` contains `raw_results.jsonl`, `scores.json`, and `run_eval.log`.  The batch directory also contains request files under `specs/`, per-endpoint results in `variant_summary.csv`, and aggregate counts in `summary.json`.  Timed-out endpoints remain in `variant_summary.csv` so the filter can reject them, while a child command or scoring failure gives the batch a nonzero exit status.
 
-Continuation requires the same command plus `--resume`.  The runner first compares the current sources with the saved copies, then validates every progress row's JSON, index, endpoint identity, status, exit code, exact variant spec, log, raw results, `run.json`, and score files.  It retries `command_failed` variants from evaluation and retries `score_failed` variants from scoring without repeating the validated provider requests.  A `timed_out` variant remains a terminal evaluated outcome.  If evaluation or scoring completed before the parent recorded progress, resume adopts the validated artifacts and continues from the next unfinished operation.  A run with a current command or scoring failure exits nonzero even though a later explicit resume can retry it.
+### Endpoint Filtering
 
-Expected files:
+The end-to-end filter joins inventory rows to `variant_summary.csv` by source index.  It rejects nonzero eval exit codes, a provider-error count different from `--filter-provider-error-count`, and a deliberation score below `--filter-min-deliberation-score`.  The default criteria require zero provider errors and a deliberation score of at least `0.90`.
 
-| File | Purpose |
-| --- | --- |
-| `manifest.json` | Immutable normalized parameters and source-to-snapshot records. |
-| `inputs/` | Exact endpoint, question, evidence, and prompt copies. |
-| `specs/*.json` | Exact OpenRouter variant specs used for requests. |
-| `variant-runs/*/run_eval.log` | Child-process output for one variant. |
-| `variant-runs/*/raw_results.jsonl` | Raw eval results for one variant. |
-| `variant-runs/*/scores.json` | Scored summary for one variant. |
-| `progress.jsonl` | Per-variant completion records. |
-| `variant_summary.csv` | Tabular per-variant summary. |
-| `summary.json` | Batch status and success counts. |
+Run the end-to-end command with `--stop-after filter` to produce a filtered set.  The filter directory contains accepted rows in `endpoint_variants.jsonl` and `endpoint_variants.csv`, rejection records in `removed_variants.jsonl`, and counts, source paths, criteria, and accepted source indexes in `summary.json`.  A filter that accepts no endpoints fails the run.
 
-Verify that every attempted variant has a progress row.  Scored variants have `scores.json`; timed-out or failed variants have `run_exit_code != 0` or no deliberation score.  Inspect provider errors, schema violations, timeouts, context-limit errors, and deliberation score as separate facts.
+The checked-in snapshot under `variants/filtered-20260529/` retains `endpoint_variants.jsonl`, `endpoint_variants.csv`, and `summary.json`.  Use a new end-to-end run for current-provider claims because routes, availability, pricing, and behavior can change.  Pass that run's filtered `endpoint_variants.jsonl` to every downstream stage.
 
-## Combine Incremental Runs
+### Gene Inference And Embeddings
 
-When a sample is incremental, combine the previous and new endpoint catalogs before filtering.  Preserve one flat combined variant list and one flat eval directory.  Renumber combined eval indexes only as display indexes; keep the original endpoint-variant records and source run IDs.
-
-For combined runs, write a `summary.json` that records source catalogs, source eval runs, combined root count, combined variant count, copied eval run count, and aggregate eval counts.  Verify that every combined variant has one eval summary row.  Keep source directories unchanged.
-
-## Filter Variants
-
-Filter endpoint variants after evals, using explicit operational and deliberation criteria.  The current checked-in survivor set uses `provider_error_count == 0` and `deliberation_score >= 0.90`.  The filter output uses `variants/filtered-20260529/` as the active survivor set for gene inference unless a new run replaces it.
-
-The current repository contains `variants/filtered-20260529/` as the active survivor set.  For a new run, create the same files from the endpoint-variant catalog, eval summaries, and exact spec files.  Each survivor variant row should include `combined_index`, `filter_provider_error_count`, and `filter_deliberation_score`.  Keep removed-variant records for timed-out, failed, provider-error, and low-score variants.
-
-Use this command for a normal inventory/eval pair produced by `tools/model_inventory.py` and `tools/run_variant_batch.py`.  For a combined run, set `variant_path`, `eval_summary_path`, and `specs_dir` to the combined paths; the command accepts either CSV or JSONL eval summaries.  If preserving the existing `variants/filtered-20260529/` directory, set `out` to a timestamped path and use that path in later commands.
-
-```bash
-uv run python - <<'PY'
-import csv
-import json
-import shutil
-from pathlib import Path
-
-variant_path = Path("results/model-roots-10-YYYYMMDDTHHMMSSZ/endpoint_variants.jsonl")
-eval_summary_path = Path("results/model-roots-10-eval-YYYYMMDDTHHMMSSZ/variant_summary.csv")
-specs_dir = Path("results/model-roots-10-eval-YYYYMMDDTHHMMSSZ/specs")
-out = Path("variants/filtered-20260529")
-min_score = 0.90
-required_provider_errors = 0
-
-def load_jsonl(path):
-    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-
-def load_eval_rows(path):
-    if path.suffix == ".csv":
-        with path.open(newline="") as handle:
-            return list(csv.DictReader(handle))
-    return load_jsonl(path)
-
-def row_index(row, fallback):
-    value = row.get("combined_index") or row.get("index") or fallback
-    return int(value)
-
-def int_field(row, key):
-    value = row.get(key)
-    return int(value) if value not in (None, "") else 0
-
-def float_field(row, key):
-    value = row.get(key)
-    if value in (None, ""):
-        return None
-    return float(value)
-
-variants = load_jsonl(variant_path)
-summaries = load_eval_rows(eval_summary_path)
-summary_by_index = {row_index(row, None): row for row in summaries}
-
-survivor_variants = []
-survivor_summaries = []
-survivor_manifest = []
-removed_variants = []
-
-def removed_row(variant, index, reason, **extra):
-    row = {
-        "combined_index": index,
-        "openrouter_model_id": variant.get("openrouter_model_id"),
-        "provider_name": variant.get("provider_name"),
-        "endpoint_tag": variant.get("endpoint_tag"),
-        "quantization": variant.get("quantization"),
-        "reason": reason,
-    }
-    row.update(extra)
-    return row
-
-for position, variant in enumerate(variants, start=1):
-    index = row_index(variant, position)
-    eval_row = summary_by_index[index]
-    run_exit_code = int_field(eval_row, "run_exit_code")
-    if run_exit_code != 0:
-        removed_variants.append(removed_row(
-            variant,
-            index,
-            "run_exit_code",
-            run_exit_code=run_exit_code,
-            variant_status=eval_row.get("variant_status"),
-            timeout_kind=eval_row.get("timeout_kind"),
-        ))
-        continue
-    provider_errors = int_field(eval_row, "provider_error_count")
-    score = float_field(eval_row, "deliberation_score")
-    if provider_errors != required_provider_errors:
-        removed_variants.append(removed_row(
-            variant,
-            index,
-            "provider_error_count",
-            provider_error_count=provider_errors,
-        ))
-        continue
-    if score is None or score < min_score:
-        removed_variants.append(removed_row(
-            variant,
-            index,
-            "deliberation_score",
-            deliberation_score=score,
-        ))
-        continue
-
-    survivor = dict(variant)
-    survivor["combined_index"] = index
-    survivor["filter_provider_error_count"] = provider_errors
-    survivor["filter_deliberation_score"] = score
-    survivor_variants.append(survivor)
-
-    summary_row = dict(eval_row)
-    summary_row["combined_index"] = index
-    summary_row["provider_error_count"] = provider_errors
-    summary_row["deliberation_score"] = score
-    survivor_summaries.append(summary_row)
-
-    survivor_manifest.append({
-        "combined_index": index,
-        "endpoint_variant_id": survivor.get("endpoint_variant_id"),
-        "openrouter_model_id": survivor.get("openrouter_model_id"),
-        "provider_name": survivor.get("provider_name"),
-        "endpoint_tag": survivor.get("endpoint_tag"),
-        "quantization": survivor.get("quantization"),
-        "run_dir": eval_row.get("variant_run_dir") or eval_row.get("run_dir"),
-    })
-
-if out.exists():
-    raise SystemExit(f"{out} already exists")
-spec_out = out / "specs"
-spec_out.mkdir(parents=True)
-
-for row in survivor_summaries:
-    matches = sorted(specs_dir.glob(f"{int(row['combined_index']):02d}-*.json"))
-    if len(matches) != 1:
-        raise SystemExit(f"expected one spec for combined index {row['combined_index']}, found {len(matches)}")
-    shutil.copy2(matches[0], spec_out / matches[0].name)
-
-def write_jsonl(path, rows):
-    with path.open("w") as handle:
-        for row in rows:
-            handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
-
-write_jsonl(out / "endpoint_variants.jsonl", survivor_variants)
-write_jsonl(out / "variant_summary.jsonl", survivor_summaries)
-write_jsonl(out / "manifest.jsonl", survivor_manifest)
-write_jsonl(out / "removed_variants.jsonl", removed_variants)
-
-fields = [
-    "combined_index",
-    "openrouter_model_id",
-    "provider_name",
-    "endpoint_tag",
-    "quantization",
-    "endpoint_variant_id",
-    "filter_provider_error_count",
-    "filter_deliberation_score",
-]
-with (out / "endpoint_variants.csv").open("w", newline="") as handle:
-    writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")
-    writer.writeheader()
-    writer.writerows(survivor_variants)
-
-summary = {
-    "source_variant_file": str(variant_path),
-    "source_eval_summary_file": str(eval_summary_path),
-    "source_specs_dir": str(specs_dir),
-    "filter_criteria": {
-        "provider_error_count": required_provider_errors,
-        "deliberation_score_minimum": min_score,
-    },
-    "total_variants": len(variants),
-    "survivor_count": len(survivor_variants),
-    "survivor_combined_indexes": [row["combined_index"] for row in survivor_summaries],
-    "removed_count": len(removed_variants),
-    "removed_variant_indexes": [row["combined_index"] for row in removed_variants],
-    "outputs": [
-        "endpoint_variants.jsonl",
-        "endpoint_variants.csv",
-        "variant_summary.jsonl",
-        "manifest.jsonl",
-        "removed_variants.jsonl",
-        "specs/*.json",
-        "summary.json",
-    ],
-}
-(out / "summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
-print({"survivor_count": len(survivor_variants)})
-PY
-```
-
-Expected files:
-
-| File | Purpose |
-| --- | --- |
-| `variants/filtered-20260529/endpoint_variants.jsonl` | Full survivor endpoint-variant records. |
-| `variants/filtered-20260529/endpoint_variants.csv` | Survivor inspection table. |
-| `variants/filtered-20260529/variant_summary.jsonl` | Survivor eval summaries. |
-| `variants/filtered-20260529/manifest.jsonl` | Survivor eval manifest rows. |
-| `variants/filtered-20260529/specs/*.json` | Exact survivor variant specs. |
-| `variants/filtered-20260529/summary.json` | Criteria, source paths, survivor count, and indexes. |
-
-Verify counts and criteria.
-
-```bash
-uv run python - <<'PY'
-import json
-from pathlib import Path
-
-out = Path("variants/filtered-20260529")
-summary = json.loads((out / "summary.json").read_text())
-variants = [json.loads(line) for line in (out / "endpoint_variants.jsonl").read_text().splitlines() if line.strip()]
-evals = [json.loads(line) for line in (out / "variant_summary.jsonl").read_text().splitlines() if line.strip()]
-specs = list((out / "specs").glob("*.json"))
-
-assert len(variants) == len(evals) == len(specs) == summary["survivor_count"]
-assert all(int(row["provider_error_count"]) == 0 for row in evals)
-assert all(float(row["deliberation_score"]) >= 0.90 for row in evals)
-print({"survivor_count": summary["survivor_count"], "criteria_ok": True})
-PY
-```
-
-## Genes And Samples
-
-Use `genes.json` as the source gene list and `sampled-genes.json` as the sampled gene list for a run.  A gene is a behavior-eliciting prompt.  The current checked-in sampling workflow uses four distinct genes and three completions per `gene + endpoint variant + persona`.
-
-The current persona is `../common/etc/personas/generic.md`.  Keep one persona unless the run design calls for persona variation.  The gene runner derives `persona_id` from the saved persona filename and records the saved persona path in every row.  Record gene count, persona count, endpoint-variant count, samples per combination, and expected completion count in the run output.
-
-For the current 32-survivor set:
-
-```text
-32 endpoint variants * 1 persona * 4 genes * 3 samples = 384 completions
-```
-
-## Gene Inference And Embeddings
-
-Run one gene index at a time.  The script name contains `first`, but `--gene-index` selects any sampled gene.  Each completion uses the exact endpoint variant request policy, records OpenRouter metadata, and embeds the response with `text-embedding-3-small` by default.
+Run one gene index at a time against the accepted endpoint set.  Each sample uses the endpoint's exact route policy and records the completion, request parameters, route metadata, status, and embedding.  The command writes directly to `records.jsonl` and summarizes expected rows, status counts, errors, and embeddings in `summary.json`.
 
 ```bash
 uv run --script tools/run_first_gene_inference_embeddings.py \
@@ -387,22 +80,12 @@ uv run --script tools/run_first_gene_inference_embeddings.py \
   --out results/gene-1-inference-embeddings-YYYYMMDDTHHMMSSZ
 ```
 
-Repeat for each gene index in `sampled-genes.json`.  Use distinct output directories for each gene.  The default request parameters are `temperature: 0.7`, `top_p: 1.0`, and `max_tokens: 512`.
+Repeat the command with a distinct output directory for every selected gene index.  Before PCA, require `records_written == expected_records`, `embedding_count == expected_records`, and zero completion and embedding errors.  The end-to-end runner enforces those conditions and stops on the first incomplete gene stage.
+The gene command writes its diagnostic rows and summary, then returns a nonzero exit status when a completion or embedding failed.
 
-The current script expects every survivor row to have a non-empty `endpoint_tag`; it builds `provider.only` from that field.  It also writes `persona_id: "generic"` regardless of the persona path.  Keep this stage to the single generic persona unless the script is changed and the change is recorded.
+### PCA
 
-Verify each gene inference run before PCA.
-
-```bash
-jq '{records_written, embedding_count, completion_error_count, embedding_error_count, status_counts, gene_index, gene}' \
-  results/gene-1-inference-embeddings-YYYYMMDDTHHMMSSZ/summary.json
-```
-
-For a 32-variant, one-persona, three-sample gene run, the expected output is 96 records and 96 embeddings.  If a new run has errors, record the counts and decide whether to rerun that gene or carry the error rows forward.  PCA includes only `status: "ok"` records.
-
-## PCA
-
-Run PCA separately for each gene.  PCA coordinates from different genes are not in one shared coordinate system, so clustering must also run per gene.  The current workflow reduces embeddings to three dimensions.
+PCA runs separately for each gene because each prompt produces its own response distribution.  `pca-records.jsonl` contains the projected rows, `pca-fit.json` contains the fitted components and variance data, and `summary.json` reports source counts and dimensions.  The requested dimension count cannot exceed the number of usable embedding rows.
 
 ```bash
 uv run --script tools/run_embedding_pca.py \
@@ -411,24 +94,9 @@ uv run --script tools/run_embedding_pca.py \
   --dimensions 3
 ```
 
-Expected files:
+### Per-Gene Clustering
 
-| File | Purpose |
-| --- | --- |
-| `pca-records.jsonl` | One projected row per included embedding. |
-| `pca-fit.json` | Mean, components, variance, ratios, and singular values. |
-| `summary.json` | Source counts and PCA dimensions. |
-
-Verify row counts, dimensions, and endpoint coverage.
-
-```bash
-jq '{included_records, source_records, embedding_dimension, pca_dimensions, explained_variance_ratio_sum}' \
-  results/gene-1-pca-3d-YYYYMMDDTHHMMSSZ/summary.json
-```
-
-## Per-Gene Clustering
-
-Cluster the completed per-gene PCA rows.  The script validates the expected row count, one gene per PCA file, 32 endpoint variants by default, three samples per endpoint variant, and three-dimensional PCA vectors by default.  It runs K-means for `k = 3..10`, scores valid candidates with silhouette score, and writes one cluster row per sampled completion.
+The clustering tool validates row counts, endpoint coverage, samples per endpoint, and PCA dimensions when their expected values are supplied.  It fits K-means separately for each gene, selects a candidate by silhouette score, and writes `clusters.jsonl`, `clusters.csv`, `cluster-fit.json`, and `summary.json`.  Cluster labels have meaning only within their gene index.
 
 ```bash
 uv run --script tools/run_gene_pca_clustering.py \
@@ -436,23 +104,16 @@ uv run --script tools/run_gene_pca_clustering.py \
   --pca-records results/gene-2-pca-3d-YYYYMMDDTHHMMSSZ/pca-records.jsonl \
   --pca-records results/gene-3-pca-3d-YYYYMMDDTHHMMSSZ/pca-records.jsonl \
   --pca-records results/gene-4-pca-3d-YYYYMMDDTHHMMSSZ/pca-records.jsonl \
-  --out results/gene-clusters-YYYYMMDDTHHMMSSZ
+  --out results/gene-clusters-YYYYMMDDTHHMMSSZ \
+  --expected-rows-per-gene 96 \
+  --expected-variants-per-gene 32 \
+  --expected-samples-per-variant 3 \
+  --pca-dimensions 3 \
+  --min-k 3 \
+  --max-k 10
 ```
 
-Use `--expected-rows-per-gene`, `--expected-variants-per-gene`, `--expected-samples-per-variant`, `--pca-dimensions`, `--min-k`, and `--max-k` to make the clustering validation match the run shape.
-
-The output cluster labels are local to `gene_index`.  A label `2` for gene 0 has no direct relation to label `2` for gene 1.
-
-Expected files:
-
-| File | Purpose |
-| --- | --- |
-| `clusters.jsonl` | One sample-level cluster row per completion. |
-| `clusters.csv` | Compact inspection table. |
-| `summary.json` | Chosen `k`, silhouette scores, counts, and validation data. |
-| `cluster-fit.json` | Cluster centers and candidate scores by gene. |
-
-Render `clusters.csv` when a visual check helps.  The chart puts one row per serving provider and one column per gene, colors each point by its cluster, and gives each model within a provider row its own marker.  It plots `pc1` against `pc2`, so it shows two of the three reduced dimensions.
+`tools/clusters-graph.py` renders the inspection CSV as a faceted chart.  Each provider occupies one row, each gene occupies one column, and model markers show `pc1` against `pc2`.  Set a noninteractive Matplotlib backend for file-only rendering.
 
 ```bash
 env MPLBACKEND=Agg uv run --script tools/clusters-graph.py \
@@ -460,9 +121,9 @@ env MPLBACKEND=Agg uv run --script tools/clusters-graph.py \
   --out results/gene-clusters-YYYYMMDDTHHMMSSZ/clusters.png
 ```
 
-## Cluster Vector Aggregation
+### Cluster Vector Aggregation
 
-Aggregate sample-level clusters into one variant/persona cluster vector per endpoint variant and persona.  For each variant, persona, and gene, the aggregator chooses a unanimous cluster when all three samples agree, a majority cluster when two samples agree, and the cluster for the sample nearest to its assigned K-means center when all three differ.  The output `clusters` array is ordered by ascending `gene_index`.
+Aggregation produces one cluster vector for each endpoint and persona.  For each gene, it chooses a unanimous label, a majority label, or the label of the sample nearest its assigned cluster center when all samples differ.  The output directory contains the canonical `variant-persona-clusters.jsonl` and `summary.json`.
 
 ```bash
 uv run --script tools/aggregate_variant_persona_clusters.py \
@@ -473,95 +134,22 @@ uv run --script tools/aggregate_variant_persona_clusters.py \
   --expected-samples-per-gene 3
 ```
 
-Expected files:
+Check that every accepted endpoint has one aggregate row and that every `clusters` array follows ascending `gene_index`.  `summary.json` reports the input row count, output row count, gene order, and aggregation-method counts.  An incomplete grouped gene or sample set, a referenced endpoint absent from the variant file, or a missing fit record aborts aggregation.
 
-| File | Purpose |
-| --- | --- |
-| `variant-persona-clusters.jsonl` | Canonical pool-sampling input. |
-| `variant-persona-clusters.json` | JSON array version of the same rows. |
-| `summary.json` | Row counts, gene order, and aggregation-method counts. |
+### Tuple-Uniform Pool Sampling
 
-Verify the aggregate before sampling a pool.
+The tuple sampler deduplicates equivalent provider endpoints before sampling.  It chooses a distinct cluster tuple uniformly, then chooses a representative endpoint/persona row uniformly within that tuple.  Sampling uses replacement unless `--without-replacement` is present.
 
 ```bash
-uv run python - <<'PY'
-import json
-from pathlib import Path
-
-path = Path("results/variant-persona-clusters-YYYYMMDDTHHMMSSZ/variant-persona-clusters.jsonl")
-rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-
-print({
-    "rows": len(rows),
-    "cluster_lengths": sorted({len(row["clusters"]) for row in rows}),
-    "all_clusters_int": all(all(isinstance(value, int) for value in row["clusters"]) for row in rows),
-    "all_have_variant": all(isinstance(row.get("variant"), dict) for row in rows),
-    "all_have_persona": all(isinstance(row.get("persona"), dict) for row in rows),
-})
-PY
-```
-
-## Tuple-Uniform Pool Sampling
-
-Use `tools/sample-tuple-pool.py` to generate the final pool.  The sampler treats each distinct `clusters` vector as a sampling unit.  For each emitted row, it chooses one unique cluster tuple uniformly at random, then chooses one row uniformly from the rows with that tuple.
-
-```bash
-mkdir -p results/sample-tuple-pool-YYYYMMDDTHHMMSSZ
 uv run --script tools/sample-tuple-pool.py \
   results/variant-persona-clusters-YYYYMMDDTHHMMSSZ/variant-persona-clusters.jsonl \
   --out results/sample-tuple-pool-YYYYMMDDTHHMMSSZ/pool.jsonl \
   --diagnostics-out results/sample-tuple-pool-YYYYMMDDTHHMMSSZ/diagnostics.jsonl \
   --equivalence-out results/sample-tuple-pool-YYYYMMDDTHHMMSSZ/equivalence.jsonl \
   --pool-size 20 \
-  --seed 0 \
-  | tee results/sample-tuple-pool-YYYYMMDDTHHMMSSZ/sample.log
+  --seed 0
 ```
 
-The sampler deduplicates equivalent provider endpoints before tuple sampling.  The equivalence key uses model identity, quantization, and modalities; it excludes provider name, endpoint tag, context limits, prompt and completion limits, supported parameters, price, latency, and uptime.  The representative selection rule ranks endpoints by operational results, capacity, and serving metadata, then writes the full provider set to `equivalence.jsonl`.
+The equivalence key uses model identity, quantization, and modalities.  Representative selection ranks operational results, capacity, availability, latency, price, and stable endpoint identifiers, while `equivalence.jsonl` records the members and selected representative of every class.  `--no-dedupe-equivalent-endpoints` retains provider routes as separate sampling rows when the pool is intended to compare those routes.
 
-Sampling is with replacement by default after deduplication.  Duplicate rows can appear in the final pool, especially when `pool-size` exceeds the number of well-populated tuples or when the random draw revisits a tuple.  The diagnostics file records the selected tuple, source row, cumulative tuple count, cumulative source-row count, model ID, provider, endpoint tag, quantization, endpoint identifier, and equivalence class for each emitted row.
-
-Add `--without-replacement` when the pool must contain each row from the sampling frame at most once.  With the default equivalent-endpoint deduplication, the sampling frame is the representative set, so `--pool-size` cannot exceed the number of equivalence classes.  The command fails before writing output when `--pool-size` is larger than the available frame.
-
-Verify the sampled pool.
-
-```bash
-uv run python - <<'PY'
-import json
-from pathlib import Path
-
-source_path = Path("results/variant-persona-clusters-YYYYMMDDTHHMMSSZ/variant-persona-clusters.jsonl")
-pool_path = Path("results/sample-tuple-pool-YYYYMMDDTHHMMSSZ/pool.jsonl")
-diagnostics_path = Path("results/sample-tuple-pool-YYYYMMDDTHHMMSSZ/diagnostics.jsonl")
-equivalence_path = Path("results/sample-tuple-pool-YYYYMMDDTHHMMSSZ/equivalence.jsonl")
-
-source_lines = [line for line in source_path.read_text().splitlines() if line.strip()]
-source_rows = [json.loads(line) for line in source_lines]
-source_ids = {row["endpoint_variant_id"] for row in source_rows}
-pool_lines = [line for line in pool_path.read_text().splitlines() if line.strip()]
-pool_rows = [json.loads(line) for line in pool_lines]
-diagnostics = [json.loads(line) for line in diagnostics_path.read_text().splitlines() if line.strip()]
-equivalence = [json.loads(line) for line in equivalence_path.read_text().splitlines() if line.strip()]
-
-source_tuples = {tuple(row["clusters"]) for row in source_rows}
-pool_tuples = {tuple(row["clusters"]) for row in pool_rows}
-
-print({
-    "output_rows": len(pool_rows),
-    "diagnostic_rows": len(diagnostics),
-    "equivalence_rows": len(equivalence),
-    "unique_output_rows": len(set(pool_lines)),
-    "unique_output_tuples": len(pool_tuples),
-    "all_representatives_from_input": all(row["endpoint_variant_id"] in source_ids for row in pool_rows),
-    "all_tuples_from_input": pool_tuples <= source_tuples,
-    "all_clusters_int": all(all(isinstance(value, int) for value in row["clusters"]) for row in pool_rows),
-    "all_equivalence_records_have_representative": all("representative_endpoint_variant_id" in row for row in equivalence),
-})
-PY
-```
-
-## Run Record
-
-Record the command, run ID, inputs, output files, counts, selected roots, selected genes, seed values, errors, and verification output for every stage.  If a run is interrupted, record the last completed stage and the next command to run.
-
-For root sampling, record the catalog snapshot and exclusion set.  For evals, record operational metrics separately from deliberation score.  For pool generation, record input row count, unique tuple count, output row count, output unique tuple count, output unique row count, seed, and pool path.
+`pool.jsonl` contains the sampled request-spec records, and `diagnostics.jsonl` identifies the tuple and source row selected for each output row.  With `--without-replacement`, the requested pool size cannot exceed the post-deduplication sampling frame.  The sampler validates the input rows and frame size before opening the output files.

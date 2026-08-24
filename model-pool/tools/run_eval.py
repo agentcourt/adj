@@ -178,9 +178,7 @@ def variant_metadata_from_spec(obj: dict) -> dict:
         "supported_parameters",
         "model_supported_parameters",
         "endpoint_raw_path",
-        "raw_endpoint_sha256",
         "model_raw_path",
-        "raw_model_sha256",
     ]
     return {key: obj[key] for key in keys if key in obj}
 
@@ -626,8 +624,6 @@ def main() -> int:
     raw_path = out / "raw_results.jsonl"
     if raw_path.exists():
         raw_path.unlink()
-    run_id = out.name
-    created_at = dt.datetime.now(dt.timezone.utc).isoformat()
     results = []
 
     if args.trials < 1:
@@ -681,8 +677,6 @@ def main() -> int:
         for row in results:
             f.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
 
-    summary = {"run_id": run_id, "created_at": created_at, "models": [spec["label"] for spec in model_specs], "model_specs": model_specs, "trials": args.trials, "questions": str(qpath.relative_to(ROOT) if qpath.is_relative_to(ROOT) else qpath), "prompt": str(prompt_path.relative_to(ROOT) if prompt_path.is_relative_to(ROOT) else prompt_path), "items": [i["id"] for i in items], "results": results}
-    (out / "run.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
     print(json.dumps({"run": str(out), "results": len(results)}, sort_keys=True))
     return 0
 

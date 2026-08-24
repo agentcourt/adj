@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
-import hashlib
 import json
 import os
 import random
@@ -53,7 +52,6 @@ CSV_FIELDS = [
     "model_per_request_limits",
     "model_supported_voices",
     "model_raw_path",
-    "raw_model_sha256",
     "endpoint_index",
     "endpoint_variant_id",
     "endpoint_variant_key",
@@ -84,7 +82,6 @@ CSV_FIELDS = [
     "latency_last_30m",
     "throughput_last_30m",
     "endpoint_raw_path",
-    "raw_endpoint_sha256",
 ]
 
 
@@ -92,26 +89,22 @@ class OpenRouterError(RuntimeError):
     pass
 
 
-def canonical_json(obj: Any) -> str:
-    return json.dumps(obj, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-
-
 def pretty_json(obj: Any) -> str:
     return json.dumps(obj, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
 
 
-def sha256_json(obj: Any) -> str:
-    return hashlib.sha256(canonical_json(obj).encode("utf-8")).hexdigest()
-
-
-def safe_name(value: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", value.strip())
-    return cleaned.strip("_") or "unnamed"
-
-
 def endpoint_raw_filename(model_id: str) -> str:
-    digest = hashlib.sha256(model_id.encode("utf-8")).hexdigest()[:12]
-    return f"{safe_name(model_id)}-{digest}.json"
+    return urllib.parse.quote(model_id, safe="") + ".json"
+
+
+def endpoint_id_component(value: Any) -> str:
+    return urllib.parse.quote(str(value or ""), safe="/:._-~+")
+
+
+def make_endpoint_variant_id(model_id: str, endpoint: dict[str, Any]) -> str:
+    route = endpoint.get("tag") or endpoint.get("endpoint_tag") or endpoint.get("provider_name") or "unknown-provider"
+    quantization = endpoint.get("quantization") or "unknown"
+    return f"openrouter:{endpoint_id_component(model_id)}@{endpoint_id_component(route)}#{endpoint_id_component(quantization)}"
 
 
 def load_openrouter_key() -> str | None:
@@ -184,7 +177,9 @@ def extract_models(body: Any) -> list[dict[str, Any]]:
     data = body.get("data") if isinstance(body, dict) else None
     if not isinstance(data, list):
         raise OpenRouterError("/models response did not contain a data list")
-    return [item for item in data if isinstance(item, dict)]
+    if not all(isinstance(item, dict) for item in data):
+        raise OpenRouterError("/models response contained a non-object model")
+    return data
 
 
 def extract_endpoint_payload(body: Any) -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -192,13 +187,19 @@ def extract_endpoint_payload(body: Any) -> tuple[dict[str, Any], list[dict[str, 
     if isinstance(data, dict):
         endpoints = data.get("endpoints")
         if not isinstance(endpoints, list):
-            endpoints = []
-        return data, [endpoint for endpoint in endpoints if isinstance(endpoint, dict)]
+            raise OpenRouterError("endpoint response data did not contain an endpoints list")
+        if not all(isinstance(endpoint, dict) for endpoint in endpoints):
+            raise OpenRouterError("endpoint response contained a non-object endpoint")
+        return data, endpoints
     endpoints = body.get("endpoints") if isinstance(body, dict) else None
     if isinstance(endpoints, list):
-        return body, [endpoint for endpoint in endpoints if isinstance(endpoint, dict)]
+        if not all(isinstance(endpoint, dict) for endpoint in endpoints):
+            raise OpenRouterError("endpoint response contained a non-object endpoint")
+        return body, endpoints
     if isinstance(data, list):
-        return body if isinstance(body, dict) else {}, [endpoint for endpoint in data if isinstance(endpoint, dict)]
+        if not all(isinstance(endpoint, dict) for endpoint in data):
+            raise OpenRouterError("endpoint response contained a non-object endpoint")
+        return body if isinstance(body, dict) else {}, data
     raise OpenRouterError("endpoint response did not contain endpoints")
 
 
@@ -225,20 +226,6 @@ def architecture_field(model: dict[str, Any], key: str) -> Any:
     if isinstance(architecture, dict):
         return architecture.get(key)
     return None
-
-
-def make_endpoint_variant_id(snapshot_id: str, model_id: str, endpoint_index: int, endpoint: dict[str, Any]) -> str:
-    basis = {
-        "snapshot_id": snapshot_id,
-        "model_id": model_id,
-        "endpoint_index": endpoint_index,
-        "provider_name": endpoint.get("provider_name"),
-        "tag": endpoint.get("tag"),
-        "name": endpoint.get("name"),
-        "quantization": endpoint.get("quantization"),
-        "endpoint_sha256": sha256_json(endpoint),
-    }
-    return hashlib.sha256(canonical_json(basis).encode("utf-8")).hexdigest()[:24]
 
 
 def endpoint_variant_key(snapshot_id: str, model_id: str, endpoint_index: int, endpoint: dict[str, Any]) -> str:
@@ -290,9 +277,8 @@ def normalized_row(
         "model_per_request_limits": model.get("per_request_limits"),
         "model_supported_voices": model.get("supported_voices"),
         "model_raw_path": model_raw_path,
-        "raw_model_sha256": sha256_json(model),
         "endpoint_index": endpoint_index,
-        "endpoint_variant_id": make_endpoint_variant_id(snapshot_id, model_id, endpoint_index, endpoint),
+        "endpoint_variant_id": make_endpoint_variant_id(model_id, endpoint),
         "endpoint_variant_key": endpoint_variant_key(snapshot_id, model_id, endpoint_index, endpoint),
         "provider_name": endpoint.get("provider_name"),
         "endpoint_name": endpoint.get("name"),
@@ -321,7 +307,6 @@ def normalized_row(
         "latency_last_30m": endpoint.get("latency_last_30m"),
         "throughput_last_30m": endpoint.get("throughput_last_30m"),
         "endpoint_raw_path": endpoint_raw_path,
-        "raw_endpoint_sha256": sha256_json(endpoint),
     }
 
 
@@ -380,18 +365,13 @@ def main(argv: list[str]) -> int:
 
     rows: list[dict[str, Any]] = []
     endpoint_fetches: list[dict[str, Any]] = []
-    errors: list[dict[str, str]] = []
     models_by_id = {str(model.get("id")): model for model in models}
 
     for model_number, model in enumerate(selected, start=1):
         model_id = str(model.get("id") or "")
-        try:
-            endpoint_path = endpoint_path_for_model(model)
-            endpoint_body = api_get(endpoint_path, key, args.request_timeout, args.retries)
-            endpoint_payload, endpoints = extract_endpoint_payload(endpoint_body)
-        except Exception as exc:  # The summary records failures without leaking credentials.
-            errors.append({"model_id": model_id, "error": str(exc)})
-            continue
+        endpoint_path = endpoint_path_for_model(model)
+        endpoint_body = api_get(endpoint_path, key, args.request_timeout, args.retries)
+        endpoint_payload, endpoints = extract_endpoint_payload(endpoint_body)
 
         endpoint_file = endpoint_dir / endpoint_raw_filename(model_id)
         endpoint_file.write_text(pretty_json(endpoint_body), encoding="utf-8")
@@ -414,6 +394,16 @@ def main(argv: list[str]) -> int:
             )
         if args.sleep and model_number < len(selected):
             time.sleep(args.sleep)
+
+    seen_variant_ids: set[str] = set()
+    duplicate_ids: set[str] = set()
+    for row in rows:
+        variant_id = str(row["endpoint_variant_id"])
+        if variant_id in seen_variant_ids:
+            duplicate_ids.add(variant_id)
+        seen_variant_ids.add(variant_id)
+    if duplicate_ids:
+        raise RuntimeError(f"duplicate endpoint variant ids: {', '.join(sorted(duplicate_ids))}")
 
     jsonl_path = out_dir / "endpoint_variants.jsonl"
     csv_path = out_dir / "endpoint_variants.csv"
@@ -438,8 +428,6 @@ def main(argv: list[str]) -> int:
         "sample_seed": args.sample_seed if args.sample_models is not None else None,
         "endpoint_variant_count": len(rows),
         "endpoint_fetch_count": len(endpoint_fetches),
-        "endpoint_fetch_error_count": len(errors),
-        "endpoint_fetch_errors": errors,
         "model_endpoint_fetches": endpoint_fetches,
         "selected_model_ids": [str(model.get("id")) for model in selected],
         "provider_counts": dict(sorted(provider_counts.items())),
@@ -452,7 +440,6 @@ def main(argv: list[str]) -> int:
             "endpoint_variants.jsonl",
             "endpoint_variants.csv",
             "summary.json",
-            "summary.md",
         ],
         "notes": [
             "This run used only OpenRouter catalog and endpoint APIs. It did not run inference probes.",
@@ -460,42 +447,7 @@ def main(argv: list[str]) -> int:
         ],
     }
     (out_dir / "summary.json").write_text(pretty_json(summary), encoding="utf-8")
-    summary_md = [
-        "# OpenRouter model inventory summary",
-        "",
-        f"- Run id: `{run_id}`",
-        f"- Started: {snapshot_timestamp}",
-        f"- Catalog models: {len(models)}",
-        f"- Selected models: {len(selected)}",
-        f"- Endpoint variants: {len(rows)}",
-        f"- Endpoint fetch errors: {len(errors)}",
-        f"- Unknown-quantization endpoint variants: {summary['unknown_quantization_endpoint_variant_count']}",
-        "",
-        "## Selected models",
-        "",
-    ]
-    summary_md.extend(f"- `{model.get('id')}`" for model in selected)
-    summary_md.extend(["", "## Quantization counts", ""])
-    summary_md.extend(f"- `{key}`: {value}" for key, value in sorted(quantization_counts.items()))
-    summary_md.extend(["", "## Provider counts", ""])
-    summary_md.extend(f"- `{key}`: {value}" for key, value in sorted(provider_counts.items()))
-    if errors:
-        summary_md.extend(["", "## Endpoint fetch errors", ""])
-        summary_md.extend(f"- `{item['model_id']}`: {item['error']}" for item in errors)
-    summary_md.extend([
-        "",
-        "## Files",
-        "",
-        "- `endpoint_variants.jsonl`",
-        "- `endpoint_variants.csv`",
-        "- `summary.json`",
-        "- `raw/models.json`",
-        "- `raw/endpoints/*.json`",
-        "",
-    ])
-    (out_dir / "summary.md").write_text("\n".join(summary_md), encoding="utf-8")
-
-    print(json.dumps({"run_id": run_id, "out_dir": str(out_dir), "selected_model_count": len(selected), "endpoint_variant_count": len(rows), "endpoint_fetch_error_count": len(errors)}, sort_keys=True))
+    print(json.dumps({"run_id": run_id, "out_dir": str(out_dir), "selected_model_count": len(selected), "endpoint_variant_count": len(rows)}, sort_keys=True))
     return 0
 
 

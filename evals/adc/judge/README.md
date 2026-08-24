@@ -8,7 +8,7 @@ The default runner uses ADC's production opportunity executor.  A model may call
 
 Rules 11, 37, and 58 currently supply deterministic judge actions in their Lean opportunities, so a default run executes those actions without a provider request.  `--counterfactual-model` removes the deterministic action from a cloned opportunity and permits model and candidate-prompt research without changing the production Lean rule.  The summary records the execution mode, and these three suites require counterfactual mode when `--opportunity-prompt-file` is present.
 
-Prompt candidates live under each suite's `prompts/` and replace the objective inside a cloned ADC opportunity.  The runner preserves the allowed tool, constraints, role view, tool schema, production turn semantics, prompt source, and a copy of the prompt file in the ignored output directory.  Each suite's `analysis.md` records historical measurements, while its `plan.md` describes fixture design and candidate text; the [prompt-authoring guide](../../../docs/prompt-authoring.md#adc-eval-candidate-templates) lists every candidate token and its validation rules.
+Prompt candidates live under each suite's `prompts/` and replace the objective inside a cloned ADC opportunity.  The runner preserves the allowed tool, constraints, role view, tool schema, production turn semantics, and prompt source.  Each suite's `analysis.md` records historical measurements, while its `plan.md` describes fixture design and candidate text; the [prompt-authoring guide](../../../docs/prompt-authoring.md#adc-eval-candidate-templates) lists every candidate token and its validation rules.
 
 ## Suites
 

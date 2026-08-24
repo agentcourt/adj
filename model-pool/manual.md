@@ -4,7 +4,7 @@
 
 Use `model-pool/` as the working directory unless a command says otherwise.  OpenRouter calls require `OPENROUTER_API_KEY` in the environment or an ignored `secrets/openrouter.api.txt` file.  Gene-response embedding calls also require `OPENAI_API_KEY` in the environment or an ignored `secrets/openai.api.txt` file.
 
-The runner requests strict JSON responses and records raw outputs, parsed responses, tool traces, provider metadata, timing data, and cost data.  Treat each directory under `results/` as a run record with enough data to audit the model behavior and reconstruct the command shape.  The current checked-in accepted endpoint set lives under `variants/filtered-20260529/`, and current-provider claims require a refreshed inventory and fresh evals.
+The runner requests strict JSON responses and records raw outputs, parsed responses, tool traces, provider metadata, timing data, and cost data.  Generated results stay under `results/`, while the checked-in accepted endpoint set lives under `variants/filtered-20260529/`.  Current-provider claims require a refreshed inventory and fresh evals.
 
 ## Purpose
 
@@ -30,7 +30,7 @@ The eval sets are sized for manual review.  A high score shows that a model beha
 
 Validate checked-in inputs before OpenRouter calls.  `tools/score_eval.py validate-items` checks item files, and `tools/audit_eval.py --json` checks repository consistency.  If either command fails, fix the item, schema, fixture, or repository reference before running network calls.
 
-Preserve run artifacts as a unit.  Raw result rows show model behavior, score files show deterministic evaluation, logs show provider or runner failures, manifests record command shape, and copied specs record exact endpoint-routing requests.  Moving one file without the others makes later comparison harder and can hide provider-route differences.
+Preserve each stage directory as a unit.  Raw result rows show model behavior, score files show deterministic evaluation, logs show provider or runner failures, and batch spec files record exact endpoint-routing requests.  Moving one file without its related results makes later comparison harder and can hide provider-route differences.
 
 Refresh endpoint inventories when a claim depends on current provider behavior.  OpenRouter providers can change routing, availability, pricing, metadata, and serving behavior after the checked-in snapshot.  Rebuild the inventory, batch eval, filtered endpoint set, gene responses, PCA records, clusters, aggregate records, and sampled pool when producing a new pool for current runs.
 
@@ -43,14 +43,14 @@ Input: OpenRouter model IDs.  Output: `pool.jsonl`, a JSONL file of endpoint/per
 | Select root models | Explicit OpenRouter model IDs, or `--root-count` plus `--root-seed` | `tools/run_end_to_end.py` or a recorded selection command | Selected OpenRouter model IDs |
 | Inventory provider endpoints | Selected OpenRouter model IDs | `tools/model_inventory.py` | Provider endpoint rows and raw OpenRouter catalog files |
 | Evaluate provider endpoints | Provider endpoint rows and a question file | `tools/run_variant_batch.py`, which calls `tools/run_eval.py` and `tools/score_eval.py` | Response files, score files, exact request specs, and per-endpoint summary rows |
-| Filter endpoints | Provider endpoint rows and evaluation summaries | `tools/run_end_to_end.py` filter stage, or the filter script in [Sampling Runbook](docs/sampling-runbook.md) | Accepted endpoint rows, rejected endpoint records, copied request specs, and filter summary |
+| Filter endpoints | Provider endpoint rows and evaluation summaries | `tools/run_end_to_end.py` filter stage | Accepted endpoint rows, rejected endpoint records, and filter summary |
 | Collect behavior responses | Accepted endpoint rows, sampled genes, persona file, sample count | `tools/run_first_gene_inference_embeddings.py` | Gene completions, OpenRouter metadata, embeddings, and per-gene summary |
 | Reduce embeddings | Gene completion records with embeddings | `tools/run_embedding_pca.py` | PCA coordinates and PCA summary |
 | Cluster responses | Per-gene PCA records | `tools/run_gene_pca_clustering.py` | Cluster assignments and clustering summary |
 | Aggregate cluster labels | Cluster assignments, cluster fit, and accepted endpoint rows | `tools/aggregate_variant_persona_clusters.py` | Endpoint/persona cluster records |
 | Sample pool | Endpoint/persona cluster records | `tools/sample-tuple-pool.py` | `pool.jsonl` and sampling diagnostics |
 
-`tools/run_end_to_end.py` executes those stages in one command.  Before the first stage, it copies the question file, referenced evidence manifests and files, prompt, gene file, and persona into `inputs/`.  Its immutable `manifest.json` records normalized result parameters and the source path for each copy, while `commands.jsonl`, stage directories, and `summary.json` record execution.
+`tools/run_end_to_end.py` executes those stages in one command.  It prints structured stage and command events while it runs.  Stage directories and `summary.json` contain the results.
 
 ```bash
 uv run --script tools/run_end_to_end.py \
@@ -76,8 +76,8 @@ This example evaluates five sampled root models, uses one trial per question, sa
 | Question | One ordinary question or record-based adjudication task. | Tests answer quality, JSON compliance, or record use. | `sets/*/questions.jsonl` |
 | Evidence record | Local evidence for a record-based adjudication question. | Limits what the model may cite when answering a record-based question. | `sets/core20/fixtures/*` |
 | Response | Strict JSON returned by a model for one question. | Gives the scorer fixed fields for answer, confidence, rationale, and evidence citations. | `schemas/response.schema.json` |
-| Evaluation output | Raw and parsed responses for a model or provider endpoint over questions and trials. | Preserves model output, tool trace, provider metadata, timing data, and errors before scoring. | `results/*/raw_results.jsonl`, `results/*/run.json` |
-| Score | Deterministic checks and aggregate metrics for an evaluation output. | Separates answer quality from formatting failures, provider errors, tool failures, latency, and cost. | `results/*/scores.json`, `results/*/scores.jsonl` |
+| Evaluation output | Raw and parsed responses for a model or provider endpoint over questions and trials. | Preserves model output, tool trace, provider metadata, timing data, and errors before scoring. | `results/*/raw_results.jsonl` |
+| Score | Deterministic checks and aggregate metrics for an evaluation output. | Separates answer quality from formatting failures, provider errors, tool failures, latency, and cost. | `results/*/scores.json` |
 | Provider endpoint | One OpenRouter provider endpoint for one OpenRouter model ID. | Keeps provider routing, quantization, context limits, pricing, and supported parameters separate during evaluation. | `endpoint_variants.jsonl` |
 | Accepted endpoint | A provider endpoint that passed the current operational and deliberation filters. | Supplies eligible endpoints for behavior sampling and pool construction. | `variants/filtered-20260529/*` |
 | Gene | A behavior-eliciting prompt used after endpoint filtering. | Produces response variation used to compare accepted endpoints beyond question-set scores. | `genes.json`, `sampled-genes.json` |
@@ -102,9 +102,7 @@ Question-set evaluation tests whether a model or pinned provider endpoint answer
 | Output | Contents |
 | --- | --- |
 | `raw_results.jsonl` | One response row per target, trial, and question |
-| `run.json` | Response rows, model specs, prompt path, question IDs, trial count, and timestamps |
-| `scores.jsonl` | One scored row per response after `tools/score_eval.py score` |
-| `scores.json` | Aggregate score summary by model or provider endpoint |
+| `scores.json` | Per-response scores and aggregate summaries by model or provider endpoint |
 
 Ordinary questions must return `answer`, `confidence`, `rationale`, and `evidence_ids`.  The evidence list is empty unless the question requires evidence.  Record-based adjudication questions must return `vote`, `confidence`, `rationale`, and `evidence_ids`, and cited evidence IDs must come from the evidence record.
 
@@ -140,12 +138,12 @@ uv run tools/run_eval.py \
 uv run tools/score_eval.py score --run results/openrouter-test
 ```
 
-An exact provider-endpoint evaluation starts from a JSON spec.  `tools/run_eval.py` adds the OpenRouter metadata header, requests the pinned provider endpoint, disables fallbacks, and records returned generation metadata when OpenRouter provides it.  The spec files under `variants/filtered-20260529/specs/` show the request body used for the checked-in accepted endpoint set.
+An exact provider-endpoint evaluation starts from a JSON spec.  `tools/run_eval.py` adds the OpenRouter metadata header, requests the pinned provider endpoint, disables fallbacks, and records returned generation metadata when OpenRouter provides it.  Batch eval directories retain the exact spec used for each endpoint request.
 
 ```bash
 uv run tools/run_eval.py \
   --prompt prompts/juror-single.md \
-  --model-spec variants/filtered-20260529/specs/03-openai-gpt-4o-mini-2024-07-18-openai-openai.json \
+  --model-spec results/<batch-run>/specs/<variant>.json \
   --limit 2 \
   --out results/openrouter-provider-endpoint-test
 
@@ -200,7 +198,7 @@ Use `--trials 1` for a single-pass test run.  The default of three trials suppor
 
 ## Provider Endpoint Selection
 
-Provider endpoint selection records the provider endpoints available for selected OpenRouter model IDs, evaluates each endpoint separately, and applies explicit filter criteria.  `tools/model_inventory.py` fetches the OpenRouter model catalog and endpoint metadata, then writes one normalized row per provider endpoint.  Each row preserves raw model JSON, raw endpoint JSON, provider name, endpoint tag, quantization, context limits, supported parameters, pricing, and status fields when OpenRouter returns them.
+Provider endpoint selection records the provider endpoints available for selected OpenRouter model IDs, evaluates each endpoint separately, and applies explicit filter criteria.  `tools/model_inventory.py` fetches the OpenRouter model catalog and endpoint metadata, then writes one normalized row per provider endpoint.  It saves the raw responses separately and records their paths with the provider name, endpoint tag, quantization, limits, supported parameters, pricing, and status fields.
 
 ```bash
 uv run tools/model_inventory.py \
@@ -214,8 +212,7 @@ Inventory outputs:
 | --- | --- |
 | `endpoint_variants.jsonl` | One provider endpoint row per OpenRouter endpoint |
 | `endpoint_variants.csv` | Inspection table for endpoint rows |
-| `summary.json` | Counts, selected model IDs, provider counts, and endpoint-fetch errors |
-| `summary.md` | Markdown summary of the same inventory |
+| `summary.json` | Counts, selected model IDs, endpoint fetches, and provider, quantization, and status counts |
 | `raw/models.json` | Raw OpenRouter model catalog response |
 | `raw/endpoints/*.json` | Raw OpenRouter endpoint metadata responses |
 
@@ -227,19 +224,13 @@ Use these fields from a variant JSON object when constructing an exact OpenRoute
 | `endpoint_tag` | `provider.only[0]` when present |
 | `provider_name` | Fallback `provider.only` value when `endpoint_tag` is absent |
 | `quantization` | `provider.quantizations` when the value is known |
-| `supported_parameters` | Runtime parameters safe to send |
+| `supported_parameters` | Parameters the endpoint reports that it supports |
 
 Provider-endpoint evaluations use exact routing constraints.  For known quantization, the request includes `provider.only`, `allow_fallbacks: false`, `require_parameters: true`, and `provider.quantizations`.  For `quantization: "unknown"`, the request still pins the provider endpoint and omits the quantization list.
 
 ```json
 {
   "model": "<openrouter_model_id>",
-  "messages": [
-    {"role": "user", "content": "<prompt>"}
-  ],
-  "temperature": 0,
-  "top_p": 1,
-  "max_tokens": 1024,
   "provider": {
     "only": ["<endpoint_tag>"],
     "allow_fallbacks": false,
@@ -249,19 +240,13 @@ Provider-endpoint evaluations use exact routing constraints.  For known quantiza
 }
 ```
 
-For `quantization: "unknown"`, pin by endpoint tag or provider tag and omit `provider.quantizations`:
+For `quantization: "unknown"`, the runner pins the endpoint tag or provider and omits `provider.quantizations`:
 
 ```json
 {
-  "model": "deepseek/deepseek-v4-flash",
-  "messages": [
-    {"role": "user", "content": "Answer with exactly: OK"}
-  ],
-  "temperature": 0,
-  "top_p": 1,
-  "max_tokens": 32,
+  "model": "<openrouter_model_id>",
   "provider": {
-    "only": ["alibaba"],
+    "only": ["<endpoint_tag-or-provider>"],
     "allow_fallbacks": false,
     "require_parameters": true
   }
@@ -276,7 +261,7 @@ X-OpenRouter-Experimental-Metadata: enabled
 
 After each OpenRouter call, verify the routed endpoint from response metadata and `/api/v1/generation?id=<generation_id>`.  Record provider, endpoint, usage, cost, latency, native token counts, and upstream IDs when OpenRouter returns them.  The request measures the routed OpenRouter endpoint product, but exact weights, serving engine, GPU type, KV-cache precision, hidden provider prompts, and provider changes after the inventory snapshot require provider attestations or controlled deployments.
 
-Use `tools/run_variant_batch.py` to evaluate an endpoint inventory one variant at a time.  The batch runner writes one exact spec file per variant, calls `tools/run_eval.py`, scores each completed run with `tools/score_eval.py`, and writes per-variant summary rows.  A new run refuses a nonempty output directory, and continuation requires an explicit `--resume`.
+Use `tools/run_variant_batch.py` to evaluate an endpoint inventory one variant at a time.  The batch runner writes one exact spec file per variant, calls `tools/run_eval.py`, scores each completed run with `tools/score_eval.py`, and writes per-variant summary rows.  The output directory must be absent or empty.
 
 ```bash
 uv run --script tools/run_variant_batch.py \
@@ -288,38 +273,31 @@ uv run --script tools/run_variant_batch.py \
   --timeout 90
 ```
 
-Omit `--resume` when creating the output directory.  At creation, the runner copies the endpoint inventory, question file, every referenced evidence manifest and file, and prompt under `inputs/`, then records their original paths and result parameters in an immutable `manifest.json`.  On resume, it compares the current source files byte-for-byte with those copies and rejects malformed, duplicate, out-of-range, identity-mismatched, or artifact-inconsistent `progress.jsonl` rows before changing run files.
-
 The batch output includes these files:
 
 | File | Contents |
 | --- | --- |
-| `manifest.json` | Immutable run type, normalized parameters, and input-copy records. |
-| `inputs/` | Exact endpoint, question, evidence, and prompt copies used by the run. |
 | `specs/*.json` | Exact OpenRouter variant specs used for requests. |
 | `variant-runs/*/run_eval.log` | Child-process output for one variant. |
 | `variant-runs/*/raw_results.jsonl` | Raw eval rows for one variant. |
 | `variant-runs/*/scores.json` | Scored summary for one variant. |
-| `progress.jsonl` | Per-variant completion records. |
 | `variant_summary.csv` | Tabular per-variant summary. |
 | `summary.json` | Batch status and aggregate counts. |
 
-The batch runner accepts `--no-progress-timeout` and `--variant-timeout`.  `--timeout` remains the per-request timeout passed to `tools/run_eval.py`; `--no-progress-timeout` terminates a child process that stops writing output or result rows.  A timed-out variant remains in `progress.jsonl` and `variant_summary.csv`, and downstream filtering excludes it before gene inference.
-
-To stop a long batch run, create the `STOP` file named in the runner's JSON status output.  The runner terminates the active child process and exits without starting another variant.  Remove `STOP`, inspect `progress.jsonl`, and invoke the same command with `--resume` to continue unattempted variants.  Resume refuses to start while `ACTIVE_PID` identifies a live child process.
+The batch runner accepts `--no-progress-timeout` and `--variant-timeout`.  `--timeout` remains the per-request timeout passed to `tools/run_eval.py`, while `--no-progress-timeout` terminates a child process that stops writing output or result rows.  A timed-out variant remains in `variant_summary.csv`, and downstream filtering excludes it before gene inference.
 
 The checked-in accepted endpoint set is `variants/filtered-20260529/`.  It contains 32 accepted provider endpoints from a 72-endpoint source set.  Its filter criteria are recorded in `summary.json`: `provider_error_count == 0` and `deliberation_score >= 0.90`.
 
-Accepted endpoint files:
+New filter-stage files:
 
 | File | Contents |
 | --- | --- |
 | `endpoint_variants.jsonl` | Full provider endpoint rows for accepted endpoints |
 | `endpoint_variants.csv` | Inspection table for accepted endpoints |
-| `variant_summary.jsonl` | Evaluation summaries for accepted endpoints |
-| `manifest.jsonl` | Accepted endpoint manifest rows |
-| `specs/*.json` | Exact request specs copied for accepted endpoints |
+| `removed_variants.jsonl` | Rejected endpoint identities, filter reasons, and relevant values |
 | `summary.json` | Filter criteria, source paths, accepted endpoint count, and selected source indexes |
+
+The dated snapshot retains `endpoint_variants.jsonl`, `endpoint_variants.csv`, and `summary.json`.  Its summary records the historical source paths, filter criteria, and accepted source indexes.  New filter runs also retain their rejected rows in `removed_variants.jsonl`.
 
 ## Behavior Clustering And Pool Sampling
 
@@ -334,7 +312,8 @@ Behavior clustering compares accepted endpoints on behavior-eliciting prompts af
 
 | File | Contents |
 | --- | --- |
-| `records.jsonl` | Gene completions and embedding vectors |
+| `records.jsonl` | Gene completions, request and route metadata, errors, and embedding vectors |
+| `summary.json` | Expected and written record counts, status counts, and completion and embedding error counts |
 | `pca-records.jsonl` | PCA coordinates for one gene's embedded responses |
 | `clusters.jsonl` | One cluster assignment per sampled completion |
 | `variant-persona-clusters.jsonl` | One endpoint/persona record with cluster labels ordered by `gene_index` |
@@ -353,6 +332,8 @@ uv run --script tools/run_first_gene_inference_embeddings.py \
   --gene-index 0 \
   --out results/gene-1-inference-embeddings-YYYYMMDDTHHMMSSZ
 ```
+
+Check `summary.json` before passing the records to PCA.  `records_written` and `embedding_count` must equal `expected_records`, while both error counts must be zero.  The gene command writes diagnostic rows and its summary before returning a nonzero exit status for a completion or embedding failure, and the end-to-end runner stops on that failed stage.
 
 Run PCA for one gene response set:
 
@@ -429,9 +410,7 @@ If a validation command fails, inspect the reported item ID and schema path firs
 
 If an OpenRouter run fails before it writes result rows, check credentials, model IDs, provider constraints, and endpoint availability.  The tools read `OPENROUTER_API_KEY` from the environment first and then from ignored `secrets/openrouter.api.txt`.  Exact-variant runs also depend on the provider route named by the variant spec, so a provider-side endpoint change can fail a spec that used to run.
 
-If a batch run stops making progress, inspect `variant-runs/*/run_eval.log`, `progress.jsonl`, `variant_summary.csv`, and the timeout fields in the command.  The per-request timeout controls one model call, while `--no-progress-timeout` controls a child process that stops writing output or result rows.  A child crash or scoring failure indicates an eval-tool problem that must be diagnosed before continuing.
-
-If `--resume` fails, use the reported manifest field or source path to identify the difference.  Restore the recorded argument or input when continuing the same run, or choose a new output directory for a changed experiment.  Do not edit `manifest.json`, the saved input copies, or `progress.jsonl` to force a mismatch through validation.
+If a batch run stops making progress, inspect `variant-runs/*/run_eval.log`, `variant_summary.csv`, and the timeout fields in the command.  The per-request timeout controls one model call, while `--no-progress-timeout` controls a child process that stops writing output or result rows.  A child crash or scoring failure indicates an eval-tool problem that must be diagnosed before continuing.
 
 If gene-response, PCA, clustering, aggregation, or pool sampling fails, check row counts against the command expectations.  The clustering and aggregation tools validate expected variants, samples per variant, and samples per gene so incomplete upstream data cannot produce a pool without an error.  For reduced tests, set those expected-count flags to the test shape rather than relying on historical full-run constants.
 
@@ -442,7 +421,7 @@ If gene-response, PCA, clustering, aggregation, or pool sampling fails, check ro
 | `sets/core20/questions.jsonl` | 20-question core set with knowledge, science, reasoning, instruction-following, and record-based adjudication questions |
 | `sets/deliberation/questions.jsonl` | 20-question deliberation set with eight juror-deliberation questions |
 | `sets/core20/fixtures/` | Evidence records for record-based questions |
-| `schemas/` | JSON schemas for questions, responses, and evaluation outputs |
+| `schemas/` | JSON schemas for questions and responses |
 | `rubrics/core20.md` | Deterministic checks, deliberation score, and operational metrics |
 | `prompts/` | Single-juror and council-member prompt wrappers |
 | `../common/etc/personas/generic.md` | Generic persona for gene-response sampling |
@@ -459,7 +438,7 @@ If gene-response, PCA, clustering, aggregation, or pool sampling fails, check ro
 | `tools/run_embedding_pca.py` | PCA reduction for embedded gene responses |
 | `tools/run_gene_pca_clustering.py` | Per-gene K-means clustering |
 | `tools/aggregate_variant_persona_clusters.py` | Aggregation from sample-level clusters to endpoint/persona cluster records |
-| `tools/sample-pool.py`, `tools/sample-diverse-pool.py`, and `tools/sample-tuple-pool.py` | Pool samplers for variant/persona cluster rows |
+| `tools/sample-tuple-pool.py` | Tuple-uniform sampler for variant/persona cluster rows |
 | `tools/clusters-graph.py` | Renders `clusters.csv` from the per-gene clustering stage as a faceted chart |
 | `variants/filtered-20260529/` | Checked-in accepted endpoint snapshot |
 | `genes.json` and `sampled-genes.json` | Source gene list and sampled gene subset used by the clustering procedure |

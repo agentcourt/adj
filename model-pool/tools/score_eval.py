@@ -346,17 +346,15 @@ def summarize_model(rows: list[dict]) -> dict:
 
 def score_run(run_dir: Path, questions: Path) -> dict:
     items = load_items(questions)
-    run = json.loads((run_dir / "run.json").read_text())
-    scores = [score_one(items[row["item_id"]], row) for row in run["results"]]
+    with (run_dir / "raw_results.jsonl").open() as handle:
+        results = [json.loads(line) for line in handle if line.strip()]
+    scores = [score_one(items[row["item_id"]], row) for row in results]
     by_model = {}
     for s in scores:
         by_model.setdefault(s["model"], []).append(s)
     summary = {model: summarize_model(rows) for model, rows in by_model.items()}
-    out = {"run_id": run.get("run_id"), "scores": scores, "summary": summary}
+    out = {"scores": scores, "summary": summary}
     (run_dir / "scores.json").write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
-    with (run_dir / "scores.jsonl").open("w") as f:
-        for s in scores:
-            f.write(json.dumps(s, sort_keys=True) + "\n")
     return out
 
 
@@ -380,7 +378,7 @@ def main() -> int:
     if not run_dir.is_absolute():
         run_dir = ROOT / run_dir
     out = score_run(run_dir, q)
-    print(json.dumps({"run_id": out["run_id"], "summary": out["summary"]}, indent=2, sort_keys=True))
+    print(json.dumps({"summary": out["summary"]}, indent=2, sort_keys=True))
     return 0
 
 if __name__ == "__main__":

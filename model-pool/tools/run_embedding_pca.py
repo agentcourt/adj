@@ -30,10 +30,8 @@ def load_jsonl(path: Path) -> list[dict]:
 
 def identity_fields(row: dict) -> dict:
     keys = [
-        "run_id",
         "gene_index",
         "gene",
-        "gene_sha256",
         "persona_id",
         "persona_path",
         "variant_order",

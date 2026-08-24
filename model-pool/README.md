@@ -34,14 +34,14 @@ uv run tools/score_eval.py score --run results/mock-perfect
 
 ## Run Data
 
-Run outputs, model responses, score files, manifests, provider inventories, sampled pools, and run-specific summaries belong under `results/`, or under an intentional snapshot directory in `variants/` when the repository needs a checked-in survivor set.  `results/` is ignored except for `results/.gitkeep`, and credentials are ignored under `secrets/`.  README content stays limited to stable workflow, file locations, and entry points; run IDs, endpoint counts, pass rates, accepted endpoint lists, and dated filter details belong in run artifacts, snapshot summaries, analysis notes, or the manual.
+Model responses, score files, provider inventories, sampled pools, and stage summaries belong under `results/`, or under an intentional snapshot directory in `variants/` when the repository needs a checked-in survivor set.  `results/` is ignored except for `results/.gitkeep`, and credentials are ignored under `secrets/`.  README content stays limited to stable workflow, file locations, and entry points; run IDs, endpoint counts, pass rates, accepted endpoint lists, and dated filter details belong in generated results, snapshot summaries, analysis notes, or the manual.
 
 ## Layout
 
 | Path | Contents |
 | --- | --- |
 | `sets/` | Checked-in question sets and fixtures. |
-| `schemas/` | JSON schemas for items, responses, and result records. |
+| `schemas/` | JSON schemas for items and responses. |
 | `rubrics/` | Deterministic scoring rules and metric definitions. |
 | `prompts/` | Prompt text used by eval or pool-construction tools. |
 | `config/` | Retained model lists and pool selections from earlier runs, kept as reference sets.  No tool reads them. |

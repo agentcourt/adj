@@ -18,7 +18,31 @@ Restored `tools/sample-tuple-pool.py` to the source model-pool behavior, which p
 
 ## 2026-08-23 End-To-End Execution Simplification
 
-Removed the end-to-end options that skipped execution or reused existing stage output.  `run_command` executes every command it records, each run requires a new directory, and stage stops remain available for bounded runs.  Python compilation and the command help path passed, and `git diff --check` passed.
+Removed the end-to-end options that skipped execution or reused existing stage output.  Each run requires a new directory, and stage stops remain available for bounded runs.  The run root contains stage directories and `summary.json`; command events go to standard output.  Python compilation and command help passed.  A live one-model inventory stage completed with three endpoint variants.
+
+## 2026-08-24 Variant Batch Continuation Removal
+
+Removed implicit continuation from `tools/run_variant_batch.py`.  Each invocation requires an absent or empty output directory and evaluates every input variant.  `variant_summary.csv` contains the terminal result for each variant, while standard-output events report live progress.  Removed the control files while retaining per-request, no-progress, and per-variant timeouts.  Removed the stale batch-output entries for snapshot files that the command does not create.
+
+Verification compiled the command and checked its help output.  A zero-variant invocation completed in an empty directory, and a second invocation against that populated directory failed before execution.  A live one-variant, one-item batch completed and scored `1.0`.  Focused child-process runs exercised both timeout kinds, returned exit code 124, and terminated the children.
+
+## 2026-08-24 Gene Runner Simplification
+
+Removed gene-run continuation, record reuse, and temporary-file replacement.  Each invocation requires an absent or empty output directory, requests every configured completion and embedding, and writes `records.jsonl` directly.  Request timeouts and bounded retries remain.
+
+A live one-variant, one-sample run completed one OpenRouter response and one OpenAI embedding.  It wrote one successful record directly, created no temporary record file, and rejected a second invocation against the populated output directory.  Python compilation and command help passed.
+
+An implementation and user-documentation search found none of the removed continuation, temporary-output, PID-file, stop-file, or end-to-end manifest code.  `git diff --check` passed.  The development journal retains the removed feature names as the record of this cleanup.
+
+## 2026-08-24 Output and Identity Reduction
+
+The evaluator now keeps response rows in `raw_results.jsonl`, and the scorer reads that file and writes `scores.json`.  Batch progress uses standard-output events and `variant_summary.csv`.  The end-to-end runner keeps stage outputs and `summary.json`.  Filtering keeps accepted endpoint rows, removed endpoint rows, its CSV view, and its summary.  Gene records omit duplicate run and gene-hash fields, and end-to-end validation rejects incomplete completions or embeddings before PCA.  Aggregation writes one JSONL pool input and its summary.
+
+Inventory aborts on an endpoint-fetch failure.  Endpoint raw filenames percent-encode the model ID, and endpoint variant IDs use `openrouter:<model>@<route>#<quantization>`.  Inventory rejects duplicate route IDs before writing normalized rows.  The checked-in filtered variants and default pool use the readable IDs consistently across root, representative, variant, and equivalent-endpoint fields.  Removed response hashes from the normalized inventory and runtime metadata.
+
+Deleted the unused pool samplers, duplicate filter artifacts and checked-in specs, duplicate aggregate JSON, duplicate scorer and evaluator outputs, inventory Markdown summary, gene manifest, and obsolete result schema.  Local verification compiled every model-pool tool, validated both item sets, passed the repository audit, completed a four-row mock evaluator run and scoring pass, and confirmed that the evaluator directory contains only `raw_results.jsonl` and `scores.json`.
+
+A current OpenRouter inventory for `openai/gpt-4o-mini` returned three routes and wrote `openai%2Fgpt-4o-mini.json`; its output contained the normalized JSONL and CSV, raw catalog responses, and `summary.json`.  A complete live run for one Relace Search route evaluated one question, retained one survivor, completed one gene response and embedding, and finished PCA, clustering, aggregation, and one-row pool sampling.  Its file tree matched the retained output set.  The focused Quick and model-request Go tests passed against the migrated default pool.
 
 ## 2026-07-16 Eval Directory Reorganization
 
@@ -48,9 +72,7 @@ Run `e2e-root40-pool30-20260618T172234Z` completed inventory, eval, filtering, a
 
 The deterministic failure class is unsupported request parameters during exact provider routing.  `tools/run_first_gene_inference_embeddings.py` sends `temperature`, `top_p`, and `max_tokens` for every survivor while also setting `provider.require_parameters` to `true`.  DigitalOcean `nvidia/nemotron-3-super-120b-a12b`, BaseTen `openai/gpt-oss-120b`, and Poolside `poolside/laguna-xs.2` do not advertise `top_p`, and OpenRouter rejects those exact-provider requests with `404 No endpoints found that can handle the requested parameters`.
 
-The transient failure classes are OpenRouter rate limits and local read failures such as `IncompleteRead(...)`.  The gene runner currently records those failures without retrying.  The proposed fix is to send only parameters supported by the endpoint metadata and to retry rate-limit and read failures with a bounded policy.  Recovery also needs `--resume` to rerun failed gene stages instead of treating any existing `summary.json` as completed.
-
-Follow-up: implemented endpoint-supported request-parameter filtering, bounded completion retries, and record-level gene resume.  The saved run resumed from the existing inventory, eval, and filter outputs.  Gene 0 reused 83 records and recovered 16 records; gene 1 reused 82 and recovered 17; gene 2 reused 85 and recovered 14; gene 3 reused 88 and recovered 11.  All four gene stages finished with 99 records, 99 embeddings, and zero completion or embedding errors.  PCA, clustering, aggregation, and pool sampling completed.  The final pool has 30 rows, 30 diagnostics rows, and 25 equivalence rows.
+OpenRouter rate limits and local read failures such as `IncompleteRead(...)` interrupted the first gene run.  The gene runner filters request parameters against endpoint metadata and retries transient completion failures with a bounded policy.  Each invocation starts a new output directory and requests every record.
 
 ## 2026-06-18 Equivalent Endpoint Deduplication
 
@@ -72,10 +94,10 @@ Survivors: Mistral Large 2407 on Mistral, Qwen3 32B on DeepInfra, Qwen3 32B on N
 
 ## 2026-05-31 End-To-End Runner
 
-Added `tools/run_end_to_end.py`, a uv-runnable command for the endpoint-variant pool pipeline.  It calls the existing inventory, eval, filter, gene inference, PCA, clustering, aggregation, and tuple-pool tools, and writes a single run directory with `manifest.json`, `commands.jsonl`, stage subdirectories, and `summary.json`.  The runner supports explicit `--model-id` values, sampled roots, stage stops, configurable filter criteria, configurable genes and samples, PCA dimension capping, and pool sampling parameters.
+Added `tools/run_end_to_end.py`, a uv-runnable command for the endpoint-variant pool pipeline.  It calls the existing inventory, eval, filter, gene inference, PCA, clustering, aggregation, and tuple-pool tools, and writes stage subdirectories and `summary.json` beneath one run directory.  The runner supports explicit `--model-id` values, sampled roots, stage stops, configurable filter criteria, configurable genes and samples, PCA dimension capping, and pool sampling parameters.
 
 Validation: `uv run --script tools/run_end_to_end.py --help` passed.
 
 Path-handling fix: generalized `tools/run_embedding_pca.py`, `tools/run_first_gene_inference_embeddings.py`, and `tools/run_variant_batch.py` so output and input paths outside the repository root can be reported without `Path.relative_to(ROOT)` failures.  `tools/run_gene_pca_clustering.py` and `tools/aggregate_variant_persona_clusters.py` already received the same display-path treatment during the small-run generalization.
 
-Variant-timeout fix: `tools/run_variant_batch.py` now redirects each child eval run to `variant-runs/*/run_eval.log`, monitors raw-result and log progress without blocking on child stdout, and terminates a variant that exceeds `--no-progress-timeout` or `--variant-timeout`.  Timed-out variants are recorded in `progress.jsonl` and `variant_summary.csv`, and the batch exits with status 0 when timeout is the only variant failure.  `tools/run_end_to_end.py` passes the no-progress timeout through the eval stage and writes `filtered/removed_variants.jsonl` so timed-out variants are removed before gene inference.
+Variant-timeout fix: `tools/run_variant_batch.py` redirects each child eval run to `variant-runs/*/run_eval.log`, monitors raw-result and log progress without blocking on child stdout, and terminates a variant that exceeds `--no-progress-timeout` or `--variant-timeout`.  Timed-out variants appear in `variant_summary.csv`, and the batch exits with status 0 when timeout is the only variant failure.  `tools/run_end_to_end.py` passes the no-progress timeout through the eval stage and writes `filtered/removed_variants.jsonl` so timed-out variants are removed before gene inference.

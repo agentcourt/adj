@@ -5,7 +5,6 @@
 # ///
 import argparse
 import datetime as dt
-import hashlib
 import http.client
 import json
 import os
@@ -236,19 +235,6 @@ def error_row(base: dict, status: str, exc: Exception) -> dict:
     return {**base, "status": status, "response_text": "", "embedding": None, "metadata": meta}
 
 
-def record_key(row: dict) -> tuple[str, str]:
-    endpoint = row.get("endpoint_variant_id")
-    if endpoint in (None, ""):
-        endpoint = row.get("combined_index")
-    return str(endpoint), str(row.get("sample_index"))
-
-
-def reusable_record(row: dict | None) -> bool:
-    if not isinstance(row, dict):
-        return False
-    return row.get("status") == "ok" and isinstance(row.get("embedding"), list)
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run one sampled gene through filtered variants and embed responses.")
     parser.add_argument("--out", required=True)
@@ -264,7 +250,6 @@ def main() -> int:
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--completion-attempts", type=int, default=3)
     parser.add_argument("--retry-sleep", type=float, default=2.0)
-    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
 
     if not load_openrouter_key():
@@ -282,6 +267,8 @@ def main() -> int:
     out = Path(args.out)
     if not out.is_absolute():
         out = ROOT / out
+    if out.exists() and (not out.is_dir() or any(out.iterdir())):
+        raise RuntimeError(f"{display_path(out)} must be absent or an empty directory")
     out.mkdir(parents=True, exist_ok=True)
 
     genes = json.loads(genes_path.read_text())
@@ -299,51 +286,23 @@ def main() -> int:
         raise RuntimeError(f"{variants_path}: no variants found")
 
     requested_params = {"temperature": args.temperature, "top_p": args.top_p, "max_tokens": args.max_tokens}
-    run_id = out.name
     expected = len(variants) * args.samples
     records_path = out / "records.jsonl"
     summary_path = out / "summary.json"
-    temp_records_path = out / "records.jsonl.tmp"
-    prior_records: dict[tuple[str, str], dict] = {}
-    if args.resume and records_path.exists():
-        for row in load_jsonl(records_path):
-            prior_records[record_key(row)] = row
-
-    manifest = {
-        "run_id": run_id,
-        "started_at": utc_now(),
-        "scope": "one_sampled_gene_only",
-        "gene_index": args.gene_index,
-        "gene": gene,
-        "persona_path": display_path(persona_path),
-        "variants_path": display_path(variants_path),
-        "variant_count": len(variants),
-        "samples_per_variant": args.samples,
-        "expected_records": expected,
-        "requested_request_parameters": requested_params,
-        "embedding_model": args.embedding_model,
-        "completion_attempts": args.completion_attempts,
-        "retry_sleep_seconds": args.retry_sleep,
-        "resume": args.resume,
-        "records_path": display_path(records_path),
-    }
-    (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    print(json.dumps({"event": "started", "run_id": run_id, "expected": expected, "out": str(out)}, sort_keys=True), flush=True)
+    started_at = utc_now()
+    print(json.dumps({"event": "started", "expected": expected, "out": str(out)}, sort_keys=True), flush=True)
 
     rows: list[dict] = []
-    reused_records = 0
-    with temp_records_path.open("w") as handle:
+    with records_path.open("w") as handle:
         completed = 0
         for variant_order, row in enumerate(variants, 1):
             spec = spec_from_variant(row)
             request_params, omitted_request_params = request_params_from_variant(row, requested_params)
             for sample_index in range(1, args.samples + 1):
                 base = {
-                    "run_id": run_id,
                     "created_at": utc_now(),
                     "gene_index": args.gene_index,
                     "gene": gene,
-                    "gene_sha256": hashlib.sha256(gene.encode()).hexdigest(),
                     "persona_id": "generic",
                     "persona_path": display_path(persona_path),
                     "variant_order": variant_order,
@@ -359,45 +318,40 @@ def main() -> int:
                     "omitted_request_parameters": omitted_request_params,
                     "embedding_model": args.embedding_model,
                 }
-                prior = prior_records.get(record_key(base))
-                if reusable_record(prior):
-                    record = prior
-                    reused_records += 1
+                try:
+                    response_text, metadata = openrouter_completion(
+                        spec,
+                        persona,
+                        gene,
+                        request_params,
+                        args.timeout,
+                        args.completion_attempts,
+                        args.retry_sleep,
+                    )
+                except Exception as exc:
+                    record = error_row(base, "completion_error", exc)
                 else:
                     try:
-                        response_text, metadata = openrouter_completion(
-                            spec,
-                            persona,
-                            gene,
-                            request_params,
-                            args.timeout,
-                            args.completion_attempts,
-                            args.retry_sleep,
-                        )
+                        embedding, embedding_meta = embedding_request(response_text, args.embedding_model, args.timeout)
                     except Exception as exc:
-                        record = error_row(base, "completion_error", exc)
+                        metadata["embedding_error_type"] = classify_error(exc)
+                        metadata["embedding_error_message"] = str(exc)
+                        record = {
+                            **base,
+                            "status": "embedding_error",
+                            "response_text": response_text,
+                            "embedding": None,
+                            "metadata": metadata,
+                        }
                     else:
-                        try:
-                            embedding, embedding_meta = embedding_request(response_text, args.embedding_model, args.timeout)
-                        except Exception as exc:
-                            metadata["embedding_error_type"] = classify_error(exc)
-                            metadata["embedding_error_message"] = str(exc)
-                            record = {
-                                **base,
-                                "status": "embedding_error",
-                                "response_text": response_text,
-                                "embedding": None,
-                                "metadata": metadata,
-                            }
-                        else:
-                            metadata.update(embedding_meta)
-                            record = {
-                                **base,
-                                "status": "ok",
-                                "response_text": response_text,
-                                "embedding": embedding,
-                                "metadata": metadata,
-                            }
+                        metadata.update(embedding_meta)
+                        record = {
+                            **base,
+                            "status": "ok",
+                            "response_text": response_text,
+                            "embedding": embedding,
+                            "metadata": metadata,
+                        }
                 rows.append(record)
                 handle.write(json.dumps(record, ensure_ascii=False) + "\n")
                 handle.flush()
@@ -411,7 +365,6 @@ def main() -> int:
                             "combined_index": row.get("combined_index"),
                             "sample_index": sample_index,
                             "status": record["status"],
-                            "reused": record is prior,
                         },
                         sort_keys=True,
                     ),
@@ -419,28 +372,37 @@ def main() -> int:
                 )
 
     hydrate_posthoc_generation_metadata(rows, args.timeout)
-    with temp_records_path.open("w") as handle:
+    with records_path.open("w") as handle:
         for row in rows:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
-    os.replace(temp_records_path, records_path)
 
     counts: dict[str, int] = {}
     for row in rows:
         counts[row["status"]] = counts.get(row["status"], 0) + 1
     summary = {
-        **manifest,
+        "started_at": started_at,
         "finished_at": utc_now(),
+        "gene_index": args.gene_index,
+        "gene": gene,
+        "persona_path": display_path(persona_path),
+        "variants_path": display_path(variants_path),
+        "variant_count": len(variants),
+        "samples_per_variant": args.samples,
+        "expected_records": expected,
+        "requested_request_parameters": requested_params,
+        "embedding_model": args.embedding_model,
+        "completion_attempts": args.completion_attempts,
+        "retry_sleep_seconds": args.retry_sleep,
+        "records_path": display_path(records_path),
         "records_written": len(rows),
-        "reused_record_count": reused_records,
         "status_counts": counts,
         "completion_error_count": counts.get("completion_error", 0),
         "embedding_error_count": counts.get("embedding_error", 0),
         "embedding_count": sum(1 for row in rows if isinstance(row.get("embedding"), list)),
-        "partial_records_allowed": True,
     }
     summary_path.write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps({"event": "finished", "summary": summary}, sort_keys=True), flush=True)
-    return 0
+    return 1 if summary["completion_error_count"] or summary["embedding_error_count"] or summary["embedding_count"] != expected else 0
 
 
 if __name__ == "__main__":

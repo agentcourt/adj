@@ -324,7 +324,21 @@ ADC judge evals expose production execution only.  Model-backed suites initializ
 
 `go test ./adc/runtime/eval`, `go test ./adc/runtime/cli`, `go test ./adc/runtime/runner`, and `go test ./adc/...` passed after the removal.  A source search found no remaining synthetic-execution names in `adc/`, `evals/adc/`, or this journal, and `git diff --check` passed.
 
-The model-pool end-to-end runner executes each command it records in a new run directory.  Removed options had created run metadata without executing inventory or had reused existing stage output.  Python compilation and the command help path passed after removing the options, branches, event fields, and documentation.
+The model-pool end-to-end runner executes every stage in a new run directory and reports command starts and finishes on standard output.  It writes stage directories and one run summary.  Stage stops remain for bounded runs.
+
+The endpoint-variant batch runner requires an absent or empty output directory and evaluates every input variant.  `variant_summary.csv` contains one terminal row per variant, while the event stream reports live progress.  Per-request, no-progress, and per-variant timeouts remain and terminate a timed-out child process.
+
+The direct evaluator writes response rows to `raw_results.jsonl`, and the scorer writes the row scores and aggregates to `scores.json`.  The filter retains accepted endpoint rows, removed endpoint rows, its CSV view, and its summary.  The gene runner requires an absent or empty output directory and writes each result to `records.jsonl`; the end-to-end runner rejects any completion error, embedding error, missing record, or missing embedding before PCA.  Request timeouts and bounded retries remain.
+
+Inventory requests now abort the run when any selected model's endpoint request fails.  Route IDs use `openrouter:<model>@<route>#<quantization>`, and inventory rejects collisions before writing normalized rows.  The checked-in filtered variants and default pool use those IDs consistently, including nested equivalent endpoints.  Inventory raw files use percent-encoded model IDs as filenames; response hashes were removed from normalized metadata.
+
+Removed the unused pool samplers and retained `sample-tuple-pool.py`.  Removed duplicate aggregate JSON, filter copies, evaluator and scorer outputs, inventory Markdown, command and progress journals, gene manifests, and the result schema whose only object was the removed evaluator aggregate.
+
+Python compilation and command help passed.  A live end-to-end inventory stage produced three endpoint variants and no run manifest.  A live one-variant batch completed one item with a score of `1.0`, and focused runs exercised both retained timeout kinds.  A live one-variant gene run completed one response and one embedding, wrote its record directly, and rejected the populated output directory on a second invocation.  The first child-process test had failed because the sandbox's default `uv` cache is read-only; setting `UV_CACHE_DIR` to a writable cache corrected that test environment.
+
+After the output reduction, a current one-model inventory returned three readable route IDs and one percent-encoded raw endpoint filename.  A complete one-route live run evaluated one question, filtered the route, completed one gene response and embedding, and finished PCA, clustering, aggregation, and pool sampling.  The output tree contained only the retained stage files.  The focused Quick and shared model-request tests passed against the migrated default pool.
+
+An implementation and user-documentation search found none of the removed continuation, temporary-output, PID-file, stop-file, or end-to-end manifest code.  `git diff --check` passed.  The development journals retain the removed feature names as the record of this cleanup.
 
 Prompt catalog construction does not resolve the default court.  A supplied nonzero court profile is validated during renderer construction, while `JudgeRole` and Rule 12 schema construction resolve an omitted court and return lookup failures.  Juror and LLM probes can therefore load and override their catalog prompts from a working directory that has no ADC court asset.
 

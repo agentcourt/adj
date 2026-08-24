@@ -463,7 +463,7 @@ func variantMetadata(raw map[string]any) map[string]any {
 		"endpoint_tag", "endpoint_id", "endpoint_model_id", "endpoint_model_name", "endpoint_model_permaslug",
 		"quantization", "unknown_quantization_endpoint_variant", "context_length", "max_prompt_tokens",
 		"max_completion_tokens", "supported_parameters", "model_supported_parameters", "endpoint_raw_path",
-		"raw_endpoint_sha256", "model_raw_path", "raw_model_sha256", "equivalence_key",
+		"model_raw_path", "equivalence_key",
 		"equivalence_class_size", "representative_source_row", "representative_endpoint_variant_id",
 		"equivalent_endpoints",
 	}
