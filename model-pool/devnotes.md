@@ -6,15 +6,19 @@ Restored `model-pool/` from adjudication commit `dde9b3fe3b83e0139534da340cb17d5
 
 Added `--prompt` to `tools/run_eval.py`, `tools/run_variant_batch.py`, and `tools/run_end_to_end.py`.  Relative paths resolve from `model-pool/`, and each runner passes or records the selected prompt path.  The default remains `prompts/juror-single.md`.
 
-Verification: Python compilation, both item validators, the repository audit, all fifteen command help paths, and the end-to-end dry run passed.  A twenty-item mock run using `prompts/council-member.md` scored `1.0`, and a second run confirmed that changing `--prompt` changes the rendered prompt and recorded prompt path.  `uv` retrieved the scripts' declared NumPy, Matplotlib, SciPy, and scikit-learn dependencies during these tests; no dependency declaration changed.
+Verification: Python compilation, both item validators, the repository audit, and all fifteen command help paths passed.  A twenty-item mock run using `prompts/council-member.md` scored `1.0`, and a second run confirmed that changing `--prompt` changes the rendered prompt and recorded prompt path.  `uv` retrieved the scripts' declared NumPy, Matplotlib, SciPy, and scikit-learn dependencies during these tests; no dependency declaration changed.
 
-## 2026-08-23 Run Integrity and Persona Packaging
+## 2026-08-23 Evaluation Runner Simplification
 
-Added `tools/run_record.py` for immutable run manifests and exact input copies.  Variant batches now require explicit `--resume`, reject nonempty output directories for new runs, copy endpoint, question, evidence, and prompt sources, compare current sources byte-for-byte before resume writes, and validate progress rows against the recorded variant order and identity.  The end-to-end runner applies the same input and parameter checks, uses its saved question, prompt, gene, and persona files for child stages, validates stage contents before skipping them, and passes `--resume` only to an existing incomplete variant batch.
+Deleted the separate run-record module, its recovery and integrity tests, and documentation for that behavior.  Restored the affected commands to the source model-pool behavior while retaining the adj OpenRouter metadata and the configurable prompt path through the direct, batch, and end-to-end eval commands.  Collapsed the unused evidence-tool error subclasses into `ToolError`.  Verification compiled the affected commands, checked the prompt-bearing help paths, completed a one-item mock run with `prompts/council-member.md`, and exercised evidence listing and reading.
 
-Tuple-pool sampling now copies every selected persona into `personas/` beside the output pool and emits a relative path to that copy.  Preflight reads all selected persona sources before writing outputs, rejects one persona ID associated with different contents, assigns deterministic filenames after normalization collisions, and permits an existing destination only when its bytes match.  `--persona-root` supplies an explicit base for relative source paths.
+## 2026-08-23 Persona Packaging Removal
 
-Focused verification compiled the five changed tools and passed thirteen standard-library tests.  The tests cover question and evidence snapshots, source and parameter mismatch rejection, preservation of run files after a rejected resume, strict progress identity, index, JSON-key, and variant-spec validation, live-child detection, an executed batch with explicit resume, end-to-end dry-run resume checks, persona packaging, and persona-ID conflicts.  A separate dry run copied all four Core20 evidence records into a run outside the repository, and a twenty-item mock eval read the copied questions and evidence before scoring `1.0`.  Sampling two rows from the active 25-row pool copied the shared generic persona beside the output and emitted `personas/generic.md` for both rows.
+Restored `tools/sample-tuple-pool.py` to the source model-pool behavior, which preserves the persona paths in its input rows.  Deleted the five persona-packaging tests and the documentation for copied persona files.  Verification compiled the script, checked its help output, and sampled two rows while preserving both input persona paths.
+
+## 2026-08-23 End-To-End Execution Simplification
+
+Removed the end-to-end options that skipped execution or reused existing stage output.  `run_command` executes every command it records, each run requires a new directory, and stage stops remain available for bounded runs.  Python compilation and the command help path passed, and `git diff --check` passed.
 
 ## 2026-07-16 Eval Directory Reorganization
 
@@ -68,9 +72,9 @@ Survivors: Mistral Large 2407 on Mistral, Qwen3 32B on DeepInfra, Qwen3 32B on N
 
 ## 2026-05-31 End-To-End Runner
 
-Added `tools/run_end_to_end.py`, a uv-runnable command for the endpoint-variant pool pipeline.  It calls the existing inventory, eval, filter, gene inference, PCA, clustering, aggregation, and tuple-pool tools, and writes a single run directory with `manifest.json`, `commands.jsonl`, stage subdirectories, and `summary.json`.  The runner supports explicit `--model-id` values, sampled roots, resume, dry-run, stage stops, configurable filter criteria, configurable genes and samples, PCA dimension capping, and pool sampling parameters.
+Added `tools/run_end_to_end.py`, a uv-runnable command for the endpoint-variant pool pipeline.  It calls the existing inventory, eval, filter, gene inference, PCA, clustering, aggregation, and tuple-pool tools, and writes a single run directory with `manifest.json`, `commands.jsonl`, stage subdirectories, and `summary.json`.  The runner supports explicit `--model-id` values, sampled roots, stage stops, configurable filter criteria, configurable genes and samples, PCA dimension capping, and pool sampling parameters.
 
-Validation: `uv run --script tools/run_end_to_end.py --help` passed.  Dry-run over `/tmp/adjudication-evals-orchestrator-dry/dry` wrote the manifest and recorded the inventory command without calling OpenRouter.  Resume validation over `/tmp/adjudication-evals-orchestrator-resume-test/run` reused today’s completed inventory, eval, and gene inference artifacts, then ran filter, PCA, clustering, aggregation, and pool sampling to completion without live API calls.
+Validation: `uv run --script tools/run_end_to_end.py --help` passed.
 
 Path-handling fix: generalized `tools/run_embedding_pca.py`, `tools/run_first_gene_inference_embeddings.py`, and `tools/run_variant_batch.py` so output and input paths outside the repository root can be reported without `Path.relative_to(ROOT)` failures.  `tools/run_gene_pca_clustering.py` and `tools/aggregate_variant_persona_clusters.py` already received the same display-path treatment during the small-run generalization.
 

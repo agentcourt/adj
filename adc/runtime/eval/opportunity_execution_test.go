@@ -64,7 +64,7 @@ func TestExecuteJudgeOpportunityCounterfactualUsesModelPath(t *testing.T) {
 	t.Parallel()
 
 	engine := writeEvalOpportunityEngine(t)
-	client := NewScriptedResponseClient([]ScriptedResponse{{Response: openaiapi.Response{
+	client := newTestResponseClient(testResponseStep{response: openaiapi.Response{
 		ResponseID: "response-1",
 		ToolCalls: []openaiapi.ToolCall{{
 			CallID: "decision-1",
@@ -73,7 +73,7 @@ func TestExecuteJudgeOpportunityCounterfactualUsesModelPath(t *testing.T) {
 				"motion_id": "motion-1",
 			},
 		}},
-	}}})
+	}})
 	result, err := executeJudgeOpportunity(context.Background(), judgeOpportunityExecutionOptions{
 		Engine:              engine,
 		State:               evalOpportunityState(),
@@ -97,11 +97,7 @@ func TestExecuteJudgeOpportunityCounterfactualUsesModelPath(t *testing.T) {
 	if _, ok := result.Opportunity["deterministic_action"]; ok {
 		t.Fatalf("counterfactual opportunity = %#v", result.Opportunity)
 	}
-	originalOpportunity := result.OpportunityResponse["opportunity"].(map[string]any)
-	if _, ok := originalOpportunity["deterministic_action"]; !ok {
-		t.Fatalf("original opportunity response was mutated: %#v", result.OpportunityResponse)
-	}
-	if !result.CounterfactualModel || len(result.Exchanges) != 1 {
+	if len(result.Exchanges) != 1 {
 		t.Fatalf("result = %#v", result)
 	}
 	if result.Opportunity["role"] != "judge" || result.TurnLog.Prompt != "Evaluate the counterfactual model decision." {
@@ -122,10 +118,10 @@ func TestExecuteJudgeOpportunityRequiresOriginalDeterministicActionBeforeClientU
 		counterfactual := counterfactual
 		t.Run(map[bool]string{false: "production", true: "counterfactual"}[counterfactual], func(t *testing.T) {
 			t.Parallel()
-			client := NewScriptedResponseClient([]ScriptedResponse{{Response: openaiapi.Response{
+			client := newTestResponseClient(testResponseStep{response: openaiapi.Response{
 				ResponseID: "response-1",
 				ToolCalls:  []openaiapi.ToolCall{{CallID: "decision-1", Name: "file_rule12_motion"}},
-			}}})
+			}})
 			_, err := executeJudgeOpportunity(context.Background(), judgeOpportunityExecutionOptions{
 				Engine:                     writeEvalOpportunityEngineWithoutDeterministicAction(t),
 				State:                      evalOpportunityState(),
@@ -142,9 +138,6 @@ func TestExecuteJudgeOpportunityRequiresOriginalDeterministicActionBeforeClientU
 			}
 			if got := client.Accounting().RequestCount; got != 0 {
 				t.Fatalf("provider request count = %d, want 0", got)
-			}
-			if exchanges := client.Exchanges(); len(exchanges) != 0 {
-				t.Fatalf("provider exchanges = %#v, want none", exchanges)
 			}
 		})
 	}
@@ -235,7 +228,7 @@ func TestJudgeEvalDecisionForScoringReturnsProviderError(t *testing.T) {
 	t.Parallel()
 
 	providerErr := errors.New("provider failed")
-	client := NewScriptedResponseClient([]ScriptedResponse{{Err: providerErr}})
+	client := newTestResponseClient(testResponseStep{err: providerErr})
 	execution, executionErr := executeJudgeOpportunity(context.Background(), judgeOpportunityExecutionOptions{
 		Engine:              writeEvalOpportunityEngine(t),
 		State:               evalOpportunityState(),

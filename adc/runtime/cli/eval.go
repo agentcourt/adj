@@ -117,7 +117,6 @@ func RunEvalJudgeVoirDire(ctx context.Context, args []string, stdout io.Writer, 
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
 	rescoreResults := fs.String("rescore-results", "", "Existing results JSONL to rescore without model calls")
-	dryRun := fs.Bool("dry-run", false, "Use expected rulings as synthetic model responses")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
 	timeoutSeconds := fs.Int("timeout-seconds", defaultLLMTimeoutSeconds, "LLM and fixture timeout in seconds")
@@ -171,7 +170,6 @@ func RunEvalJudgeVoirDire(ctx context.Context, args []string, stdout io.Writer, 
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		DryRun:                *dryRun,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
 		Temperature:           tempPtr,
@@ -203,7 +201,6 @@ func RunEvalJudgeForCause(ctx context.Context, args []string, stdout io.Writer, 
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
 	rescoreResults := fs.String("rescore-results", "", "Existing results JSONL to rescore without model calls")
-	dryRun := fs.Bool("dry-run", false, "Use expected for-cause rulings as synthetic model responses")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
 	timeoutSeconds := fs.Int("timeout-seconds", defaultLLMTimeoutSeconds, "LLM and fixture timeout in seconds")
@@ -257,7 +254,6 @@ func RunEvalJudgeForCause(ctx context.Context, args []string, stdout io.Writer, 
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		DryRun:                *dryRun,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
 		Temperature:           tempPtr,
@@ -288,7 +284,6 @@ func RunEvalJudgeRule56(ctx context.Context, args []string, stdout io.Writer, st
 	var promptFiles deferredPromptFileFlag
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
-	dryRun := fs.Bool("dry-run", false, "Use expected dispositions as synthetic model responses")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
 	timeoutSeconds := fs.Int("timeout-seconds", defaultLLMTimeoutSeconds, "LLM and fixture timeout in seconds")
@@ -327,7 +322,6 @@ func RunEvalJudgeRule56(ctx context.Context, args []string, stdout io.Writer, st
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		DryRun:                *dryRun,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
 		Temperature:           tempPtr,
@@ -359,7 +353,6 @@ func RunEvalJudgeRule12(ctx context.Context, args []string, stdout io.Writer, st
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
 	rescoreResults := fs.String("rescore-results", "", "Existing results JSONL to rescore without model calls")
-	dryRun := fs.Bool("dry-run", false, "Use expected dispositions as synthetic model responses")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
 	timeoutSeconds := fs.Int("timeout-seconds", defaultLLMTimeoutSeconds, "LLM and fixture timeout in seconds")
@@ -413,7 +406,6 @@ func RunEvalJudgeRule12(ctx context.Context, args []string, stdout io.Writer, st
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		DryRun:                *dryRun,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
 		Temperature:           tempPtr,
@@ -445,7 +437,6 @@ func RunEvalJudgeRule51(ctx context.Context, args []string, stdout io.Writer, st
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
 	rescoreResults := fs.String("rescore-results", "", "Existing results JSONL to rescore without model calls")
-	dryRun := fs.Bool("dry-run", false, "Use expected instruction summary as a synthetic model response")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
 	timeoutSeconds := fs.Int("timeout-seconds", defaultLLMTimeoutSeconds, "LLM and fixture timeout in seconds")
@@ -499,7 +490,6 @@ func RunEvalJudgeRule51(ctx context.Context, args []string, stdout io.Writer, st
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		DryRun:                *dryRun,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
 		Temperature:           tempPtr,
@@ -531,7 +521,6 @@ func RunEvalJudgeRule37(ctx context.Context, args []string, stdout io.Writer, st
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
 	rescoreResults := fs.String("rescore-results", "", "Existing results JSONL to rescore without model calls")
-	dryRun := fs.Bool("dry-run", false, "Use expected Rule 37 decisions as synthetic model responses")
 	counterfactualModel := fs.Bool("counterfactual-model", false, "Use a model instead of the production deterministic action")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
@@ -586,7 +575,6 @@ func RunEvalJudgeRule37(ctx context.Context, args []string, stdout io.Writer, st
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		DryRun:                *dryRun,
 		CounterfactualModel:   *counterfactualModel,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
@@ -619,7 +607,6 @@ func RunEvalJudgeRule11(ctx context.Context, args []string, stdout io.Writer, st
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
 	rescoreResults := fs.String("rescore-results", "", "Existing results JSONL to rescore without model calls")
-	dryRun := fs.Bool("dry-run", false, "Use expected Rule 11 decisions as synthetic model responses")
 	counterfactualModel := fs.Bool("counterfactual-model", false, "Use a model instead of the production deterministic action")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
@@ -674,7 +661,6 @@ func RunEvalJudgeRule11(ctx context.Context, args []string, stdout io.Writer, st
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		DryRun:                *dryRun,
 		CounterfactualModel:   *counterfactualModel,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
@@ -707,7 +693,6 @@ func RunEvalJudgeRule52(ctx context.Context, args []string, stdout io.Writer, st
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
 	rescoreResults := fs.String("rescore-results", "", "Existing results JSONL to rescore without model calls")
-	dryRun := fs.Bool("dry-run", false, "Use expected Rule 52 bench opinions as synthetic model responses")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
 	timeoutSeconds := fs.Int("timeout-seconds", defaultLLMTimeoutSeconds, "LLM and fixture timeout in seconds")
@@ -761,7 +746,6 @@ func RunEvalJudgeRule52(ctx context.Context, args []string, stdout io.Writer, st
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		DryRun:                *dryRun,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
 		Temperature:           tempPtr,
@@ -792,7 +776,6 @@ func RunEvalJudgeRule58(ctx context.Context, args []string, stdout io.Writer, st
 	var promptFiles deferredPromptFileFlag
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
-	dryRun := fs.Bool("dry-run", false, "Use expected Rule 58 judgment entries as synthetic model responses")
 	counterfactualModel := fs.Bool("counterfactual-model", false, "Use a model instead of the production deterministic action")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
@@ -832,7 +815,6 @@ func RunEvalJudgeRule58(ctx context.Context, args []string, stdout io.Writer, st
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		DryRun:                *dryRun,
 		CounterfactualModel:   *counterfactualModel,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
@@ -865,7 +847,6 @@ func RunEvalJudgeRule60(ctx context.Context, args []string, stdout io.Writer, st
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
 	rescoreResults := fs.String("rescore-results", "", "Existing results JSONL to rescore without model calls")
-	dryRun := fs.Bool("dry-run", false, "Use expected Rule 60 rulings as synthetic model responses")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
 	timeoutSeconds := fs.Int("timeout-seconds", defaultLLMTimeoutSeconds, "LLM and fixture timeout in seconds")
@@ -919,7 +900,6 @@ func RunEvalJudgeRule60(ctx context.Context, args []string, stdout io.Writer, st
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		DryRun:                *dryRun,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
 		Temperature:           tempPtr,

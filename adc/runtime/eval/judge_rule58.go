@@ -50,7 +50,6 @@ type JudgeRule58Options struct {
 	Engine                lean.Engine
 	Model                 string
 	Online                bool
-	DryRun                bool
 	Limit                 int
 	Timeout               time.Duration
 	Temperature           *float64
@@ -63,14 +62,11 @@ type JudgeRule58Options struct {
 type JudgeRule58Summary struct {
 	Evaluation          string                      `json:"evaluation"`
 	Model               string                      `json:"model"`
-	DryRun              bool                        `json:"dry_run"`
-	Provenance          JudgeEvalProvenance         `json:"provenance"`
 	ExecutionMode       string                      `json:"execution_mode"`
 	CounterfactualModel bool                        `json:"counterfactual_model"`
 	PromptSource        string                      `json:"prompt_source"`
 	PromptName          string                      `json:"prompt_name"`
 	PromptPath          string                      `json:"prompt_path,omitempty"`
-	PromptCopyPath      string                      `json:"prompt_copy_path,omitempty"`
 	FixturesPath        string                      `json:"fixtures_path"`
 	OutputDir           string                      `json:"output_dir"`
 	ResultsPath         string                      `json:"results_path"`
@@ -127,7 +123,6 @@ type JudgeRule58Result struct {
 	Severity                  float64           `json:"severity"`
 	ContextNotes              string            `json:"context_notes,omitempty"`
 	Model                     string            `json:"model"`
-	DryRun                    bool              `json:"dry_run"`
 	ExecutionMode             string            `json:"execution_mode"`
 	CounterfactualModel       bool              `json:"counterfactual_model"`
 	PromptSource              string            `json:"prompt_source"`
@@ -167,7 +162,6 @@ type judgeRule58PromptVariant struct {
 	Source   string
 	Name     string
 	Path     string
-	CopyPath string
 	Text     string
 	Renderer *runner.PromptRenderer
 }
@@ -208,7 +202,7 @@ func RunJudgeRule58(ctx context.Context, opts JudgeRule58Options) (resultValue J
 	}
 	modelRef := modelrequest.ModelRef{}
 	var client *openai.Client
-	if opts.CounterfactualModel && !opts.DryRun {
+	if opts.CounterfactualModel {
 		modelRef, err = modelrequest.ParseModelRef(opts.Model)
 		if err != nil {
 			return JudgeRule58Summary{}, fmt.Errorf("parse --model: %w", err)
@@ -221,7 +215,7 @@ func RunJudgeRule58(ctx context.Context, opts JudgeRule58Options) (resultValue J
 	if err := os.MkdirAll(opts.OutputDir, 0o755); err != nil {
 		return JudgeRule58Summary{}, fmt.Errorf("create output directory %s: %w", opts.OutputDir, err)
 	}
-	promptVariant, err := loadJudgeRule58PromptVariant(opts.OpportunityPromptPath, opts.OpportunityPromptName, opts.OutputDir)
+	promptVariant, err := loadJudgeRule58PromptVariant(opts.OpportunityPromptPath, opts.OpportunityPromptName)
 	if err != nil {
 		return JudgeRule58Summary{}, err
 	}
@@ -267,14 +261,11 @@ func newJudgeRule58Summary(opts JudgeRule58Options, promptVariant judgeRule58Pro
 	return JudgeRule58Summary{
 		Evaluation:          "judge_rule58",
 		Model:               opts.Model,
-		DryRun:              opts.DryRun,
-		Provenance:          newJudgeEvalProvenance(opts.Court, opts.PromptDir, opts.PromptFiles, promptVariant.Source, promptVariant.Name, promptVariant.Path, opts.Temperature, opts.Online, opts.DryRun, opts.Engine, judgeEvalExecutionMode(opts.CounterfactualModel)),
 		ExecutionMode:       judgeEvalExecutionMode(opts.CounterfactualModel),
 		CounterfactualModel: opts.CounterfactualModel,
 		PromptSource:        promptVariant.Source,
 		PromptName:          promptVariant.Name,
 		PromptPath:          promptVariant.Path,
-		PromptCopyPath:      promptVariant.CopyPath,
 		FixturesPath:        opts.FixturesPath,
 		OutputDir:           opts.OutputDir,
 		ResultsPath:         resultsPath,
@@ -306,24 +297,21 @@ func runJudgeRule58Fixture(
 		return JudgeRule58Result{}, fmt.Errorf("fixture %s roles: %w", fixture.ID, err)
 	}
 	executionModel := opts.Model
-	if opts.CounterfactualModel && !opts.DryRun {
+	if opts.CounterfactualModel {
 		executionModel = modelRef.Model
 	}
-	responseClient := judgeEvalResponseClient(opts.DryRun, client, dryRunJudgeRule58Response(fixture))
 	callCtx, cancel := context.WithTimeout(ctx, opts.Timeout)
 	execution, executionErr := executeJudgeOpportunity(callCtx, judgeOpportunityExecutionOptions{
 		Engine:                     opts.Engine,
 		State:                      state,
 		Roles:                      roles,
 		RolesPayload:               rolesPayload,
-		Client:                     responseClient,
+		Client:                     client,
 		Court:                      opts.Court,
 		Model:                      executionModel,
 		Temperature:                opts.Temperature,
 		PromptDir:                  opts.PromptDir,
 		PromptFiles:                opts.PromptFiles,
-		MaxStepsPerTurn:            3,
-		TurnIndex:                  1,
 		CounterfactualModel:        opts.CounterfactualModel,
 		RequireDeterministicAction: true,
 		Objective: func(opportunity map[string]any) (string, error) {
@@ -338,7 +326,7 @@ func runJudgeRule58Fixture(
 	if decisionErr != nil {
 		return JudgeRule58Result{}, fmt.Errorf("fixture %s execute opportunity: %w", fixture.ID, decisionErr)
 	}
-	result := scoreJudgeRule58Response(fixture, opts.Model, opts.DryRun, state, execution.View, execution.Opportunity, decision.Input, decision.ScoringResponse)
+	result := scoreJudgeRule58Response(fixture, opts.Model, state, execution.View, execution.Opportunity, decision.Input, decision.ScoringResponse)
 	result.RawResponse = responseJSON(decision.RawResponse)
 	result.ResponseExchanges = judgeEvalResponseExchangeJSON(execution.Exchanges)
 	result.TurnLog = execution.TurnLog
@@ -397,7 +385,7 @@ func LoadJudgeRule58Fixtures(path string) (resultValue []JudgeRule58Fixture, ret
 	return out, nil
 }
 
-func loadJudgeRule58PromptVariant(path string, name string, outputDir string) (judgeRule58PromptVariant, error) {
+func loadJudgeRule58PromptVariant(path string, name string) (judgeRule58PromptVariant, error) {
 	path = strings.TrimSpace(path)
 	name = strings.TrimSpace(name)
 	if path == "" {
@@ -420,11 +408,7 @@ func loadJudgeRule58PromptVariant(path string, name string, outputDir string) (j
 	if name == "" || name == "." {
 		name = "file"
 	}
-	copyPath := filepath.Join(outputDir, "opportunity_prompt.md")
-	if err := os.WriteFile(copyPath, raw, 0o644); err != nil {
-		return judgeRule58PromptVariant{}, fmt.Errorf("copy opportunity prompt to %s: %w", copyPath, err)
-	}
-	return judgeRule58PromptVariant{Source: "file:" + path, Name: name, Path: path, CopyPath: copyPath, Text: text}, nil
+	return judgeRule58PromptVariant{Source: "file:" + path, Name: name, Path: path, Text: text}, nil
 }
 
 func (f JudgeRule58Fixture) Validate() error {
@@ -607,7 +591,6 @@ func buildJudgeRule58Input(
 func scoreJudgeRule58Response(
 	fixture JudgeRule58Fixture,
 	model string,
-	dryRun bool,
 	state map[string]any,
 	view map[string]any,
 	opportunity map[string]any,
@@ -633,7 +616,6 @@ func scoreJudgeRule58Response(
 		Severity:                normalizedSeverity(fixture.Severity),
 		ContextNotes:            strings.TrimSpace(fixture.ContextNotes),
 		Model:                   model,
-		DryRun:                  dryRun,
 		State:                   state,
 		View:                    view,
 		Opportunity:             opportunity,
@@ -702,20 +684,6 @@ func extractJudgeRule58Payload(resp openai.Response) (map[string]any, string) {
 		return nil, "missing_arguments"
 	}
 	return call.Arguments, ""
-}
-
-func dryRunJudgeRule58Response(f JudgeRule58Fixture) openai.Response {
-	return openai.Response{
-		ResponseID: "dry-run-" + strings.TrimSpace(f.ID),
-		ToolCalls: []openai.ToolCall{{
-			CallID: "dry-run-call-" + strings.TrimSpace(f.ID),
-			Name:   JudgeRule58Tool,
-			Arguments: map[string]any{
-				"claim_id": strings.TrimSpace(f.ExpectedClaimID),
-				"basis":    strings.TrimSpace(f.ExpectedBasis),
-			},
-		}},
-	}
 }
 
 func renderJudgeRule58PromptTemplate(template string, fixture JudgeRule58Fixture, opportunity map[string]any) (string, error) {

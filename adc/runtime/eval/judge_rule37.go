@@ -53,7 +53,6 @@ type JudgeRule37Options struct {
 	Engine                lean.Engine
 	Model                 string
 	Online                bool
-	DryRun                bool
 	Limit                 int
 	Timeout               time.Duration
 	Temperature           *float64
@@ -64,23 +63,18 @@ type JudgeRule37Options struct {
 }
 
 type JudgeRule37RescoreOptions struct {
-	ResultsPath       string
-	SourceSummaryPath string
-	OutputDir         string
+	ResultsPath string
+	OutputDir   string
 }
 
 type JudgeRule37Summary struct {
-	RunID               string                      `json:"run_id"`
 	Evaluation          string                      `json:"evaluation"`
 	Model               string                      `json:"model"`
-	DryRun              bool                        `json:"dry_run"`
-	Provenance          JudgeEvalProvenance         `json:"provenance"`
 	ExecutionMode       string                      `json:"execution_mode"`
 	CounterfactualModel bool                        `json:"counterfactual_model"`
 	PromptSource        string                      `json:"prompt_source"`
 	PromptName          string                      `json:"prompt_name"`
 	PromptPath          string                      `json:"prompt_path,omitempty"`
-	PromptCopyPath      string                      `json:"prompt_copy_path,omitempty"`
 	FixturesPath        string                      `json:"fixtures_path"`
 	OutputDir           string                      `json:"output_dir"`
 	ResultsPath         string                      `json:"results_path"`
@@ -123,8 +117,6 @@ type JudgeRule37Slice struct {
 }
 
 type JudgeRule37Result struct {
-	RunID                  string            `json:"run_id"`
-	Evaluation             string            `json:"evaluation"`
 	ID                     string            `json:"id"`
 	Tier                   int               `json:"tier"`
 	IssueFamily            string            `json:"issue_family"`
@@ -146,7 +138,6 @@ type JudgeRule37Result struct {
 	Severity               float64           `json:"severity"`
 	ContextNotes           string            `json:"context_notes,omitempty"`
 	Model                  string            `json:"model"`
-	DryRun                 bool              `json:"dry_run"`
 	ExecutionMode          string            `json:"execution_mode"`
 	CounterfactualModel    bool              `json:"counterfactual_model"`
 	PromptSource           string            `json:"prompt_source"`
@@ -183,7 +174,6 @@ type judgeRule37PromptVariant struct {
 	Source   string
 	Name     string
 	Path     string
-	CopyPath string
 	Text     string
 	Renderer *runner.PromptRenderer
 }
@@ -224,7 +214,7 @@ func RunJudgeRule37(ctx context.Context, opts JudgeRule37Options) (resultValue J
 	}
 	modelRef := modelrequest.ModelRef{}
 	var client *openai.Client
-	if opts.CounterfactualModel && !opts.DryRun {
+	if opts.CounterfactualModel {
 		modelRef, err = modelrequest.ParseModelRef(opts.Model)
 		if err != nil {
 			return JudgeRule37Summary{}, fmt.Errorf("parse --model: %w", err)
@@ -234,14 +224,10 @@ func RunJudgeRule37(ctx context.Context, opts JudgeRule37Options) (resultValue J
 			return JudgeRule37Summary{}, err
 		}
 	}
-	runID, err := newJudgeEvalRunID()
-	if err != nil {
-		return JudgeRule37Summary{}, err
-	}
 	if err := os.MkdirAll(opts.OutputDir, 0o755); err != nil {
 		return JudgeRule37Summary{}, fmt.Errorf("create output directory %s: %w", opts.OutputDir, err)
 	}
-	promptVariant, err := loadJudgeRule37PromptVariant(opts.OpportunityPromptPath, opts.OpportunityPromptName, opts.OutputDir)
+	promptVariant, err := loadJudgeRule37PromptVariant(opts.OpportunityPromptPath, opts.OpportunityPromptName)
 	if err != nil {
 		return JudgeRule37Summary{}, err
 	}
@@ -257,7 +243,7 @@ func RunJudgeRule37(ctx context.Context, opts JudgeRule37Options) (resultValue J
 	}
 	defer closeEvalFile(resultsFile, resultsPath, &returnErr)
 
-	summary := newJudgeRule37Summary(opts, promptVariant, resultsPath, summaryPath, runID)
+	summary := newJudgeRule37Summary(opts, promptVariant, resultsPath, summaryPath)
 	var totalWeight float64
 	var correctWeight float64
 	encoder := json.NewEncoder(resultsFile)
@@ -266,8 +252,6 @@ func RunJudgeRule37(ctx context.Context, opts JudgeRule37Options) (resultValue J
 		if err != nil {
 			return JudgeRule37Summary{}, err
 		}
-		result.RunID = runID
-		result.Evaluation = summary.Evaluation
 		if err := encoder.Encode(result); err != nil {
 			return JudgeRule37Summary{}, fmt.Errorf("write %s: %w", resultsPath, err)
 		}
@@ -296,14 +280,10 @@ func RescoreJudgeRule37(opts JudgeRule37RescoreOptions) (resultValue JudgeRule37
 	if err != nil {
 		return JudgeRule37Summary{}, err
 	}
-	source, sourceSummaryPath, err := loadJudgeEvalSourceSummary(opts.ResultsPath, opts.SourceSummaryPath, "judge_rule37")
-	if err != nil {
-		return JudgeRule37Summary{}, err
+	if len(results) == 0 {
+		return JudgeRule37Summary{}, fmt.Errorf("no results loaded from %s", opts.ResultsPath)
 	}
-	if err := validateJudgeEvalRescoreRows(opts.ResultsPath, source, results, judgeRule37ResultIdentity, validateJudgeRule37RescoreResult); err != nil {
-		return JudgeRule37Summary{}, err
-	}
-	if err := validateJudgeEvalRescoreOutputPaths(opts.ResultsPath, sourceSummaryPath, opts.OutputDir); err != nil {
+	if err := validateJudgeEvalRescoreOutputPath(opts.ResultsPath, opts.OutputDir); err != nil {
 		return JudgeRule37Summary{}, err
 	}
 	if err := os.MkdirAll(opts.OutputDir, 0o755); err != nil {
@@ -318,16 +298,13 @@ func RescoreJudgeRule37(opts JudgeRule37RescoreOptions) (resultValue JudgeRule37
 	defer closeEvalFile(resultsFile, resultsPath, &returnErr)
 
 	summary := JudgeRule37Summary{
-		RunID:               source.RunID,
 		Evaluation:          "judge_rule37",
-		Model:               source.Model,
-		DryRun:              source.DryRun,
-		Provenance:          newJudgeEvalRescoreProvenance(source, opts.ResultsPath, sourceSummaryPath),
-		ExecutionMode:       source.ExecutionMode,
-		CounterfactualModel: source.CounterfactualModel,
-		PromptSource:        source.PromptSource,
-		PromptName:          source.PromptName,
-		PromptPath:          source.PromptPath,
+		Model:               results[0].Model,
+		ExecutionMode:       results[0].ExecutionMode,
+		CounterfactualModel: results[0].CounterfactualModel,
+		PromptSource:        resultJudgeRule37PromptSource(results[0]),
+		PromptName:          resultJudgeRule37PromptName(results[0]),
+		PromptPath:          results[0].PromptPath,
 		FixturesPath:        "rescored from " + opts.ResultsPath,
 		OutputDir:           opts.OutputDir,
 		ResultsPath:         resultsPath,
@@ -362,19 +339,15 @@ func RescoreJudgeRule37(opts JudgeRule37RescoreOptions) (resultValue JudgeRule37
 	return summary, nil
 }
 
-func newJudgeRule37Summary(opts JudgeRule37Options, promptVariant judgeRule37PromptVariant, resultsPath string, summaryPath string, runID string) JudgeRule37Summary {
+func newJudgeRule37Summary(opts JudgeRule37Options, promptVariant judgeRule37PromptVariant, resultsPath string, summaryPath string) JudgeRule37Summary {
 	return JudgeRule37Summary{
-		RunID:               runID,
 		Evaluation:          "judge_rule37",
 		Model:               opts.Model,
-		DryRun:              opts.DryRun,
-		Provenance:          newJudgeEvalProvenance(opts.Court, opts.PromptDir, opts.PromptFiles, promptVariant.Source, promptVariant.Name, promptVariant.Path, opts.Temperature, opts.Online, opts.DryRun, opts.Engine, judgeEvalExecutionMode(opts.CounterfactualModel)),
 		ExecutionMode:       judgeEvalExecutionMode(opts.CounterfactualModel),
 		CounterfactualModel: opts.CounterfactualModel,
 		PromptSource:        promptVariant.Source,
 		PromptName:          promptVariant.Name,
 		PromptPath:          promptVariant.Path,
-		PromptCopyPath:      promptVariant.CopyPath,
 		FixturesPath:        opts.FixturesPath,
 		OutputDir:           opts.OutputDir,
 		ResultsPath:         resultsPath,
@@ -407,24 +380,21 @@ func runJudgeRule37Fixture(
 		return JudgeRule37Result{}, fmt.Errorf("fixture %s roles: %w", fixture.ID, err)
 	}
 	executionModel := opts.Model
-	if opts.CounterfactualModel && !opts.DryRun {
+	if opts.CounterfactualModel {
 		executionModel = modelRef.Model
 	}
-	responseClient := judgeEvalResponseClient(opts.DryRun, client, dryRunJudgeRule37Response(fixture))
 	callCtx, cancel := context.WithTimeout(ctx, opts.Timeout)
 	execution, executionErr := executeJudgeOpportunity(callCtx, judgeOpportunityExecutionOptions{
 		Engine:                     opts.Engine,
 		State:                      state,
 		Roles:                      roles,
 		RolesPayload:               rolesPayload,
-		Client:                     responseClient,
+		Client:                     client,
 		Court:                      opts.Court,
 		Model:                      executionModel,
 		Temperature:                opts.Temperature,
 		PromptDir:                  opts.PromptDir,
 		PromptFiles:                opts.PromptFiles,
-		MaxStepsPerTurn:            3,
-		TurnIndex:                  1,
 		CounterfactualModel:        opts.CounterfactualModel,
 		RequireDeterministicAction: true,
 		Objective: func(opportunity map[string]any) (string, error) {
@@ -439,7 +409,7 @@ func runJudgeRule37Fixture(
 	if decisionErr != nil {
 		return JudgeRule37Result{}, fmt.Errorf("fixture %s execute opportunity: %w", fixture.ID, decisionErr)
 	}
-	result := scoreJudgeRule37Response(fixture, opts.Model, opts.DryRun, state, execution.View, execution.Opportunity, decision.Input, decision.ScoringResponse)
+	result := scoreJudgeRule37Response(fixture, opts.Model, state, execution.View, execution.Opportunity, decision.Input, decision.ScoringResponse)
 	result.RawResponse = responseJSON(decision.RawResponse)
 	result.ResponseExchanges = judgeEvalResponseExchangeJSON(execution.Exchanges)
 	result.TurnLog = execution.TurnLog
@@ -499,54 +469,10 @@ func LoadJudgeRule37Fixtures(path string) (resultValue []JudgeRule37Fixture, ret
 }
 
 func readJudgeRule37Results(path string) (resultValue []JudgeRule37Result, returnErr error) {
-	return readJudgeEvalJSONL[JudgeRule37Result](path, judgeEvalRequiredResultFields(
-		"tier", "issue_family", "case_theme", "movant", "target_party", "discovery_type", "set_index",
-		"request_text", "response_text", "motion_text", "opposition_text", "expected_granted",
-		"expected_sanction_type", "expected_reason_tags", "severity", "grant_correct", "sanction_correct", "matched_reason_tags",
-	)...)
+	return readJudgeEvalJSONL[JudgeRule37Result](path)
 }
 
-func judgeRule37ResultIdentity(result JudgeRule37Result) judgeEvalResultIdentity {
-	return judgeEvalResultIdentity{
-		RunID:               result.RunID,
-		Evaluation:          result.Evaluation,
-		ID:                  result.ID,
-		Model:               result.Model,
-		DryRun:              result.DryRun,
-		PromptSource:        resultJudgeRule37PromptSource(result),
-		PromptName:          resultJudgeRule37PromptName(result),
-		PromptPath:          result.PromptPath,
-		ExecutionMode:       result.ExecutionMode,
-		CounterfactualModel: result.CounterfactualModel,
-	}
-}
-
-func validateJudgeRule37RescoreResult(result JudgeRule37Result) error {
-	return (JudgeRule37Fixture{
-		ID:                     result.ID,
-		Tier:                   result.Tier,
-		IssueFamily:            result.IssueFamily,
-		CaseTheme:              result.CaseTheme,
-		Movant:                 result.Movant,
-		TargetParty:            result.TargetParty,
-		DiscoveryType:          result.DiscoveryType,
-		SetIndex:               result.SetIndex,
-		RequestText:            result.RequestText,
-		ResponseText:           result.ResponseText,
-		MeetAndConferText:      result.MeetAndConferText,
-		MotionText:             result.MotionText,
-		OppositionText:         result.OppositionText,
-		ReplyText:              result.ReplyText,
-		ExpectedGranted:        result.ExpectedGranted,
-		ExpectedSanctionType:   result.ExpectedSanctionType,
-		ExpectedSanctionAmount: result.ExpectedSanctionAmount,
-		ExpectedReasonTags:     result.ExpectedReasonTags,
-		Severity:               result.Severity,
-		ContextNotes:           result.ContextNotes,
-	}).Validate()
-}
-
-func loadJudgeRule37PromptVariant(path string, name string, outputDir string) (judgeRule37PromptVariant, error) {
+func loadJudgeRule37PromptVariant(path string, name string) (judgeRule37PromptVariant, error) {
 	path = strings.TrimSpace(path)
 	name = strings.TrimSpace(name)
 	if path == "" {
@@ -569,11 +495,7 @@ func loadJudgeRule37PromptVariant(path string, name string, outputDir string) (j
 	if name == "" || name == "." {
 		name = "file"
 	}
-	copyPath := filepath.Join(outputDir, "opportunity_prompt.md")
-	if err := os.WriteFile(copyPath, raw, 0o644); err != nil {
-		return judgeRule37PromptVariant{}, fmt.Errorf("copy opportunity prompt to %s: %w", copyPath, err)
-	}
-	return judgeRule37PromptVariant{Source: "file:" + path, Name: name, Path: path, CopyPath: copyPath, Text: text}, nil
+	return judgeRule37PromptVariant{Source: "file:" + path, Name: name, Path: path, Text: text}, nil
 }
 
 func (f JudgeRule37Fixture) Validate() error {
@@ -722,7 +644,6 @@ func buildJudgeRule37Input(
 func scoreJudgeRule37Response(
 	fixture JudgeRule37Fixture,
 	model string,
-	dryRun bool,
 	state map[string]any,
 	view map[string]any,
 	opportunity map[string]any,
@@ -751,7 +672,6 @@ func scoreJudgeRule37Response(
 		Severity:               normalizedSeverity(fixture.Severity),
 		ContextNotes:           strings.TrimSpace(fixture.ContextNotes),
 		Model:                  model,
-		DryRun:                 dryRun,
 		State:                  state,
 		View:                   view,
 		Opportunity:            opportunity,
@@ -845,40 +765,6 @@ func extractJudgeRule37Payload(resp openai.Response) (map[string]any, string) {
 		return nil, "missing_arguments"
 	}
 	return call.Arguments, ""
-}
-
-func dryRunJudgeRule37Response(f JudgeRule37Fixture) openai.Response {
-	amount := f.ExpectedSanctionAmount
-	payload := map[string]any{
-		"motion_index":  0,
-		"granted":       f.ExpectedGranted,
-		"sanction_type": strings.TrimSpace(f.ExpectedSanctionType),
-		"order_text":    dryRunJudgeRule37OrderText(f),
-		"reasoning":     "gold tags: " + strings.Join(f.ExpectedReasonTags, ", "),
-	}
-	if strings.TrimSpace(f.ExpectedSanctionType) == "fees" || amount != 0 {
-		payload["sanction_amount"] = amount
-	} else {
-		payload["sanction_amount"] = 0
-	}
-	return openai.Response{
-		ResponseID: "dry-run-" + strings.TrimSpace(f.ID),
-		ToolCalls: []openai.ToolCall{{
-			CallID:    "dry-run-call-" + strings.TrimSpace(f.ID),
-			Name:      JudgeRule37Tool,
-			Arguments: payload,
-		}},
-	}
-}
-
-func dryRunJudgeRule37OrderText(f JudgeRule37Fixture) string {
-	if f.ExpectedGranted {
-		if strings.TrimSpace(f.ExpectedSanctionType) == "fees" {
-			return "motion granted; compel discovery response and award fees"
-		}
-		return "motion granted; compel discovery response without fee award"
-	}
-	return "motion denied"
 }
 
 func renderJudgeRule37PromptTemplate(template string, fixture JudgeRule37Fixture, opportunity map[string]any) (string, error) {

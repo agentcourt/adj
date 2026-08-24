@@ -68,7 +68,7 @@ func TestScoreJudgeRule37ResponseDetectsSanctionMismatch(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule37Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule37Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if result.InvalidReason != "" {
 		t.Fatalf("InvalidReason = %q", result.InvalidReason)
 	}
@@ -91,7 +91,7 @@ func TestScoreJudgeRule37ResponseDetectsSanctionMismatch(t *testing.T) {
 	}
 }
 
-func TestRunJudgeRule37DryRunWritesReports(t *testing.T) {
+func TestRunJudgeRule37DeterministicWritesReports(t *testing.T) {
 	t.Parallel()
 
 	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
@@ -105,8 +105,7 @@ func TestRunJudgeRule37DryRunWritesReports(t *testing.T) {
 		FixturesPath: fixturePath,
 		OutputDir:    outDir,
 		Engine:       lean.New([]string{engineScript}),
-		Model:        "dry-model",
-		DryRun:       true,
+		Model:        "test-model",
 		Timeout:      time.Second,
 	})
 	if err != nil {

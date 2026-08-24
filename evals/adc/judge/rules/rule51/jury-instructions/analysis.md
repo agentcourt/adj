@@ -4,15 +4,13 @@ These results predate the evaluator's restoration to the current ADC runtime.  T
 
 ## Results
 
-The Rule 51 eval has 16 fixtures and uses the real `settle_jury_instructions` opportunity.  The dry run scored 16/16 and confirmed fixture loading, charge-state construction, Lean opportunity generation, prompt rendering, deterministic scoring, report writing, and Lean acceptance.  The first production live score was 8/16 under an overly literal prohibited-term scorer that treated quoted rejected language as if it appeared in the final charge.
+The Rule 51 eval has 16 fixtures and uses the real `settle_jury_instructions` opportunity.  The first production live score was 8/16 under an overly literal prohibited-term scorer that treated quoted rejected language as if it appeared in the final charge.
 
 The scorer now distinguishes final-charge contamination from a ruling section that rejects a defective proposal.  It ignores prohibited phrases when the local context shows the instruction was sustained against, rejected, refused, denied, negated, or excluded.  It also accepts equivalent required wording, including `breach caused` for causation, `evidence admitted at trial` for admitted evidence, and `may but are not required to infer` for a permissive adverse inference.
 
 | Prompt | Run | Correct | Reason Matches | Invalid | Missing Required | Prohibited Included |
 |---|---|---:|---:|---:|---:|---:|
-| Production | dry | 16/16 | 16/16 | 0 | 0 | 0 |
 | Production | live, rescored | 16/16 | 16/16 | 0 | 0 | 0 |
-| Candidate v1 | dry | 16/16 | 16/16 | 0 | 0 | 0 |
 | Candidate v1 | live, rescored | 16/16 | 16/16 | 0 | 0 | 0 |
 
 ## Failure Analysis

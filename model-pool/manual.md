@@ -67,9 +67,7 @@ uv run --script tools/run_end_to_end.py \
   --pool-size 5
 ```
 
-This example evaluates five sampled root models, uses one trial per question, samples two genes, collects one response per accepted endpoint/gene pair, reduces embeddings to three PCA dimensions, searches K-means values from `2` through `4`, and writes five pool entries.  A production pool should set root model IDs or root sampling parameters, question file, trial count, filter criteria, gene selection, sample count, PCA dimensions, clustering range, pool size, and random seeds explicitly.  `--stop-after` stops after a named stage, while `--resume` verifies the recorded parameters and every original input against its saved copy before examining completed stage contents.
-
-A resume fails if a result parameter, input path, question file, referenced evidence file, prompt, gene file, or persona changed.  The runner performs those comparisons before appending a command record or updating a summary.  It regards a stage as complete only when the stage summary agrees with the required output contents and passes `--resume` to an incomplete variant batch that already has run files.
+This example evaluates five sampled root models, uses one trial per question, samples two genes, collects one response per accepted endpoint/gene pair, reduces embeddings to three PCA dimensions, searches K-means values from `2` through `4`, and writes five pool entries.  A production pool should set root model IDs or root sampling parameters, question file, trial count, filter criteria, gene selection, sample count, PCA dimensions, clustering range, pool size, and random seeds explicitly.  `--stop-after` stops after a named stage.
 
 ## Glossary
 
@@ -341,7 +339,6 @@ Behavior clustering compares accepted endpoints on behavior-eliciting prompts af
 | `clusters.jsonl` | One cluster assignment per sampled completion |
 | `variant-persona-clusters.jsonl` | One endpoint/persona record with cluster labels ordered by `gene_index` |
 | `pool.jsonl` | Sampled endpoint/persona records selected from cluster-label tuples |
-| `personas/*` beside `pool.jsonl` | Exact persona files referenced by the sampled pool |
 
 PCA is computed separately for each gene because each gene has its own response distribution.  Per-gene clustering assigns each sampled completion to a K-means cluster within that gene.  Aggregation converts sample-level labels into one cluster record per endpoint/persona row, ordered by ascending `gene_index`.
 
@@ -405,8 +402,6 @@ uv run --script tools/sample-tuple-pool.py \
 
 `tools/sample-tuple-pool.py` deduplicates equivalent provider endpoints before sampling.  It groups rows by OpenRouter model ID, endpoint model ID, canonical slug, Hugging Face ID, quantization, and modalities.  The grouping excludes provider name, endpoint tag, context limits, prompt and completion limits, supported parameters, price, latency, and uptime, because those fields describe provider-route capability or serving behavior rather than model-configuration identity.  For each group, it selects one concrete provider endpoint by operational rank: fewer provider errors, higher deliberation score, fewer schema violations, fewer timeouts and context-limit errors, higher context and token capacity, higher uptime, lower latency, lower price, then stable endpoint identifiers.
 
-The sampler copies each selected persona into `personas/` beside `pool.jsonl` and replaces the emitted persona path with `personas/<name>`.  Relative source paths resolve from `model-pool/`, the cluster-input directory, and the shared `common/etc/` directory, or from `--persona-root` when supplied.  It checks every selected persona before writing output, rejects one persona ID associated with different file contents, and reuses an existing packaged file only when its bytes match.
-
 The pool remains executable because each emitted row names one concrete provider endpoint.  `equivalence.jsonl` records every provider endpoint in each equivalent group, including the selected representative, provider name, endpoint tag, quantization, limits, operational fields, and cluster vector.  Use `--no-dedupe-equivalent-endpoints` only when the pool is meant to compare provider routes for the same model configuration.
 
 After deduplication, the sampler chooses one unique cluster tuple uniformly at random, then chooses one representative row uniformly from rows with that tuple.  Sampling uses replacement by default, so repeated rows can appear in `pool.jsonl`; the diagnostics file records the selected tuple, source row, model ID, provider, endpoint tag, quantization, equivalence class, and cumulative counts.  The diagnostic counts describe the deduplicated sampling frame unless `--no-dedupe-equivalent-endpoints` was used.
@@ -458,7 +453,6 @@ If gene-response, PCA, clustering, aggregation, or pool sampling fails, check ro
 | `tools/audit_eval.py` | Repository consistency audit |
 | `tools/tool_server.py` | Local read-only evidence tools used by the runner |
 | `tools/model_inventory.py` | OpenRouter model and provider endpoint inventory |
-| `tools/run_record.py` | Immutable manifests, exact source copies, evidence-record copies, and resume validation |
 | `tools/run_variant_batch.py` | Provider-endpoint batch evaluation |
 | `tools/run_end_to_end.py` | Full selection procedure from root models to `pool.jsonl` |
 | `tools/run_first_gene_inference_embeddings.py` | Gene completion and embedding collection |
@@ -470,7 +464,6 @@ If gene-response, PCA, clustering, aggregation, or pool sampling fails, check ro
 | `variants/filtered-20260529/` | Checked-in accepted endpoint snapshot |
 | `genes.json` and `sampled-genes.json` | Source gene list and sampled gene subset used by the clustering procedure |
 | `results/` | Generated evaluation and pool-construction files.  Git ignores this directory except for `.gitkeep`. |
-| `tests/` | Standard-library tests for run integrity, progress validation, and persona packaging |
 
 ## Scope
 

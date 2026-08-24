@@ -26,7 +26,7 @@ POOL_RUN=results/sample-tuple-pool-YYYYMMDDTHHMMSSZ
 
 ## End-To-End Runner
 
-Use `tools/run_end_to_end.py` when the whole pipeline should run as one job.  The runner copies the question file, referenced evidence records, prompt, gene file, and persona into `inputs/`, records normalized result parameters and source paths in an immutable `manifest.json`, records every command in `commands.jsonl`, and writes a final `summary.json`.  It supports `--resume`, `--dry-run`, and `--stop-after`.
+Use `tools/run_end_to_end.py` when the whole pipeline should run as one job.  The runner copies the question file, referenced evidence records, prompt, gene file, and persona into `inputs/`, records normalized result parameters and source paths in an immutable `manifest.json`, records every command in `commands.jsonl`, and writes a final `summary.json`.  It supports `--stop-after`.
 
 ```bash
 uv run --script tools/run_end_to_end.py \
@@ -44,8 +44,6 @@ uv run --script tools/run_end_to_end.py \
 ```
 
 The default runner shape is a small test run.  Increase `--eval-trials`, `--gene-count`, `--samples-per-gene`, and `--pool-size` for a production pool.  The runner caps PCA dimensions to the available embedding rows unless `--strict-pca-dimensions` is set.  The eval stage uses `--timeout` per request and `--eval-no-progress-timeout` per variant child process.
-
-Use `--resume` only with an existing recorded run.  Before writing, the runner requires the current result parameters and original input paths to match the manifest, then compares each current input byte-for-byte with its saved copy.  It also validates the command log, progress records, completed stage records, pending provider-stage records, and every completed stage's derivation from its recorded inputs.  Inventory, eval, and gene stages retain validated provider results and continue missing work.  An interrupted local filter, PCA, clustering, aggregation, or pool attempt is moved under `interrupted-local-stages/` and recomputed from its recorded inputs.  A directory lock prevents a second runner from writing the same run while the runner or one of its child processes remains active.
 
 ## Root Sampling
 
@@ -391,7 +389,7 @@ uv run --script tools/run_first_gene_inference_embeddings.py \
 
 Repeat for each gene index in `sampled-genes.json`.  Use distinct output directories for each gene.  The default request parameters are `temperature: 0.7`, `top_p: 1.0`, and `max_tokens: 512`.
 
-The current script expects every survivor row to have a non-empty `endpoint_tag`; it builds `provider.only` from that field.  Each direct gene run records an immutable manifest, exact variant, gene, and persona copies, one atomic row record per completion, and an aggregate `records.jsonl`.  Explicit `--resume` validates those artifacts before any write or provider request.  It reuses successful rows, retries only embedding after an `embedding_error`, and retries completion after a `completion_error` or missing row.
+The current script expects every survivor row to have a non-empty `endpoint_tag`; it builds `provider.only` from that field.  It also writes `persona_id: "generic"` regardless of the persona path.  Keep this stage to the single generic persona unless the script is changed and the change is recorded.
 
 Verify each gene inference run before PCA.
 
@@ -521,8 +519,6 @@ uv run --script tools/sample-tuple-pool.py \
 
 The sampler deduplicates equivalent provider endpoints before tuple sampling.  The equivalence key uses model identity, quantization, and modalities; it excludes provider name, endpoint tag, context limits, prompt and completion limits, supported parameters, price, latency, and uptime.  The representative selection rule ranks endpoints by operational results, capacity, and serving metadata, then writes the full provider set to `equivalence.jsonl`.
 
-The sampler copies selected persona files into `personas/` beside `pool.jsonl` and emits confined `personas/...` paths relative to the pool file.  Relative source paths resolve from `model-pool/`, the cluster-input directory, and shared `common/etc/` unless `--persona-root` supplies a base directory.  A source path supplied with `--persona-root` must resolve inside that root.  Before writing output, the sampler validates every selected persona, rejects one persona ID associated with different bytes, rejects symbolic links in the output persona path, and accepts an existing destination only when its bytes match.
-
 Sampling is with replacement by default after deduplication.  Duplicate rows can appear in the final pool, especially when `pool-size` exceeds the number of well-populated tuples or when the random draw revisits a tuple.  The diagnostics file records the selected tuple, source row, cumulative tuple count, cumulative source-row count, model ID, provider, endpoint tag, quantization, endpoint identifier, and equivalence class for each emitted row.
 
 Add `--without-replacement` when the pool must contain each row from the sampling frame at most once.  With the default equivalent-endpoint deduplication, the sampling frame is the representative set, so `--pool-size` cannot exceed the number of equivalence classes.  The command fails before writing output when `--pool-size` is larger than the available frame.
@@ -566,6 +562,6 @@ PY
 
 ## Run Record
 
-The batch and end-to-end runners save normalized result parameters and exact input copies before model work.  A new run refuses a nonempty output directory.  Resume occurs only through explicit `--resume` with the original sources and result parameters; neither runner infers continuation from existing files.  Resume validates every reusable artifact before publishing an owner record, appending a command record, deleting a recognized interrupted temporary, or changing a stage output.  Preserve `manifest.json`, `inputs/`, `commands.jsonl`, stage outputs, stage records, progress files, and `summary.json` as one run record.
+Record the command, run ID, inputs, output files, counts, selected roots, selected genes, seed values, errors, and verification output for every stage.  If a run is interrupted, record the last completed stage and the next command to run.
 
 For root sampling, record the catalog snapshot and exclusion set.  For evals, record operational metrics separately from deliberation score.  For pool generation, record input row count, unique tuple count, output row count, output unique tuple count, output unique row count, seed, and pool path.

@@ -4,17 +4,14 @@ These results predate the evaluator's restoration to the current ADC runtime.  T
 
 ## Results
 
-The Rule 12 eval has 18 fixtures and uses the real `decide_rule12_motion` opportunity.  The dry run scored 18/18 and confirmed fixture loading, state construction, Lean opportunity generation, template rendering, scoring, report writing, and Lean acceptance.  The production live run initially scored 15/18 under the first scorer, but two misses reflected scorer precision rather than model behavior.
+The Rule 12 eval has 18 fixtures and uses the real `decide_rule12_motion` opportunity.  The production live run initially scored 15/18 under the first scorer, but two misses reflected scorer precision rather than model behavior.
 
 The scorer now accepts equivalent missing-element labels and jurisdiction-basis wording.  A payload identifying `facts constituting breach` satisfies an expected `breach` element, and a payload rejecting both federal-question and diversity jurisdiction satisfies an expected omitted jurisdiction basis.  After rescoring the same production live result file, production scored 17/18, with 18/18 reason matches, no false dismissals, no false denials, no invalid responses, and one posture mismatch.
 
 | Prompt | Run | Correct | Reason Matches | Invalid | False Dismissals | False Denials | Posture Mismatches |
 |---|---|---:|---:|---:|---:|---:|---:|
-| Production | dry | 18/18 | 18/18 | 0 | 0 | 0 | 0 |
 | Production | live, rescored | 17/18 | 18/18 | 0 | 0 | 0 | 1 |
-| Candidate v1 | dry | 18/18 | 18/18 | 0 | 0 | 0 | 0 |
 | Candidate v1 | live | 15/18 | 18/18 | 0 | 0 | 0 | 3 |
-| Candidate v2 | dry | 18/18 | 18/18 | 0 | 0 | 0 | 0 |
 | Candidate v2 | live | 18/18 | 18/18 | 0 | 0 | 0 | 0 |
 
 ## Failure Analysis

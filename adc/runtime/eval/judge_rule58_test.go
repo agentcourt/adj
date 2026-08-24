@@ -57,7 +57,7 @@ func TestScoreJudgeRule58ResponseRejectsWrongClaim(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule58Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule58Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if result.ClaimCorrect {
 		t.Fatalf("ClaimCorrect = true, want false")
 	}
@@ -70,8 +70,14 @@ func TestFinalizeJudgeRule58ResultChecksAppliedAmount(t *testing.T) {
 	t.Parallel()
 
 	fixture := testRule58JuryFixture()
-	resp := dryRunJudgeRule58Response(fixture)
-	result := scoreJudgeRule58Response(fixture, "test-model", true, nil, nil, nil, nil, resp)
+	resp := openai.Response{ToolCalls: []openai.ToolCall{{
+		Name: JudgeRule58Tool,
+		Arguments: map[string]any{
+			"claim_id": fixture.ExpectedClaimID,
+			"basis":    fixture.ExpectedBasis,
+		},
+	}}}
+	result := scoreJudgeRule58Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	result.LeanAccepted = true
 	result.StepAccepted = true
 	result.AppliedCaseStatus = "judgment_entered"
@@ -87,7 +93,7 @@ func TestFinalizeJudgeRule58ResultChecksAppliedAmount(t *testing.T) {
 	}
 }
 
-func TestRunJudgeRule58DryRunWritesReports(t *testing.T) {
+func TestRunJudgeRule58DeterministicWritesReports(t *testing.T) {
 	t.Parallel()
 
 	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
@@ -101,8 +107,7 @@ func TestRunJudgeRule58DryRunWritesReports(t *testing.T) {
 		FixturesPath: fixturePath,
 		OutputDir:    outDir,
 		Engine:       lean.New([]string{engineScript}),
-		Model:        "dry-model",
-		DryRun:       true,
+		Model:        "test-model",
 		Timeout:      time.Second,
 	})
 	if err != nil {
@@ -137,49 +142,6 @@ func TestRunJudgeRule58DryRunWritesReports(t *testing.T) {
 		t.Fatalf("deterministic result used provider: provider = %+v, exchanges = %+v", result.Provider, result.ResponseExchanges)
 	}
 	if result.ExecutionMode != "production" || result.CounterfactualModel {
-		t.Fatalf("execution mode = %q, counterfactual = %v", result.ExecutionMode, result.CounterfactualModel)
-	}
-}
-
-func TestRunJudgeRule58CounterfactualUsesModelDecision(t *testing.T) {
-	t.Parallel()
-
-	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
-	fixtureLine := `{"id":"r58-dry","tier":1,"issue_family":"jury_plaintiff","case_theme":"Jury verdict for plaintiff.","trial_mode":"jury","verdict_for":"plaintiff","verdict_damages":12000,"expected_claim_id":"claim-1","expected_basis":"jury verdict","expected_amount":12000,"required_basis_concepts":["jury verdict"],"expected_reason_tags":["jury_verdict"],"severity":5}`
-	if err := os.WriteFile(fixturePath, []byte(fixtureLine+"\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile fixture error = %v", err)
-	}
-	outDir := filepath.Join(t.TempDir(), "out")
-	summary, err := RunJudgeRule58(nil, JudgeRule58Options{
-		FixturesPath:        fixturePath,
-		OutputDir:           outDir,
-		Engine:              lean.New([]string{writeFakeJudgeRule58Engine(t)}),
-		Model:               "dry-model",
-		DryRun:              true,
-		CounterfactualModel: true,
-		Timeout:             time.Second,
-	})
-	if err != nil {
-		t.Fatalf("RunJudgeRule58 error = %v", err)
-	}
-	if summary.Correct != 1 || summary.ExecutionMode != "counterfactual_model" || !summary.CounterfactualModel {
-		t.Fatalf("summary = %+v", summary)
-	}
-	raw, err := os.ReadFile(filepath.Join(outDir, "results.jsonl"))
-	if err != nil {
-		t.Fatalf("ReadFile results error = %v", err)
-	}
-	var result JudgeRule58Result
-	if err := json.Unmarshal(raw, &result); err != nil {
-		t.Fatalf("Unmarshal result error = %v", err)
-	}
-	if result.Provider.RequestCount != 1 || len(result.ResponseExchanges) != 1 {
-		t.Fatalf("counterfactual provider = %+v, exchanges = %+v", result.Provider, result.ResponseExchanges)
-	}
-	if _, ok := result.Opportunity["deterministic_action"]; ok {
-		t.Fatalf("counterfactual opportunity retained deterministic_action: %+v", result.Opportunity)
-	}
-	if result.ExecutionMode != "counterfactual_model" || !result.CounterfactualModel {
 		t.Fatalf("execution mode = %q, counterfactual = %v", result.ExecutionMode, result.CounterfactualModel)
 	}
 }

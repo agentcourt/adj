@@ -4,13 +4,8 @@
 # dependencies = []
 # ///
 import argparse
-import copy
 import json
-import os
 import random
-import re
-import stat
-import tempfile
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
@@ -18,7 +13,6 @@ from typing import Any
 
 ClusterTuple = tuple[int, ...]
 EquivalenceKey = str
-ROOT = Path(__file__).resolve().parents[1]
 
 
 def variant_record(row: dict[str, Any]) -> dict[str, Any]:
@@ -338,222 +332,6 @@ def endpoint_key(row: dict[str, Any]) -> str:
     )
 
 
-def safe_persona_name(value: str) -> str:
-    text = value.lower()
-    text = re.sub(r"[^a-z0-9._-]+", "-", text)
-    text = re.sub(r"-+", "-", text).strip("-.")
-    return text[:80] or "persona"
-
-
-def persona_fields(row: dict[str, Any]) -> tuple[str, str]:
-    persona = row.get("persona")
-    if isinstance(persona, dict):
-        persona_id = str(persona.get("id") or row.get("persona_id") or "").strip()
-        reference = str(persona.get("path") or persona.get("file") or persona.get("persona_file") or "").strip()
-    elif isinstance(persona, str):
-        reference = persona.strip()
-        persona_id = str(row.get("persona_id") or Path(reference).stem).strip()
-    else:
-        reference = str(row.get("persona_file") or "").strip()
-        persona_id = str(row.get("persona_id") or Path(reference).stem).strip()
-    if not persona_id:
-        raise RuntimeError("selected row has no persona id")
-    if not reference:
-        raise RuntimeError(f"persona {persona_id!r} has no file path")
-    return persona_id, reference
-
-
-def resolve_persona_path(reference: str, input_path: Path, persona_root: Path | None) -> Path:
-    path = Path(reference)
-    if persona_root is not None:
-        root = persona_root.expanduser().resolve()
-        candidate = path.expanduser().resolve() if path.is_absolute() else (root / path).resolve()
-        if candidate != root and root not in candidate.parents:
-            raise RuntimeError(f"persona path escapes --persona-root: {reference!r}")
-        candidates = [candidate]
-    elif path.is_absolute():
-        candidates = [path]
-    else:
-        candidates = [ROOT / path, input_path.parent / path, ROOT.parent / "common" / "etc" / path]
-    seen: set[Path] = set()
-    for candidate in candidates:
-        candidate = candidate.expanduser().resolve()
-        if candidate in seen:
-            continue
-        seen.add(candidate)
-        if candidate.is_file():
-            return candidate
-    rendered = ", ".join(str(path) for path in seen)
-    raise RuntimeError(f"persona file does not exist for {reference!r}; checked {rendered}")
-
-
-def absolute_without_symlink_resolution(path: Path) -> Path:
-    return Path(os.path.abspath(path))
-
-
-def validate_real_directory_path(path: Path, *, allow_missing: bool) -> None:
-    absolute = absolute_without_symlink_resolution(path)
-    current = Path(absolute.anchor)
-    missing = False
-    for part in absolute.parts[1:]:
-        current /= part
-        if missing:
-            continue
-        try:
-            metadata = os.lstat(current)
-        except FileNotFoundError:
-            if not allow_missing:
-                raise RuntimeError(f"directory does not exist: {current}")
-            missing = True
-            continue
-        if stat.S_ISLNK(metadata.st_mode):
-            raise RuntimeError(f"directory path contains a symbolic link: {current}")
-        if not stat.S_ISDIR(metadata.st_mode):
-            raise RuntimeError(f"directory path component is not a directory: {current}")
-
-
-def ensure_real_directory(path: Path) -> Path:
-    absolute = absolute_without_symlink_resolution(path)
-    current = Path(absolute.anchor)
-    for part in absolute.parts[1:]:
-        current /= part
-        try:
-            metadata = os.lstat(current)
-        except FileNotFoundError:
-            try:
-                os.mkdir(current)
-            except FileExistsError:
-                pass
-            metadata = os.lstat(current)
-        if stat.S_ISLNK(metadata.st_mode):
-            raise RuntimeError(f"directory path contains a symbolic link: {current}")
-        if not stat.S_ISDIR(metadata.st_mode):
-            raise RuntimeError(f"directory path component is not a directory: {current}")
-    return absolute
-
-
-def read_regular_file_without_symlinks(path: Path) -> bytes:
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
-    try:
-        descriptor = os.open(path, flags)
-    except FileNotFoundError:
-        raise
-    except OSError as exc:
-        raise RuntimeError(f"persona destination is not a regular file: {path}: {exc}") from exc
-    try:
-        metadata = os.fstat(descriptor)
-        if not stat.S_ISREG(metadata.st_mode):
-            raise RuntimeError(f"persona destination is not a regular file: {path}")
-        chunks: list[bytes] = []
-        while chunk := os.read(descriptor, 1024 * 1024):
-            chunks.append(chunk)
-        return b"".join(chunks)
-    finally:
-        os.close(descriptor)
-
-
-def publish_persona_file(path: Path, data: bytes) -> None:
-    try:
-        found = read_regular_file_without_symlinks(path)
-    except FileNotFoundError:
-        found = None
-    if found is not None:
-        if found != data:
-            raise RuntimeError(f"persona destination contains different contents: {path}")
-        return
-
-    directory = ensure_real_directory(path.parent)
-    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.pending-", dir=directory)
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(descriptor, "wb", closefd=True) as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        try:
-            os.link(temporary, path, follow_symlinks=False)
-        except FileExistsError:
-            found = read_regular_file_without_symlinks(path)
-            if found != data:
-                raise RuntimeError(f"persona destination contains different contents: {path}")
-    finally:
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
-
-
-def package_personas(
-    selected_rows: list[dict[str, Any]],
-    input_path: Path,
-    output_path: Path,
-    persona_root: Path | None,
-) -> tuple[list[dict[str, Any]], dict[Path, bytes]]:
-    by_id: dict[str, tuple[bytes, set[Path]]] = {}
-    row_personas: list[str] = []
-    for row in selected_rows:
-        persona_id, reference = persona_fields(row)
-        source = resolve_persona_path(reference, input_path, persona_root)
-        data = source.read_bytes()
-        if not data.strip():
-            raise RuntimeError(f"persona file is empty: {source}")
-        prior = by_id.get(persona_id)
-        if prior is not None and prior[0] != data:
-            sources = sorted(str(path) for path in prior[1] | {source})
-            raise RuntimeError(f"persona id {persona_id!r} refers to files with different contents: {', '.join(sources)}")
-        if prior is None:
-            by_id[persona_id] = (data, {source})
-        else:
-            prior[1].add(source)
-        row_personas.append(persona_id)
-
-    filenames: dict[str, str] = {}
-    occupied: set[str] = set()
-    for persona_id in sorted(by_id):
-        _, sources = by_id[persona_id]
-        source = min(sources, key=lambda path: str(path))
-        suffix = source.suffix.lower() or ".txt"
-        base = safe_persona_name(persona_id)
-        candidate = f"{base}{suffix}"
-        number = 2
-        while candidate in occupied:
-            candidate = f"{base}-{number}{suffix}"
-            number += 1
-        occupied.add(candidate)
-        filenames[persona_id] = candidate
-
-    persona_dir = output_path.parent / "personas"
-    validate_real_directory_path(persona_dir, allow_missing=True)
-    files: dict[Path, bytes] = {}
-    for persona_id, (data, _) in by_id.items():
-        destination = persona_dir / filenames[persona_id]
-        try:
-            found = read_regular_file_without_symlinks(destination)
-        except FileNotFoundError:
-            found = None
-        if found is not None and found != data:
-            raise RuntimeError(f"persona destination contains different contents: {destination}")
-        files[destination] = data
-
-    output_rows: list[dict[str, Any]] = []
-    for row, persona_id in zip(selected_rows, row_personas, strict=True):
-        output_row = copy.deepcopy(clean_row(row))
-        packaged_path = (Path("personas") / filenames[persona_id]).as_posix()
-        persona = output_row.get("persona")
-        if isinstance(persona, dict):
-            persona["path"] = packaged_path
-            persona.pop("file", None)
-            persona.pop("persona_file", None)
-            output_row.pop("persona_file", None)
-        elif isinstance(persona, str):
-            output_row["persona"] = packaged_path
-            output_row.pop("persona_file", None)
-        else:
-            output_row["persona_file"] = packaged_path
-        output_rows.append(output_row)
-    return output_rows, files
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Sample rows by uniformly selected cluster-assignment tuples.")
     parser.add_argument("input", type=Path, help="Input variant-persona cluster JSONL file")
@@ -572,21 +350,7 @@ def main() -> int:
     )
     parser.add_argument("--pool-size", type=int, default=20, help="Number of rows to emit. Default: %(default)s")
     parser.add_argument("--seed", type=int, help="Optional deterministic random seed")
-    parser.add_argument(
-        "--persona-root",
-        type=Path,
-        help="Base directory for relative persona paths. Defaults include model-pool/, the input directory, and common/etc/.",
-    )
     args = parser.parse_args()
-
-    args.input = args.input.expanduser()
-    args.out = args.out.expanduser()
-    if args.diagnostics_out is not None:
-        args.diagnostics_out = args.diagnostics_out.expanduser()
-    if args.equivalence_out is not None:
-        args.equivalence_out = args.equivalence_out.expanduser()
-    if args.persona_root is not None:
-        args.persona_root = args.persona_root.expanduser()
 
     if args.pool_size <= 0:
         raise RuntimeError("--pool-size must be positive")
@@ -612,92 +376,76 @@ def main() -> int:
     provider_counts: Counter[str] = Counter()
     endpoint_counts: Counter[str] = Counter()
 
-    selected_rows: list[dict[str, Any]] = []
-    diagnostics: list[dict[str, Any]] = []
-    console_lines: list[str] = []
-    for step in range(1, args.pool_size + 1):
-        if args.without_replacement:
-            cluster_tuple = available_tuples[rng.randrange(len(available_tuples))]
-            candidates = available_grouped[cluster_tuple]
-            available_before = len(candidates)
-            row = candidates.pop(rng.randrange(len(candidates)))
-            if not candidates:
-                available_tuples.remove(cluster_tuple)
-        else:
-            cluster_tuple = tuples[rng.randrange(len(tuples))]
-            candidates = grouped[cluster_tuple]
-            available_before = len(candidates)
-            row = candidates[rng.randrange(len(candidates))]
-
-        tuple_counts[cluster_tuple] += 1
-        row_counts[row["_source_row"]] += 1
-        model_id = str(row.get("openrouter_model_id", ""))
-        provider_name = str(row.get("provider_name", ""))
-        endpoint = endpoint_key(row)
-        model_counts[model_id] += 1
-        provider_counts[provider_name] += 1
-        endpoint_counts[endpoint] += 1
-        selected_rows.append(row)
-
-        console_lines.append(
-            f"{step}: tuple={list(cluster_tuple)} tuple_size={len(grouped[cluster_tuple])} "
-            f"available_before={available_before} "
-            f"tuple_count={tuple_counts[cluster_tuple]} row={row['_source_row']} "
-            f"row_count={row_counts[row['_source_row']]} model={model_id} "
-            f"provider={provider_name} endpoint={row.get('endpoint_tag', '')} "
-            f"quantization={row.get('quantization', '')}"
-        )
-        diagnostics.append({
-            "step": step,
-            "cluster_tuple": list(cluster_tuple),
-            "cluster_tuple_count": tuple_counts[cluster_tuple],
-            "cluster_tuple_size": len(grouped[cluster_tuple]),
-            "cluster_tuple_available_before": available_before,
-            "source_row": row["_source_row"],
-            "source_row_count": row_counts[row["_source_row"]],
-            "openrouter_model_id": model_id,
-            "provider_name": provider_name,
-            "endpoint_tag": row.get("endpoint_tag"),
-            "quantization": row.get("quantization"),
-            "endpoint_identifier": endpoint,
-            "equivalence_key": row.get("_equivalence_key"),
-            "equivalence_class_size": row.get("_equivalence_class_size", 1),
-            "representative_source_row": row.get("_representative_source_row", row["_source_row"]),
-            "representative_endpoint_variant_id": row.get("_representative_endpoint_variant_id", row.get("endpoint_variant_id")),
-            "equivalent_endpoints": row.get("_equivalent_endpoints", [endpoint_summary(row)]),
-            "without_replacement": args.without_replacement,
-        })
-
-    persona_root = args.persona_root
-    if persona_root is not None and not persona_root.is_absolute():
-        persona_root = ROOT / persona_root
-    output_rows, persona_files = package_personas(selected_rows, args.input, args.out, persona_root)
-    output_paths = [path for path in (args.out, args.diagnostics_out, args.equivalence_out) if path is not None]
-    if len({path.expanduser().resolve() for path in output_paths}) != len(output_paths):
-        raise RuntimeError("output, diagnostics, and equivalence paths must be distinct")
-    persona_destinations = {path.expanduser().resolve() for path in persona_files}
-    conflict = persona_destinations & {path.expanduser().resolve() for path in output_paths}
-    if conflict:
-        raise RuntimeError(f"persona destination conflicts with an output path: {min(conflict, key=str)}")
-
-    for destination, data in persona_files.items():
-        publish_persona_file(destination, data)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    with args.out.open("w") as output_handle:
-        for row in output_rows:
-            output_handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+    diagnostics_handle = None
     if args.diagnostics_out:
         args.diagnostics_out.parent.mkdir(parents=True, exist_ok=True)
-        with args.diagnostics_out.open("w") as diagnostics_handle:
-            for record in diagnostics:
-                diagnostics_handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+        diagnostics_handle = args.diagnostics_out.open("w")
     if args.equivalence_out:
         args.equivalence_out.parent.mkdir(parents=True, exist_ok=True)
         with args.equivalence_out.open("w") as equivalence_handle:
             for record in equivalence_records:
                 equivalence_handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
-    for line in console_lines:
-        print(line)
+
+    try:
+        with args.out.open("w") as output_handle:
+            for step in range(1, args.pool_size + 1):
+                if args.without_replacement:
+                    cluster_tuple = available_tuples[rng.randrange(len(available_tuples))]
+                    candidates = available_grouped[cluster_tuple]
+                    available_before = len(candidates)
+                    row = candidates.pop(rng.randrange(len(candidates)))
+                    if not candidates:
+                        available_tuples.remove(cluster_tuple)
+                else:
+                    cluster_tuple = tuples[rng.randrange(len(tuples))]
+                    candidates = grouped[cluster_tuple]
+                    available_before = len(candidates)
+                    row = candidates[rng.randrange(len(candidates))]
+
+                tuple_counts[cluster_tuple] += 1
+                row_counts[row["_source_row"]] += 1
+                model_id = str(row.get("openrouter_model_id", ""))
+                provider_name = str(row.get("provider_name", ""))
+                endpoint = endpoint_key(row)
+                model_counts[model_id] += 1
+                provider_counts[provider_name] += 1
+                endpoint_counts[endpoint] += 1
+
+                print(
+                    f"{step}: tuple={list(cluster_tuple)} tuple_size={len(grouped[cluster_tuple])} "
+                    f"available_before={available_before} "
+                    f"tuple_count={tuple_counts[cluster_tuple]} row={row['_source_row']} "
+                    f"row_count={row_counts[row['_source_row']]} model={model_id} "
+                    f"provider={provider_name} endpoint={row.get('endpoint_tag', '')} "
+                    f"quantization={row.get('quantization', '')}"
+                )
+                output_handle.write(json.dumps(clean_row(row), ensure_ascii=False) + "\n")
+
+                if diagnostics_handle:
+                    diagnostics_handle.write(json.dumps({
+                        "step": step,
+                        "cluster_tuple": list(cluster_tuple),
+                        "cluster_tuple_count": tuple_counts[cluster_tuple],
+                        "cluster_tuple_size": len(grouped[cluster_tuple]),
+                        "cluster_tuple_available_before": available_before,
+                        "source_row": row["_source_row"],
+                        "source_row_count": row_counts[row["_source_row"]],
+                        "openrouter_model_id": model_id,
+                        "provider_name": provider_name,
+                        "endpoint_tag": row.get("endpoint_tag"),
+                        "quantization": row.get("quantization"),
+                        "endpoint_identifier": endpoint,
+                        "equivalence_key": row.get("_equivalence_key"),
+                        "equivalence_class_size": row.get("_equivalence_class_size", 1),
+                        "representative_source_row": row.get("_representative_source_row", row["_source_row"]),
+                        "representative_endpoint_variant_id": row.get("_representative_endpoint_variant_id", row.get("endpoint_variant_id")),
+                        "equivalent_endpoints": row.get("_equivalent_endpoints", [endpoint_summary(row)]),
+                        "without_replacement": args.without_replacement,
+                    }, ensure_ascii=False, sort_keys=True) + "\n")
+    finally:
+        if diagnostics_handle:
+            diagnostics_handle.close()
 
     print(
         f"summary: input_rows={len(rows)} deduped_rows={len(sample_rows)} "

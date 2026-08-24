@@ -21,28 +21,20 @@ type judgeOpportunityExecutionOptions struct {
 	Court                      courts.Profile
 	Model                      string
 	Temperature                *float64
-	Runtime                    runner.RuntimeLimits
-	ScenarioBaseDir            string
-	EventsPath                 string
 	PromptDir                  string
 	PromptFiles                map[string]string
-	MaxStepsPerTurn            int
-	TurnIndex                  int
-	ObjectiveOverride          string
 	Objective                  func(map[string]any) (string, error)
 	CounterfactualModel        bool
 	RequireDeterministicAction bool
 }
 
 type judgeOpportunityExecution struct {
-	OpportunityResponse map[string]any
-	Opportunity         map[string]any
-	View                map[string]any
-	TurnLog             runner.TurnLog
-	FinalState          map[string]any
-	Provider            openaiapi.Accounting
-	Exchanges           []ResponseExchange
-	CounterfactualModel bool
+	Opportunity map[string]any
+	View        map[string]any
+	TurnLog     runner.TurnLog
+	FinalState  map[string]any
+	Provider    openaiapi.Accounting
+	Exchanges   []ResponseExchange
 }
 
 func executeJudgeOpportunity(ctx context.Context, opts judgeOpportunityExecutionOptions) (judgeOpportunityExecution, error) {
@@ -58,11 +50,7 @@ func executeJudgeOpportunity(ctx context.Context, opts judgeOpportunityExecution
 	if len(opts.RolesPayload) == 0 {
 		return judgeOpportunityExecution{}, fmt.Errorf("judge opportunity roles payload is empty")
 	}
-	maxSteps := opts.MaxStepsPerTurn
-	if maxSteps <= 0 {
-		maxSteps = 3
-	}
-	opportunityResponse, err := opts.Engine.NextOpportunityContext(ctx, opts.State, opts.RolesPayload, maxSteps)
+	opportunityResponse, err := opts.Engine.NextOpportunityContext(ctx, opts.State, opts.RolesPayload, 3)
 	if err != nil {
 		return judgeOpportunityExecution{}, fmt.Errorf("next opportunity: %w", err)
 	}
@@ -76,7 +64,6 @@ func executeJudgeOpportunity(ctx context.Context, opts judgeOpportunityExecution
 	if len(opportunity) == 0 {
 		return judgeOpportunityExecution{}, fmt.Errorf("next opportunity returned empty opportunity")
 	}
-	opportunity = cloneEvalMap(opportunity)
 	if opts.RequireDeterministicAction {
 		if deterministic, ok := opportunity["deterministic_action"].(map[string]any); !ok || deterministic == nil {
 			return judgeOpportunityExecution{}, fmt.Errorf("judge opportunity requires a deterministic action")
@@ -88,11 +75,8 @@ func executeJudgeOpportunity(ctx context.Context, opts judgeOpportunityExecution
 	if _, deterministic := opportunity["deterministic_action"]; !deterministic && opts.Client == nil {
 		return judgeOpportunityExecution{}, fmt.Errorf("model-backed judge opportunity requires a response client")
 	}
-	objectiveOverride := strings.TrimSpace(opts.ObjectiveOverride)
+	objectiveOverride := ""
 	if opts.Objective != nil {
-		if objectiveOverride != "" {
-			return judgeOpportunityExecution{}, fmt.Errorf("judge opportunity specifies both Objective and ObjectiveOverride")
-		}
 		objectiveOverride, err = opts.Objective(cloneEvalMap(opportunity))
 		if err != nil {
 			return judgeOpportunityExecution{}, fmt.Errorf("render opportunity objective: %w", err)
@@ -101,13 +85,6 @@ func executeJudgeOpportunity(ctx context.Context, opts judgeOpportunityExecution
 		if objectiveOverride == "" {
 			return judgeOpportunityExecution{}, fmt.Errorf("render opportunity objective returned empty text")
 		}
-	}
-	roleName := strings.TrimSpace(executionStringField(opportunity, "role"))
-	if roleName == "" {
-		return judgeOpportunityExecution{}, fmt.Errorf("next opportunity returned missing role")
-	}
-	if !judgeOpportunityRoleExists(opts.Roles, roleName) {
-		return judgeOpportunityExecution{}, fmt.Errorf("next opportunity returned unknown role: %s", roleName)
 	}
 	var recordingClient *RecordingResponseClient
 	responseClient := opts.Client
@@ -119,36 +96,27 @@ func executeJudgeOpportunity(ctx context.Context, opts judgeOpportunityExecution
 		responseClient = recordingClient
 	}
 	opportunityRunner, err := runner.NewOpportunityRunner(runner.OpportunityRunnerOptions{
-		State:           opts.State,
-		Roles:           opts.Roles,
-		Engine:          opts.Engine,
-		Client:          responseClient,
-		Court:           opts.Court,
-		Model:           opts.Model,
-		Temperature:     opts.Temperature,
-		Runtime:         opts.Runtime,
-		ScenarioBaseDir: opts.ScenarioBaseDir,
-		EventsPath:      opts.EventsPath,
-		PromptDir:       opts.PromptDir,
-		PromptFiles:     opts.PromptFiles,
+		State:       opts.State,
+		Roles:       opts.Roles,
+		Engine:      opts.Engine,
+		Client:      responseClient,
+		Court:       opts.Court,
+		Model:       opts.Model,
+		Temperature: opts.Temperature,
+		PromptDir:   opts.PromptDir,
+		PromptFiles: opts.PromptFiles,
 	})
 	if err != nil {
 		return judgeOpportunityExecution{}, err
 	}
-	turnIndex := opts.TurnIndex
-	if turnIndex <= 0 {
-		turnIndex = 1
-	}
 	result := judgeOpportunityExecution{
-		OpportunityResponse: cloneEvalMap(opportunityResponse),
-		Opportunity:         cloneEvalMap(opportunity),
-		CounterfactualModel: opts.CounterfactualModel,
+		Opportunity: cloneEvalMap(opportunity),
 	}
 	result.TurnLog, err = opportunityRunner.ExecuteDirectOpportunity(ctx, runner.DirectOpportunityRequest{
 		Opportunity:       opportunity,
 		StateVersion:      executionIntField(opportunityResponse, "state_version"),
 		RolesPayload:      opts.RolesPayload,
-		TurnIndex:         turnIndex,
+		TurnIndex:         1,
 		ObjectiveOverride: objectiveOverride,
 	})
 	result.View = opportunityRunner.LastOpportunityView()
@@ -158,15 +126,6 @@ func executeJudgeOpportunity(ctx context.Context, opts judgeOpportunityExecution
 		result.Exchanges = recordingClient.Exchanges()
 	}
 	return result, err
-}
-
-func judgeOpportunityRoleExists(roles []spec.RoleSpec, roleName string) bool {
-	for _, role := range roles {
-		if strings.TrimSpace(role.Name) == roleName {
-			return true
-		}
-	}
-	return false
 }
 
 func executionStringField(value map[string]any, key string) string {

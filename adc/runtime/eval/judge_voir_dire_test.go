@@ -1,14 +1,10 @@
 package eval
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/agentcourt/adj/adc/runtime/lean"
 	"github.com/agentcourt/adj/common/openai"
 )
 
@@ -66,7 +62,7 @@ func TestScoreJudgeVoirDireResponseDetectsFalseAllow(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeVoirDireResponse(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeVoirDireResponse(fixture, "test-model", nil, nil, nil, nil, resp)
 	if result.InvalidReason != "" {
 		t.Fatalf("InvalidReason = %q", result.InvalidReason)
 	}
@@ -93,7 +89,7 @@ func TestScoreJudgeVoirDireResponseMatchesReasonTag(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeVoirDireResponse(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeVoirDireResponse(fixture, "test-model", nil, nil, nil, nil, resp)
 	if !result.OutcomeCorrect || !result.ReasonCorrect {
 		t.Fatalf("score = outcome %v reason %v matches %v", result.OutcomeCorrect, result.ReasonCorrect, result.MatchedReasonTags)
 	}
@@ -131,101 +127,6 @@ func TestReasonTagsMatchLiveAllowedWording(t *testing.T) {
 	}
 }
 
-func TestRunJudgeVoirDireDryRunWritesReports(t *testing.T) {
-	t.Parallel()
-
-	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
-	fixtureLine := `{"id":"jvd-dry","tier":1,"question_family":"proper_bias_probe","case_theme":"theme","asked_by":"plaintiff","juror_id":"J1","question":"Can you be fair to both sides?","expected_allowed":true,"expected_reason_tags":["proper_bias_probe"],"severity":1}`
-	if err := os.WriteFile(fixturePath, []byte(fixtureLine+"\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile fixture error = %v", err)
-	}
-	engineScript := writeFakeJudgeVoirDireEngine(t)
-	outDir := filepath.Join(t.TempDir(), "out")
-	summary, err := RunJudgeVoirDire(nil, JudgeVoirDireOptions{
-		FixturesPath: fixturePath,
-		OutputDir:    outDir,
-		Engine:       lean.New([]string{engineScript}),
-		Model:        "dry-model",
-		DryRun:       true,
-		Timeout:      time.Second,
-	})
-	if err != nil {
-		t.Fatalf("RunJudgeVoirDire error = %v", err)
-	}
-	if summary.Total != 1 || summary.Correct != 1 || summary.Invalid != 0 {
-		t.Fatalf("summary = %+v", summary)
-	}
-	rawSummary, err := os.ReadFile(filepath.Join(outDir, "summary.json"))
-	if err != nil {
-		t.Fatalf("ReadFile summary error = %v", err)
-	}
-	var parsed JudgeVoirDireSummary
-	if err := json.Unmarshal(rawSummary, &parsed); err != nil {
-		t.Fatalf("Unmarshal summary error = %v", err)
-	}
-	if parsed.Total != 1 || parsed.WeightedAccuracy != 1 {
-		t.Fatalf("parsed summary = %+v", parsed)
-	}
-	rawResults, err := os.ReadFile(filepath.Join(outDir, "results.jsonl"))
-	if err != nil {
-		t.Fatalf("ReadFile results error = %v", err)
-	}
-	if !strings.Contains(string(rawResults), `"lean_accepted":true`) {
-		t.Fatalf("results missing accepted Lean decision: %s", rawResults)
-	}
-}
-
-func TestRunJudgeVoirDireDryRunUsesPromptOverride(t *testing.T) {
-	t.Parallel()
-
-	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
-	fixtureLine := `{"id":"jvd-prompt","tier":1,"question_family":"proper_bias_probe","case_theme":"theme","asked_by":"plaintiff","juror_id":"J1","question":"Can you be fair to both sides?","expected_allowed":true,"expected_reason_tags":["proper_bias_probe"],"severity":1}`
-	if err := os.WriteFile(fixturePath, []byte(fixtureLine+"\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile fixture error = %v", err)
-	}
-	promptPath := filepath.Join(t.TempDir(), "candidate.md")
-	promptText := "Variant prompt for {{question}} by {{asked_by}} to {{juror_id}} in {{case_theme}}. Production was {{production_objective}}."
-	if err := os.WriteFile(promptPath, []byte(promptText), 0o644); err != nil {
-		t.Fatalf("WriteFile prompt error = %v", err)
-	}
-	engineScript := writeFakeJudgeVoirDireEngine(t)
-	outDir := filepath.Join(t.TempDir(), "out")
-	summary, err := RunJudgeVoirDire(nil, JudgeVoirDireOptions{
-		FixturesPath:          fixturePath,
-		OutputDir:             outDir,
-		OpportunityPromptPath: promptPath,
-		OpportunityPromptName: "candidate-test",
-		Engine:                lean.New([]string{engineScript}),
-		Model:                 "dry-model",
-		DryRun:                true,
-		Timeout:               time.Second,
-	})
-	if err != nil {
-		t.Fatalf("RunJudgeVoirDire error = %v", err)
-	}
-	if summary.PromptName != "candidate-test" || summary.PromptSource != "file:"+promptPath {
-		t.Fatalf("prompt summary = source %q name %q", summary.PromptSource, summary.PromptName)
-	}
-	copiedPrompt, err := os.ReadFile(filepath.Join(outDir, "opportunity_prompt.md"))
-	if err != nil {
-		t.Fatalf("ReadFile copied prompt error = %v", err)
-	}
-	if string(copiedPrompt) != promptText {
-		t.Fatalf("copied prompt = %q, want %q", copiedPrompt, promptText)
-	}
-	rawResults, err := os.ReadFile(filepath.Join(outDir, "results.jsonl"))
-	if err != nil {
-		t.Fatalf("ReadFile results error = %v", err)
-	}
-	resultText := string(rawResults)
-	if !strings.Contains(resultText, "Variant prompt for Can you be fair to both sides? by plaintiff to J1 in theme") {
-		t.Fatalf("results missing rendered prompt: %s", resultText)
-	}
-	if !strings.Contains(resultText, `"prompt_name":"candidate-test"`) {
-		t.Fatalf("results missing prompt metadata: %s", resultText)
-	}
-}
-
 func testFixture(expectedAllowed bool, tag string) JudgeVoirDireFixture {
 	return JudgeVoirDireFixture{
 		ID:                 "jvd-test",
@@ -239,34 +140,4 @@ func testFixture(expectedAllowed bool, tag string) JudgeVoirDireFixture {
 		ExpectedReasonTags: []string{tag},
 		Severity:           1,
 	}
-}
-
-func writeFakeJudgeVoirDireEngine(t *testing.T) string {
-	t.Helper()
-
-	path := filepath.Join(t.TempDir(), "engine.sh")
-	body := `#!/bin/sh
-req=$(cat)
-case "$req" in
-*'"request_type":"role_view"'*)
-  printf '%s' '{"ok":true,"view":{"role":"judge","state":{"case":"visible"},"redactions":[],"role_private":{}}}'
-  ;;
-*'"request_type":"next_opportunity"'*)
-  printf '%s' '{"ok":true,"state_version":0,"opportunity":{"opportunity_id":"opp-1","role":"judge","phase":"voir_dire","kind":"turn","may_pass":false,"actor_message":"Current voir_dire opportunity for judge: act on this objective now.","objective":"For case 0, rule on the pending voir dire question by plaintiff to juror_id J1. Allow a narrow question that tests bias. Disallow a precommitment.","allowed_tools":["decide_voir_dire_question"],"step_budget":3,"priority":100,"constraints":{"required_payload":{"exchange_id":"vx-1","juror_id":"J1","asked_by":"plaintiff"}}}}'
-  ;;
-*'"request_type":"apply_decision"'*)
-  printf '%s' '{"ok":true,"result_kind":"execute_tool","state":{"accepted":true},"action":{"action_type":"decide_voir_dire_question"}}'
-  ;;
-*'"action_type":"decide_voir_dire_question"'*)
-  printf '%s' '{"ok":true,"state":{"state_version":1,"case":{"status":"jury_selection","phase":"voir_dire"}}}'
-  ;;
-*)
-  printf '%s' '{"ok":false,"error":"unexpected request"}'
-  ;;
-esac
-`
-	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
-		t.Fatalf("WriteFile engine error = %v", err)
-	}
-	return path
 }

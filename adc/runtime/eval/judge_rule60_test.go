@@ -1,14 +1,10 @@
 package eval
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/agentcourt/adj/adc/runtime/lean"
 	"github.com/agentcourt/adj/common/openai"
 )
 
@@ -65,7 +61,7 @@ func TestScoreJudgeRule60ResponseRejectsWrongGrant(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule60Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule60Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if result.GrantCorrect {
 		t.Fatalf("GrantCorrect = true, want false")
 	}
@@ -86,7 +82,7 @@ func TestScoreJudgeRule60ResponseAcceptsOrdinaryLitigationReason(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule60Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule60Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if !result.ReasonCorrect {
 		t.Fatalf("ReasonCorrect = false, matched tags = %+v", result.MatchedReasonTags)
 	}
@@ -109,7 +105,7 @@ func TestScoreJudgeRule60ResponseAllowsNegatedProhibitedConcept(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule60Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule60Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if !result.ProhibitedCorrect {
 		t.Fatalf("ProhibitedCorrect = false, present prohibited concepts = %+v", result.PresentProhibitedConcepts)
 	}
@@ -132,7 +128,7 @@ func TestScoreJudgeRule60ResponseAllowsStandardStatement(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule60Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule60Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if !result.RequiredCorrect || !result.ProhibitedCorrect || !result.ReasonCorrect {
 		t.Fatalf("result = %+v", result)
 	}
@@ -155,7 +151,7 @@ func TestScoreJudgeRule60ResponseAllowsNoFraudShowing(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule60Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule60Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if !result.ProhibitedCorrect {
 		t.Fatalf("present prohibited concepts = %+v", result.PresentProhibitedConcepts)
 	}
@@ -178,7 +174,7 @@ func TestScoreJudgeRule60ResponseAllowsNoExtraordinaryShowing(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule60Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule60Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if !result.RequiredCorrect || !result.ProhibitedCorrect {
 		t.Fatalf("result = %+v", result)
 	}
@@ -201,53 +197,9 @@ func TestScoreJudgeRule60ResponseAllowsNoGroundList(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule60Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule60Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if !result.ProhibitedCorrect {
 		t.Fatalf("present prohibited concepts = %+v", result.PresentProhibitedConcepts)
-	}
-}
-
-func TestRunJudgeRule60DryRunWritesReports(t *testing.T) {
-	t.Parallel()
-
-	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
-	fixtureLine := `{"id":"r60-dry","tier":1,"issue_family":"excusable_neglect","case_theme":"Default judgment after service routing error.","judgment_summary":"Default judgment entered for plaintiff.","motion_ground":"60b1_mistake","motion_text":"Defendant missed the answer deadline because service was routed to a closed mailbox and appeared promptly.","opposition_text":"Plaintiff argues the neglect was careless.","default_judgment":true,"expected_granted":true,"required_concepts":["excusable neglect","prompt action"],"expected_reason_tags":["mistake_excusable_neglect"],"severity":5}`
-	if err := os.WriteFile(fixturePath, []byte(fixtureLine+"\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile fixture error = %v", err)
-	}
-	engineScript := writeFakeJudgeRule60Engine(t)
-	outDir := filepath.Join(t.TempDir(), "out")
-	summary, err := RunJudgeRule60(nil, JudgeRule60Options{
-		FixturesPath: fixturePath,
-		OutputDir:    outDir,
-		Engine:       lean.New([]string{engineScript}),
-		Model:        "dry-model",
-		DryRun:       true,
-		Timeout:      time.Second,
-	})
-	if err != nil {
-		t.Fatalf("RunJudgeRule60 error = %v", err)
-	}
-	if summary.Total != 1 || summary.Correct != 1 || summary.Invalid != 0 {
-		t.Fatalf("summary = %+v", summary)
-	}
-	rawSummary, err := os.ReadFile(filepath.Join(outDir, "summary.json"))
-	if err != nil {
-		t.Fatalf("ReadFile summary error = %v", err)
-	}
-	var parsed JudgeRule60Summary
-	if err := json.Unmarshal(rawSummary, &parsed); err != nil {
-		t.Fatalf("Unmarshal summary error = %v", err)
-	}
-	if parsed.Total != 1 || parsed.WeightedAccuracy != 1 {
-		t.Fatalf("parsed summary = %+v", parsed)
-	}
-	rawResults, err := os.ReadFile(filepath.Join(outDir, "results.jsonl"))
-	if err != nil {
-		t.Fatalf("ReadFile results error = %v", err)
-	}
-	if !strings.Contains(string(rawResults), `"step_accepted":true`) {
-		t.Fatalf("results missing accepted step: %s", rawResults)
 	}
 }
 
@@ -267,34 +219,4 @@ func testRule60Fixture(expectedGranted bool) JudgeRule60Fixture {
 		ExpectedReasonTags: []string{"mistake_excusable_neglect"},
 		Severity:           5,
 	}
-}
-
-func writeFakeJudgeRule60Engine(t *testing.T) string {
-	t.Helper()
-
-	path := filepath.Join(t.TempDir(), "engine.sh")
-	body := `#!/bin/sh
-req=$(cat)
-case "$req" in
-*'"request_type":"role_view"'*)
-  printf '%s' '{"ok":true,"view":{"role":"judge","state":{"case":"visible"},"redactions":[],"role_private":{}}}'
-  ;;
-*'"request_type":"next_opportunity"'*)
-  printf '%s' '{"ok":true,"state_version":0,"opportunity":{"opportunity_id":"opp-1","role":"judge","phase":"post_verdict","kind":"turn","may_pass":true,"actor_message":"Current post_verdict opportunity for judge: consider this objective and either act now or pass.","objective":"For case 0, resolve Rule 60 motion_index 0 as granted or denied with a short relief summary.","allowed_tools":["resolve_rule60_motion"],"step_budget":3,"priority":100}}'
-  ;;
-*'"request_type":"apply_decision"'*)
-  printf '%s' '{"ok":true,"result_kind":"execute_tool","action":{"action_type":"resolve_rule60_motion","actor_role":"judge","payload":{"motion_index":0,"granted":true,"relief_summary":"excusable neglect; prompt action"}}}'
-  ;;
-*'"action_type":"resolve_rule60_motion"'*)
-  printf '%s' '{"ok":true,"state":{"case":{"status":"judgment_entered"}}}'
-  ;;
-*)
-  printf '%s' '{"ok":false,"error":"unexpected request"}'
-  ;;
-esac
-`
-	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
-		t.Fatalf("WriteFile engine error = %v", err)
-	}
-	return path
 }

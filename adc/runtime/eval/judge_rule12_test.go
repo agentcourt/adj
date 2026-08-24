@@ -6,9 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/agentcourt/adj/adc/runtime/lean"
 	"github.com/agentcourt/adj/common/openai"
 )
 
@@ -72,7 +70,7 @@ func TestScoreJudgeRule12ResponseDetectsFalseDismissal(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule12Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule12Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if result.InvalidReason != "" {
 		t.Fatalf("InvalidReason = %q", result.InvalidReason)
 	}
@@ -157,50 +155,6 @@ func TestRule12ReasonTagsMatchLiveWording(t *testing.T) {
 	}
 }
 
-func TestRunJudgeRule12DryRunWritesReports(t *testing.T) {
-	t.Parallel()
-
-	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
-	fixtureLine := `{"id":"r12-dry","tier":1,"issue_family":"missing_element","case_theme":"theme","ground":"failure_to_state_a_claim","complaint_text":"Plaintiff alleges breach but no damages.","motion_text":"Defendant moves because damages are missing.","opposition_text":"Plaintiff requests leave to amend.","expected_disposition":"granted","expected_leave_to_amend":true,"expected_missing_elements":["damages"],"expected_reason_tags":["missing_element","amendable_defect"],"severity":3}`
-	if err := os.WriteFile(fixturePath, []byte(fixtureLine+"\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile fixture error = %v", err)
-	}
-	engineScript := writeFakeJudgeRule12Engine(t)
-	outDir := filepath.Join(t.TempDir(), "out")
-	summary, err := RunJudgeRule12(nil, JudgeRule12Options{
-		FixturesPath: fixturePath,
-		OutputDir:    outDir,
-		Engine:       lean.New([]string{engineScript}),
-		Model:        "dry-model",
-		DryRun:       true,
-		Timeout:      time.Second,
-	})
-	if err != nil {
-		t.Fatalf("RunJudgeRule12 error = %v", err)
-	}
-	if summary.Total != 1 || summary.Correct != 1 || summary.Invalid != 0 {
-		t.Fatalf("summary = %+v", summary)
-	}
-	rawSummary, err := os.ReadFile(filepath.Join(outDir, "summary.json"))
-	if err != nil {
-		t.Fatalf("ReadFile summary error = %v", err)
-	}
-	var parsed JudgeRule12Summary
-	if err := json.Unmarshal(rawSummary, &parsed); err != nil {
-		t.Fatalf("Unmarshal summary error = %v", err)
-	}
-	if parsed.Total != 1 || parsed.WeightedAccuracy != 1 {
-		t.Fatalf("parsed summary = %+v", parsed)
-	}
-	rawResults, err := os.ReadFile(filepath.Join(outDir, "results.jsonl"))
-	if err != nil {
-		t.Fatalf("ReadFile results error = %v", err)
-	}
-	if !strings.Contains(string(rawResults), `"lean_accepted":true`) {
-		t.Fatalf("results missing accepted Lean decision: %s", rawResults)
-	}
-}
-
 func TestRescoreJudgeRule12WritesUpdatedSummary(t *testing.T) {
 	t.Parallel()
 
@@ -262,34 +216,4 @@ func testRule12Fixture(expectedDisposition string, tag string) JudgeRule12Fixtur
 		ExpectedReasonTags:  []string{tag},
 		Severity:            1,
 	}
-}
-
-func writeFakeJudgeRule12Engine(t *testing.T) string {
-	t.Helper()
-
-	path := filepath.Join(t.TempDir(), "engine.sh")
-	body := `#!/bin/sh
-req=$(cat)
-case "$req" in
-*'"request_type":"role_view"'*)
-  printf '%s' '{"ok":true,"view":{"role":"judge","state":{"case":"visible"},"redactions":[],"role_private":{}}}'
-  ;;
-*'"request_type":"next_opportunity"'*)
-  printf '%s' '{"ok":true,"state_version":0,"opportunity":{"opportunity_id":"opp-1","role":"judge","phase":"none","kind":"turn","may_pass":false,"actor_message":"Current none opportunity for judge: act on this objective now.","objective":"For case 0, decide Rule 12 motion_index 0 on the ground failure_to_state_a_claim. Apply the standard for that ground. Grant only if that ground is established on the pleadings or jurisdictional allegations. If granted, set with_prejudice and leave_to_amend consistently and state the decisive reason.","allowed_tools":["decide_rule12_motion"],"step_budget":3,"priority":100,"constraints":{"required_payload":{"motion_index":0,"ground":"failure_to_state_a_claim"}}}}'
-  ;;
-*'"request_type":"apply_decision"'*)
-  printf '%s' '{"ok":true,"result_kind":"execute_tool","state":{"accepted":true},"action":{"action_type":"decide_rule12_motion"}}'
-  ;;
-*'"action_type":"decide_rule12_motion"'*)
-  printf '%s' '{"ok":true,"state":{"state_version":1,"case":{"status":"pretrial","phase":"pleadings"}}}'
-  ;;
-*)
-  printf '%s' '{"ok":false,"error":"unexpected request"}'
-  ;;
-esac
-`
-	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
-		t.Fatalf("WriteFile engine error = %v", err)
-	}
-	return path
 }

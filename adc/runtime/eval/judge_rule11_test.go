@@ -67,13 +67,13 @@ func TestScoreJudgeRule11ResponseRejectsDeniedSanction(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule11Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule11Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if result.InvalidReason != "denied_with_sanction_type" {
 		t.Fatalf("InvalidReason = %q, want denied_with_sanction_type", result.InvalidReason)
 	}
 }
 
-func TestRunJudgeRule11DryRunWritesReports(t *testing.T) {
+func TestRunJudgeRule11DeterministicWritesReports(t *testing.T) {
 	t.Parallel()
 
 	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
@@ -87,8 +87,7 @@ func TestRunJudgeRule11DryRunWritesReports(t *testing.T) {
 		FixturesPath: fixturePath,
 		OutputDir:    outDir,
 		Engine:       lean.New([]string{engineScript}),
-		Model:        "dry-model",
-		DryRun:       true,
+		Model:        "test-model",
 		Timeout:      time.Second,
 	})
 	if err != nil {
@@ -110,12 +109,6 @@ func TestRunJudgeRule11DryRunWritesReports(t *testing.T) {
 	}
 	if parsed.ExecutionMode != "production" || parsed.CounterfactualModel {
 		t.Fatalf("summary execution mode = %q, counterfactual = %v", parsed.ExecutionMode, parsed.CounterfactualModel)
-	}
-	if parsed.Provenance.SummaryMode != "run" || parsed.Provenance.ExecutionMode != "production" || parsed.Provenance.Court == nil || parsed.Provenance.Online == nil || !parsed.Provenance.DryRun || len(parsed.Provenance.Engine) == 0 {
-		t.Fatalf("summary provenance = %+v", parsed.Provenance)
-	}
-	if parsed.Provenance.CandidatePromptSource != "production" || parsed.Provenance.CandidatePromptName != "production" {
-		t.Fatalf("summary provenance = %+v", parsed.Provenance)
 	}
 	rawResults, err := os.ReadFile(filepath.Join(outDir, "results.jsonl"))
 	if err != nil {
@@ -226,9 +219,6 @@ func TestRescoreJudgeRule11WritesUpdatedSummary(t *testing.T) {
 	var parsed JudgeRule11Summary
 	if err := json.Unmarshal(rawSummary, &parsed); err != nil {
 		t.Fatalf("Unmarshal summary error = %v", err)
-	}
-	if parsed.Provenance.SummaryMode != "rescore" || parsed.Provenance.ExecutionMode != "production" || parsed.Provenance.CandidatePromptSource != "production" || parsed.Provenance.CandidatePromptName != "production" {
-		t.Fatalf("rescore provenance = %+v", parsed.Provenance)
 	}
 }
 

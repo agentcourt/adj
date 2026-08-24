@@ -34,7 +34,7 @@ uv run tools/score_eval.py score --run results/mock-perfect
 
 ## Run Data
 
-Run outputs, model responses, score files, manifests, provider inventories, sampled pools, and run-specific summaries belong under `results/`, or under an intentional snapshot directory in `variants/` when the repository needs a checked-in survivor set.  The batch and end-to-end runners copy their source inputs into each run, keep the run manifest immutable, and require explicit `--resume` before continuing.  `results/` is ignored except for `results/.gitkeep`, and credentials are ignored under `secrets/`.
+Run outputs, model responses, score files, manifests, provider inventories, sampled pools, and run-specific summaries belong under `results/`, or under an intentional snapshot directory in `variants/` when the repository needs a checked-in survivor set.  `results/` is ignored except for `results/.gitkeep`, and credentials are ignored under `secrets/`.  README content stays limited to stable workflow, file locations, and entry points; run IDs, endpoint counts, pass rates, accepted endpoint lists, and dated filter details belong in run artifacts, snapshot summaries, analysis notes, or the manual.
 
 ## Layout
 
@@ -49,9 +49,7 @@ Run outputs, model responses, score files, manifests, provider inventories, samp
 | `variants/` | Checked-in provider-endpoint snapshot files. |
 | `tools/run_eval.py`, `tools/score_eval.py`, `tools/audit_eval.py` | Question-set execution, validation, scoring, and repository checks. |
 | `tools/model_inventory.py`, `tools/run_variant_batch.py`, `tools/run_end_to_end.py` | Provider inventory, endpoint-variant evaluation, and full pool-pipeline execution. |
-| `tools/run_record.py` | Immutable run manifests, exact input copies, evidence-record copies, and resume validation. |
 | `tools/run_first_gene_inference_embeddings.py`, `tools/run_embedding_pca.py`, `tools/run_gene_pca_clustering.py` | Gene-response collection, embedding reduction, and clustering. |
 | `tools/aggregate_variant_persona_clusters.py`, `tools/sample-tuple-pool.py` | Cluster aggregation and tuple-uniform pool sampling. |
 | `tools/clusters-graph.py` | Renders per-gene cluster rows as a faceted chart. |
 | `results/` | Generated eval and pool-construction files. |
-| `tests/` | Tests for run integrity, progress validation, deterministic stage validation, and persona packaging. |

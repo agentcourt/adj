@@ -1,14 +1,11 @@
 package eval
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/agentcourt/adj/adc/runtime/lean"
 	"github.com/agentcourt/adj/common/openai"
 )
 
@@ -72,7 +69,7 @@ func TestScoreJudgeRule56ResponseDetectsFalseGrant(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule56Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule56Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if result.InvalidReason != "" {
 		t.Fatalf("InvalidReason = %q", result.InvalidReason)
 	}
@@ -108,12 +105,12 @@ func TestScoreJudgeRule56ResponseComparesSurvivingIssuesExactlyAfterNormalizatio
 		}}}
 	}
 
-	normalizedMatch := scoreJudgeRule56Response(fixture, "test-model", false, nil, nil, nil, nil, response([]any{"  DAMAGES ", "causation"}))
+	normalizedMatch := scoreJudgeRule56Response(fixture, "test-model", nil, nil, nil, nil, response([]any{"  DAMAGES ", "causation"}))
 	if !normalizedMatch.SurvivingCorrect || !normalizedMatch.OutcomeCorrect {
 		t.Fatalf("normalized match = %+v", normalizedMatch)
 	}
 
-	mismatch := scoreJudgeRule56Response(fixture, "test-model", false, nil, nil, nil, nil, response([]any{"causation"}))
+	mismatch := scoreJudgeRule56Response(fixture, "test-model", nil, nil, nil, nil, response([]any{"causation"}))
 	if mismatch.SurvivingCorrect || mismatch.OutcomeCorrect {
 		t.Fatalf("mismatch = %+v", mismatch)
 	}
@@ -133,7 +130,7 @@ func TestScoreJudgeRule56ResponseRejectsUnexpectedSurvivingIssue(t *testing.T) {
 	t.Parallel()
 
 	fixture := testRule56Fixture("granted", "missing_element")
-	result := scoreJudgeRule56Response(fixture, "test-model", false, nil, nil, nil, nil, openai.Response{
+	result := scoreJudgeRule56Response(fixture, "test-model", nil, nil, nil, nil, openai.Response{
 		ToolCalls: []openai.ToolCall{{
 			Name: JudgeRule56Tool,
 			Arguments: map[string]any{
@@ -181,106 +178,6 @@ func TestRule56ReasonTagsMatchLiveWording(t *testing.T) {
 	}
 }
 
-func TestRunJudgeRule56DryRunWritesReports(t *testing.T) {
-	t.Parallel()
-
-	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
-	fixtureLine := `{"id":"r56-dry","tier":1,"issue_family":"missing_element","case_theme":"theme","moving_party":"defendant","request_text":"Defendant seeks summary judgment on causation.","statement_of_undisputed_facts":"Plaintiff has no causation evidence.","opposition_text":"Plaintiff concedes the record has no causation witness or document.","expected_disposition":"granted","expected_reason_tags":["missing_element"],"severity":1}`
-	if err := os.WriteFile(fixturePath, []byte(fixtureLine+"\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile fixture error = %v", err)
-	}
-	engineScript := writeFakeJudgeRule56Engine(t)
-	outDir := filepath.Join(t.TempDir(), "out")
-	summary, err := RunJudgeRule56(nil, JudgeRule56Options{
-		FixturesPath: fixturePath,
-		OutputDir:    outDir,
-		Engine:       lean.New([]string{engineScript}),
-		Model:        "dry-model",
-		DryRun:       true,
-		Timeout:      time.Second,
-	})
-	if err != nil {
-		t.Fatalf("RunJudgeRule56 error = %v", err)
-	}
-	if summary.Total != 1 || summary.Correct != 1 || summary.Invalid != 0 {
-		t.Fatalf("summary = %+v", summary)
-	}
-	rawSummary, err := os.ReadFile(filepath.Join(outDir, "summary.json"))
-	if err != nil {
-		t.Fatalf("ReadFile summary error = %v", err)
-	}
-	var parsed JudgeRule56Summary
-	if err := json.Unmarshal(rawSummary, &parsed); err != nil {
-		t.Fatalf("Unmarshal summary error = %v", err)
-	}
-	if parsed.Total != 1 || parsed.WeightedAccuracy != 1 {
-		t.Fatalf("parsed summary = %+v", parsed)
-	}
-	rawResults, err := os.ReadFile(filepath.Join(outDir, "results.jsonl"))
-	if err != nil {
-		t.Fatalf("ReadFile results error = %v", err)
-	}
-	if !strings.Contains(string(rawResults), `"lean_accepted":true`) {
-		t.Fatalf("results missing accepted Lean decision: %s", rawResults)
-	}
-	var parsedResult JudgeRule56Result
-	if err := json.Unmarshal(rawResults, &parsedResult); err != nil {
-		t.Fatalf("Unmarshal result error = %v", err)
-	}
-	if ok, _ := parsedResult.View["ok"].(bool); !ok {
-		t.Fatalf("recorded view lacks ok wrapper: %#v", parsedResult.View)
-	}
-	if _, ok := parsedResult.View["view"].(map[string]any); !ok {
-		t.Fatalf("recorded view lacks nested view: %#v", parsedResult.View)
-	}
-	systemPrompt, _ := parsedResult.Input[0]["content"].(string)
-	if !strings.Contains(systemPrompt, `"ok":true`) || !strings.Contains(systemPrompt, `"view":{`) {
-		t.Fatalf("prompt lacks full role_view response: %s", systemPrompt)
-	}
-}
-
-func TestRunJudgeRule56RejectedApplyCannotScoreCorrect(t *testing.T) {
-	t.Parallel()
-
-	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
-	fixtureLine := `{"id":"r56-rejected","tier":1,"issue_family":"missing_element","case_theme":"theme","moving_party":"defendant","request_text":"Defendant seeks summary judgment on causation.","statement_of_undisputed_facts":"Plaintiff has no causation evidence.","opposition_text":"Plaintiff identifies no causation evidence.","expected_disposition":"granted","expected_reason_tags":["missing_element"],"severity":1}`
-	if err := os.WriteFile(fixturePath, []byte(fixtureLine+"\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	outDir := filepath.Join(t.TempDir(), "out")
-	summary, err := RunJudgeRule56(nil, JudgeRule56Options{
-		FixturesPath: fixturePath,
-		OutputDir:    outDir,
-		Engine:       lean.New([]string{writeFakeJudgeRule56EngineWithApply(t, false)}),
-		Model:        "dry-model",
-		DryRun:       true,
-		Timeout:      time.Second,
-	})
-	if err != nil {
-		t.Fatalf("RunJudgeRule56 error = %v", err)
-	}
-	if summary.Correct != 0 {
-		t.Fatalf("Correct = %d, want 0", summary.Correct)
-	}
-	raw, err := os.ReadFile(filepath.Join(outDir, "results.jsonl"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var result JudgeRule56Result
-	if err := json.Unmarshal(raw, &result); err != nil {
-		t.Fatal(err)
-	}
-	if result.OutcomeCorrect || result.LeanAccepted || result.StepAccepted {
-		t.Fatalf("result = %+v", result)
-	}
-	if result.InvalidReason != "procedural_invalid_attempt_limit" || !strings.Contains(result.LeanError, "rejected for test") {
-		t.Fatalf("result = %+v", result)
-	}
-	if len(result.ResponseExchanges) != 3 || result.Provider.RequestCount != 3 {
-		t.Fatalf("result = %+v", result)
-	}
-}
-
 func testRule56Fixture(expectedDisposition string, tag string) JudgeRule56Fixture {
 	return JudgeRule56Fixture{
 		ID:                  "r56-test",
@@ -295,42 +192,4 @@ func testRule56Fixture(expectedDisposition string, tag string) JudgeRule56Fixtur
 		ExpectedReasonTags:  []string{tag},
 		Severity:            1,
 	}
-}
-
-func writeFakeJudgeRule56Engine(t *testing.T) string {
-	return writeFakeJudgeRule56EngineWithApply(t, true)
-}
-
-func writeFakeJudgeRule56EngineWithApply(t *testing.T, accept bool) string {
-	t.Helper()
-
-	applyResponse := `{"ok":true,"result_kind":"execute_tool","state":{"accepted":true},"action":{"action_type":"decide_rule56_motion"}}`
-	if !accept {
-		applyResponse = `{"ok":false,"error":"rejected for test"}`
-	}
-	path := filepath.Join(t.TempDir(), "engine.sh")
-	body := `#!/bin/sh
-req=$(cat)
-case "$req" in
-*'"request_type":"role_view"'*)
-  printf '%s' '{"ok":true,"view":{"role":"judge","state":{"case":"visible"},"redactions":[],"role_private":{}}}'
-  ;;
-*'"request_type":"next_opportunity"'*)
-  printf '%s' '{"ok":true,"state_version":0,"opportunity":{"opportunity_id":"opp-1","role":"judge","phase":"pretrial","kind":"turn","may_pass":false,"actor_message":"Current pretrial opportunity for judge: act on this objective now.","objective":"For case 0, decide Rule 56 motion_index 0 with disposition granted, denied, or partial, and explain the decisive record-based reason.","allowed_tools":["decide_rule56_motion"],"step_budget":3,"priority":100,"constraints":{}}}'
-  ;;
-*'"request_type":"apply_decision"'*)
-  printf '%s' '` + applyResponse + `'
-  ;;
-*'"action_type":"decide_rule56_motion"'*)
-  printf '%s' '{"ok":true,"state":{"state_version":1,"case":{"status":"pretrial","phase":"pretrial"}}}'
-  ;;
-*)
-  printf '%s' '{"ok":false,"error":"unexpected request"}'
-  ;;
-esac
-`
-	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
-		t.Fatalf("WriteFile engine error = %v", err)
-	}
-	return path
 }

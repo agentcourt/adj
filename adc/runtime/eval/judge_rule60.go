@@ -47,7 +47,6 @@ type JudgeRule60Options struct {
 	Engine                lean.Engine
 	Model                 string
 	Online                bool
-	DryRun                bool
 	Limit                 int
 	Timeout               time.Duration
 	Temperature           *float64
@@ -57,23 +56,18 @@ type JudgeRule60Options struct {
 }
 
 type JudgeRule60RescoreOptions struct {
-	ResultsPath       string
-	SourceSummaryPath string
-	OutputDir         string
+	ResultsPath string
+	OutputDir   string
 }
 
 type JudgeRule60Summary struct {
-	RunID                 string                      `json:"run_id"`
 	Evaluation            string                      `json:"evaluation"`
 	Model                 string                      `json:"model"`
-	DryRun                bool                        `json:"dry_run"`
 	ExecutionMode         string                      `json:"execution_mode"`
 	CounterfactualModel   bool                        `json:"counterfactual_model"`
-	Provenance            JudgeEvalProvenance         `json:"provenance"`
 	PromptSource          string                      `json:"prompt_source"`
 	PromptName            string                      `json:"prompt_name"`
 	PromptPath            string                      `json:"prompt_path,omitempty"`
-	PromptCopyPath        string                      `json:"prompt_copy_path,omitempty"`
 	FixturesPath          string                      `json:"fixtures_path"`
 	OutputDir             string                      `json:"output_dir"`
 	ResultsPath           string                      `json:"results_path"`
@@ -117,8 +111,6 @@ type JudgeRule60Slice struct {
 }
 
 type JudgeRule60Result struct {
-	RunID                     string            `json:"run_id"`
-	Evaluation                string            `json:"evaluation"`
 	ID                        string            `json:"id"`
 	Tier                      int               `json:"tier"`
 	IssueFamily               string            `json:"issue_family"`
@@ -135,7 +127,6 @@ type JudgeRule60Result struct {
 	Severity                  float64           `json:"severity"`
 	ContextNotes              string            `json:"context_notes,omitempty"`
 	Model                     string            `json:"model"`
-	DryRun                    bool              `json:"dry_run"`
 	ExecutionMode             string            `json:"execution_mode"`
 	CounterfactualModel       bool              `json:"counterfactual_model"`
 	PromptSource              string            `json:"prompt_source"`
@@ -172,7 +163,6 @@ type judgeRule60PromptVariant struct {
 	Source   string
 	Name     string
 	Path     string
-	CopyPath string
 	Text     string
 	Renderer *runner.PromptRenderer
 }
@@ -208,26 +198,18 @@ func RunJudgeRule60(ctx context.Context, opts JudgeRule60Options) (resultValue J
 	if len(opts.Engine.Command) == 0 {
 		opts.Engine = lean.New(nil)
 	}
-	modelRef := modelrequest.ModelRef{}
-	var client *openai.Client
-	if !opts.DryRun {
-		modelRef, err = modelrequest.ParseModelRef(opts.Model)
-		if err != nil {
-			return JudgeRule60Summary{}, fmt.Errorf("parse --model: %w", err)
-		}
-		client, err = openai.NewForEndpoint(modelRef.Endpoint, opts.Online, opts.Timeout)
-		if err != nil {
-			return JudgeRule60Summary{}, err
-		}
+	modelRef, err := modelrequest.ParseModelRef(opts.Model)
+	if err != nil {
+		return JudgeRule60Summary{}, fmt.Errorf("parse --model: %w", err)
 	}
-	runID, err := newJudgeEvalRunID()
+	client, err := openai.NewForEndpoint(modelRef.Endpoint, opts.Online, opts.Timeout)
 	if err != nil {
 		return JudgeRule60Summary{}, err
 	}
 	if err := os.MkdirAll(opts.OutputDir, 0o755); err != nil {
 		return JudgeRule60Summary{}, fmt.Errorf("create output directory %s: %w", opts.OutputDir, err)
 	}
-	promptVariant, err := loadJudgeRule60PromptVariant(opts.OpportunityPromptPath, opts.OpportunityPromptName, opts.OutputDir)
+	promptVariant, err := loadJudgeRule60PromptVariant(opts.OpportunityPromptPath, opts.OpportunityPromptName)
 	if err != nil {
 		return JudgeRule60Summary{}, err
 	}
@@ -243,7 +225,7 @@ func RunJudgeRule60(ctx context.Context, opts JudgeRule60Options) (resultValue J
 	}
 	defer closeEvalFile(resultsFile, resultsPath, &returnErr)
 
-	summary := newJudgeRule60Summary(opts, promptVariant, resultsPath, summaryPath, runID)
+	summary := newJudgeRule60Summary(opts, promptVariant, resultsPath, summaryPath)
 	var totalWeight float64
 	var correctWeight float64
 	encoder := json.NewEncoder(resultsFile)
@@ -252,8 +234,6 @@ func RunJudgeRule60(ctx context.Context, opts JudgeRule60Options) (resultValue J
 		if err != nil {
 			return JudgeRule60Summary{}, err
 		}
-		result.RunID = runID
-		result.Evaluation = summary.Evaluation
 		result.ExecutionMode = summary.ExecutionMode
 		result.CounterfactualModel = summary.CounterfactualModel
 		if err := encoder.Encode(result); err != nil {
@@ -284,14 +264,10 @@ func RescoreJudgeRule60(opts JudgeRule60RescoreOptions) (resultValue JudgeRule60
 	if err != nil {
 		return JudgeRule60Summary{}, err
 	}
-	source, sourceSummaryPath, err := loadJudgeEvalSourceSummary(opts.ResultsPath, opts.SourceSummaryPath, "judge_rule60")
-	if err != nil {
-		return JudgeRule60Summary{}, err
+	if len(results) == 0 {
+		return JudgeRule60Summary{}, fmt.Errorf("no results loaded from %s", opts.ResultsPath)
 	}
-	if err := validateJudgeEvalRescoreRows(opts.ResultsPath, source, results, judgeRule60ResultIdentity, validateJudgeRule60RescoreResult); err != nil {
-		return JudgeRule60Summary{}, err
-	}
-	if err := validateJudgeEvalRescoreOutputPaths(opts.ResultsPath, sourceSummaryPath, opts.OutputDir); err != nil {
+	if err := validateJudgeEvalRescoreOutputPath(opts.ResultsPath, opts.OutputDir); err != nil {
 		return JudgeRule60Summary{}, err
 	}
 	if err := os.MkdirAll(opts.OutputDir, 0o755); err != nil {
@@ -306,16 +282,13 @@ func RescoreJudgeRule60(opts JudgeRule60RescoreOptions) (resultValue JudgeRule60
 	defer closeEvalFile(resultsFile, resultsPath, &returnErr)
 
 	summary := JudgeRule60Summary{
-		RunID:                 source.RunID,
 		Evaluation:            "judge_rule60",
-		Model:                 source.Model,
-		DryRun:                source.DryRun,
-		ExecutionMode:         source.ExecutionMode,
-		CounterfactualModel:   source.CounterfactualModel,
-		Provenance:            newJudgeEvalRescoreProvenance(source, opts.ResultsPath, sourceSummaryPath),
-		PromptSource:          source.PromptSource,
-		PromptName:            source.PromptName,
-		PromptPath:            source.PromptPath,
+		Model:                 results[0].Model,
+		ExecutionMode:         results[0].ExecutionMode,
+		CounterfactualModel:   results[0].CounterfactualModel,
+		PromptSource:          resultJudgeRule60PromptSource(results[0]),
+		PromptName:            resultJudgeRule60PromptName(results[0]),
+		PromptPath:            results[0].PromptPath,
 		FixturesPath:          "rescored from " + opts.ResultsPath,
 		OutputDir:             opts.OutputDir,
 		ResultsPath:           resultsPath,
@@ -348,19 +321,15 @@ func RescoreJudgeRule60(opts JudgeRule60RescoreOptions) (resultValue JudgeRule60
 	return summary, nil
 }
 
-func newJudgeRule60Summary(opts JudgeRule60Options, promptVariant judgeRule60PromptVariant, resultsPath string, summaryPath string, runID string) JudgeRule60Summary {
+func newJudgeRule60Summary(opts JudgeRule60Options, promptVariant judgeRule60PromptVariant, resultsPath string, summaryPath string) JudgeRule60Summary {
 	return JudgeRule60Summary{
-		RunID:                 runID,
 		Evaluation:            "judge_rule60",
 		Model:                 opts.Model,
-		DryRun:                opts.DryRun,
 		ExecutionMode:         "production",
 		CounterfactualModel:   false,
-		Provenance:            newJudgeEvalProvenance(opts.Court, opts.PromptDir, opts.PromptFiles, promptVariant.Source, promptVariant.Name, promptVariant.Path, opts.Temperature, opts.Online, opts.DryRun, opts.Engine, "production"),
 		PromptSource:          promptVariant.Source,
 		PromptName:            promptVariant.Name,
 		PromptPath:            promptVariant.Path,
-		PromptCopyPath:        promptVariant.CopyPath,
 		FixturesPath:          opts.FixturesPath,
 		OutputDir:             opts.OutputDir,
 		ResultsPath:           resultsPath,
@@ -391,25 +360,18 @@ func runJudgeRule60Fixture(
 	if err != nil {
 		return JudgeRule60Result{}, fmt.Errorf("fixture %s roles: %w", fixture.ID, err)
 	}
-	executionModel := opts.Model
-	if !opts.DryRun {
-		executionModel = modelRef.Model
-	}
-	responseClient := judgeEvalResponseClient(opts.DryRun, client, dryRunJudgeRule60Response(fixture))
 	callCtx, cancel := context.WithTimeout(ctx, opts.Timeout)
 	execution, executionErr := executeJudgeOpportunity(callCtx, judgeOpportunityExecutionOptions{
-		Engine:          opts.Engine,
-		State:           state,
-		Roles:           roles,
-		RolesPayload:    rolesPayload,
-		Client:          responseClient,
-		Court:           opts.Court,
-		Model:           executionModel,
-		Temperature:     opts.Temperature,
-		PromptDir:       opts.PromptDir,
-		PromptFiles:     opts.PromptFiles,
-		MaxStepsPerTurn: 3,
-		TurnIndex:       1,
+		Engine:       opts.Engine,
+		State:        state,
+		Roles:        roles,
+		RolesPayload: rolesPayload,
+		Client:       client,
+		Court:        opts.Court,
+		Model:        modelRef.Model,
+		Temperature:  opts.Temperature,
+		PromptDir:    opts.PromptDir,
+		PromptFiles:  opts.PromptFiles,
 		Objective: func(opportunity map[string]any) (string, error) {
 			if strings.TrimSpace(promptVariant.Text) == "" {
 				return stringField(opportunity, "objective"), nil
@@ -422,7 +384,7 @@ func runJudgeRule60Fixture(
 	if decisionErr != nil {
 		return JudgeRule60Result{}, fmt.Errorf("fixture %s execute opportunity: %w", fixture.ID, decisionErr)
 	}
-	result := scoreJudgeRule60Response(fixture, opts.Model, opts.DryRun, state, execution.View, execution.Opportunity, decision.Input, decision.ScoringResponse)
+	result := scoreJudgeRule60Response(fixture, opts.Model, state, execution.View, execution.Opportunity, decision.Input, decision.ScoringResponse)
 	result.RawResponse = responseJSON(decision.RawResponse)
 	result.ResponseExchanges = judgeEvalResponseExchangeJSON(execution.Exchanges)
 	result.TurnLog = execution.TurnLog
@@ -479,49 +441,10 @@ func LoadJudgeRule60Fixtures(path string) (resultValue []JudgeRule60Fixture, ret
 }
 
 func readJudgeRule60Results(path string) (resultValue []JudgeRule60Result, returnErr error) {
-	return readJudgeEvalJSONL[JudgeRule60Result](path, judgeEvalRequiredResultFields(
-		"tier", "issue_family", "case_theme", "judgment_summary", "motion_ground", "motion_text", "opposition_text",
-		"default_judgment", "expected_granted", "required_concepts", "expected_reason_tags", "severity", "granted",
-		"grant_correct", "required_correct", "prohibited_correct", "matched_reason_tags",
-	)...)
+	return readJudgeEvalJSONL[JudgeRule60Result](path)
 }
 
-func judgeRule60ResultIdentity(result JudgeRule60Result) judgeEvalResultIdentity {
-	return judgeEvalResultIdentity{
-		RunID:               result.RunID,
-		Evaluation:          result.Evaluation,
-		ID:                  result.ID,
-		Model:               result.Model,
-		DryRun:              result.DryRun,
-		PromptSource:        resultJudgeRule60PromptSource(result),
-		PromptName:          resultJudgeRule60PromptName(result),
-		PromptPath:          result.PromptPath,
-		ExecutionMode:       result.ExecutionMode,
-		CounterfactualModel: result.CounterfactualModel,
-	}
-}
-
-func validateJudgeRule60RescoreResult(result JudgeRule60Result) error {
-	return (JudgeRule60Fixture{
-		ID:                 result.ID,
-		Tier:               result.Tier,
-		IssueFamily:        result.IssueFamily,
-		CaseTheme:          result.CaseTheme,
-		JudgmentSummary:    result.JudgmentSummary,
-		MotionGround:       result.MotionGround,
-		MotionText:         result.MotionText,
-		OppositionText:     result.OppositionText,
-		DefaultJudgment:    result.DefaultJudgment,
-		ExpectedGranted:    result.ExpectedGranted,
-		RequiredConcepts:   result.RequiredConcepts,
-		ProhibitedConcepts: result.ProhibitedConcepts,
-		ExpectedReasonTags: result.ExpectedReasonTags,
-		Severity:           result.Severity,
-		ContextNotes:       result.ContextNotes,
-	}).Validate()
-}
-
-func loadJudgeRule60PromptVariant(path string, name string, outputDir string) (judgeRule60PromptVariant, error) {
+func loadJudgeRule60PromptVariant(path string, name string) (judgeRule60PromptVariant, error) {
 	path = strings.TrimSpace(path)
 	name = strings.TrimSpace(name)
 	if path == "" {
@@ -544,11 +467,7 @@ func loadJudgeRule60PromptVariant(path string, name string, outputDir string) (j
 	if name == "" || name == "." {
 		name = "file"
 	}
-	copyPath := filepath.Join(outputDir, "opportunity_prompt.md")
-	if err := os.WriteFile(copyPath, raw, 0o644); err != nil {
-		return judgeRule60PromptVariant{}, fmt.Errorf("copy opportunity prompt to %s: %w", copyPath, err)
-	}
-	return judgeRule60PromptVariant{Source: "file:" + path, Name: name, Path: path, CopyPath: copyPath, Text: text}, nil
+	return judgeRule60PromptVariant{Source: "file:" + path, Name: name, Path: path, Text: text}, nil
 }
 
 func resultJudgeRule60PromptSource(result JudgeRule60Result) string {
@@ -690,7 +609,7 @@ func buildJudgeRule60Input(view map[string]any, opportunity map[string]any, fixt
 	return buildJudgeEvalInput(promptVariant.Renderer, JudgeRule60Tool, view, opportunity, objective)
 }
 
-func scoreJudgeRule60Response(fixture JudgeRule60Fixture, model string, dryRun bool, state map[string]any, view map[string]any, opportunity map[string]any, input []map[string]any, resp openai.Response) JudgeRule60Result {
+func scoreJudgeRule60Response(fixture JudgeRule60Fixture, model string, state map[string]any, view map[string]any, opportunity map[string]any, input []map[string]any, resp openai.Response) JudgeRule60Result {
 	result := JudgeRule60Result{
 		ID:                 fixture.ID,
 		Tier:               fixture.Tier,
@@ -708,7 +627,6 @@ func scoreJudgeRule60Response(fixture JudgeRule60Fixture, model string, dryRun b
 		Severity:           normalizedSeverity(fixture.Severity),
 		ContextNotes:       strings.TrimSpace(fixture.ContextNotes),
 		Model:              model,
-		DryRun:             dryRun,
 		State:              state,
 		View:               view,
 		Opportunity:        opportunity,
@@ -792,22 +710,6 @@ func extractJudgeRule60Payload(resp openai.Response) (map[string]any, string) {
 		return nil, "missing_arguments"
 	}
 	return call.Arguments, ""
-}
-
-func dryRunJudgeRule60Response(f JudgeRule60Fixture) openai.Response {
-	summary := strings.Join(nonemptyRule52Strings(f.RequiredConcepts), "; ")
-	return openai.Response{
-		ResponseID: "dry-run-" + strings.TrimSpace(f.ID),
-		ToolCalls: []openai.ToolCall{{
-			CallID: "dry-run-call-" + strings.TrimSpace(f.ID),
-			Name:   JudgeRule60Tool,
-			Arguments: map[string]any{
-				"motion_index":   0,
-				"granted":        f.ExpectedGranted,
-				"relief_summary": summary,
-			},
-		}},
-	}
 }
 
 func renderJudgeRule60PromptTemplate(template string, fixture JudgeRule60Fixture, opportunity map[string]any) (string, error) {

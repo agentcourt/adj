@@ -44,15 +44,15 @@ Complaint drafting, complaint preparation, reports, and direct role turns use th
 
 `adc eval` runs controlled judge decisions through the current Lean engine and ADC production opportunity executor.  The executor provides the production prompt catalog, tool schemas, reference tools, correction loop, decision validation, and final Lean action step.  The ten suites cover voir dire questions, for-cause challenges, and Rules 11, 12, 37, 51, 52, 56, 58, and 60; their fixtures, prompt candidates, plans, and historical analyses live under [`evals/adc/judge`](../evals/adc/judge/README.md), while generated results live under the ignored `evals/out/adc/judge/` tree.
 
-Each suite accepts a fixture path, output directory, model, fixture limit, timeout, engine command, and court profile.  `--dry-run` supplies the expected legal action through a scripted response client when the opportunity requires a model, while the production executor still handles the complete turn.  `--prompt-dir` and repeated `--prompt-file ID=PATH` flags select the production prompt catalog, while `--opportunity-prompt-file` selects one suite-local candidate objective template.
+Each suite accepts a fixture path, output directory, model, fixture limit, timeout, engine command, and court profile.  `--prompt-dir` and repeated `--prompt-file ID=PATH` flags select the production prompt catalog, while `--opportunity-prompt-file` selects one suite-local candidate objective template.
 
 The Lean opportunities for Rules 11, 37, and 58 contain deterministic judge actions.  Their default eval mode executes the deterministic action without a provider request, matching an ADC case.  `--counterfactual-model` permits prompt research for those suites by removing the deterministic action from a cloned opportunity, and the output summary records that mode.
 
 ```bash
 .bin/adc eval judge-rule56 \
-  --dry-run \
+  --model openrouter://openai/gpt-5 \
   --engine .bin/adcengine \
-  --out-dir ../evals/out/adc/judge/rule56-dry
+  --out-dir ../evals/out/adc/judge/rule56-live
 ```
 
 `adc juror` asks one selected or sampled pool member a question and can preserve an NDJSON transcript for continuation.  `adc llm` sends a direct request through the same provider client and can supply a function-tool schema.  Both commands accept prompt text through `--prompt` or `--input-file`, and accept catalog changes through `--prompt-dir` and repeated `--prompt-file ID=PATH` options.

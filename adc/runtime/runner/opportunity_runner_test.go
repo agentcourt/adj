@@ -219,53 +219,6 @@ func TestOpportunityRunnerExecutesReferenceToolAndDecision(t *testing.T) {
 	}
 }
 
-func TestOpportunityRunnerExecutesDeterministicActionWithoutModel(t *testing.T) {
-	t.Parallel()
-
-	engine, _ := writeOpportunityRunnerEngine(t)
-	client := &opportunityTestClient{}
-	r, err := NewOpportunityRunner(OpportunityRunnerOptions{
-		State:  opportunityRunnerTestState(),
-		Roles:  opportunityRunnerTestRoles(),
-		Engine: engine,
-		Client: client,
-		Court:  courts.PropositionTribunal(),
-		Model:  "test-model",
-	})
-	if err != nil {
-		t.Fatalf("NewOpportunityRunner error = %v", err)
-	}
-	opportunity := opportunityRunnerTestOpportunity()
-	opportunity["deterministic_action"] = map[string]any{
-		"kind":        "single_tool",
-		"action_type": "file_rule12_motion",
-		"payload": map[string]any{
-			"motion_id": "motion-1",
-		},
-		"extra": "copied into payload",
-	}
-	wantOpportunity := cloneRunnerMap(opportunity)
-	log, err := r.ExecuteDirectOpportunity(context.Background(), DirectOpportunityRequest{
-		Opportunity:       opportunity,
-		StateVersion:      7,
-		RolesPayload:      opportunityRunnerTestRolesPayload(),
-		TurnIndex:         1,
-		ObjectiveOverride: "Use the deterministic action.",
-	})
-	if err != nil {
-		t.Fatalf("ExecuteDirectOpportunity error = %v", err)
-	}
-	if !reflect.DeepEqual(opportunity, wantOpportunity) {
-		t.Fatalf("deterministic opportunity mutated:\n got %#v\nwant %#v", opportunity, wantOpportunity)
-	}
-	if len(client.requests) != 0 {
-		t.Fatalf("model requests = %d, want 0", len(client.requests))
-	}
-	if log.Prompt != "Use the deterministic action." || log.Steps != 1 {
-		t.Fatalf("turn log = %#v", log)
-	}
-}
-
 func TestOpportunityRunnerReturnsTypedProceduralFailure(t *testing.T) {
 	t.Parallel()
 

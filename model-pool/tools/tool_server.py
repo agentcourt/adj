@@ -12,19 +12,13 @@ ROOT = Path(__file__).resolve().parents[1]
 class ToolError(RuntimeError):
     pass
 
-class ToolRequestError(ToolError):
-    pass
-
-class ToolRecordError(ToolError):
-    pass
-
 def _record_dir(record_dir: str) -> Path:
     p = Path(record_dir)
     if not p.is_absolute():
         p = ROOT / p
     p = p.resolve()
     if not p.is_dir():
-        raise ToolRecordError(f"record_dir not found: {record_dir}")
+        raise ToolError(f"record_dir not found: {record_dir}")
     return p
 
 def load_manifest(record_dir: str) -> dict:
@@ -40,11 +34,11 @@ def read_evidence(record_dir: str, evidence_id: str) -> dict:
     manifest = load_manifest(record_dir)
     by_id = {e["id"]: e for e in manifest["evidence"]}
     if evidence_id not in by_id:
-        raise ToolRequestError(f"unknown evidence id: {evidence_id}")
+        raise ToolError(f"unknown evidence id: {evidence_id}")
     e = by_id[evidence_id]
     path = (d / e["file"]).resolve()
     if d.resolve() not in path.parents:
-        raise ToolRecordError(f"evidence path escapes record: {evidence_id}")
+        raise ToolError(f"evidence path escapes record: {evidence_id}")
     return {"id": evidence_id, "title": e.get("title", ""), "text": path.read_text()}
 
 def stat_evidence(record_dir: str, evidence_id: str) -> dict:

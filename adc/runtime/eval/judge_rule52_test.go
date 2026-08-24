@@ -1,15 +1,11 @@
 package eval
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/agentcourt/adj/adc/runtime/courts"
-	"github.com/agentcourt/adj/adc/runtime/lean"
 	"github.com/agentcourt/adj/common/openai"
 )
 
@@ -66,7 +62,7 @@ func TestScoreJudgeRule52ResponseRejectsProhibitedConcept(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule52Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule52Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if result.ProhibitedCorrect {
 		t.Fatalf("ProhibitedCorrect = true, want false")
 	}
@@ -98,7 +94,7 @@ func TestScoreJudgeRule52ResponseAcceptsEquivalentConceptLanguage(t *testing.T) 
 			},
 		}},
 	}
-	result := scoreJudgeRule52Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule52Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if !result.RequiredCorrect {
 		t.Fatalf("MissingRequiredConcepts = %v", result.MissingRequiredConcepts)
 	}
@@ -156,7 +152,7 @@ func TestScoreJudgeRule52ResponseRequiresVerdictFor(t *testing.T) {
 			},
 		}},
 	}
-	result := scoreJudgeRule52Response(fixture, "test-model", false, nil, nil, nil, nil, resp)
+	result := scoreJudgeRule52Response(fixture, "test-model", nil, nil, nil, nil, resp)
 	if result.InvalidReason != "malformed_verdict_for" {
 		t.Fatalf("InvalidReason = %q", result.InvalidReason)
 	}
@@ -209,99 +205,6 @@ func TestJudgeRule52ConceptAliasesCoverBenchOpinionPhrases(t *testing.T) {
 	}
 }
 
-func TestRunJudgeRule52DryRunWritesReports(t *testing.T) {
-	t.Parallel()
-
-	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
-	fixtureLine := `{"id":"r52-dry","tier":1,"issue_family":"breach_proved","case_theme":"Bench trial on unpaid goods.","complaint_text":"Plaintiff seeks payment for delivered goods.","answer_text":"Defendant denies delivery.","plaintiff_theory":"The purchase order, delivery log, and invoice prove breach.","defendant_theory":"Delivery did not occur.","admitted_evidence":["Purchase order PO-17 for $12,000.","Delivery log signed by defendant.","Unpaid invoice for $12,000."],"plaintiff_closing":"The admitted record proves delivery and nonpayment.","defendant_closing":"The delivery log should receive little weight.","expected_winner":"plaintiff","expected_amount_text":"12000","required_concepts":["purchase order","delivery log","nonpayment","12000"],"expected_reason_tags":["breach_proved","damages_proved","fact_law_separation"],"severity":5}`
-	if err := os.WriteFile(fixturePath, []byte(fixtureLine+"\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile fixture error = %v", err)
-	}
-	engineScript := writeFakeJudgeRule52Engine(t)
-	outDir := filepath.Join(t.TempDir(), "out")
-	summary, err := RunJudgeRule52(nil, JudgeRule52Options{
-		FixturesPath: fixturePath,
-		OutputDir:    outDir,
-		Engine:       lean.New([]string{engineScript}),
-		Model:        "dry-model",
-		DryRun:       true,
-		Timeout:      time.Second,
-	})
-	if err != nil {
-		t.Fatalf("RunJudgeRule52 error = %v", err)
-	}
-	if summary.Total != 1 || summary.Correct != 1 || summary.Invalid != 0 {
-		t.Fatalf("summary = %+v", summary)
-	}
-	rawSummary, err := os.ReadFile(filepath.Join(outDir, "summary.json"))
-	if err != nil {
-		t.Fatalf("ReadFile summary error = %v", err)
-	}
-	var parsed JudgeRule52Summary
-	if err := json.Unmarshal(rawSummary, &parsed); err != nil {
-		t.Fatalf("Unmarshal summary error = %v", err)
-	}
-	if parsed.Total != 1 || parsed.WeightedAccuracy != 1 {
-		t.Fatalf("parsed summary = %+v", parsed)
-	}
-	rawResults, err := os.ReadFile(filepath.Join(outDir, "results.jsonl"))
-	if err != nil {
-		t.Fatalf("ReadFile results error = %v", err)
-	}
-	if !strings.Contains(string(rawResults), `"lean_accepted":true`) {
-		t.Fatalf("results missing accepted Lean decision: %s", rawResults)
-	}
-}
-
-func TestRunJudgeRule52AppliesCourtToLeanStateAndPrompt(t *testing.T) {
-	t.Parallel()
-
-	fixturePath := filepath.Join(t.TempDir(), "fixtures.jsonl")
-	fixtureJSON, err := json.Marshal(testRule52Fixture("plaintiff"))
-	if err != nil {
-		t.Fatalf("Marshal fixture error = %v", err)
-	}
-	if err := os.WriteFile(fixturePath, append(fixtureJSON, '\n'), 0o644); err != nil {
-		t.Fatalf("WriteFile fixture error = %v", err)
-	}
-	logPath := filepath.Join(t.TempDir(), "lean-requests.jsonl")
-	engineScript := writeRecordingFakeJudgeRule52Engine(t, logPath)
-	court := courts.Profile{
-		Name:                     "Custom Eval Court",
-		RulesMarkdown:            "Apply Custom Eval Court rules.",
-		AllowedJurisdictionBases: []string{"general_civil"},
-	}
-	outDir := filepath.Join(t.TempDir(), "out")
-	_, err = RunJudgeRule52(nil, JudgeRule52Options{
-		FixturesPath: fixturePath,
-		OutputDir:    outDir,
-		Engine:       lean.New([]string{engineScript}),
-		Model:        "dry-model",
-		DryRun:       true,
-		Timeout:      time.Second,
-		Court:        court,
-	})
-	if err != nil {
-		t.Fatalf("RunJudgeRule52 error = %v", err)
-	}
-	requests, err := os.ReadFile(logPath)
-	if err != nil {
-		t.Fatalf("ReadFile requests error = %v", err)
-	}
-	for _, value := range []string{`"court_name":"Custom Eval Court"`, `"name":"Custom Eval Court"`} {
-		if !strings.Contains(string(requests), value) {
-			t.Fatalf("Lean requests missing %s: %s", value, requests)
-		}
-	}
-	results, err := os.ReadFile(filepath.Join(outDir, "results.jsonl"))
-	if err != nil {
-		t.Fatalf("ReadFile results error = %v", err)
-	}
-	if !strings.Contains(string(results), court.RulesMarkdown) {
-		t.Fatalf("eval prompt missing court rules: %s", results)
-	}
-}
-
 func testRule52Fixture(expectedWinner string) JudgeRule52Fixture {
 	return JudgeRule52Fixture{
 		ID:                 "r52-test",
@@ -321,43 +224,4 @@ func testRule52Fixture(expectedWinner string) JudgeRule52Fixture {
 		ExpectedReasonTags: []string{"breach_proved", "damages_proved", "fact_law_separation"},
 		Severity:           5,
 	}
-}
-
-func writeFakeJudgeRule52Engine(t *testing.T) string {
-	return writeRecordingFakeJudgeRule52Engine(t, "")
-}
-
-func writeRecordingFakeJudgeRule52Engine(t *testing.T, logPath string) string {
-	t.Helper()
-
-	path := filepath.Join(t.TempDir(), "engine.sh")
-	body := `#!/bin/sh
-req=$(cat)
-`
-	if logPath != "" {
-		body += "printf '%s\\n' \"$req\" >> '" + logPath + "'\n"
-	}
-	body += `
-case "$req" in
-*'"request_type":"role_view"'*)
-  printf '%s' '{"ok":true,"view":{"role":"judge","state":{"case":"visible"},"redactions":[],"role_private":{}}}'
-  ;;
-*'"request_type":"next_opportunity"'*)
-  printf '%s' '{"ok":true,"state_version":0,"opportunity":{"opportunity_id":"opp-1","role":"judge","phase":"verdict_return","kind":"turn","may_pass":true,"actor_message":"Current verdict_return opportunity for judge: consider this objective and either act now or pass.","objective":"For case 0, file a bench opinion explaining findings of fact, conclusions of law, and why judgment should be entered.","allowed_tools":["file_bench_opinion"],"step_budget":3,"priority":100}}'
-  ;;
-*'"request_type":"apply_decision"'*)
-  printf '%s' '{"ok":true,"result_kind":"execute_tool","state":{"accepted":true},"action":{"action_type":"file_bench_opinion"}}'
-  ;;
-*'"action_type":"file_bench_opinion"'*)
-  printf '%s' '{"ok":true,"state":{"state_version":1,"case":{"status":"trial","phase":"verdict_return"}}}'
-  ;;
-*)
-  printf '%s' '{"ok":false,"error":"unexpected request"}'
-  ;;
-esac
-`
-	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
-		t.Fatalf("WriteFile engine error = %v", err)
-	}
-	return path
 }

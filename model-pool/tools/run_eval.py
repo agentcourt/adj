@@ -5,7 +5,6 @@
 # ///
 import argparse
 import datetime as dt
-import http.client
 import json
 import os
 import re
@@ -19,8 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from run_record import atomic_write_bytes
-from tool_server import ToolRequestError, build_record_context, list_evidence, read_evidence, stat_evidence
+from tool_server import build_record_context, list_evidence, read_evidence, stat_evidence
 
 
 class OpenRouterHTTPError(RuntimeError):
@@ -29,26 +27,6 @@ class OpenRouterHTTPError(RuntimeError):
         self.status_code = status_code
         self.detail = detail
         self.body_json = body_json
-
-
-class OpenRouterResponseError(RuntimeError):
-    pass
-
-
-class ToolInvocationError(RuntimeError):
-    pass
-
-
-EXPECTED_PROVIDER_ERRORS = (
-    OpenRouterHTTPError,
-    OpenRouterResponseError,
-    urllib.error.URLError,
-    TimeoutError,
-    socket.timeout,
-    http.client.HTTPException,
-    ConnectionError,
-)
-
 
 TOOL_DEFS = [
     {
@@ -380,10 +358,7 @@ def openrouter_request(payload: dict, timeout: int, extra_headers: dict | None =
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            try:
-                return json.loads(resp.read().decode())
-            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-                raise OpenRouterResponseError(f"OpenRouter returned invalid JSON: {exc}") from exc
+            return json.loads(resp.read().decode())
     except urllib.error.HTTPError as e:
         detail = e.read().decode(errors="replace")
         try:
@@ -413,7 +388,7 @@ def openrouter_generation_metadata(generation_id: str, timeout: int) -> tuple[di
     except urllib.error.HTTPError as e:
         detail = e.read().decode(errors="replace")[:1000]
         return None, f"OpenRouter generation HTTP {e.code}: {detail}"
-    except (urllib.error.URLError, TimeoutError, socket.timeout, http.client.HTTPException, UnicodeDecodeError, json.JSONDecodeError) as e:
+    except Exception as e:
         return None, str(e)
 
 
@@ -422,7 +397,7 @@ def response_meta(body: dict, started: float) -> tuple[str, dict, dict]:
     choices = body.get("choices")
     if not isinstance(choices, list) or not choices:
         snippet = json.dumps(body, ensure_ascii=False, sort_keys=True)[:1000]
-        raise OpenRouterResponseError(f"OpenRouter response missing choices: {snippet}")
+        raise RuntimeError(f"OpenRouter response missing choices: {snippet}")
     choice = choices[0]
     message = choice.get("message", {})
     usage = body.get("usage", {}) or {}
@@ -512,7 +487,7 @@ def execute_tool(record_dir: str, name: str, args: dict) -> dict:
         return read_evidence(record_dir, args.get("evidence_id", ""))
     if name == "stat_evidence":
         return stat_evidence(record_dir, args.get("evidence_id", ""))
-    raise ToolInvocationError(f"unknown tool: {name}")
+    raise RuntimeError(f"unknown tool: {name}")
 
 
 def call_openrouter_tools(spec: dict, item: dict, prompt: str, timeout: int, max_rounds: int = 6) -> tuple[str, dict, list[dict]]:
@@ -549,24 +524,24 @@ def call_openrouter_tools(spec: dict, item: dict, prompt: str, timeout: int, max
             try:
                 result = execute_tool(item["record_dir"], name, args)
                 result_for_trace = result
-            except (ToolInvocationError, ToolRequestError) as e:
+            except Exception as e:
                 result = {"error": str(e)}
                 result_for_trace = result
                 meta["tool_error_count"] = int(meta.get("tool_error_count", 0)) + 1
             trace.append({"tool": name, "args": args, "result": result_for_trace})
             messages.append({"role": "tool", "tool_call_id": tc.get("id"), "name": name, "content": json.dumps(result, ensure_ascii=False)})
-    raise OpenRouterResponseError("tool loop exceeded max rounds before final answer")
+    raise RuntimeError("tool loop exceeded max rounds before final answer")
 
 
 def parse_maybe_json(text: str):
     try:
         return json.loads(text)
-    except json.JSONDecodeError:
+    except Exception:
         m = re.search(r"\{.*\}", text, re.S)
         if m:
             try:
                 return json.loads(m.group(0))
-            except json.JSONDecodeError:
+            except Exception:
                 return None
         return None
 
@@ -658,7 +633,10 @@ def main() -> int:
     if args.trials < 1:
         raise SystemExit("--trials must be at least 1")
 
-    model_specs = load_model_specs(args.models, args.model_spec, args.model_spec_jsonl)
+    try:
+        model_specs = load_model_specs(args.models, args.model_spec, args.model_spec_jsonl)
+    except Exception as e:
+        raise SystemExit(str(e)) from e
 
     for spec in model_specs:
         model = spec["label"]
@@ -682,7 +660,7 @@ def main() -> int:
                             if api_trace:
                                 trace = api_trace
                         meta.update({"runner": "openrouter", "tool_mode": args.tool_mode, **api_meta})
-                    except EXPECTED_PROVIDER_ERRORS as e:
+                    except Exception as e:
                         raw = ""
                         meta.update({
                             "runner": "openrouter",
@@ -696,20 +674,15 @@ def main() -> int:
                 row = {"item_id": item["id"], "model": model, "trial_index": trial_index, "raw_response": raw, "parsed_response": parsed, "tool_trace": trace, "metadata": meta}
                 results.append(row)
                 with raw_path.open("a") as f:
-                    f.write(json.dumps(row, ensure_ascii=False, allow_nan=False, sort_keys=True) + "\n")
+                    f.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
 
     hydrate_posthoc_generation_metadata(results, args.timeout)
-    raw_data = b"".join(
-        (json.dumps(row, ensure_ascii=False, allow_nan=False, sort_keys=True) + "\n").encode("utf-8")
-        for row in results
-    )
-    atomic_write_bytes(raw_path, raw_data)
+    with raw_path.open("w") as f:
+        for row in results:
+            f.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
 
     summary = {"run_id": run_id, "created_at": created_at, "models": [spec["label"] for spec in model_specs], "model_specs": model_specs, "trials": args.trials, "questions": str(qpath.relative_to(ROOT) if qpath.is_relative_to(ROOT) else qpath), "prompt": str(prompt_path.relative_to(ROOT) if prompt_path.is_relative_to(ROOT) else prompt_path), "items": [i["id"] for i in items], "results": results}
-    atomic_write_bytes(
-        out / "run.json",
-        (json.dumps(summary, indent=2, ensure_ascii=False, allow_nan=False, sort_keys=True) + "\n").encode("utf-8"),
-    )
+    (out / "run.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False, sort_keys=True) + "\n")
     print(json.dumps({"run": str(out), "results": len(results)}, sort_keys=True))
     return 0
 

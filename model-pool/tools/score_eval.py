@@ -10,10 +10,7 @@ import statistics
 import sys
 from pathlib import Path
 
-from run_record import atomic_write_bytes
-
 ROOT = Path(__file__).resolve().parents[1]
-SCORES_COMPLETE = "scores.complete.json"
 DELIBERATION_CATEGORIES = {"basic_human_knowledge", "basic_science_quantitative", "basic_reasoning", "juror_deliberation"}
 
 
@@ -356,26 +353,10 @@ def score_run(run_dir: Path, questions: Path) -> dict:
         by_model.setdefault(s["model"], []).append(s)
     summary = {model: summarize_model(rows) for model, rows in by_model.items()}
     out = {"run_id": run.get("run_id"), "scores": scores, "summary": summary}
-    marker = run_dir / SCORES_COMPLETE
-    try:
-        marker.unlink()
-    except FileNotFoundError:
-        pass
-    atomic_write_bytes(
-        run_dir / "scores.json",
-        (json.dumps(out, allow_nan=False, indent=2, sort_keys=True) + "\n").encode("utf-8"),
-    )
-    score_rows = b"".join(
-        (json.dumps(score, allow_nan=False, sort_keys=True) + "\n").encode("utf-8")
-        for score in scores
-    )
-    atomic_write_bytes(run_dir / "scores.jsonl", score_rows)
-    atomic_write_bytes(
-        marker,
-        (json.dumps({"run_id": run.get("run_id"), "files": ["scores.json", "scores.jsonl"]}, sort_keys=True) + "\n").encode(
-            "utf-8"
-        ),
-    )
+    (run_dir / "scores.json").write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+    with (run_dir / "scores.jsonl").open("w") as f:
+        for s in scores:
+            f.write(json.dumps(s, sort_keys=True) + "\n")
     return out
 
 

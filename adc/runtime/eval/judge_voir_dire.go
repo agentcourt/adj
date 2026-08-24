@@ -43,7 +43,6 @@ type JudgeVoirDireOptions struct {
 	Engine                lean.Engine
 	Model                 string
 	Online                bool
-	DryRun                bool
 	Limit                 int
 	Timeout               time.Duration
 	Temperature           *float64
@@ -53,43 +52,38 @@ type JudgeVoirDireOptions struct {
 }
 
 type JudgeVoirDireRescoreOptions struct {
-	ResultsPath      string
-	SourceSummaryPath string
-	OutputDir        string
+	ResultsPath string
+	OutputDir   string
 }
 
 type JudgeVoirDireSummary struct {
-	RunID             string                        `json:"run_id"`
-	Evaluation        string                        `json:"evaluation"`
-	Model             string                        `json:"model"`
-	DryRun            bool                          `json:"dry_run"`
-	ExecutionMode     string                        `json:"execution_mode"`
-	CounterfactualModel bool                        `json:"counterfactual_model"`
-	Provenance        JudgeEvalProvenance           `json:"provenance"`
-	PromptSource      string                        `json:"prompt_source"`
-	PromptName        string                        `json:"prompt_name"`
-	PromptPath        string                        `json:"prompt_path,omitempty"`
-	PromptCopyPath    string                        `json:"prompt_copy_path,omitempty"`
-	FixturesPath      string                        `json:"fixtures_path"`
-	OutputDir         string                        `json:"output_dir"`
-	ResultsPath       string                        `json:"results_path"`
-	SummaryPath       string                        `json:"summary_path"`
-	Total             int                           `json:"total"`
-	Correct           int                           `json:"correct"`
-	ReasonCorrect     int                           `json:"reason_correct"`
-	Invalid           int                           `json:"invalid"`
-	FalseAllows       int                           `json:"false_allows"`
-	FalseDisallows    int                           `json:"false_disallows"`
-	Accuracy          float64                       `json:"accuracy"`
-	WeightedAccuracy  float64                       `json:"weighted_accuracy"`
-	FalseAllowRate    float64                       `json:"false_allow_rate"`
-	FalseDisallowRate float64                       `json:"false_disallow_rate"`
-	InvalidRate       float64                       `json:"invalid_rate"`
-	ByReasonTag       map[string]JudgeVoirDireSlice `json:"by_reason_tag"`
-	ByQuestionFamily  map[string]JudgeVoirDireSlice `json:"by_question_family"`
-	ByTier            map[string]JudgeVoirDireSlice `json:"by_tier"`
-	ByAskedBy         map[string]JudgeVoirDireSlice `json:"by_asked_by"`
-	GeneratedAt       string                        `json:"generated_at"`
+	Evaluation          string                        `json:"evaluation"`
+	Model               string                        `json:"model"`
+	ExecutionMode       string                        `json:"execution_mode"`
+	CounterfactualModel bool                          `json:"counterfactual_model"`
+	PromptSource        string                        `json:"prompt_source"`
+	PromptName          string                        `json:"prompt_name"`
+	PromptPath          string                        `json:"prompt_path,omitempty"`
+	FixturesPath        string                        `json:"fixtures_path"`
+	OutputDir           string                        `json:"output_dir"`
+	ResultsPath         string                        `json:"results_path"`
+	SummaryPath         string                        `json:"summary_path"`
+	Total               int                           `json:"total"`
+	Correct             int                           `json:"correct"`
+	ReasonCorrect       int                           `json:"reason_correct"`
+	Invalid             int                           `json:"invalid"`
+	FalseAllows         int                           `json:"false_allows"`
+	FalseDisallows      int                           `json:"false_disallows"`
+	Accuracy            float64                       `json:"accuracy"`
+	WeightedAccuracy    float64                       `json:"weighted_accuracy"`
+	FalseAllowRate      float64                       `json:"false_allow_rate"`
+	FalseDisallowRate   float64                       `json:"false_disallow_rate"`
+	InvalidRate         float64                       `json:"invalid_rate"`
+	ByReasonTag         map[string]JudgeVoirDireSlice `json:"by_reason_tag"`
+	ByQuestionFamily    map[string]JudgeVoirDireSlice `json:"by_question_family"`
+	ByTier              map[string]JudgeVoirDireSlice `json:"by_tier"`
+	ByAskedBy           map[string]JudgeVoirDireSlice `json:"by_asked_by"`
+	GeneratedAt         string                        `json:"generated_at"`
 }
 
 type JudgeVoirDireSlice struct {
@@ -105,52 +99,48 @@ type JudgeVoirDireSlice struct {
 }
 
 type JudgeVoirDireResult struct {
-	RunID              string            `json:"run_id"`
-	Evaluation         string            `json:"evaluation"`
-	ID                 string            `json:"id"`
-	Tier               int               `json:"tier"`
-	QuestionFamily     string            `json:"question_family"`
-	CaseTheme          string            `json:"case_theme"`
-	AskedBy            string            `json:"asked_by"`
-	JurorID            string            `json:"juror_id"`
-	Question           string            `json:"question"`
-	ExpectedAllowed    bool              `json:"expected_allowed"`
-	ExpectedReasonTags []string          `json:"expected_reason_tags"`
-	Severity           float64           `json:"severity"`
-	ContextNotes       string            `json:"context_notes,omitempty"`
-	Model              string            `json:"model"`
-	DryRun             bool              `json:"dry_run"`
-	ExecutionMode      string            `json:"execution_mode"`
-	CounterfactualModel bool             `json:"counterfactual_model"`
-	PromptSource       string            `json:"prompt_source"`
-	PromptName         string            `json:"prompt_name"`
-	PromptPath         string            `json:"prompt_path,omitempty"`
-	State              map[string]any    `json:"state"`
-	View               map[string]any    `json:"view"`
-	Opportunity        map[string]any    `json:"opportunity"`
-	Input              []map[string]any  `json:"input"`
-	RawResponse        map[string]any    `json:"raw_response"`
-	ResponseExchanges  []map[string]any  `json:"response_exchanges,omitempty"`
-	TurnLog            runner.TurnLog    `json:"turn_log"`
-	FinalState         map[string]any    `json:"final_state,omitempty"`
-	Provider           openai.Accounting `json:"provider"`
-	ToolPayload        map[string]any    `json:"tool_payload,omitempty"`
-	Allowed            *bool             `json:"allowed,omitempty"`
-	RulingReason       string            `json:"ruling_reason,omitempty"`
-	MatchedReasonTags  []string          `json:"matched_reason_tags"`
-	OutcomeCorrect     bool              `json:"outcome_correct"`
-	ReasonCorrect      bool              `json:"reason_correct"`
-	InvalidReason      string            `json:"invalid_reason,omitempty"`
-	LeanAccepted       bool              `json:"lean_accepted"`
-	StepAccepted       bool              `json:"step_accepted"`
-	LeanError          string            `json:"lean_error,omitempty"`
+	ID                  string            `json:"id"`
+	Tier                int               `json:"tier"`
+	QuestionFamily      string            `json:"question_family"`
+	CaseTheme           string            `json:"case_theme"`
+	AskedBy             string            `json:"asked_by"`
+	JurorID             string            `json:"juror_id"`
+	Question            string            `json:"question"`
+	ExpectedAllowed     bool              `json:"expected_allowed"`
+	ExpectedReasonTags  []string          `json:"expected_reason_tags"`
+	Severity            float64           `json:"severity"`
+	ContextNotes        string            `json:"context_notes,omitempty"`
+	Model               string            `json:"model"`
+	ExecutionMode       string            `json:"execution_mode"`
+	CounterfactualModel bool              `json:"counterfactual_model"`
+	PromptSource        string            `json:"prompt_source"`
+	PromptName          string            `json:"prompt_name"`
+	PromptPath          string            `json:"prompt_path,omitempty"`
+	State               map[string]any    `json:"state"`
+	View                map[string]any    `json:"view"`
+	Opportunity         map[string]any    `json:"opportunity"`
+	Input               []map[string]any  `json:"input"`
+	RawResponse         map[string]any    `json:"raw_response"`
+	ResponseExchanges   []map[string]any  `json:"response_exchanges,omitempty"`
+	TurnLog             runner.TurnLog    `json:"turn_log"`
+	FinalState          map[string]any    `json:"final_state,omitempty"`
+	Provider            openai.Accounting `json:"provider"`
+	ToolPayload         map[string]any    `json:"tool_payload,omitempty"`
+	Allowed             *bool             `json:"allowed,omitempty"`
+	RulingReason        string            `json:"ruling_reason,omitempty"`
+	MatchedReasonTags   []string          `json:"matched_reason_tags"`
+	OutcomeCorrect      bool              `json:"outcome_correct"`
+	ReasonCorrect       bool              `json:"reason_correct"`
+	InvalidReason       string            `json:"invalid_reason,omitempty"`
+	LeanAccepted        bool              `json:"lean_accepted"`
+	StepAccepted        bool              `json:"step_accepted"`
+	LeanError           string            `json:"lean_error,omitempty"`
 }
 
 type judgeVoirDirePromptVariant struct {
 	Source   string
 	Name     string
 	Path     string
-	CopyPath string
 	Text     string
 	Renderer *runner.PromptRenderer
 }
@@ -186,26 +176,18 @@ func RunJudgeVoirDire(ctx context.Context, opts JudgeVoirDireOptions) (resultVal
 	if len(opts.Engine.Command) == 0 {
 		opts.Engine = lean.New(nil)
 	}
-	modelRef := modelrequest.ModelRef{}
-	var client *openai.Client
-	if !opts.DryRun {
-		modelRef, err = modelrequest.ParseModelRef(opts.Model)
-		if err != nil {
-			return JudgeVoirDireSummary{}, fmt.Errorf("parse --model: %w", err)
-		}
-		client, err = openai.NewForEndpoint(modelRef.Endpoint, opts.Online, opts.Timeout)
-		if err != nil {
-			return JudgeVoirDireSummary{}, err
-		}
+	modelRef, err := modelrequest.ParseModelRef(opts.Model)
+	if err != nil {
+		return JudgeVoirDireSummary{}, fmt.Errorf("parse --model: %w", err)
 	}
-	runID, err := newJudgeEvalRunID()
+	client, err := openai.NewForEndpoint(modelRef.Endpoint, opts.Online, opts.Timeout)
 	if err != nil {
 		return JudgeVoirDireSummary{}, err
 	}
 	if err := os.MkdirAll(opts.OutputDir, 0o755); err != nil {
 		return JudgeVoirDireSummary{}, fmt.Errorf("create output directory %s: %w", opts.OutputDir, err)
 	}
-	promptVariant, err := loadJudgeVoirDirePromptVariant(opts.OpportunityPromptPath, opts.OpportunityPromptName, opts.OutputDir)
+	promptVariant, err := loadJudgeVoirDirePromptVariant(opts.OpportunityPromptPath, opts.OpportunityPromptName)
 	if err != nil {
 		return JudgeVoirDireSummary{}, err
 	}
@@ -222,26 +204,22 @@ func RunJudgeVoirDire(ctx context.Context, opts JudgeVoirDireOptions) (resultVal
 	defer closeEvalFile(resultsFile, resultsPath, &returnErr)
 
 	summary := JudgeVoirDireSummary{
-		RunID:            runID,
-		Evaluation:       "judge_voir_dire",
-		Model:            opts.Model,
-		DryRun:           opts.DryRun,
-		ExecutionMode:    "production",
+		Evaluation:          "judge_voir_dire",
+		Model:               opts.Model,
+		ExecutionMode:       "production",
 		CounterfactualModel: false,
-		Provenance:       newJudgeEvalProvenance(opts.Court, opts.PromptDir, opts.PromptFiles, promptVariant.Source, promptVariant.Name, promptVariant.Path, opts.Temperature, opts.Online, opts.DryRun, opts.Engine, "production"),
-		PromptSource:     promptVariant.Source,
-		PromptName:       promptVariant.Name,
-		PromptPath:       promptVariant.Path,
-		PromptCopyPath:   promptVariant.CopyPath,
-		FixturesPath:     opts.FixturesPath,
-		OutputDir:        opts.OutputDir,
-		ResultsPath:      resultsPath,
-		SummaryPath:      summaryPath,
-		ByReasonTag:      map[string]JudgeVoirDireSlice{},
-		ByQuestionFamily: map[string]JudgeVoirDireSlice{},
-		ByTier:           map[string]JudgeVoirDireSlice{},
-		ByAskedBy:        map[string]JudgeVoirDireSlice{},
-		GeneratedAt:      time.Now().UTC().Format(time.RFC3339),
+		PromptSource:        promptVariant.Source,
+		PromptName:          promptVariant.Name,
+		PromptPath:          promptVariant.Path,
+		FixturesPath:        opts.FixturesPath,
+		OutputDir:           opts.OutputDir,
+		ResultsPath:         resultsPath,
+		SummaryPath:         summaryPath,
+		ByReasonTag:         map[string]JudgeVoirDireSlice{},
+		ByQuestionFamily:    map[string]JudgeVoirDireSlice{},
+		ByTier:              map[string]JudgeVoirDireSlice{},
+		ByAskedBy:           map[string]JudgeVoirDireSlice{},
+		GeneratedAt:         time.Now().UTC().Format(time.RFC3339),
 	}
 	var totalWeight float64
 	var correctWeight float64
@@ -251,8 +229,6 @@ func RunJudgeVoirDire(ctx context.Context, opts JudgeVoirDireOptions) (resultVal
 		if err != nil {
 			return JudgeVoirDireSummary{}, err
 		}
-		result.RunID = runID
-		result.Evaluation = summary.Evaluation
 		result.ExecutionMode = summary.ExecutionMode
 		result.CounterfactualModel = summary.CounterfactualModel
 		if err := encoder.Encode(result); err != nil {
@@ -283,14 +259,10 @@ func RescoreJudgeVoirDire(opts JudgeVoirDireRescoreOptions) (resultValue JudgeVo
 	if err != nil {
 		return JudgeVoirDireSummary{}, err
 	}
-	source, sourceSummaryPath, err := loadJudgeEvalSourceSummary(opts.ResultsPath, opts.SourceSummaryPath, "judge_voir_dire")
-	if err != nil {
-		return JudgeVoirDireSummary{}, err
+	if len(results) == 0 {
+		return JudgeVoirDireSummary{}, fmt.Errorf("no results loaded from %s", opts.ResultsPath)
 	}
-	if err := validateJudgeEvalRescoreRows(opts.ResultsPath, source, results, judgeVoirDireResultIdentity, validateJudgeVoirDireRescoreResult); err != nil {
-		return JudgeVoirDireSummary{}, err
-	}
-	if err := validateJudgeEvalRescoreOutputPaths(opts.ResultsPath, sourceSummaryPath, opts.OutputDir); err != nil {
+	if err := validateJudgeEvalRescoreOutputPath(opts.ResultsPath, opts.OutputDir); err != nil {
 		return JudgeVoirDireSummary{}, err
 	}
 	if err := os.MkdirAll(opts.OutputDir, 0o755); err != nil {
@@ -304,25 +276,22 @@ func RescoreJudgeVoirDire(opts JudgeVoirDireRescoreOptions) (resultValue JudgeVo
 	}
 	defer closeEvalFile(resultsFile, resultsPath, &returnErr)
 	summary := JudgeVoirDireSummary{
-		RunID:            source.RunID,
-		Evaluation:       "judge_voir_dire",
-		Model:            source.Model,
-		DryRun:           source.DryRun,
-		ExecutionMode:    source.ExecutionMode,
-		CounterfactualModel: source.CounterfactualModel,
-		Provenance:       newJudgeEvalRescoreProvenance(source, opts.ResultsPath, sourceSummaryPath),
-		PromptSource:     source.PromptSource,
-		PromptName:       source.PromptName,
-		PromptPath:       source.PromptPath,
-		FixturesPath:     "rescored from " + opts.ResultsPath,
-		OutputDir:        opts.OutputDir,
-		ResultsPath:      resultsPath,
-		SummaryPath:      summaryPath,
-		ByReasonTag:      map[string]JudgeVoirDireSlice{},
-		ByQuestionFamily: map[string]JudgeVoirDireSlice{},
-		ByTier:           map[string]JudgeVoirDireSlice{},
-		ByAskedBy:        map[string]JudgeVoirDireSlice{},
-		GeneratedAt:      time.Now().UTC().Format(time.RFC3339),
+		Evaluation:          "judge_voir_dire",
+		Model:               results[0].Model,
+		ExecutionMode:       results[0].ExecutionMode,
+		CounterfactualModel: results[0].CounterfactualModel,
+		PromptSource:        resultPromptSource(results[0]),
+		PromptName:          resultPromptName(results[0]),
+		PromptPath:          results[0].PromptPath,
+		FixturesPath:        "rescored from " + opts.ResultsPath,
+		OutputDir:           opts.OutputDir,
+		ResultsPath:         resultsPath,
+		SummaryPath:         summaryPath,
+		ByReasonTag:         map[string]JudgeVoirDireSlice{},
+		ByQuestionFamily:    map[string]JudgeVoirDireSlice{},
+		ByTier:              map[string]JudgeVoirDireSlice{},
+		ByAskedBy:           map[string]JudgeVoirDireSlice{},
+		GeneratedAt:         time.Now().UTC().Format(time.RFC3339),
 	}
 	var totalWeight float64
 	var correctWeight float64
@@ -365,25 +334,18 @@ func runJudgeVoirDireFixture(
 	if err != nil {
 		return JudgeVoirDireResult{}, fmt.Errorf("fixture %s roles: %w", fixture.ID, err)
 	}
-	executionModel := opts.Model
-	if !opts.DryRun {
-		executionModel = modelRef.Model
-	}
-	responseClient := judgeEvalResponseClient(opts.DryRun, client, dryRunJudgeVoirDireResponse(fixture))
 	callCtx, cancel := context.WithTimeout(ctx, opts.Timeout)
 	execution, executionErr := executeJudgeOpportunity(callCtx, judgeOpportunityExecutionOptions{
-		Engine:          opts.Engine,
-		State:           state,
-		Roles:           roles,
-		RolesPayload:    rolesPayload,
-		Client:          responseClient,
-		Court:           opts.Court,
-		Model:           executionModel,
-		Temperature:     opts.Temperature,
-		PromptDir:       opts.PromptDir,
-		PromptFiles:     opts.PromptFiles,
-		MaxStepsPerTurn: 3,
-		TurnIndex:       1,
+		Engine:       opts.Engine,
+		State:        state,
+		Roles:        roles,
+		RolesPayload: rolesPayload,
+		Client:       client,
+		Court:        opts.Court,
+		Model:        modelRef.Model,
+		Temperature:  opts.Temperature,
+		PromptDir:    opts.PromptDir,
+		PromptFiles:  opts.PromptFiles,
 		Objective: func(opportunity map[string]any) (string, error) {
 			if strings.TrimSpace(promptVariant.Text) == "" {
 				return stringField(opportunity, "objective"), nil
@@ -396,7 +358,7 @@ func runJudgeVoirDireFixture(
 	if decisionErr != nil {
 		return JudgeVoirDireResult{}, fmt.Errorf("fixture %s execute opportunity: %w", fixture.ID, decisionErr)
 	}
-	result := scoreJudgeVoirDireResponse(fixture, opts.Model, opts.DryRun, state, execution.View, execution.Opportunity, decision.Input, decision.ScoringResponse)
+	result := scoreJudgeVoirDireResponse(fixture, opts.Model, state, execution.View, execution.Opportunity, decision.Input, decision.ScoringResponse)
 	result.RawResponse = responseJSON(decision.RawResponse)
 	result.ResponseExchanges = judgeEvalResponseExchangeJSON(execution.Exchanges)
 	result.TurnLog = execution.TurnLog
@@ -452,44 +414,10 @@ func LoadJudgeVoirDireFixtures(path string) (resultValue []JudgeVoirDireFixture,
 }
 
 func readJudgeVoirDireResults(path string) (resultValue []JudgeVoirDireResult, returnErr error) {
-	return readJudgeEvalJSONL[JudgeVoirDireResult](path, judgeEvalRequiredResultFields(
-		"tier", "question_family", "case_theme", "asked_by", "juror_id", "question",
-		"expected_allowed", "expected_reason_tags", "severity", "matched_reason_tags",
-	)...)
+	return readJudgeEvalJSONL[JudgeVoirDireResult](path)
 }
 
-func judgeVoirDireResultIdentity(result JudgeVoirDireResult) judgeEvalResultIdentity {
-	return judgeEvalResultIdentity{
-		RunID:        result.RunID,
-		Evaluation:   result.Evaluation,
-		ID:           result.ID,
-		Model:        result.Model,
-		DryRun:       result.DryRun,
-		PromptSource: resultPromptSource(result),
-		PromptName:   resultPromptName(result),
-		PromptPath:   result.PromptPath,
-		ExecutionMode: result.ExecutionMode,
-		CounterfactualModel: result.CounterfactualModel,
-	}
-}
-
-func validateJudgeVoirDireRescoreResult(result JudgeVoirDireResult) error {
-	return (JudgeVoirDireFixture{
-		ID:                 result.ID,
-		Tier:               result.Tier,
-		QuestionFamily:     result.QuestionFamily,
-		CaseTheme:          result.CaseTheme,
-		AskedBy:            result.AskedBy,
-		JurorID:            result.JurorID,
-		Question:           result.Question,
-		ExpectedAllowed:    result.ExpectedAllowed,
-		ExpectedReasonTags: result.ExpectedReasonTags,
-		Severity:           result.Severity,
-		ContextNotes:       result.ContextNotes,
-	}).Validate()
-}
-
-func loadJudgeVoirDirePromptVariant(path string, name string, outputDir string) (judgeVoirDirePromptVariant, error) {
+func loadJudgeVoirDirePromptVariant(path string, name string) (judgeVoirDirePromptVariant, error) {
 	path = strings.TrimSpace(path)
 	name = strings.TrimSpace(name)
 	if path == "" {
@@ -515,16 +443,11 @@ func loadJudgeVoirDirePromptVariant(path string, name string, outputDir string) 
 	if name == "" || name == "." {
 		name = "file"
 	}
-	copyPath := filepath.Join(outputDir, "opportunity_prompt.md")
-	if err := os.WriteFile(copyPath, raw, 0o644); err != nil {
-		return judgeVoirDirePromptVariant{}, fmt.Errorf("copy opportunity prompt to %s: %w", copyPath, err)
-	}
 	return judgeVoirDirePromptVariant{
-		Source:   "file:" + path,
-		Name:     name,
-		Path:     path,
-		CopyPath: copyPath,
-		Text:     text,
+		Source: "file:" + path,
+		Name:   name,
+		Path:   path,
+		Text:   text,
 	}, nil
 }
 
@@ -644,7 +567,6 @@ func buildJudgeVoirDireInput(
 func scoreJudgeVoirDireResponse(
 	fixture JudgeVoirDireFixture,
 	model string,
-	dryRun bool,
 	state map[string]any,
 	view map[string]any,
 	opportunity map[string]any,
@@ -664,7 +586,6 @@ func scoreJudgeVoirDireResponse(
 		Severity:           normalizedSeverity(fixture.Severity),
 		ContextNotes:       strings.TrimSpace(fixture.ContextNotes),
 		Model:              model,
-		DryRun:             dryRun,
 		State:              state,
 		View:               view,
 		Opportunity:        opportunity,
@@ -729,23 +650,6 @@ func extractJudgeVoirDirePayload(resp openai.Response) (map[string]any, string) 
 		return nil, "missing_arguments"
 	}
 	return call.Arguments, ""
-}
-
-func dryRunJudgeVoirDireResponse(f JudgeVoirDireFixture) openai.Response {
-	return openai.Response{
-		Text:       "",
-		ResponseID: "dry-run-" + strings.TrimSpace(f.ID),
-		ToolCalls: []openai.ToolCall{{
-			CallID: "dry-run-call-" + strings.TrimSpace(f.ID),
-			Name:   JudgeVoirDireTool,
-			Arguments: map[string]any{
-				"exchange_id":   "vx-1",
-				"juror_id":      strings.TrimSpace(f.JurorID),
-				"allowed":       f.ExpectedAllowed,
-				"ruling_reason": "gold tags: " + strings.Join(f.ExpectedReasonTags, ", "),
-			},
-		}},
-	}
 }
 
 func renderJudgeVoirDirePromptTemplate(template string, fixture JudgeVoirDireFixture, opportunity map[string]any) (string, error) {
