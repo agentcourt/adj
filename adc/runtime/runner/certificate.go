@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -85,10 +86,14 @@ func newReplayInitializeRequest(state map[string]any) (ReplayInitializeRequest, 
 }
 
 func (r *Runner) stepForCertificate(actionType string, actorRole string, payload map[string]any) (map[string]any, error) {
+	return r.stepForCertificateContext(context.Background(), actionType, actorRole, payload)
+}
+
+func (r *Runner) stepForCertificateContext(ctx context.Context, actionType string, actorRole string, payload map[string]any) (map[string]any, error) {
 	if payload == nil {
 		payload = map[string]any{}
 	}
-	resp, err := r.lean.Step(r.state, actionType, actorRole, payload)
+	resp, err := r.lean.StepContext(ctx, r.state, actionType, actorRole, payload)
 	if err != nil {
 		return nil, err
 	}

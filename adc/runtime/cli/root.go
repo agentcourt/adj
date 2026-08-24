@@ -18,6 +18,12 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 		return RunCasePacket(args[1:], stdout, stderr)
 	case "complain":
 		return RunComplain(args[1:], stdout, stderr)
+	case "eval":
+		return RunEval(ctx, args[1:], stdout, stderr)
+	case "juror":
+		return RunJuror(ctx, args[1:], stdout, stderr)
+	case "llm":
+		return RunLLM(ctx, args[1:], stdout, stderr)
 	case "scenario":
 		return RunScenarioCase(ctx, args[1:], stdout, stderr)
 	case "pacer":
@@ -37,6 +43,12 @@ func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer)
 			return RunCasePacket([]string{"-h"}, stdout, stderr)
 		case "complain":
 			return RunComplain([]string{"-h"}, stdout, stderr)
+		case "eval":
+			return RunEval(ctx, []string{"-h"}, stdout, stderr)
+		case "juror":
+			return RunJuror(ctx, []string{"-h"}, stdout, stderr)
+		case "llm":
+			return RunLLM(ctx, []string{"-h"}, stdout, stderr)
 		case "scenario":
 			return RunScenarioCase(ctx, []string{"-h"}, stdout, stderr)
 		case "pacer":
@@ -60,6 +72,9 @@ Subcommands:
   case       Prepare a complaint or proposition and run the case
   case-packet  Build a deterministic complaint packet
   complain   Draft complaint.md from a situation markdown file
+  eval       Run ADC evals
+  juror      Ask one juror pool member a question
+  llm        Send one prompt through the runtime model client
   scenario   Run an existing scenario JSON without starting agents
   pacer      List or fetch PACER-style documents from sqlite
   validate   Validate a scenario file for the Go runner

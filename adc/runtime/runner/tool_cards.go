@@ -3,21 +3,14 @@ package runner
 import (
 	"fmt"
 	"strings"
-
-	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
 )
 
 func (r *Runner) buildTurnPrompt(roleName string, basePrompt string, allowedTools []string) (string, error) {
-	schemaLines := toolSchemaPromptLinesWithResolver(allowedTools, r.toolSchema)
-	cards, err := r.collectToolCards(roleName, allowedTools)
+	renderer, err := r.runtimePromptRenderer()
 	if err != nil {
 		return "", err
 	}
-	return r.prompts.Render(adcprompts.RuntimeTurnID, map[string]string{
-		"{{BASE_PROMPT}}":   promptValue(basePrompt),
-		"{{TOOL_SCHEMAS}}":  promptSections(schemaLines),
-		"{{TOOL_GUIDANCE}}": promptSections(cards),
-	})
+	return renderer.RenderTurnPrompt(roleName, basePrompt, allowedTools)
 }
 
 func toolSchemaPromptLines(allowedTools []string) []string {
@@ -42,21 +35,31 @@ func toolSchemaPromptLinesWithResolver(allowedTools []string, resolveSchema func
 	return lines
 }
 
-func (r *Runner) collectToolCards(roleName string, allowedTools []string) ([]string, error) {
-	roleName = strings.TrimSpace(roleName)
+func toolSchemaPromptLinesWithErrorResolver(allowedTools []string, resolveSchema func(string) (map[string]any, error)) ([]string, error) {
 	seen := map[string]bool{}
-	cards := make([]string, 0, len(allowedTools))
+	lines := make([]string, 0, len(allowedTools))
 	for _, toolName := range allowedTools {
 		toolName = strings.TrimSpace(toolName)
 		if toolName == "" || seen[toolName] {
 			continue
 		}
 		seen[toolName] = true
-		card, err := r.prompts.ToolCard(roleName, toolName)
+		schema, err := resolveSchema(toolName)
 		if err != nil {
 			return nil, err
 		}
-		cards = append(cards, fmt.Sprintf("Tool `%s`:\n%s", toolName, card))
+		if schema == nil {
+			continue
+		}
+		lines = append(lines, fmt.Sprintf("Tool `%s` payload: %s", toolName, marshalString(schema)))
 	}
-	return cards, nil
+	return lines, nil
+}
+
+func (r *Runner) collectToolCards(roleName string, allowedTools []string) ([]string, error) {
+	renderer, err := r.runtimePromptRenderer()
+	if err != nil {
+		return nil, err
+	}
+	return renderer.collectToolCards(roleName, allowedTools)
 }

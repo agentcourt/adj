@@ -46,25 +46,41 @@ func (r *Runner) effectiveRoleTemperatureByName(roleName string) *float64 {
 }
 
 func (r *Runner) buildSystemPrompt(role spec.RoleSpec, view map[string]any) (string, error) {
-	return r.prompts.Render(adcprompts.RuntimeSystemID, map[string]string{
-		"{{ROLE}}":            strings.TrimSpace(role.Name),
-		"{{PREAMBLE}}":        promptValue(role.PromptPreamble),
-		"{{INSTRUCTIONS}}":    promptValue(role.Instructions),
-		"{{ALLOWED_ACTIONS}}": promptList(role.EffectiveAllowedActions()),
-		"{{VIEW}}":            marshalString(view),
-	})
+	renderer, err := r.runtimePromptRenderer()
+	if err != nil {
+		return "", err
+	}
+	return renderer.RenderSystemPrompt(role, view)
 }
 
 func (r *Runner) buildOpportunityPrompt(role spec.RoleSpec, opportunity leanOpportunity) (string, error) {
-	return r.prompts.Render(adcprompts.RuntimeOpportunityID, map[string]string{
-		"{{ACTOR_MESSAGE}}":   promptValue(opportunity.ActorMessage),
-		"{{OBJECTIVE}}":       promptValue(opportunity.Objective),
-		"{{PHASE}}":           promptValue(opportunity.Phase),
-		"{{ALLOWED_ACTIONS}}": promptList(opportunity.AllowedTools),
-		"{{REFERENCE_TOOLS}}": promptList(referenceToolsForRole(role)),
-		"{{CONSTRAINTS}}":     promptJSON(opportunity.Constraints),
-		"{{PASS_ACTION}}":     passAction(opportunity.MayPass),
-	})
+	renderer, err := r.runtimePromptRenderer()
+	if err != nil {
+		return "", err
+	}
+	return renderer.RenderOpportunityPrompt(role, promptOpportunityFromLean(opportunity))
+}
+
+func (r *Runner) runtimePromptRenderer() (*PromptRenderer, error) {
+	if r.promptRenderer != nil {
+		return r.promptRenderer, nil
+	}
+	if r.prompts == nil {
+		promptCatalog, err := adcprompts.Load(adcprompts.Options{})
+		if err != nil {
+			return nil, err
+		}
+		r.prompts = promptCatalog
+	}
+	if r.schemaDescriptions == nil {
+		descriptions, err := loadSchemaPropertyDescriptions(r.prompts)
+		if err != nil {
+			return nil, err
+		}
+		r.schemaDescriptions = descriptions
+	}
+	r.promptRenderer = newPromptRenderer(r.prompts, r.schemaDescriptions, r.courtProfile)
+	return r.promptRenderer, nil
 }
 
 func promptValue(value string) string {

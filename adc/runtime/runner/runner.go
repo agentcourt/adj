@@ -70,10 +70,13 @@ type Runner struct {
 	scenario                spec.FormalScenario
 	lean                    lean.Engine
 	store                   *store.Store
-	client                  *openai.Client
-	jurorClient             *openai.Client
+	client                  ResponseClient
+	jurorClient             ResponseClient
+	sharedClientAccounting  bool
+	allowNoStorePersistence bool
 	cfg                     Config
 	state                   map[string]any
+	lastOpportunityView     map[string]any
 	roles                   map[string]spec.RoleSpec
 	courtProfile            courts.Profile
 	certificateInit         ReplayInitializeRequest
@@ -84,6 +87,7 @@ type Runner struct {
 	externalRoles           map[string]bool
 	roleAPI                 *roleAPIServer
 	prompts                 *adcprompts.Catalog
+	promptRenderer          *PromptRenderer
 	schemaDescriptions      map[string]map[string]string
 }
 
@@ -100,6 +104,9 @@ func (r *Runner) RequiresLLMTurns() bool {
 }
 
 func New(st *store.Store, le lean.Engine, client *openai.Client, jurorClient *openai.Client, cfg Config) (*Runner, error) {
+	if st == nil {
+		return nil, fmt.Errorf("runner store is nil")
+	}
 	scenario, err := spec.Load(cfg.ScenarioPath)
 	if err != nil {
 		return nil, err
@@ -108,41 +115,33 @@ func New(st *store.Store, le lean.Engine, client *openai.Client, jurorClient *op
 	if strings.TrimSpace(cfg.ScenarioBaseDir) == "" {
 		cfg.ScenarioBaseDir = filepath.Dir(cfg.ScenarioPath)
 	}
-	cfg.Runtime = cfg.Runtime.Normalized()
-	roles := make(map[string]spec.RoleSpec, len(scenario.Roles))
-	for _, r := range scenario.Roles {
-		roles[r.Name] = r
-	}
-	if err := loadRolePromptPreambles(roles, cfg.ScenarioBaseDir); err != nil {
-		return nil, err
-	}
 	courtProfile, err := resolveScenarioCourtProfile(scenario)
 	if err != nil {
 		return nil, err
 	}
-	promptCatalog, err := adcprompts.Load(adcprompts.Options{PromptDir: cfg.PromptDir, PromptFiles: cfg.PromptFiles})
+	var responseClient ResponseClient
+	if client != nil {
+		responseClient = client
+	}
+	var jurorResponseClient ResponseClient
+	if jurorClient != nil {
+		jurorResponseClient = jurorClient
+	}
+	r, err := newRunnerCore(
+		st,
+		le,
+		responseClient,
+		jurorResponseClient,
+		client != nil && client == jurorClient,
+		cfg,
+		scenario.Roles,
+		courtProfile,
+		false,
+	)
 	if err != nil {
 		return nil, err
 	}
-	schemaDescriptions, err := loadSchemaPropertyDescriptions(promptCatalog)
-	if err != nil {
-		return nil, err
-	}
-	r := &Runner{
-		scenario:                scenario,
-		lean:                    le,
-		store:                   st,
-		client:                  client,
-		jurorClient:             jurorClient,
-		cfg:                     cfg,
-		roles:                   roles,
-		courtProfile:            courtProfile,
-		workProductDirs:         map[string]string{},
-		jurorPersonaAssignments: map[string]jurorPersonaPair{},
-		externalRoles:           externalRoleSet(cfg.ExternalRoles),
-		prompts:                 promptCatalog,
-		schemaDescriptions:      schemaDescriptions,
-	}
+	r.scenario = scenario
 	if strings.TrimSpace(cfg.JurorPersonasPath) != "" {
 		pool, err := loadJurorPersonaPool(cfg.JurorPersonasPath, cfg.ScenarioBaseDir)
 		if err != nil {
@@ -150,7 +149,7 @@ func New(st *store.Store, le lean.Engine, client *openai.Client, jurorClient *op
 		}
 		r.jurorPersonaPool = pool
 	}
-	if err := validateScenarioActions(scenario, roles); err != nil {
+	if err := validateScenarioActions(scenario, r.roles); err != nil {
 		return nil, err
 	}
 	initialState := buildInitialState(scenario, courtProfile)
@@ -325,6 +324,12 @@ func validateScenarioActions(scenario spec.FormalScenario, roles map[string]spec
 }
 
 func (r *Runner) Run(ctx context.Context) (result Result, err error) {
+	if r == nil {
+		return Result{}, fmt.Errorf("runner is nil")
+	}
+	if r.store == nil {
+		return Result{}, fmt.Errorf("runner store is nil")
+	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -418,10 +423,20 @@ func (r *Runner) ProviderAccounting() openai.Accounting {
 	if r == nil {
 		return openai.Accounting{}
 	}
-	if r.client == r.jurorClient {
+	if r.sharedClientAccounting {
+		if r.client == nil {
+			return openai.Accounting{}
+		}
 		return r.client.Accounting()
 	}
-	return openai.MergeAccounting(r.client.Accounting(), r.jurorClient.Accounting())
+	accounting := make([]openai.Accounting, 0, 2)
+	if r.client != nil {
+		accounting = append(accounting, r.client.Accounting())
+	}
+	if r.jurorClient != nil {
+		accounting = append(accounting, r.jurorClient.Accounting())
+	}
+	return openai.MergeAccounting(accounting...)
 }
 
 func (r *Runner) writeCaseManifest(manifest casemanifest.Manifest) error {
@@ -447,17 +462,21 @@ func resultMap(result Result) (map[string]any, error) {
 }
 
 func (r *Runner) executeAction(turnIndex, stepIndex int, actorRole, actionType string, payload map[string]any) (ActionExecution, error) {
+	return r.executeActionContext(context.Background(), turnIndex, stepIndex, actorRole, actionType, payload)
+}
+
+func (r *Runner) executeActionContext(ctx context.Context, turnIndex, stepIndex int, actorRole, actionType string, payload map[string]any) (ActionExecution, error) {
 	preparedPayload, err := r.prepareActionPayload(actionType, payload)
 	if err != nil {
 		return ActionExecution{}, err
 	}
 	payload = preparedPayload
-	execRes, handled, err := r.executeLocalAction(actorRole, actionType, payload)
+	execRes, handled, err := r.executeLocalActionContext(ctx, actorRole, actionType, payload)
 	if err != nil {
 		return ActionExecution{}, err
 	}
 	if !handled {
-		res, err := r.stepForCertificate(actionType, actorRole, payload)
+		res, err := r.stepForCertificateContext(ctx, actionType, actorRole, payload)
 		if err != nil {
 			return ActionExecution{}, err
 		}

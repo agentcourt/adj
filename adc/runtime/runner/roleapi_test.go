@@ -24,7 +24,10 @@ func TestCaseAPIHealthIdentifiesRun(t *testing.T) {
 func TestObserverCannotActOnActiveTurn(t *testing.T) {
 	api, turn := testRoleAPIWithActiveTurn(t)
 
-	status := api.statusResponseLocked(roleAPIRequest{CaseID: "case-1", RoleID: "observer"})
+	status, err := api.statusResponseLocked(roleAPIRequest{CaseID: "case-1", RoleID: "observer"})
+	if err != nil {
+		t.Fatalf("statusResponseLocked error = %v", err)
+	}
 	if status["status"] != "active" {
 		t.Fatalf("observer status = %#v, want active read access", status)
 	}
@@ -276,7 +279,10 @@ func TestRoleAPIStatusExpiresPastDeadline(t *testing.T) {
 	turn.deadline = time.Now().Add(-time.Second)
 	turn.timeout = time.Second
 
-	response := api.statusResponseLocked(roleAPIRequest{CaseID: "case-1", RoleID: "plaintiff"})
+	response, err := api.statusResponseLocked(roleAPIRequest{CaseID: "case-1", RoleID: "plaintiff"})
+	if err != nil {
+		t.Fatalf("statusResponseLocked error = %v", err)
+	}
 	if response["status"] != "waiting" {
 		t.Fatalf("expired status response = %#v", response)
 	}
@@ -307,7 +313,10 @@ func TestRoleAPIStatusIncludesAdjudicationResolution(t *testing.T) {
 		},
 	}
 	api := newRoleAPIServer(r)
-	response := api.statusResponseLocked(roleAPIRequest{CaseID: "case-1", RoleID: "observer"})
+	response, err := api.statusResponseLocked(roleAPIRequest{CaseID: "case-1", RoleID: "observer"})
+	if err != nil {
+		t.Fatalf("statusResponseLocked error = %v", err)
+	}
 	caseStatus, ok := response["case_status"].(map[string]any)
 	if !ok {
 		t.Fatalf("case_status = %#v", response["case_status"])

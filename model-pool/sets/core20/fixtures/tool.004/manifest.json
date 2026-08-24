@@ -1,0 +1,21 @@
+{
+  "evidence": [
+    {
+      "file": "E1.md",
+      "id": "E1",
+      "title": "Checkpoint temperature log"
+    },
+    {
+      "file": "E2.md",
+      "id": "E2",
+      "title": "Container specification"
+    },
+    {
+      "file": "E3.md",
+      "id": "E3",
+      "title": "Courier note"
+    }
+  ],
+  "record_id": "tool.004",
+  "title": "Sample container temperature chain"
+}

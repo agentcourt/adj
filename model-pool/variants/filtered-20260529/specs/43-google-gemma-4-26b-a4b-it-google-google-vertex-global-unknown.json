@@ -1,0 +1,123 @@
+{
+  "canonical_slug": "google/gemma-4-26b-a4b-it-20260403",
+  "catalog_snapshot_id": "model-roots-10-more-20260529T140914Z",
+  "context_length": 262144,
+  "endpoint_id": null,
+  "endpoint_index": 7,
+  "endpoint_model_id": "google/gemma-4-26b-a4b-it",
+  "endpoint_model_name": "Google: Gemma 4 26B A4B ",
+  "endpoint_model_permaslug": null,
+  "endpoint_name": "Google | google/gemma-4-26b-a4b-it-20260403",
+  "endpoint_pricing": {
+    "completion": "0.0000006",
+    "discount": 0,
+    "prompt": "0.00000015"
+  },
+  "endpoint_raw_path": "raw/endpoints/google_gemma-4-26b-a4b-it-c6079e21213b.json",
+  "endpoint_tag": "google-vertex/global",
+  "endpoint_variant_id": "3712c5ec61988b0098200b69",
+  "endpoint_variant_key": "model-roots-10-more-20260529T140914Z | google/gemma-4-26b-a4b-it | 7 | Google | google-vertex/global | Google | google/gemma-4-26b-a4b-it-20260403 | unknown",
+  "hugging_face_id": "google/gemma-4-26B-A4B-it",
+  "input_modalities": [
+    "image",
+    "text",
+    "video"
+  ],
+  "instruct_type": null,
+  "knowledge_cutoff": null,
+  "latency_last_30m": {
+    "p50": 407,
+    "p75": 567,
+    "p90": 874,
+    "p99": 5791.7000000000335
+  },
+  "max_completion_tokens": 262144,
+  "max_prompt_tokens": null,
+  "modality": "text+image+video->text",
+  "model_context_length": 262144,
+  "model_created": 1775227989,
+  "model_default_parameters": {
+    "temperature": 1,
+    "top_k": 64,
+    "top_p": 0.95
+  },
+  "model_description": "Gemma 4 26B A4B IT is an instruction-tuned Mixture-of-Experts (MoE) model from Google DeepMind. Despite 25.2B total parameters, only 3.8B activate per token during inference \u2014 delivering near-31B quality at...",
+  "model_name": "Google: Gemma 4 26B A4B ",
+  "model_per_request_limits": null,
+  "model_pricing": {
+    "completion": "0.00000033",
+    "prompt": "0.00000006"
+  },
+  "model_raw_path": "raw/models.json",
+  "model_supported_parameters": [
+    "frequency_penalty",
+    "include_reasoning",
+    "logit_bias",
+    "logprobs",
+    "max_tokens",
+    "min_p",
+    "presence_penalty",
+    "reasoning",
+    "repetition_penalty",
+    "response_format",
+    "seed",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_k",
+    "top_logprobs",
+    "top_p"
+  ],
+  "model_supported_voices": null,
+  "model_top_provider": {
+    "context_length": 262144,
+    "is_moderated": false,
+    "max_completion_tokens": null
+  },
+  "openrouter_model_id": "google/gemma-4-26b-a4b-it",
+  "output_modalities": [
+    "text"
+  ],
+  "pricing_completion": "0.0000006",
+  "pricing_discount": 0,
+  "pricing_input_cache_read": null,
+  "pricing_input_cache_write": null,
+  "pricing_prompt": "0.00000015",
+  "provider_name": "Google",
+  "quantization": "unknown",
+  "raw_endpoint_sha256": "8ed4beaad1e0196139163eadad5eed57b5492aa2c89df32906a3a1e77a279092",
+  "raw_model_sha256": "3639c51c5a07c03b7ecbb0cd1a672ad99bd6776c05f9ef8ac65c5b7e7f878007",
+  "snapshot_timestamp_utc": "2026-05-29T14:09:39.983842Z",
+  "status": 0,
+  "supported_parameters": [
+    "reasoning",
+    "include_reasoning",
+    "max_tokens",
+    "temperature",
+    "top_p",
+    "seed",
+    "response_format",
+    "top_k",
+    "repetition_penalty",
+    "frequency_penalty",
+    "presence_penalty",
+    "stop",
+    "tools",
+    "tool_choice",
+    "structured_outputs"
+  ],
+  "supports_implicit_caching": false,
+  "throughput_last_30m": {
+    "p50": 56,
+    "p75": 72,
+    "p90": 89,
+    "p99": 138
+  },
+  "tokenizer": "Gemma",
+  "unknown_quantization_endpoint_variant": true,
+  "uptime_last_1d": 99.83787626809321,
+  "uptime_last_30m": 99.85424096759188,
+  "uptime_last_5m": 99.73269973269974
+}

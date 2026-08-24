@@ -2,7 +2,7 @@ package runner
 
 import "strings"
 
-func (r *Runner) legalToolSchemaLines(allowedTools []string) []string {
+func (r *Runner) legalToolSchemaLines(allowedTools []string) ([]string, error) {
 	lines := make([]string, 0, len(allowedTools))
 	seen := map[string]bool{}
 	for _, toolName := range allowedTools {
@@ -11,13 +11,16 @@ func (r *Runner) legalToolSchemaLines(allowedTools []string) []string {
 			continue
 		}
 		seen[toolName] = true
-		schema := r.toolSchema(toolName)
+		schema, err := r.toolSchema(toolName)
+		if err != nil {
+			return nil, err
+		}
 		if schema == nil {
 			continue
 		}
 		lines = append(lines, "- "+toolName+": "+marshalString(schema))
 	}
-	return lines
+	return lines, nil
 }
 
 func issueText(issue correctionIssue) string {

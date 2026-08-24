@@ -28,6 +28,12 @@ make -C quick build test
 
 The shared `common/` tree contains document import and verification, record writing, case manifests, model requests, provider clients, and persona loading used across the procedures.  It also contains the default juror and council request-spec pool, the persona named by that pool, and a [persona corpus](common/etc/personas/README.md) for custom pools.  One root Go module keeps these shared packages and all five commands together.
 
+## Evaluations and Model Pools
+
+The [behavior evals](evals/README.md) place an ADC actor in controlled Lean states, run the production opportunity executor, and score the resulting legal action against committed fixtures.  ADC provides ten judge suites through `adc eval`, with fixtures, candidate prompts, plans, and historical analyses under `evals/adc/judge/`.  Generated behavior-eval records belong under the ignored `evals/out/` directory.
+
+The [model-pool tools](model-pool/README.md) inventory provider endpoints, evaluate and score models, collect behavior responses, calculate embeddings, cluster the results, and sample request-specification pools.  Quick, ARB, AARD, and ADC consume the resulting JSONL records through their council or juror pool options.  Generated pool runs belong under the ignored `model-pool/results/` directory, while the distributed runtime default remains `common/data/personas/pool.jsonl`.
+
 ## Command-Line Cases
 
 Each command provides `help` for its subcommands.  ADC can start from a complaint, proposition, or prepared scenario.  ARB and AARD start from complaints, while simple and quick start from propositions.  Model-provider credentials depend on the roles, direct model, and council request specifications selected for a case.  The ADC example signing script requires OpenSSL and creates the two linked signature inputs before complaint drafting.

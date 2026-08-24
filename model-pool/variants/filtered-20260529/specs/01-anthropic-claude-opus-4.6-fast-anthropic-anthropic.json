@@ -1,0 +1,123 @@
+{
+  "canonical_slug": "anthropic/claude-4.6-opus-fast-20260407",
+  "catalog_snapshot_id": "model-roots-5-all-variants-20260529T1135Z",
+  "combined_set_id": "model-roots-10-combined-variants-20260529T1137Z",
+  "context_length": 1000000,
+  "endpoint_id": null,
+  "endpoint_index": 0,
+  "endpoint_model_id": "anthropic/claude-opus-4.6-fast",
+  "endpoint_model_name": "Anthropic: Claude Opus 4.6 (Fast)",
+  "endpoint_model_permaslug": null,
+  "endpoint_name": "Anthropic | anthropic/claude-4.6-opus-fast-20260407",
+  "endpoint_pricing": {
+    "completion": "0.00015",
+    "discount": 0,
+    "input_cache_read": "0.000003",
+    "input_cache_write": "0.0000375",
+    "prompt": "0.00003",
+    "web_search": "0.01"
+  },
+  "endpoint_raw_path": "raw/endpoints/anthropic_claude-opus-4.6-fast-4afdd87d98f7.json",
+  "endpoint_tag": "anthropic",
+  "endpoint_variant_id": "b4259a67d49dc13019b5d65c",
+  "endpoint_variant_key": "model-roots-5-all-variants-20260529T1135Z | anthropic/claude-opus-4.6-fast | 0 | Anthropic | anthropic | Anthropic | anthropic/claude-4.6-opus-fast-20260407 | unknown",
+  "hugging_face_id": null,
+  "input_modalities": [
+    "text",
+    "image",
+    "file"
+  ],
+  "instruct_type": null,
+  "knowledge_cutoff": null,
+  "latency_last_30m": {
+    "p50": 906,
+    "p75": 1329,
+    "p90": 1644.4,
+    "p99": 2167.6099999999988
+  },
+  "max_completion_tokens": 128000,
+  "max_prompt_tokens": null,
+  "modality": "text+image+file->text",
+  "model_context_length": 1000000,
+  "model_created": 1775592472,
+  "model_default_parameters": {
+    "frequency_penalty": null,
+    "presence_penalty": null,
+    "repetition_penalty": null,
+    "temperature": null,
+    "top_k": null,
+    "top_p": null
+  },
+  "model_description": "Fast-mode variant of [Opus 4.6](/anthropic/claude-opus-4.6) - identical capabilities with higher output speed at premium 6x pricing.\n\nLearn more in Anthropic's docs: https://platform.claude.com/docs/en/build-with-claude/fast-mode",
+  "model_name": "Anthropic: Claude Opus 4.6 (Fast)",
+  "model_per_request_limits": null,
+  "model_pricing": {
+    "completion": "0.00015",
+    "input_cache_read": "0.000003",
+    "input_cache_write": "0.0000375",
+    "prompt": "0.00003",
+    "web_search": "0.01"
+  },
+  "model_raw_path": "raw/models.json",
+  "model_supported_parameters": [
+    "include_reasoning",
+    "max_tokens",
+    "reasoning",
+    "response_format",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_p",
+    "verbosity"
+  ],
+  "model_supported_voices": null,
+  "model_top_provider": {
+    "context_length": 1000000,
+    "is_moderated": true,
+    "max_completion_tokens": 128000
+  },
+  "openrouter_model_id": "anthropic/claude-opus-4.6-fast",
+  "output_modalities": [
+    "text"
+  ],
+  "pricing_completion": "0.00015",
+  "pricing_discount": 0,
+  "pricing_input_cache_read": "0.000003",
+  "pricing_input_cache_write": "0.0000375",
+  "pricing_prompt": "0.00003",
+  "provider_name": "Anthropic",
+  "quantization": "unknown",
+  "raw_endpoint_sha256": "72330efc72f8abb6862718fef117a4323ed6ff1683146a3571b242101c383881",
+  "raw_model_sha256": "cccd15c9bd37975dc901065f217f508bb697ff8a7ad4e5c0ef2ddf5a13fa21f4",
+  "snapshot_timestamp_utc": "2026-05-29T11:35:27.547230Z",
+  "source_variant_path": "results/model-roots-5-all-variants-20260529T1135Z/endpoint_variants.jsonl",
+  "source_variant_set": "first_5_roots",
+  "status": 0,
+  "supported_parameters": [
+    "max_tokens",
+    "top_p",
+    "temperature",
+    "stop",
+    "reasoning",
+    "include_reasoning",
+    "tool_choice",
+    "tools",
+    "structured_outputs",
+    "response_format",
+    "verbosity"
+  ],
+  "supports_implicit_caching": false,
+  "throughput_last_30m": {
+    "p50": 5,
+    "p75": 70,
+    "p90": 102.9,
+    "p99": 244.16999999999982
+  },
+  "tokenizer": "Claude",
+  "unknown_quantization_endpoint_variant": true,
+  "uptime_last_1d": 100,
+  "uptime_last_30m": 100,
+  "uptime_last_5m": null
+}

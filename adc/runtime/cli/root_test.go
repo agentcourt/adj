@@ -23,7 +23,7 @@ func TestRunHelpWritesUsageToStdout(t *testing.T) {
 }
 
 func TestSubcommandsRejectPositionalArguments(t *testing.T) {
-	for _, subcommand := range []string{"case", "case-packet", "complain", "scenario", "pacer", "validate", "verify-certificate"} {
+	for _, subcommand := range []string{"case", "case-packet", "complain", "juror", "llm", "scenario", "pacer", "validate", "verify-certificate"} {
 		t.Run(subcommand, func(t *testing.T) {
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer

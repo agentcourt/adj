@@ -1,0 +1,115 @@
+{
+  "canonical_slug": "mistralai/devstral-2512",
+  "catalog_snapshot_id": "model-roots-5-all-variants-20260529T1135Z",
+  "combined_set_id": "model-roots-10-combined-variants-20260529T1137Z",
+  "context_length": 262144,
+  "endpoint_id": null,
+  "endpoint_index": 0,
+  "endpoint_model_id": "mistralai/devstral-2512",
+  "endpoint_model_name": "Mistral: Devstral 2 2512",
+  "endpoint_model_permaslug": null,
+  "endpoint_name": "Mistral | mistralai/devstral-2512",
+  "endpoint_pricing": {
+    "completion": "0.000002",
+    "discount": 0,
+    "input_cache_read": "0.00000004",
+    "prompt": "0.0000004"
+  },
+  "endpoint_raw_path": "raw/endpoints/mistralai_devstral-2512-03e9ede66aca.json",
+  "endpoint_tag": "mistral",
+  "endpoint_variant_id": "456b0257aaa1e0750976af36",
+  "endpoint_variant_key": "model-roots-5-all-variants-20260529T1135Z | mistralai/devstral-2512 | 0 | Mistral | mistral | Mistral | mistralai/devstral-2512 | unknown",
+  "hugging_face_id": "mistralai/Devstral-2-123B-Instruct-2512",
+  "input_modalities": [
+    "text",
+    "file"
+  ],
+  "instruct_type": null,
+  "knowledge_cutoff": null,
+  "latency_last_30m": {
+    "p50": 1923,
+    "p75": 2577.5,
+    "p90": 2890,
+    "p99": 4852.000000000011
+  },
+  "max_completion_tokens": null,
+  "max_prompt_tokens": null,
+  "modality": "text+file->text",
+  "model_context_length": 262144,
+  "model_created": 1765285419,
+  "model_default_parameters": {
+    "frequency_penalty": null,
+    "temperature": 0.3,
+    "top_p": null
+  },
+  "model_description": "Devstral 2 is a state-of-the-art open-source model by Mistral AI specializing in agentic coding. It is a 123B-parameter dense transformer model supporting a 256K context window. Devstral 2 supports exploring...",
+  "model_name": "Mistral: Devstral 2 2512",
+  "model_per_request_limits": null,
+  "model_pricing": {
+    "completion": "0.000002",
+    "input_cache_read": "0.00000004",
+    "prompt": "0.0000004"
+  },
+  "model_raw_path": "raw/models.json",
+  "model_supported_parameters": [
+    "frequency_penalty",
+    "max_tokens",
+    "presence_penalty",
+    "response_format",
+    "seed",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_p"
+  ],
+  "model_supported_voices": null,
+  "model_top_provider": {
+    "context_length": 262144,
+    "is_moderated": false,
+    "max_completion_tokens": null
+  },
+  "openrouter_model_id": "mistralai/devstral-2512",
+  "output_modalities": [
+    "text"
+  ],
+  "pricing_completion": "0.000002",
+  "pricing_discount": 0,
+  "pricing_input_cache_read": "0.00000004",
+  "pricing_input_cache_write": null,
+  "pricing_prompt": "0.0000004",
+  "provider_name": "Mistral",
+  "quantization": "unknown",
+  "raw_endpoint_sha256": "10425ff89000ddc93b261e99bdbfe9e1be83dd2a885b1badcffc15b5b9a14a01",
+  "raw_model_sha256": "f5ca0b06ddc7e734ace9898c78e0eff644840f6c7e64435b3f7630572b856702",
+  "snapshot_timestamp_utc": "2026-05-29T11:35:27.547230Z",
+  "source_variant_path": "results/model-roots-5-all-variants-20260529T1135Z/endpoint_variants.jsonl",
+  "source_variant_set": "first_5_roots",
+  "status": 0,
+  "supported_parameters": [
+    "max_tokens",
+    "temperature",
+    "top_p",
+    "stop",
+    "frequency_penalty",
+    "presence_penalty",
+    "seed",
+    "response_format",
+    "structured_outputs",
+    "tools",
+    "tool_choice"
+  ],
+  "supports_implicit_caching": false,
+  "throughput_last_30m": {
+    "p50": 20,
+    "p75": 69,
+    "p90": 114,
+    "p99": 176.8800000000001
+  },
+  "tokenizer": "Mistral",
+  "unknown_quantization_endpoint_variant": true,
+  "uptime_last_1d": 99.95779494837997,
+  "uptime_last_30m": 99.90512333965845,
+  "uptime_last_5m": 100
+}

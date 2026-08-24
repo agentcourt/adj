@@ -45,6 +45,17 @@ func (r *Runner) handleOpportunityResponseError(
 	model string,
 	err error,
 ) (TurnLog, bool, error) {
+	return r.handleOpportunityResponseErrorContext(context.Background(), turnIndex, role, opportunity, model, err)
+}
+
+func (r *Runner) handleOpportunityResponseErrorContext(
+	ctx context.Context,
+	turnIndex int,
+	role spec.RoleSpec,
+	opportunity leanOpportunity,
+	model string,
+	err error,
+) (TurnLog, bool, error) {
 	if role.Name != "juror" || err == nil {
 		return TurnLog{}, false, nil
 	}
@@ -53,11 +64,11 @@ func (r *Runner) handleOpportunityResponseError(
 		return TurnLog{}, false, nil
 	}
 	if isCandidateJurorOpportunity(opportunity) {
-		log, handleErr := r.handleCandidateJurorTimeout(turnIndex, opportunity, model, jurorID, err)
+		log, handleErr := r.handleCandidateJurorTimeoutContext(ctx, turnIndex, opportunity, model, jurorID, err)
 		return log, true, handleErr
 	}
 	if isDeliberationJurorOpportunity(opportunity) {
-		log, handleErr := r.handleDeliberatingJurorTimeout(turnIndex, opportunity, model, jurorID, err)
+		log, handleErr := r.handleDeliberatingJurorTimeoutContext(ctx, turnIndex, opportunity, model, jurorID, err)
 		return log, true, handleErr
 	}
 	return TurnLog{}, false, nil
@@ -70,8 +81,19 @@ func (r *Runner) handleCandidateJurorTimeout(
 	jurorID string,
 	cause error,
 ) (TurnLog, error) {
+	return r.handleCandidateJurorTimeoutContext(context.Background(), turnIndex, opportunity, model, jurorID, cause)
+}
+
+func (r *Runner) handleCandidateJurorTimeoutContext(
+	ctx context.Context,
+	turnIndex int,
+	opportunity leanOpportunity,
+	model string,
+	jurorID string,
+	cause error,
+) (TurnLog, error) {
 	transcript := make([]map[string]any, 0, 2)
-	timeoutRes, err := r.executeAction(turnIndex, 1, "system", "process_juror_timeout", map[string]any{"juror_id": jurorID})
+	timeoutRes, err := r.executeActionContext(ctx, turnIndex, 1, "system", "process_juror_timeout", map[string]any{"juror_id": jurorID})
 	if err != nil {
 		return TurnLog{}, err
 	}
@@ -87,7 +109,7 @@ func (r *Runner) handleCandidateJurorTimeout(
 	})
 	replacementNumber := nextJurorNumber(r.state)
 	replacementID := fmt.Sprintf("J%d", replacementNumber)
-	addRes, err := r.executeAction(turnIndex, 2, "clerk", "add_juror", map[string]any{
+	addRes, err := r.executeActionContext(ctx, turnIndex, 2, "clerk", "add_juror", map[string]any{
 		"juror_id": replacementID,
 		"name":     fmt.Sprintf("Juror %d", replacementNumber),
 	})
@@ -132,8 +154,19 @@ func (r *Runner) handleDeliberatingJurorTimeout(
 	jurorID string,
 	cause error,
 ) (TurnLog, error) {
+	return r.handleDeliberatingJurorTimeoutContext(context.Background(), turnIndex, opportunity, model, jurorID, cause)
+}
+
+func (r *Runner) handleDeliberatingJurorTimeoutContext(
+	ctx context.Context,
+	turnIndex int,
+	opportunity leanOpportunity,
+	model string,
+	jurorID string,
+	cause error,
+) (TurnLog, error) {
 	transcript := make([]map[string]any, 0, 1)
-	timeoutRes, err := r.executeAction(turnIndex, 1, "system", "process_juror_timeout", map[string]any{"juror_id": jurorID})
+	timeoutRes, err := r.executeActionContext(ctx, turnIndex, 1, "system", "process_juror_timeout", map[string]any{"juror_id": jurorID})
 	if err != nil {
 		return TurnLog{}, err
 	}

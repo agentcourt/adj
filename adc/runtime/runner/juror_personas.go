@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/agentcourt/adj/common/modelrequest"
-	"github.com/agentcourt/adj/common/openai"
 	"github.com/agentcourt/adj/common/persona"
 )
 
@@ -251,7 +250,7 @@ func (r *Runner) jurorOpportunityRequestSpec(opportunity leanOpportunity) *model
 	return &spec
 }
 
-func (r *Runner) jurorResponseClient(model string) (*openai.Client, error) {
+func (r *Runner) jurorResponseClient(model string) (ResponseClient, error) {
 	model = strings.TrimSpace(model)
 	if model == "" {
 		if r.client == nil {

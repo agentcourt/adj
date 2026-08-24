@@ -111,25 +111,55 @@ func builtinCourtPath(name string) (string, bool) {
 }
 
 func resolveBuiltinCourtPath(rel string) string {
-	rel = filepath.FromSlash(rel)
 	cwd, err := os.Getwd()
 	if err != nil {
-		return rel
+		return filepath.FromSlash(rel)
+	}
+	return resolveBuiltinCourtPathFrom(cwd, rel)
+}
+
+func resolveBuiltinCourtPathFrom(start string, rel string) string {
+	rel = filepath.FromSlash(rel)
+	base, err := filepath.Abs(filepath.Clean(start))
+	if err != nil {
+		base = filepath.Clean(start)
+	}
+	moduleRoot := nearestCourtModuleRoot(base)
+	searchLimit := base
+	if moduleRoot != "" {
+		searchLimit = moduleRoot
 	}
 	for {
 		for _, candidate := range []string{
-			filepath.Join(cwd, rel),
-			filepath.Join(cwd, "adc", rel),
+			filepath.Join(base, rel),
+			filepath.Join(base, "adc", rel),
 		} {
 			if _, err := os.Stat(candidate); err == nil {
 				return candidate
 			}
 		}
-		parent := filepath.Dir(cwd)
-		if parent == cwd {
+		if base == searchLimit {
 			return rel
 		}
-		cwd = parent
+		parent := filepath.Dir(base)
+		if parent == base {
+			return rel
+		}
+		base = parent
+	}
+}
+
+func nearestCourtModuleRoot(start string) string {
+	base := filepath.Clean(start)
+	for {
+		if _, err := os.Stat(filepath.Join(base, "go.mod")); err == nil {
+			return base
+		}
+		parent := filepath.Dir(base)
+		if parent == base {
+			return ""
+		}
+		base = parent
 	}
 }
 

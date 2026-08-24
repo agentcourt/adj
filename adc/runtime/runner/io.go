@@ -19,8 +19,14 @@ func (r *Runner) persistActionEvent(
 	payload map[string]any,
 	res map[string]any,
 ) error {
-	if err := r.store.AppendEvent(r.cfg.RunID, turnIndex, stepIndex, actorRole, actionType, payload, res); err != nil {
-		return err
+	if r.store == nil {
+		if !r.allowNoStorePersistence {
+			return fmt.Errorf("persist action event: runner store is nil")
+		}
+	} else {
+		if err := r.store.AppendEvent(r.cfg.RunID, turnIndex, stepIndex, actorRole, actionType, payload, res); err != nil {
+			return err
+		}
 	}
 	if r.cfg.EventsPath == "" {
 		return nil
@@ -45,8 +51,14 @@ func (r *Runner) persistAgentEvent(
 	payload map[string]any,
 ) error {
 	stepIndex := -sequence
-	if err := r.store.AppendEvent(r.cfg.RunID, turnIndex, stepIndex, actorRole, eventType, payload, map[string]any{}); err != nil {
-		return err
+	if r.store == nil {
+		if !r.allowNoStorePersistence {
+			return fmt.Errorf("persist agent event: runner store is nil")
+		}
+	} else {
+		if err := r.store.AppendEvent(r.cfg.RunID, turnIndex, stepIndex, actorRole, eventType, payload, map[string]any{}); err != nil {
+			return err
+		}
 	}
 	if r.cfg.EventsPath == "" {
 		return nil

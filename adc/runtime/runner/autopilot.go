@@ -41,7 +41,7 @@ func (r *Runner) runAutopilot(ctx context.Context, startTurnIndex int) ([]TurnLo
 			}
 			return logs, nil
 		}
-		resp, err := r.lean.NextOpportunity(r.state, rolesPayload, loop.MaxStepsPerTurn)
+		resp, err := r.lean.NextOpportunityContext(ctx, r.state, rolesPayload, loop.MaxStepsPerTurn)
 		if err != nil {
 			return nil, fmt.Errorf("lean next_opportunity failed: %w", err)
 		}
@@ -81,32 +81,14 @@ func (r *Runner) runAutopilot(ctx context.Context, startTurnIndex int) ([]TurnLo
 		); err != nil {
 			return nil, fmt.Errorf("write agent call: %w", err)
 		}
-		var turnLog TurnLog
-		if opportunity.DeterministicAction != nil {
-			turn := spec.TurnSpec{
-				Role:                opportunity.Role,
-				Prompt:              opportunity.Objective,
-				MaxSteps:            opportunity.StepBudget,
-				AllowedTools:        opportunity.AllowedTools,
-				DeterministicAction: opportunity.DeterministicAction,
-				RequireSuccess:      true,
-			}
-			turnLog, err = r.executeTurn(ctx, turnIndex, role, turn, opportunity.AllowedTools)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			if r.roleIsExternal(role.Name) {
-				turnLog, err = r.executeExternalOpportunityTurn(ctx, turnIndex, role, opportunity, rolesPayload, stateVersion)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				turnLog, err = r.executeOpportunityTurn(ctx, turnIndex, role, opportunity, rolesPayload, stateVersion)
-				if err != nil {
-					return nil, err
-				}
-			}
+		turnLog, err := r.ExecuteDirectOpportunity(ctx, DirectOpportunityRequest{
+			Opportunity:  opportunityPayload,
+			StateVersion: stateVersion,
+			RolesPayload: rolesPayload,
+			TurnIndex:    turnIndex,
+		})
+		if err != nil {
+			return nil, err
 		}
 		turnLog.Source = "next_opportunity"
 		turnLog.ActionID = opportunity.OpportunityID
@@ -136,14 +118,23 @@ func parseLeanOpportunity(payload map[string]any) (leanOpportunity, error) {
 	if role == "" {
 		return leanOpportunity{}, fmt.Errorf("lean next_opportunity returned missing role")
 	}
-	allowedRaw, _ := payload["allowed_tools"].([]any)
-	allowed := make([]string, 0, len(allowedRaw))
-	for _, item := range allowedRaw {
-		value := strings.TrimSpace(stringOrDefault(item, ""))
-		if value == "" {
-			continue
+	var allowed []string
+	switch allowedRaw := payload["allowed_tools"].(type) {
+	case []any:
+		allowed = make([]string, 0, len(allowedRaw))
+		for _, item := range allowedRaw {
+			value := strings.TrimSpace(stringOrDefault(item, ""))
+			if value != "" {
+				allowed = append(allowed, value)
+			}
 		}
-		allowed = append(allowed, value)
+	case []string:
+		allowed = make([]string, 0, len(allowedRaw))
+		for _, item := range allowedRaw {
+			if value := strings.TrimSpace(item); value != "" {
+				allowed = append(allowed, value)
+			}
+		}
 	}
 	if len(allowed) == 0 {
 		return leanOpportunity{}, fmt.Errorf("lean next_opportunity returned empty allowed_tools opportunity_id=%s", opportunityID)

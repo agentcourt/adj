@@ -309,3 +309,25 @@ Review found that a provider could return a successful response after parent can
 The canonical repository is `github.com/agentcourt/adj`.  The Go module declaration and every internal import use that path.  A tracked-file search found no remaining reference to the former module path.
 
 `../verification/go-test -count=1 ./...`, `go vet -p=1 ./...`, and `go build -p=1 ./...` passed after the module-path change.  Go printed the existing warning that `GOPATH` and `GOROOT` both name `/home/somebody/go`.  Source formatting and `git diff --check` complete the repository verification.
+
+## Evaluation-system restoration
+
+The repository split deleted the behavior-eval and model-pool systems before the first `adj` commit.  The deletion also removed 63 evaluator tests and marked the planned assertion preservation complete without a corresponding migration.  The restoration source is old `adjudication` commit `dde9b3fe3b83e0139534da340cb17d5e4522f256` on `tidy`, the last maintained form of both systems.
+
+The maintained layout separates actor behavior evaluation from provider and pool construction.  `evals/` contains ADC fixtures, prompt candidates, plans, and analyses, while `adc/runtime/eval/` contains the Lean-backed runners and scorers.  `model-pool/` contains provider inventory, model evaluation, deterministic scoring, embeddings, clustering, and pool sampling, and the runtime default remains `common/data/personas/pool.jsonl` until a generated replacement receives separate review.
+
+Current ADC changed after the recovered evaluators were written.  The port uses the current prompt catalog and the same opportunity executor as an ADC case, including reference-tool calls, correction turns, Lean `apply_decision`, and Lean `step`.  Each result records every provider exchange, the turn log, final state, provider usage and cost accounting, and separate Lean and Step acceptance.  Provider, prompt, Lean-process, filesystem, and persistence errors abort a run, while a bounded invalid model turn produces a typed procedural failure that the scorer marks invalid.  The recovered `adc juror` and `adc llm` commands provide the pool-member and direct-request probes used beside the eval suites.
+
+Rules 11, 37, and 58 provide deterministic actions in their production Lean opportunities.  Their default evals execute those actions without initializing a model provider, and each suite rejects a missing deterministic action.  The explicit `--counterfactual-model` option removes the action from a cloned opportunity for prompt research and records that execution mode in every result and summary.
+
+Prompt catalog construction does not resolve the default court.  A supplied nonzero court profile is validated during renderer construction, while `JudgeRole` and Rule 12 schema construction resolve an omitted court and return lookup failures.  Juror and LLM probes can therefore load and override their catalog prompts from a working directory that has no ADC court asset.
+
+The complete Go test suite, the race-enabled evaluator, runner, Lean, and CLI suites, `go vet -p=1 ./...`, `go build -p=1 ./...`, and `make -C adc prove` passed.  Every production suite passed a one-fixture Lean-backed dry run, all sixteen candidate prompts completed their full fixture sets, and the 30 hard voir-dire fixtures passed.  The deterministic-rule candidates used counterfactual execution.  All eight supported rescore paths passed without runtime initialization, and a prompt-catalog override appeared in the recorded model input.  A live one-fixture voir-dire run completed through OpenRouter with one accepted tool call, one accepted Lean decision, one accepted Step, and complete provider accounting.
+
+- [x] Restore the maintained source trees and related probe commands.
+- [x] Port evaluator prompts, schemas, command context, and prompt overrides.
+- [x] Pass focused and complete Go verification.
+- [x] Pass every Lean-backed dry-run suite and rescore path.
+- [ ] Pass model-pool validation, audit, mock scoring, and pipeline construction.
+- [ ] Pass bounded live ADC and complete model-pool runs.
+- [ ] Review the final file set, documentation, and generated ignored output.

@@ -1,0 +1,8 @@
+# Generated run data and credentials.
+# This directory is for source tooling, schemas, question sets, rubrics,
+# prompts, personas, configs, variant snapshots, and docs.
+
+/results/*
+!/results/.gitkeep
+
+/secrets/

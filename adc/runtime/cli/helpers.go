@@ -54,6 +54,27 @@ func (f *promptFileFlag) Set(value string) error {
 	return f.assignments.Set(id + "=" + path)
 }
 
+type deferredPromptFileFlag struct {
+	assignments promptfile.Assignments
+}
+
+func (f *deferredPromptFileFlag) String() string {
+	if f == nil {
+		return ""
+	}
+	return f.assignments.String()
+}
+
+func (f *deferredPromptFileFlag) Set(value string) error {
+	id, path, ok := strings.Cut(value, "=")
+	id = strings.TrimSpace(id)
+	path = strings.TrimSpace(path)
+	if !ok || id == "" || path == "" {
+		return fmt.Errorf("prompt file must use ID=PATH")
+	}
+	return f.assignments.Set(id + "=" + path)
+}
+
 func copyPromptFiles(files promptFileFlag) map[string]string {
 	return files.assignments.Values()
 }
@@ -65,6 +86,34 @@ func resolvePromptOptions(promptDir string, files promptFileFlag) (string, map[s
 		return "", nil, err
 	}
 	return promptDir, promptFiles, nil
+}
+
+func resolveDeferredPromptOptions(promptDir string, files deferredPromptFileFlag) (string, map[string]string, error) {
+	promptDir = strings.TrimSpace(promptDir)
+	promptFiles := files.assignments.Values()
+	if err := validatePromptFileIDs(promptFiles); err != nil {
+		return "", nil, err
+	}
+	if _, err := adcprompts.Load(adcprompts.Options{PromptDir: promptDir, PromptFiles: promptFiles}); err != nil {
+		return "", nil, err
+	}
+	return promptDir, promptFiles, nil
+}
+
+func newProbePromptRenderer(promptDir string, files promptFileFlag) (*runner.PromptRenderer, error) {
+	return runner.NewPromptRenderer(runner.PromptRendererOptions{
+		PromptDir:   strings.TrimSpace(promptDir),
+		PromptFiles: copyPromptFiles(files),
+	})
+}
+
+func validatePromptFileIDs(promptFiles map[string]string) error {
+	for id := range promptFiles {
+		if !adcprompts.Known(id) {
+			return fmt.Errorf("unknown ADC prompt id %q", id)
+		}
+	}
+	return nil
 }
 
 func (f *stringListFlag) Set(value string) error {
@@ -85,6 +134,23 @@ func parseFlagSet(fs *flag.FlagSet, args []string) (bool, error) {
 		return false, fmt.Errorf("flag output is not an error-tracking writer")
 	}
 	return cliio.Parse(fs, args, output)
+}
+
+func loadPromptText(prompt string, inputFile string) (string, error) {
+	if strings.TrimSpace(prompt) != "" && strings.TrimSpace(inputFile) != "" {
+		return "", fmt.Errorf("--prompt and --input-file are mutually exclusive")
+	}
+	if strings.TrimSpace(prompt) != "" {
+		return prompt, nil
+	}
+	if strings.TrimSpace(inputFile) == "" {
+		return "", nil
+	}
+	raw, err := os.ReadFile(inputFile)
+	if err != nil {
+		return "", fmt.Errorf("read prompt file: %w", err)
+	}
+	return string(raw), nil
 }
 
 func writeJSONFile(path string, v any) error {
@@ -171,11 +237,22 @@ func defaultEngineCommand() string {
 }
 
 func defaultADCPath(parts ...string) string {
-	rel := filepath.Join(parts...)
 	cwd, err := os.Getwd()
 	if err != nil {
-		return rel
+		return filepath.Join(parts...)
 	}
+	return defaultADCPathFrom(cwd, parts...)
+}
+
+func defaultADCPathFrom(start string, parts ...string) string {
+	rel := filepath.Join(parts...)
+	start = absoluteCleanPath(start)
+	moduleRoot := nearestGoModuleRoot(start)
+	searchLimit := start
+	if moduleRoot != "" {
+		searchLimit = moduleRoot
+	}
+	cwd := start
 	for {
 		for _, candidate := range []string{
 			filepath.Join(cwd, rel),
@@ -184,6 +261,9 @@ func defaultADCPath(parts ...string) string {
 			if fileExists(candidate) {
 				return candidate
 			}
+		}
+		if cwd == searchLimit {
+			return rel
 		}
 		parent := filepath.Dir(cwd)
 		if parent == cwd {
@@ -236,14 +316,15 @@ func fileExists(path string) bool {
 }
 
 func locateCommonRootFrom(start string) string {
-	base := filepath.Clean(strings.TrimSpace(start))
-	if base == "" {
+	originalStart := strings.TrimSpace(start)
+	if originalStart == "" {
 		return filepath.FromSlash("../common")
 	}
-	if !filepath.IsAbs(base) {
-		if absBase, err := filepath.Abs(base); err == nil {
-			base = absBase
-		}
+	base := absoluteCleanPath(originalStart)
+	moduleRoot := nearestGoModuleRoot(base)
+	searchLimit := base
+	if moduleRoot != "" {
+		searchLimit = moduleRoot
 	}
 	for {
 		candidate := filepath.Join(base, "common")
@@ -253,13 +334,40 @@ func locateCommonRootFrom(start string) string {
 		if filepath.Base(base) == "common" && (fileExists(filepath.Join(base, "data", "personas", "pool.jsonl")) || fileExists(filepath.Join(base, "etc", "personas.csv"))) {
 			return base
 		}
+		if base == searchLimit {
+			break
+		}
 		next := filepath.Dir(base)
 		if next == base {
 			break
 		}
 		base = next
 	}
-	return filepath.Clean(filepath.Join(start, filepath.FromSlash("../common")))
+	return filepath.Clean(filepath.Join(originalStart, filepath.FromSlash("../common")))
+}
+
+func nearestGoModuleRoot(start string) string {
+	base := absoluteCleanPath(start)
+	for {
+		if fileExists(filepath.Join(base, "go.mod")) {
+			return base
+		}
+		next := filepath.Dir(base)
+		if next == base {
+			return ""
+		}
+		base = next
+	}
+}
+
+func absoluteCleanPath(path string) string {
+	path = filepath.Clean(strings.TrimSpace(path))
+	if !filepath.IsAbs(path) {
+		if absolute, err := filepath.Abs(path); err == nil {
+			return absolute
+		}
+	}
+	return path
 }
 
 func resolveDefault(value string, fallback string) string {

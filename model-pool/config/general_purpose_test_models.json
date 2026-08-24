@@ -1,0 +1,11 @@
+{
+  "source": "adjudication-dev context-200k council pool",
+  "purpose": "small v0 real-data test set for deliberation_score plus operational metrics",
+  "models": [
+    "openrouter://openai/gpt-4.1-mini",
+    "openrouter://google/gemini-2.0-flash-001",
+    "openrouter://mistralai/mistral-large-2512",
+    "openrouter://anthropic/claude-sonnet-4.6",
+    "openrouter://qwen/qwen3-max-thinking"
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "adj model-pool item",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "id",
+    "category",
+    "capability",
+    "mode",
+    "prompt",
+    "allowed_tools",
+    "answer_type",
+    "gold",
+    "rubric",
+    "source_note"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(core20|deliberation)\\."
+    },
+    "eval_family": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "capability": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "mode": {
+      "enum": ["single_turn", "tool_record"]
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "allowed_tools": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "answer_type": {
+      "enum": ["multiple_choice", "short_answer", "adjudication_vote"]
+    },
+    "choices": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "gold": {},
+    "record_dir": {"type": "string"},
+    "required_citations": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "vote_options": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "rubric": {"type": "object"},
+    "source_note": {"type": "string"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"mode": {"const": "tool_record"}}},
+      "then": {
+        "required": ["record_dir", "required_citations", "vote_options"],
+        "properties": {"answer_type": {"const": "adjudication_vote"}}
+      }
+    },
+    {
+      "if": {"properties": {"mode": {"const": "single_turn"}}},
+      "then": {
+        "properties": {
+          "allowed_tools": {"maxItems": 0},
+          "answer_type": {"enum": ["multiple_choice", "short_answer"]}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"answer_type": {"const": "multiple_choice"}}},
+      "then": {
+        "required": ["choices"],
+        "properties": {
+          "choices": {"minItems": 4, "maxItems": 4},
+          "gold": {"enum": ["A", "B", "C", "D"]}
+        }
+      }
+    }
+  ]
+}

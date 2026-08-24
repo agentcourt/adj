@@ -1,0 +1,119 @@
+{
+  "canonical_slug": "z-ai/glm-4.6-20251208",
+  "catalog_snapshot_id": "model-roots-10-more-20260529T140914Z",
+  "context_length": 131072,
+  "endpoint_id": null,
+  "endpoint_index": 1,
+  "endpoint_model_id": "z-ai/glm-4.6v",
+  "endpoint_model_name": "Z.ai: GLM 4.6V",
+  "endpoint_model_permaslug": null,
+  "endpoint_name": "Novita | z-ai/glm-4.6-20251208",
+  "endpoint_pricing": {
+    "completion": "0.0000009",
+    "discount": 0,
+    "input_cache_read": "0.000000055",
+    "prompt": "0.0000003"
+  },
+  "endpoint_raw_path": "raw/endpoints/z-ai_glm-4.6v-425251ffdffa.json",
+  "endpoint_tag": "novita/bf16",
+  "endpoint_variant_id": "86ab3e0e692e3760dcf82259",
+  "endpoint_variant_key": "model-roots-10-more-20260529T140914Z | z-ai/glm-4.6v | 1 | Novita | novita/bf16 | Novita | z-ai/glm-4.6-20251208 | bf16",
+  "hugging_face_id": "zai-org/GLM-4.6V",
+  "input_modalities": [
+    "image",
+    "text",
+    "video"
+  ],
+  "instruct_type": null,
+  "knowledge_cutoff": null,
+  "latency_last_30m": {
+    "p50": 2829,
+    "p75": 5694.25,
+    "p90": 9817.7,
+    "p99": 15614.649999999998
+  },
+  "max_completion_tokens": 32768,
+  "max_prompt_tokens": null,
+  "modality": "text+image+video->text",
+  "model_context_length": 131072,
+  "model_created": 1765207462,
+  "model_default_parameters": {
+    "frequency_penalty": null,
+    "temperature": 0.8,
+    "top_p": 0.6
+  },
+  "model_description": "GLM-4.6V is a large multimodal model designed for high-fidelity visual understanding and long-context reasoning across images, documents, and mixed media. It supports up to 128K tokens, processes complex page layouts...",
+  "model_name": "Z.ai: GLM 4.6V",
+  "model_per_request_limits": null,
+  "model_pricing": {
+    "completion": "0.0000009",
+    "input_cache_read": "0.00000005",
+    "prompt": "0.0000003"
+  },
+  "model_raw_path": "raw/models.json",
+  "model_supported_parameters": [
+    "frequency_penalty",
+    "include_reasoning",
+    "max_tokens",
+    "presence_penalty",
+    "reasoning",
+    "repetition_penalty",
+    "response_format",
+    "seed",
+    "stop",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_k",
+    "top_p"
+  ],
+  "model_supported_voices": null,
+  "model_top_provider": {
+    "context_length": 131072,
+    "is_moderated": false,
+    "max_completion_tokens": 24000
+  },
+  "openrouter_model_id": "z-ai/glm-4.6v",
+  "output_modalities": [
+    "text"
+  ],
+  "pricing_completion": "0.0000009",
+  "pricing_discount": 0,
+  "pricing_input_cache_read": "0.000000055",
+  "pricing_input_cache_write": null,
+  "pricing_prompt": "0.0000003",
+  "provider_name": "Novita",
+  "quantization": "bf16",
+  "raw_endpoint_sha256": "a72e09e9716c39f000971139c4ed79b0ba139a5066275523380585e5a844dd8f",
+  "raw_model_sha256": "271bac79ac7a3b469614d706d8666fe2af51535329c15b2ee6962b6cc2eb0b72",
+  "snapshot_timestamp_utc": "2026-05-29T14:09:39.983842Z",
+  "status": 0,
+  "supported_parameters": [
+    "reasoning",
+    "include_reasoning",
+    "max_tokens",
+    "temperature",
+    "top_p",
+    "stop",
+    "frequency_penalty",
+    "presence_penalty",
+    "seed",
+    "top_k",
+    "repetition_penalty",
+    "tools",
+    "tool_choice",
+    "response_format"
+  ],
+  "supports_implicit_caching": false,
+  "throughput_last_30m": {
+    "p50": 24.5,
+    "p75": 30.75,
+    "p90": 41.7,
+    "p99": 47.31
+  },
+  "tokenizer": "Other",
+  "unknown_quantization_endpoint_variant": false,
+  "uptime_last_1d": 97.51157407407408,
+  "uptime_last_30m": null,
+  "uptime_last_5m": null
+}

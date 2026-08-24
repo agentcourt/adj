@@ -1,0 +1,112 @@
+{
+  "canonical_slug": "arcee-ai/trinity-mini-20251201",
+  "catalog_snapshot_id": "model-roots-sample-5-more-20260529T1136Z",
+  "combined_set_id": "model-roots-10-combined-variants-20260529T1137Z",
+  "context_length": 131072,
+  "endpoint_id": null,
+  "endpoint_index": 0,
+  "endpoint_model_id": "arcee-ai/trinity-mini",
+  "endpoint_model_name": "Arcee AI: Trinity Mini",
+  "endpoint_model_permaslug": null,
+  "endpoint_name": "Clarifai | arcee-ai/trinity-mini-20251201",
+  "endpoint_pricing": {
+    "completion": "0.00000015",
+    "discount": 0,
+    "prompt": "0.000000045"
+  },
+  "endpoint_raw_path": "raw/endpoints/arcee-ai_trinity-mini-698b8a0a5e9e.json",
+  "endpoint_tag": "clarifai/bf16",
+  "endpoint_variant_id": "c14397378cbcfdb9348ddc6e",
+  "endpoint_variant_key": "model-roots-sample-5-more-20260529T1136Z | arcee-ai/trinity-mini | 0 | Clarifai | clarifai/bf16 | Clarifai | arcee-ai/trinity-mini-20251201 | bf16",
+  "hugging_face_id": "arcee-ai/Trinity-Mini",
+  "input_modalities": [
+    "text"
+  ],
+  "instruct_type": null,
+  "knowledge_cutoff": null,
+  "latency_last_30m": {
+    "p50": 571,
+    "p75": 1048,
+    "p90": 1281,
+    "p99": 1406.7999999999997
+  },
+  "max_completion_tokens": 131072,
+  "max_prompt_tokens": null,
+  "modality": "text->text",
+  "model_context_length": 131072,
+  "model_created": 1764601720,
+  "model_default_parameters": {
+    "frequency_penalty": null,
+    "temperature": 0.15,
+    "top_p": 0.75
+  },
+  "model_description": "Trinity Mini is a 26B-parameter (3B active) sparse mixture-of-experts language model featuring 128 experts with 8 active per token. Engineered for efficient reasoning over long contexts (131k) with robust function...",
+  "model_name": "Arcee AI: Trinity Mini",
+  "model_per_request_limits": null,
+  "model_pricing": {
+    "completion": "0.00000015",
+    "prompt": "0.000000045"
+  },
+  "model_raw_path": "raw/models.json",
+  "model_supported_parameters": [
+    "include_reasoning",
+    "max_completion_tokens",
+    "max_tokens",
+    "reasoning",
+    "response_format",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_p"
+  ],
+  "model_supported_voices": null,
+  "model_top_provider": {
+    "context_length": 131072,
+    "is_moderated": false,
+    "max_completion_tokens": 131072
+  },
+  "openrouter_model_id": "arcee-ai/trinity-mini",
+  "output_modalities": [
+    "text"
+  ],
+  "pricing_completion": "0.00000015",
+  "pricing_discount": 0,
+  "pricing_input_cache_read": null,
+  "pricing_input_cache_write": null,
+  "pricing_prompt": "0.000000045",
+  "provider_name": "Clarifai",
+  "quantization": "bf16",
+  "raw_endpoint_sha256": "b0374e513b9e2c0ebbea449a461569808609f53fa2f9b42dd56d409d120b4a11",
+  "raw_model_sha256": "18f5149fa19ac2782232f15a6ef05bf1b1e0acfab141b3f393d02b500ca4df2e",
+  "snapshot_timestamp_utc": "2026-05-29T11:36:13.513514Z",
+  "source_variant_path": "results/model-roots-sample-5-more-20260529T1136Z/endpoint_variants.jsonl",
+  "source_variant_set": "next_5_roots",
+  "status": 0,
+  "supported_parameters": [
+    "reasoning",
+    "include_reasoning",
+    "temperature",
+    "max_tokens",
+    "top_p",
+    "tool_choice",
+    "tools",
+    "response_format",
+    "structured_outputs",
+    "stop",
+    "max_completion_tokens"
+  ],
+  "supports_implicit_caching": false,
+  "throughput_last_30m": {
+    "p50": 125,
+    "p75": 183,
+    "p90": 195,
+    "p99": 199
+  },
+  "tokenizer": "Other",
+  "unknown_quantization_endpoint_variant": false,
+  "uptime_last_1d": 99.9759961593855,
+  "uptime_last_30m": null,
+  "uptime_last_5m": null
+}

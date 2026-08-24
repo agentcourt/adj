@@ -1,0 +1,7 @@
+# Generated eval run output.
+# This directory is for fixtures, prompt candidates, plans, and analysis.
+
+!**/analysis.md
+
+/out/*
+!/out/.gitkeep

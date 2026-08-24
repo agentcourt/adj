@@ -1,0 +1,21 @@
+{
+  "evidence": [
+    {
+      "file": "E1.md",
+      "id": "E1",
+      "title": "Approval memo"
+    },
+    {
+      "file": "E2.md",
+      "id": "E2",
+      "title": "Signature page"
+    },
+    {
+      "file": "E3.md",
+      "id": "E3",
+      "title": "Delegation note"
+    }
+  ],
+  "record_id": "tool.003",
+  "title": "Grant agreement signing record"
+}

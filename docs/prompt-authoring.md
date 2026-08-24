@@ -26,7 +26,7 @@ The loader validates the source before inserting runtime values.  A proposition,
 
 ## Core catalogs
 
-The following tables list every Simple and Quick core entry.  Paths are relative to the procedure directory supplied through `--prompt-dir`, and the conventional path prepends `prompts/simple/` or `prompts/quick/`.  The core catalogs contain six Simple entries, 23 Quick entries, 45 AAR entries, 45 AARD entries, and 208 ADC entries.  A dash in either table means that the entry accepts no replacement token.
+The following tables list every Simple and Quick core entry.  Paths are relative to the procedure directory supplied through `--prompt-dir`, and the conventional path prepends `prompts/simple/` or `prompts/quick/`.  The core catalogs contain six Simple entries, 23 Quick entries, 45 AAR entries, 45 AARD entries, and 210 ADC entries.  A dash in either table means that the entry accepts no replacement token.
 
 | Simple ID | Relative path | Available tokens |
 | --- | --- | --- |
@@ -69,7 +69,28 @@ Quick's shared lawyer instruction treats propositions, arguments, documents, res
 
 The [AAR manual](../arb/manual.md#prompt-configuration) lists all 45 AAR core IDs, relative paths, and tokens.  The [AARD manual](../arbd/manual.md#prompt-configuration) provides the corresponding 45-entry AARD catalog, including its question, judgment-standard, and council-answer entries.  Both catalogs cover attorney composition, phase instructions, evidence and text limits, direct and external council prompts, the five direct-council correction components, observers, every core tool description, and the `send_work_notes` property description.
 
-The [ADC prompt catalog](../adc/docs/prompts.md) lists all 208 ADC IDs, paths, and tokens through its 64-entry fixed table, 92-name direct-tool set, and 52 role-specific or shared tool cards.  Its fixed entries include the `strategy.proposition.proponent` and `strategy.proposition.opponent` prompts, corrections, tool-result guidance, case-file attachment text, and the three `import_case_file` schema-property descriptions.  The catalog also covers complaint and case preparation, generated roles, direct and external turns, reports, tool descriptions, and tool guidance.
+The [ADC prompt catalog](../adc/docs/prompts.md) lists all 210 ADC IDs, paths, and tokens through its 66-entry fixed table, 92-name direct-tool set, and 52 role-specific or shared tool cards.  Its fixed entries include the `strategy.proposition.proponent` and `strategy.proposition.opponent` prompts, the `probe.juror.identity` and `probe.juror.tool-check` probe prompts, corrections, tool-result guidance, case-file attachment text, and the three `import_case_file` schema-property descriptions.  The catalog also covers complaint and case preparation, generated roles, direct and external turns, reports, tool descriptions, and tool guidance.
+
+ADC behavior evals use the same catalog and accept the same `--prompt-dir` and repeated `--prompt-file ID=PATH` options.  A suite candidate supplied through `--opportunity-prompt-file` replaces the objective in a cloned opportunity before the current `runtime.opportunity` and `runtime.turn` entries render the model request.  Rules 11, 37, and 58 require `--counterfactual-model` for candidate evaluation because their production Lean opportunities specify deterministic judge actions; every other suite uses its production model opportunity by default.
+
+### ADC eval candidate templates
+
+An eval candidate uses literal `{{token}}` replacement and may omit any supported token.  Every suite supports `{{production_objective}}`, `{{actor_message}}`, `{{phase}}`, `{{allowed_tools}}`, `{{fixture_id}}`, `{{tier}}`, `{{case_theme}}`, and `{{context_notes}}`; the table lists its additional tokens.  ADC rejects an unknown token, an unmatched `{{`, or an empty rendered candidate before making the fixture's model request.
+
+| Eval suite | Additional candidate tokens |
+| --- | --- |
+| Voir dire question | `{{question_family}}`, `{{asked_by}}`, `{{juror_id}}`, `{{question}}`, `{{exchange_id}}` |
+| For-cause challenge | `{{issue_family}}`, `{{challenged_by}}`, `{{juror_id}}`, `{{voir_dire_record}}`, `{{challenge_grounds}}` |
+| Rule 11 | `{{issue_family}}`, `{{movant}}`, `{{target_party}}`, `{{challenged_filing}}`, `{{filing_text}}`, `{{notice_text}}`, `{{notice_served_at}}`, `{{motion_filed_at}}`, `{{correction_text}}`, `{{motion_text}}`, `{{opposition_text}}` |
+| Rule 12 | `{{issue_family}}`, `{{ground}}`, `{{complaint_text}}`, `{{motion_text}}`, `{{opposition_text}}`, `{{reply_text}}` |
+| Rule 37 | `{{issue_family}}`, `{{movant}}`, `{{target_party}}`, `{{discovery_type}}`, `{{set_index}}`, `{{request_text}}`, `{{response_text}}`, `{{meet_and_confer_text}}`, `{{motion_text}}`, `{{opposition_text}}`, `{{reply_text}}` |
+| Rule 51 | `{{issue_family}}`, `{{claim_summary}}`, `{{plaintiff_instruction}}`, `{{defendant_instruction}}`, `{{plaintiff_objection}}`, `{{defendant_objection}}`, `{{evidence_summary}}` |
+| Rule 52 | `{{issue_family}}`, `{{complaint_text}}`, `{{answer_text}}`, `{{plaintiff_theory}}`, `{{defendant_theory}}`, `{{admitted_evidence}}`, `{{excluded_evidence}}`, `{{plaintiff_closing}}`, `{{defendant_closing}}` |
+| Rule 56 | `{{issue_family}}`, `{{moving_party}}`, `{{opposing_party}}`, `{{motion_scope}}`, `{{request_text}}`, `{{statement_of_undisputed_facts}}`, `{{evidence_refs}}`, `{{opposition_text}}`, `{{reply_text}}` |
+| Rule 58 | `{{issue_family}}`, `{{trial_mode}}`, `{{verdict_for}}`, `{{verdict_damages}}`, `{{bench_opinion_text}}`, `{{bench_judgment_amount}}`, `{{expected_claim_id}}`, `{{expected_basis}}`, `{{expected_amount}}` |
+| Rule 60 | `{{issue_family}}`, `{{judgment_summary}}`, `{{motion_ground}}`, `{{motion_text}}`, `{{opposition_text}}` |
+
+`{{production_objective}}` contains the unmodified Lean opportunity objective, while the remaining values come from the same opportunity or the selected fixture.  The renderer validates the candidate source before inserting those runtime values, so braces within a question, pleading, evidence record, or other fixture field remain literal data.  The rendered candidate becomes the `{{OBJECTIVE}}` value for `runtime.opportunity`; the production role, court rules, view, tool schemas, and tool guidance remain under their catalog IDs.
 
 ## Standalone MCP catalogs
 

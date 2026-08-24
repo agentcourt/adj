@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -113,7 +114,11 @@ func uploadedCaseFilePayload(payload map[string]any) (string, string, []byte, er
 }
 
 func (r *Runner) visibleCaseForRole(actorRole string) (map[string]any, error) {
-	resp, err := r.lean.View(r.state, actorRole)
+	return r.visibleCaseForRoleContext(context.Background(), actorRole)
+}
+
+func (r *Runner) visibleCaseForRoleContext(ctx context.Context, actorRole string) (map[string]any, error) {
+	resp, err := r.lean.ViewContext(ctx, r.state, actorRole)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +141,11 @@ func (r *Runner) visibleCaseForRole(actorRole string) (map[string]any, error) {
 }
 
 func (r *Runner) visibleCaseFilesForRole(actorRole string) ([]any, error) {
-	caseObj, err := r.visibleCaseForRole(actorRole)
+	return r.visibleCaseFilesForRoleContext(context.Background(), actorRole)
+}
+
+func (r *Runner) visibleCaseFilesForRoleContext(ctx context.Context, actorRole string) ([]any, error) {
+	caseObj, err := r.visibleCaseForRoleContext(ctx, actorRole)
 	if err != nil {
 		return nil, err
 	}
@@ -409,13 +418,17 @@ func jurorContextPayload(caseObj map[string]any, jurorID string) map[string]any 
 }
 
 func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[string]any) (ActionExecution, bool, error) {
+	return r.executeLocalActionContext(context.Background(), actorRole, actionType, payload)
+}
+
+func (r *Runner) executeLocalActionContext(ctx context.Context, actorRole, actionType string, payload map[string]any) (ActionExecution, bool, error) {
 	caseObj, _ := r.state["case"].(map[string]any)
 	if caseObj == nil {
 		return ActionExecution{}, false, fmt.Errorf("state.case missing")
 	}
 	switch actionType {
 	case "get_case":
-		visibleCase, err := r.visibleCaseForRole(actorRole)
+		visibleCase, err := r.visibleCaseForRoleContext(ctx, actorRole)
 		if err != nil {
 			return ActionExecution{}, true, err
 		}
@@ -485,7 +498,7 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 			"sha256":          hex.EncodeToString(digest[:]),
 			"size_bytes":      len(raw),
 		}
-		leanRes, err := r.stepForCertificate("import_case_file", actorRole, record)
+		leanRes, err := r.stepForCertificateContext(ctx, "import_case_file", actorRole, record)
 		if err != nil {
 			return ActionExecution{}, true, err
 		}
@@ -503,7 +516,7 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 		}
 		return ActionExecution{Result: leanRes}, true, nil
 	case "list_case_files":
-		caseFiles, err := r.visibleCaseFilesForRole(actorRole)
+		caseFiles, err := r.visibleCaseFilesForRoleContext(ctx, actorRole)
 		if err != nil {
 			return ActionExecution{}, true, err
 		}
@@ -521,7 +534,7 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 		if fileID == "" {
 			return ActionExecution{Result: map[string]any{"ok": false, "error": "file_id is required"}}, true, nil
 		}
-		visibleFiles, err := r.visibleCaseFilesForRole(actorRole)
+		visibleFiles, err := r.visibleCaseFilesForRoleContext(ctx, actorRole)
 		if err != nil {
 			return ActionExecution{}, true, err
 		}
@@ -594,7 +607,7 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 		if fileID == "" {
 			return ActionExecution{Result: map[string]any{"ok": false, "error": "file_id is required"}}, true, nil
 		}
-		visibleFiles, err := r.visibleCaseFilesForRole(actorRole)
+		visibleFiles, err := r.visibleCaseFilesForRoleContext(ctx, actorRole)
 		if err != nil {
 			return ActionExecution{}, true, err
 		}
@@ -658,7 +671,7 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 		if requestRef, _ := payload["request_ref"].(string); strings.TrimSpace(requestRef) != "" {
 			leanPayload["request_ref"] = requestRef
 		}
-		leanRes, err := r.stepForCertificate("produce_case_file", actorRole, leanPayload)
+		leanRes, err := r.stepForCertificateContext(ctx, "produce_case_file", actorRole, leanPayload)
 		if err != nil {
 			return ActionExecution{}, true, err
 		}
@@ -682,7 +695,7 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 			return ActionExecution{Result: map[string]any{"ok": false, "error": "file_id is required"}}, true, nil
 		}
 		if !hasCaseFile(caseObj, fileID) {
-			visibleFiles, err := r.visibleCaseFilesForRole(actorRole)
+			visibleFiles, err := r.visibleCaseFilesForRoleContext(ctx, actorRole)
 			if err != nil {
 				return ActionExecution{}, true, err
 			}
@@ -731,7 +744,7 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 			"admitted":    admitted,
 			"offered_at":  time.Now().UTC().Format(time.RFC3339),
 		}
-		leanRes, err := r.stepForCertificate("offer_exhibit", actorRole, leanPayload)
+		leanRes, err := r.stepForCertificateContext(ctx, "offer_exhibit", actorRole, leanPayload)
 		if err != nil {
 			return ActionExecution{}, true, err
 		}
@@ -748,7 +761,7 @@ func (r *Runner) executeLocalAction(actorRole, actionType string, payload map[st
 		}
 		return ActionExecution{Result: leanRes}, true, nil
 	case "rest_case":
-		leanRes, err := r.stepForCertificate("rest_case", actorRole, map[string]any{})
+		leanRes, err := r.stepForCertificateContext(ctx, "rest_case", actorRole, map[string]any{})
 		if err != nil {
 			return ActionExecution{}, true, err
 		}

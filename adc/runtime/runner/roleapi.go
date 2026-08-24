@@ -416,8 +416,12 @@ func (api *roleAPIServer) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	api.mu.Lock()
-	response := api.statusResponseLocked(req)
+	response, responseErr := api.statusResponseLocked(req)
 	api.mu.Unlock()
+	if responseErr != nil {
+		writeRoleAPIJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": roleAPIError("prompt_render_failed", responseErr.Error())})
+		return
+	}
 	writeRoleAPIJSON(w, http.StatusOK, response)
 }
 
@@ -451,7 +455,12 @@ func (api *roleAPIServer) handleWait(w http.ResponseWriter, r *http.Request) {
 			api.mu.Unlock()
 			return
 		}
-		response := api.statusResponseLocked(req)
+		response, responseErr := api.statusResponseLocked(req)
+		if responseErr != nil {
+			api.mu.Unlock()
+			writeRoleAPIJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": roleAPIError("prompt_render_failed", responseErr.Error())})
+			return
+		}
 		status := strings.TrimSpace(stringOrDefault(response["status"], ""))
 		if status == "active" || status == "done" || status == "failed" || !time.Now().Before(deadline) {
 			if status == "waiting" {
@@ -476,8 +485,12 @@ func (api *roleAPIServer) handleStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	api.mu.Lock()
-	response := api.statusResponseLocked(req)
+	response, responseErr := api.statusResponseLocked(req)
 	api.mu.Unlock()
+	if responseErr != nil {
+		writeRoleAPIJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": roleAPIError("prompt_render_failed", responseErr.Error())})
+		return
+	}
 	writeRoleAPIJSON(w, http.StatusOK, response)
 }
 
@@ -619,7 +632,7 @@ func (api *roleAPIServer) caseID() string {
 	return strings.TrimSpace(api.r.scenario.Name)
 }
 
-func (api *roleAPIServer) statusResponseLocked(req roleAPIRequest) map[string]any {
+func (api *roleAPIServer) statusResponseLocked(req roleAPIRequest) (map[string]any, error) {
 	api.expireActiveTurnLocked(time.Now())
 	response := map[string]any{
 		"ok":           true,
@@ -638,20 +651,24 @@ func (api *roleAPIServer) statusResponseLocked(req roleAPIRequest) map[string]an
 		}
 		response["status"] = status
 		response["result"] = api.terminalResult
-		return response
+		return response, nil
 	}
 	if api.active == nil || api.active.completed {
 		response["status"] = "waiting"
-		return response
+		return response, nil
 	}
 	response["current_turn"] = api.currentTurnPayloadLocked(api.active)
 	if !api.turnVisibleToRequest(api.active, req) {
 		response["status"] = "waiting"
-		return response
+		return response, nil
 	}
 	response["status"] = "active"
-	response["opportunity"] = api.opportunityPayloadLocked(api.active, true)
-	return response
+	opportunity, err := api.opportunityPayloadLocked(api.active, true)
+	if err != nil {
+		return nil, err
+	}
+	response["opportunity"] = opportunity
+	return response, nil
 }
 
 func (api *roleAPIServer) caseStatusLocked() map[string]any {
@@ -688,13 +705,17 @@ func (api *roleAPIServer) currentTurnPayloadLocked(turn *externalOpportunityTurn
 	return payload
 }
 
-func (api *roleAPIServer) opportunityPayloadLocked(turn *externalOpportunityTurn, includePrompt bool) map[string]any {
+func (api *roleAPIServer) opportunityPayloadLocked(turn *externalOpportunityTurn, includePrompt bool) (map[string]any, error) {
 	payload := api.currentTurnPayloadLocked(turn)
 	payload["objective"] = turn.opportunity.Objective
 	payload["actor_message"] = turn.opportunity.ActorMessage
 	payload["may_pass"] = turn.opportunity.MayPass
 	payload["allowed_legal_tools"] = append([]string{}, turn.opportunity.AllowedTools...)
-	payload["legal_tool_specs"] = api.r.legalToolSpecs(turn.opportunity.AllowedTools)
+	legalToolSpecs, err := api.r.legalToolSpecs(turn.opportunity.AllowedTools)
+	if err != nil {
+		return nil, err
+	}
+	payload["legal_tool_specs"] = legalToolSpecs
 	payload["available_tool_specs"] = append([]map[string]any(nil), turn.availableToolSpecs...)
 	payload["constraints"] = cloneJSONMap(turn.opportunity.Constraints)
 	payload["view"] = turn.view
@@ -704,7 +725,7 @@ func (api *roleAPIServer) opportunityPayloadLocked(turn *externalOpportunityTurn
 	if includePrompt {
 		payload["prompt"] = turn.prompt
 	}
-	return payload
+	return payload, nil
 }
 
 func remainingMillis(deadline time.Time) int64 {
@@ -746,7 +767,10 @@ func (api *roleAPIServer) doLocked(req roleAPIRequest) (map[string]any, int) {
 		return map[string]any{"ok": false, "error": roleAPIError("missing_tool", "tool is required")}, http.StatusBadRequest
 	}
 	if req.Tool == "case_status" {
-		response := api.statusResponseLocked(req)
+		response, err := api.statusResponseLocked(req)
+		if err != nil {
+			return map[string]any{"ok": false, "error": roleAPIError("prompt_render_failed", err.Error())}, http.StatusInternalServerError
+		}
 		response["result"] = map[string]any{"case_status": response["case_status"], "current_turn": response["current_turn"]}
 		return response, http.StatusOK
 	}
@@ -769,7 +793,11 @@ func (api *roleAPIServer) doLocked(req roleAPIRequest) (map[string]any, int) {
 		if err != nil {
 			return map[string]any{"ok": false, "error": roleAPIError("write_notes_failed", err.Error())}, http.StatusInternalServerError
 		}
-		return map[string]any{"ok": true, "case_id": api.caseID(), "status": "active", "result": result, "opportunity": api.opportunityPayloadLocked(turn, false)}, http.StatusOK
+		opportunity, err := api.opportunityPayloadLocked(turn, false)
+		if err != nil {
+			return map[string]any{"ok": false, "error": roleAPIError("prompt_render_failed", err.Error())}, http.StatusInternalServerError
+		}
+		return map[string]any{"ok": true, "case_id": api.caseID(), "status": "active", "result": result, "opportunity": opportunity}, http.StatusOK
 	case "submit_decision":
 		result, errResponse := api.submitDecisionLocked(turn, req.Arguments)
 		if errResponse != nil {
@@ -782,7 +810,11 @@ func (api *roleAPIServer) doLocked(req roleAPIRequest) (map[string]any, int) {
 		if resultOK, exists := result["ok"].(bool); exists {
 			ok = ok && resultOK
 		}
-		return map[string]any{"ok": ok, "case_id": api.caseID(), "status": "active", "result": result, "opportunity": api.opportunityPayloadLocked(turn, false)}, status
+		opportunity, err := api.opportunityPayloadLocked(turn, false)
+		if err != nil {
+			return map[string]any{"ok": false, "error": roleAPIError("prompt_render_failed", err.Error())}, http.StatusInternalServerError
+		}
+		return map[string]any{"ok": ok, "case_id": api.caseID(), "status": "active", "result": result, "opportunity": opportunity}, status
 	}
 }
 
@@ -1005,7 +1037,10 @@ func (r *Runner) buildRoleAPIPrompt(role spec.RoleSpec, view map[string]any, opp
 	if !deadline.IsZero() {
 		deadlineText = deadline.UTC().Format("2006-01-02 15:04:05 UTC")
 	}
-	legalSchemaLines := r.legalToolSchemaLines(opportunity.AllowedTools)
+	legalSchemaLines, err := r.legalToolSchemaLines(opportunity.AllowedTools)
+	if err != nil {
+		return "", err
+	}
 	cards, err := r.collectToolCards(role.Name, opportunity.AllowedTools)
 	if err != nil {
 		return "", err
@@ -1131,7 +1166,7 @@ func simpleToolSpec(name string, description string, properties map[string]any) 
 	}
 }
 
-func (r *Runner) legalToolSpecs(allowedTools []string) []map[string]any {
+func (r *Runner) legalToolSpecs(allowedTools []string) ([]map[string]any, error) {
 	specs := make([]map[string]any, 0, len(allowedTools))
 	seen := map[string]bool{}
 	for _, name := range allowedTools {
@@ -1140,13 +1175,16 @@ func (r *Runner) legalToolSpecs(allowedTools []string) []map[string]any {
 			continue
 		}
 		seen[name] = true
-		schema := r.toolSchema(name)
+		schema, err := r.toolSchema(name)
+		if err != nil {
+			return nil, err
+		}
 		if schema == nil {
 			continue
 		}
 		specs = append(specs, map[string]any{"name": name, "parameters": schema})
 	}
-	return specs
+	return specs, nil
 }
 
 func (r *Runner) writeWorkNotes(turn *externalOpportunityTurn, notes string) (result map[string]any, err error) {

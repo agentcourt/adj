@@ -1,0 +1,122 @@
+{
+  "canonical_slug": "moonshotai/kimi-k2-thinking-20251106",
+  "catalog_snapshot_id": "model-roots-10-more-20260529T140914Z",
+  "context_length": 262144,
+  "endpoint_id": null,
+  "endpoint_index": 1,
+  "endpoint_model_id": "moonshotai/kimi-k2-thinking",
+  "endpoint_model_name": "MoonshotAI: Kimi K2 Thinking",
+  "endpoint_model_permaslug": null,
+  "endpoint_name": "AtlasCloud | moonshotai/kimi-k2-thinking-20251106",
+  "endpoint_pricing": {
+    "completion": "0.0000025",
+    "discount": 0,
+    "input_cache_read": "0.0000006",
+    "prompt": "0.0000006"
+  },
+  "endpoint_raw_path": "raw/endpoints/moonshotai_kimi-k2-thinking-ff7d6d6d44b0.json",
+  "endpoint_tag": "atlas-cloud/int4",
+  "endpoint_variant_id": "480c7dd371fb2023e691066f",
+  "endpoint_variant_key": "model-roots-10-more-20260529T140914Z | moonshotai/kimi-k2-thinking | 1 | AtlasCloud | atlas-cloud/int4 | AtlasCloud | moonshotai/kimi-k2-thinking-20251106 | int4",
+  "hugging_face_id": "moonshotai/Kimi-K2-Thinking",
+  "input_modalities": [
+    "text"
+  ],
+  "instruct_type": null,
+  "knowledge_cutoff": null,
+  "latency_last_30m": {
+    "p50": 641,
+    "p75": 916.5,
+    "p90": 1488.2000000000003,
+    "p99": 43060.49999999991
+  },
+  "max_completion_tokens": 262144,
+  "max_prompt_tokens": null,
+  "modality": "text->text",
+  "model_context_length": 262144,
+  "model_created": 1762440622,
+  "model_default_parameters": {
+    "frequency_penalty": null,
+    "temperature": null,
+    "top_p": null
+  },
+  "model_description": "Kimi K2 Thinking is Moonshot AI\u2019s most advanced open reasoning model to date, extending the K2 series into agentic, long-horizon reasoning. Built on the trillion-parameter Mixture-of-Experts (MoE) architecture introduced in...",
+  "model_name": "MoonshotAI: Kimi K2 Thinking",
+  "model_per_request_limits": null,
+  "model_pricing": {
+    "completion": "0.0000025",
+    "prompt": "0.0000006"
+  },
+  "model_raw_path": "raw/models.json",
+  "model_supported_parameters": [
+    "frequency_penalty",
+    "include_reasoning",
+    "logit_bias",
+    "max_tokens",
+    "min_p",
+    "presence_penalty",
+    "reasoning",
+    "repetition_penalty",
+    "response_format",
+    "seed",
+    "stop",
+    "structured_outputs",
+    "temperature",
+    "tool_choice",
+    "tools",
+    "top_k",
+    "top_p"
+  ],
+  "model_supported_voices": null,
+  "model_top_provider": {
+    "context_length": 262144,
+    "is_moderated": false,
+    "max_completion_tokens": 262144
+  },
+  "openrouter_model_id": "moonshotai/kimi-k2-thinking",
+  "output_modalities": [
+    "text"
+  ],
+  "pricing_completion": "0.0000025",
+  "pricing_discount": 0,
+  "pricing_input_cache_read": "0.0000006",
+  "pricing_input_cache_write": null,
+  "pricing_prompt": "0.0000006",
+  "provider_name": "AtlasCloud",
+  "quantization": "int4",
+  "raw_endpoint_sha256": "f3ad2639a1a06cac943059e5a24b985810c20b5867ab485666ce9b4f8afd45ce",
+  "raw_model_sha256": "5f7cdc3680338519a867a5a5b5e41b0aad27becb7dff457028da519ad4dd338f",
+  "snapshot_timestamp_utc": "2026-05-29T14:09:39.983842Z",
+  "status": 0,
+  "supported_parameters": [
+    "reasoning",
+    "include_reasoning",
+    "max_tokens",
+    "temperature",
+    "top_p",
+    "top_k",
+    "min_p",
+    "frequency_penalty",
+    "presence_penalty",
+    "repetition_penalty",
+    "stop",
+    "seed",
+    "logit_bias",
+    "response_format",
+    "structured_outputs",
+    "tools",
+    "tool_choice"
+  ],
+  "supports_implicit_caching": false,
+  "throughput_last_30m": {
+    "p50": 49,
+    "p75": 58,
+    "p90": 64,
+    "p99": 68.86999999999998
+  },
+  "tokenizer": "Other",
+  "unknown_quantization_endpoint_variant": false,
+  "uptime_last_1d": 99.8734604352961,
+  "uptime_last_30m": 100,
+  "uptime_last_5m": null
+}

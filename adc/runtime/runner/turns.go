@@ -27,7 +27,7 @@ func (r *Runner) executeTurn(
 ) (TurnLog, error) {
 	transcript := make([]map[string]any, 0)
 	if turn.DeterministicAction != nil {
-		steps, err := r.executeDeterministicTurn(turnIndex, role.Name, turn.DeterministicAction, &transcript)
+		steps, err := r.executeDeterministicTurn(ctx, turnIndex, role.Name, turn.DeterministicAction, &transcript)
 		if err != nil {
 			return TurnLog{}, err
 		}
@@ -48,7 +48,7 @@ func (r *Runner) executeTurn(
 	if r.client == nil {
 		return TurnLog{}, fmt.Errorf("llm client is nil")
 	}
-	view, err := r.lean.View(r.state, role.Name)
+	view, err := r.lean.ViewContext(ctx, r.state, role.Name)
 	if err != nil {
 		return TurnLog{}, err
 	}
@@ -141,7 +141,7 @@ func (r *Runner) executeTurn(
 				transcript = append(transcript, map[string]any{"action": call.Name, "arguments": call.Arguments, "result": duplicate})
 				continue
 			}
-			execRes, err := r.executeAction(turnIndex, steps, role.Name, call.Name, call.Arguments)
+			execRes, err := r.executeActionContext(ctx, turnIndex, steps, role.Name, call.Name, call.Arguments)
 			if err != nil {
 				return TurnLog{}, err
 			}
@@ -225,10 +225,11 @@ func (r *Runner) executeOpportunityTurn(
 	if r.client == nil {
 		return TurnLog{}, fmt.Errorf("llm client is nil")
 	}
-	view, err := r.lean.View(r.state, role.Name)
+	view, err := r.lean.ViewContext(ctx, r.state, role.Name)
 	if err != nil {
 		return TurnLog{}, err
 	}
+	r.lastOpportunityView = cloneRunnerMap(view)
 	transcript := make([]map[string]any, 0)
 	systemPrompt, err := r.buildSystemPrompt(role, view)
 	if err != nil {
@@ -296,7 +297,11 @@ func (r *Runner) executeOpportunityTurn(
 		invalidAttemptReasons = append(invalidAttemptReasons, formatIssue(issue))
 		invalidAttempts++
 		if invalidAttempts >= maxInvalidAttemptsPerTurn {
-			return formatInvalidAttemptLimitError(fmt.Sprintf("agent turn=%d role=%s", turnIndex, role.Name), invalidAttemptReasons)
+			return &ProceduralTurnFailure{
+				Kind:    ProceduralFailureInvalidAttemptLimit,
+				Partial: partialOpportunityTurnLog(role, opportunity, steps, transcript),
+				Err:     formatInvalidAttemptLimitError(fmt.Sprintf("agent turn=%d role=%s", turnIndex, role.Name), invalidAttemptReasons),
+			}
 		}
 		return nil
 	}
@@ -318,7 +323,7 @@ func (r *Runner) executeOpportunityTurn(
 			resp, err = responseClient.CreateResponse(ctx, activeModel, inputItems, tools, prevID, r.effectiveRoleTemperature(role))
 		}
 		if err != nil {
-			if timeoutLog, handled, handleErr := r.handleOpportunityResponseError(turnIndex, role, opportunity, activeModel, err); handled {
+			if timeoutLog, handled, handleErr := r.handleOpportunityResponseErrorContext(ctx, turnIndex, role, opportunity, activeModel, err); handled {
 				if handleErr != nil {
 					return TurnLog{}, handleErr
 				}
@@ -503,7 +508,7 @@ func (r *Runner) executeOpportunityTurn(
 				continue
 			}
 			supportSteps++
-			execRes, err := r.executeAction(turnIndex, steps, role.Name, call.Name, call.Arguments)
+			execRes, err := r.executeActionContext(ctx, turnIndex, steps, role.Name, call.Name, call.Arguments)
 			if err != nil {
 				return TurnLog{}, err
 			}
@@ -576,7 +581,7 @@ func (r *Runner) executeOpportunityTurn(
 				"payload":   payload,
 			}
 		}
-		acceptResp, err := r.lean.ApplyDecision(r.state, stateVersion, opportunity.OpportunityID, role.Name, decision, rolesPayload, opportunity.StepBudget)
+		acceptResp, err := r.lean.ApplyDecisionContext(ctx, r.state, stateVersion, opportunity.OpportunityID, role.Name, decision, rolesPayload, opportunity.StepBudget)
 		if err != nil {
 			return TurnLog{}, err
 		}
@@ -638,7 +643,7 @@ func (r *Runner) executeOpportunityTurn(
 		if payload == nil {
 			payload = map[string]any{}
 		}
-		execRes, err := r.executeAction(turnIndex, 1, actorRole, actionType, payload)
+		execRes, err := r.executeActionContext(ctx, turnIndex, 1, actorRole, actionType, payload)
 		if err != nil {
 			return TurnLog{}, err
 		}
@@ -674,7 +679,21 @@ func (r *Runner) executeOpportunityTurn(
 		}
 		return TurnLog{Role: role.Name, Prompt: opportunity.Objective, Steps: steps, Transcript: transcript}, nil
 	}
-	return TurnLog{}, fmt.Errorf("opportunity exhausted decision budget turn=%d role=%s opportunity_id=%s", turnIndex, role.Name, opportunity.OpportunityID)
+	failure := &ProceduralTurnFailure{
+		Kind:    ProceduralFailureDecisionBudget,
+		Partial: partialOpportunityTurnLog(role, opportunity, steps, transcript),
+		Err:     fmt.Errorf("opportunity exhausted decision budget turn=%d role=%s opportunity_id=%s", turnIndex, role.Name, opportunity.OpportunityID),
+	}
+	return failure.Partial, failure
+}
+
+func partialOpportunityTurnLog(role spec.RoleSpec, opportunity leanOpportunity, steps int, transcript []map[string]any) TurnLog {
+	return TurnLog{
+		Role:       role.Name,
+		Prompt:     opportunity.Objective,
+		Steps:      steps,
+		Transcript: append([]map[string]any(nil), transcript...),
+	}
 }
 
 func (r *Runner) appendOpportunityCorrection(
@@ -940,6 +959,7 @@ func redundantAfterSuccess(toolName string, result map[string]any, successfulCal
 }
 
 func (r *Runner) executeDeterministicTurn(
+	ctx context.Context,
 	turnIndex int,
 	roleName string,
 	deterministic *spec.DeterministicAction,
@@ -950,7 +970,7 @@ func (r *Runner) executeDeterministicTurn(
 	}
 	kind := strings.TrimSpace(deterministic.Kind)
 	if kind == "" || kind == "action" || kind == "single_tool" {
-		execRes, err := r.executeAction(turnIndex, 1, roleName, deterministic.ActionType, deterministic.Payload)
+		execRes, err := r.executeActionContext(ctx, turnIndex, 1, roleName, deterministic.ActionType, deterministic.Payload)
 		if err != nil {
 			return 0, err
 		}
@@ -984,7 +1004,7 @@ func (r *Runner) executeDeterministicTurn(
 				"juror_id": fmt.Sprintf("J%d", jurorNumber),
 				"name":     fmt.Sprintf("Juror %d", jurorNumber),
 			}
-			execRes, err := r.executeAction(turnIndex, step, roleName, "add_juror", payload)
+			execRes, err := r.executeActionContext(ctx, turnIndex, step, roleName, "add_juror", payload)
 			if err != nil {
 				return step, err
 			}
@@ -1016,7 +1036,7 @@ func (r *Runner) executeDeterministicTurn(
 			"case_id":   caseID,
 			"juror_ids": selected,
 		}
-		execRes, err := r.executeAction(turnIndex, 1, roleName, "empanel_jury", payload)
+		execRes, err := r.executeActionContext(ctx, turnIndex, 1, roleName, "empanel_jury", payload)
 		if err != nil {
 			return 0, err
 		}
