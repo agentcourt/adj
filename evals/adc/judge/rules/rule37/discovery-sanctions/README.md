@@ -1,16 +1,16 @@
 # Rule 37 Discovery Sanctions
 
-This suite evaluates `decide_rule37_motion`.  The fixture set covers discovery failures, justified objections, proportionality disputes, harmlessness, prior-order violations, and sanction payload constraints.  The scorer checks grant or denial, sanction type, fee amount, reason tags, and invalid payloads.
+This suite evaluates `decide_rule37_motion`.  Its sixteen fixtures cover concrete discovery failures, complete responses, justified objections, overbreadth, proportionality, cure, disclosure duties, discovery-order violations, and fee limits.  The scorer checks the grant decision, sanction fields, explanation tags, payload validity, and action execution.
 
 ## Files
 
 | File | Use |
 | --- | --- |
-| [Rule 37 Analysis](analysis.md) | Results, findings, recommendation, and next fixture work. |
-| [Rule 37 Plan](plan.md) | Fixture shape, scoring design, and prompt-iteration plan. |
-| [Rule 37 Fixtures](fixtures.jsonl) | Sixteen committed fixture rows. |
-| [Prompt Candidates](prompts/) | Eval-local opportunity prompt candidates. |
+| [Rule 37 Evaluation Analysis](analysis.md) | Fixture coverage, decision boundaries, and scoring. |
+| [Rule 37 Evaluation Plan](plan.md) | Fixture schema, scoring rules, and execution procedure. |
+| [Rule 37 Fixtures](fixtures.jsonl) | Sixteen fixture rows. |
+| [Prompt Candidates](prompts/) | Opportunity prompt templates for model-backed evaluation. |
 
 ## Runner
 
-Run the suite from the repository root with `adc eval judge-rule37` or the corresponding `go run ./adc/runtime/cmd/adc eval judge-rule37` form.  The CLI default fixture path points to this directory.  Generated results belong under `evals/out/adc/judge/`.
+Run the default suite from the repository root with `adc eval judge-rule37` or `go run ./adc/runtime/cmd/adc eval judge-rule37`.  The command reads this directory's fixture file and writes `results.jsonl` and `summary.json` under `evals/out/adc/judge/rule37-latest`.  The `--fixtures` and `--out-dir` options select alternate paths.  Model-backed prompt evaluation requires `--counterfactual-model` together with `--opportunity-prompt-file`.

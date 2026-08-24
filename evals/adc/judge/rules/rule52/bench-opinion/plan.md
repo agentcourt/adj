@@ -1,14 +1,14 @@
 # Rule 52 Judge Eval Plan
 
-## Scope
+## Procedure
 
-This eval measures the judge's bench-trial opinion under Rule 52.  The current ADC posture offers `file_bench_opinion` at `status=trial`, `trial_mode=bench`, and `phase=verdict_return`, so the first eval scores the filed opinion text rather than a multi-step sequence of separate findings and conclusions.  The runner still checks the Rule 52 concerns that motivated the plan: findings grounded in admitted evidence, conclusions tied to the claim elements, exclusion of unadmitted proof, and judgment consistent with the record.
+This eval measures the judge's bench-trial opinion under Rule 52 through `file_bench_opinion`.  Each fixture constructs a case with `status=trial`, `trial_mode=bench`, and `phase=verdict_return`, then obtains the current judge opportunity from Lean.  The runner executes the judge turn through the ADC prompt and tool path and applies the accepted action to the state.
 
-The eval constructs a completed bench-trial ADC state with complaint and answer text, opening theories, admitted bench evidence, excluded evidence when applicable, rests, and closing arguments.  It obtains the real Lean judge opportunity and applies the model's `file_bench_opinion` tool call back through Lean.  Each result records the fixture, constructed state, role view, opportunity, prompt input, raw response, extracted opinion text, deterministic score, and Lean acceptance.
+The docket contains the complaint, answer, both trial theories, admitted and excluded evidence, party rests, and closing arguments.  Decision traces establish the pleadings, bench-trial designation, exhibit treatment, rests, closings, and verdict-return phase.  Each result records the fixture, state, role view, opportunity, prompt input, response exchanges, final state, provider accounting, extracted opinion, and component scores.
 
 ## Fixture Set
 
-The first fixture file contains 16 rows across three difficulty tiers.  The rows test clean plaintiff and defense judgments, contract formation, credibility, causation, excluded evidence, damages proof, damages limitation, authentication, agency authority, and contractual notice.  The set is balanced between plaintiff and defendant judgments so the scorer can separate wrong winner selection from missing reasoning detail.
+The fixture file contains 16 rows across three difficulty tiers and divides evenly between expected plaintiff and defense judgments.  Every row supplies pleadings, party theories, admitted evidence, any excluded evidence, closings, the expected winner and amount, required and prohibited concepts, reason tags, and a severity weight.  The legal boundaries include contract formation, breach, credibility, causation, damages proof, damages limitation, authentication, agency authority, and contractual notice.
 
 | Theme | Scored Boundary |
 |---|---|
@@ -23,14 +23,14 @@ The first fixture file contains 16 rows across three difficulty tiers.  The rows
 
 ## Scoring
 
-The scorer requires exactly one `file_bench_opinion` tool call with nonempty `text`.  It detects the judgment winner, checks any expected damages amount, requires concepts tied to the admitted record, rejects prohibited reliance on excluded or unsupported proof, and requires the opinion to contain findings, conclusions, and judgment language.  It also matches reason tags such as `breach_proved`, `causation_gap`, `damages_limited`, `excluded_evidence`, `authentication`, `agency`, `notice`, `credibility`, and `fact_law_separation`.
+The scorer requires exactly one `file_bench_opinion` tool call with a valid `verdict_for` and nonempty `text`.  It checks the payload winner, any expected amount in the text, required concepts tied to admitted proof, prohibited concepts, and the presence of `finding`, `conclusion`, and `judgment` in the normalized text.  Lean must accept and execute the decision, and the execution path must finish without a procedural error.
 
-The scorer includes `--rescore-results` because bench opinions use varied but valid legal language.  The first live runs exposed deterministic scorer strictness rather than wrong decisions: opinions used phrases such as `additional freight charges`, `audit log AL-3 was authenticated`, and `did not meet the contractual written-notice requirement`.  The final scorer accepts those equivalent formulations while still rejecting wrong winners, wrong amounts, invalid payloads, prohibited proof, and opinions without Rule 52 section separation.
+Reason tags such as `breach_proved`, `causation_gap`, `damages_limited`, `excluded_evidence`, `authentication`, `agency`, `notice`, `credibility`, and `fact_law_separation` are reported separately.  The aggregate summary includes component counts, accuracy, winner accuracy, weighted accuracy, invalid rate, and slices by reason tag, issue family, tier, and expected winner.  The `--rescore-results` option applies these deterministic checks to an existing Rule 52 result file without making model calls.
 
-## Prompt Iteration
+## Prompt Selection
 
-Candidate v1 gives the judge explicit fixture context and asks for labeled `Findings of Fact`, `Conclusions of Law`, and `Judgment` sections.  It states record-confinement rules for excluded evidence, lawyer argument, failed elements, proved damages, and damages limited to direct losses.  Measured results are in [Rule 52 Analysis](analysis.md).
+The runner uses the objective supplied by the Lean opportunity by default.  [Candidate v1](prompts/candidate-v1.md) supplies the pleadings, party theories, evidence, and closings and requires labeled `Findings of Fact`, `Conclusions of Law`, and `Judgment` sections.  The expected winner, amount, concepts, and reason tags remain scorer inputs.
 
-## Next Extensions
+## Outputs
 
-The next Rule 52 set should add harder rows before any production prompt change.  Useful additions include multiple claims with mixed winners, counterclaims, equitable relief, nominal damages, adverse inference from evidence loss, witness impeachment that affects only one issue, and a bench opinion that must explain why an admitted exhibit receives little weight.  A later runner can test multi-step findings and conclusions if the Lean opportunity sequence exposes `add_bench_finding` and `add_bench_conclusion` before `file_bench_opinion`.
+The runner writes one JSON object per fixture to `results.jsonl` and an aggregate `summary.json` in the selected output directory.  The `--limit` option selects the first specified number of fixture rows, while model, court, timeout, temperature, prompt catalog, and Lean engine options control execution.  Each result row includes component scores for winner, amount, required concepts, prohibited concepts, opinion terms, decision acceptance, and step execution.

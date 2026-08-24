@@ -1,6 +1,6 @@
 # Rule 56
 
-ARCP Rule 56 requires the court to grant summary judgment when the movant shows no genuine dispute as to any material fact and entitlement to judgment as a matter of law.  A grant ends a claim before trial, which makes this the pretrial decision with the largest single effect on a case.  The judge must decide whether a dispute exists without deciding how it should come out, so weighing credibility and choosing between competing inferences are both out of bounds.  The failure with consequences is a grant over a genuine dispute, because it takes the question away from the factfinder.
+The Rule 56 suite evaluates `decide_rule56_motion`.  Its thirty fixtures cover no-dispute grants, factual disputes, credibility, competing inferences, element failures, damages theories, and authentication.  The scorer checks disposition, surviving issues, reason tags, false grants and denials, partial mismatches, invalid payloads, and Lean acceptance.
 
 ## Suites
 

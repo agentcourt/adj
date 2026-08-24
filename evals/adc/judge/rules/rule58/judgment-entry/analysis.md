@@ -1,34 +1,25 @@
 # Rule 58 Judge Eval Analysis
 
-These results predate the evaluator's restoration to the current ADC runtime.  The old harness issued one provider response, passed its proposed action through Lean `apply_decision`, and stopped before several production turn stages.  Current comparisons require a new run whose summary identifies `production` or `counterfactual_model` execution mode.
-
 ## Scope
 
-This analysis covers the judge eval for `enter_judgment`.  The fixture set contains 16 eligible judgment-entry postures across jury verdicts and bench opinions.  The eval uses real ADC state, the real Lean opportunity, the production judge prompt or an eval-local prompt candidate, deterministic scoring, opportunity validation, and a Lean step that records the judgment state.
+The fixture file contains 16 eligible post-verdict states: nine jury verdicts and seven bench opinions.  Four rows are tier 1, six are tier 2, and six are tier 3.  The cases include plaintiff and defense outcomes, a zero-dollar plaintiff verdict, limited and larger awards, authentication, agency, notice, credibility, and rejection of excluded or unsupported proof.
 
-The scorer checks both payload correctness and the post-step case state.  It requires the correct claim id and basis, rejects prohibited basis concepts, then executes the accepted action and verifies `status=judgment_entered` and the expected `monetary_judgment`.  This structure matches Rule 58 in the engine, where the payload identifies the claim and basis while the amount comes from the jury verdict or existing bench judgment state.
+Jury fixtures place a unanimous verdict and damages amount in state.  Bench fixtures place a `Bench Opinion` docket entry and the adjudicated amount in `monetary_judgment`.  Both postures reach the `post_verdict` phase with traces that allow Lean to offer the required `enter_judgment` action.
 
-## Results
+## Execution Modes
 
-| Prompt | Run | Correct | Claim Correct | Basis Correct | Amount Correct | Status Correct | Invalid | Lean Rejected | Step Rejected | Weighted Accuracy |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| production | dry 16 | 16 | 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| production | live 16 | 16 | 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| candidate-v1 | dry 16 | 16 | 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| candidate-v1 | live 16 | 16 | 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
+The default execution mode uses the deterministic single-tool action embedded in the Lean opportunity.  This path verifies opportunity generation, action validation, step execution, and state effects through that action.  The summary records this path as `production` with `counterfactual_model: false`.
 
-## Findings
+The `--counterfactual-model` option first verifies that Lean supplied a deterministic action, removes that action from the eval opportunity, and asks the selected model for a decision.  That path uses the configured ADC prompts and any eval-local opportunity template.  The summary records this path as `counterfactual_model` with `counterfactual_model: true`.
 
-Production performed cleanly on the measured Rule 58 set.  It returned valid `enter_judgment` payloads for all 16 live rows, used `claim-1`, used the expected `jury verdict` or `bench verdict` basis, and passed the opportunity constraints.  The executed Lean step entered `judgment_entered` and preserved the expected monetary amount in every row.
+## Scoring Boundary
 
-Candidate v1 preserved production behavior but did not improve measured results.  It states the judgment-entry boundary more directly, including the instruction not to revisit liability or damages, but the production prompt already handled the fixture set.  The live comparison therefore shows no prompt failure cluster.
+A valid response contains exactly one `enter_judgment` call with a nonempty `claim_id` and `basis`.  Correctness requires the fixture's claim id, all required basis concepts, no prohibited basis concepts, a matching reason tag, and successful action execution.  Model-backed mode obtains `lean_accepted` from `apply_decision`.  Deterministic production mode has no decision stage and sets `lean_accepted` when the step succeeds.  After execution, the case must have `status=judgment_entered` and the expected `monetary_judgment`.
 
-The implementation exposed a useful harness distinction.  `apply_decision` validates and normalizes the model's opportunity decision, but it does not execute the returned action.  Rule 58 therefore adds a second Lean `step` call after acceptance so the scorer can verify final status and monetary judgment.
+The `enter_judgment` payload has no amount field.  Jury judgment amounts come from `jury_verdict.damages`, while bench judgment amounts already reside in the case state before entry.  State-derived amount scoring therefore verifies that the engine carries the adjudicated amount through the Rule 58 transition.
 
-## Recommendation
+The aggregate summary reports accuracy, severity-weighted accuracy, invalid rate, rejection counters, component counts, and slices by reason tag, issue family, tier, and trial mode.  The `lean_rejected` and `step_rejected` counters include only rows without an `invalid_reason`.  In counterfactual-model mode, a decision or step rejection that exhausts the correction or decision budget becomes invalid and does not increment those counters.  A deterministic step failure or other nonprocedural execution error aborts the run.  Per-row results retain the attempted acceptance fields, state before and after execution, opportunity, response, extracted payload, and each component score.
 
-Do not update the production Rule 58 opportunity prompt from this eval alone.  Production and candidate v1 both scored 16/16 with no invalid payloads, no Lean rejections, and no post-step state mismatches.  The next eval should move to Rule 59 or Rule 60, where the judge must decide whether to disturb an entered judgment rather than enter a mechanically determined judgment.
+## Limits
 
-## Next Work
-
-Future Rule 58 rows should focus on multiple claims, partial judgment, Rule 68 acceptance, default judgment under Rule 55, and unavailable-opportunity states such as pre-verdict or hung-jury postures.  Post-judgment work should continue in Rule 60 and Rule 59, where the judge must decide whether to disturb an entered judgment rather than enter a mechanically determined one.  Rule 58 should keep scoring the post-step state because judgment entry correctness depends on the state transition as well as the payload.
+Every fixture has one claim and an available post-verdict judgment-entry opportunity.  The fixture scope covers judgment after a jury verdict or bench opinion.  The scorer's basis checks use configured textual concepts to determine whether the payload identifies the adjudicative basis already present in state.

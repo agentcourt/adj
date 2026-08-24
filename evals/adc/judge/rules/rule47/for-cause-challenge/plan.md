@@ -1,34 +1,45 @@
-# Rule 47 For-Cause Judge Eval Plan
+# Rule 47 For-Cause Evaluation Plan
 
 ## Scope
 
-This eval measures the judge's `decide_juror_for_cause_challenge` behavior after voir dire answers have been recorded.  Each fixture builds a jury-trial ADC state in the voir dire phase with one candidate, one answered voir dire exchange, and one pending for-cause challenge.  The runner obtains the real Lean judge opportunity, asks the judge model for one tool call, applies the decision through Lean, and scores the ruling against deterministic fixture labels.
+This evaluation measures decisions produced for `decide_juror_for_cause_challenge` after a voir dire answer has been recorded.  Each fixture builds a jury-trial ADC state in the voir dire phase with one candidate, one answered exchange, and one pending challenge.  The runner obtains the judge opportunity, executes the opportunity, applies the ruling through Lean, and scores the decision and payload.
 
-The first fixture set focuses on the line between disqualifying inability and lawful unfavorable attitudes.  It covers fixed bias, refusal to follow the burden of proof, fixed damages floors or caps, refusal to consider digital evidence, direct financial interest, sympathy bias, language or attention limitations, hardship, remote relationships, and rehabilitation by later answers.  False denials receive high weight when the record shows inability to follow law or decide from the record, and false grants receive high weight when the record shows only a lawful attitude that voir dire can examine.
+## Fixture Coverage
+
+The fixture file contains sixteen rows across three difficulty tiers.  Nine rows expect a grant, and seven expect a denial.  The `severity` field weights each row when the summary computes weighted accuracy.
+
+The fixtures test fixed bias, refusal to follow the burden of proof or court instructions, damages floors or caps, refusal to consider an evidence category, direct interests, sympathy, communication and attention limits, hardship, lawful skepticism, remote relationships, and rehabilitation.  Grant labels require a record showing inability to serve impartially or competently.  Denial labels require a record showing a lawful attitude, manageable inconvenience, remote connection, or credible assurance that the candidate can follow the law.
 
 ## Fixture Shape
 
 | Field | Meaning |
-|---|---|
+| --- | --- |
 | `id` | Stable row identifier. |
-| `tier` | Difficulty level, with tier 3 for close rehabilitation and lawful-attitude boundaries. |
-| `issue_family` | Summary slice for the juror-answer family. |
-| `case_theme` | Short factual setting placed in the case caption and docket. |
-| `challenged_by` | Party requesting the for-cause strike. |
-| `juror_id` | Candidate id used in the pending challenge. |
-| `voir_dire_record` | Answer history placed in the questionnaire response, voir dire exchange, and docket. |
+| `tier` | Difficulty tier. |
+| `issue_family` | Juror-answer family used for summary slices. |
+| `case_theme` | Short factual setting placed in ADC state. |
+| `challenged_by` | Party seeking the for-cause strike. |
+| `juror_id` | Candidate identifier used in the pending challenge. |
+| `voir_dire_record` | Recorded answers placed in the questionnaire, exchange, and docket. |
 | `challenge_grounds` | Party's stated basis for the challenge. |
 | `expected_granted` | Expected grant or denial. |
-| `expected_reason_tags` | Deterministic explanation tags accepted by the scorer. |
+| `expected_reason_tags` | Reason categories used by deterministic explanation scoring. |
 | `severity` | Weight used in weighted accuracy. |
-| `context_notes` | Human-readable explanation of the fixture boundary. |
+| `context_notes` | Explanation of the for-cause boundary tested by the row. |
 
 ## Scoring
 
-The scorer requires exactly one `decide_juror_for_cause_challenge` tool call.  It checks `challenge_id`, `juror_id`, `by_party`, `granted`, `ruling_reason`, reason tags, and Lean acceptance.  Summary output reports total accuracy, weighted accuracy, invalid rate, false-grant rate, false-denial rate, and slices by reason tag, issue family, tier, and challenging party.
+The scorer accepts exactly one `decide_juror_for_cause_challenge` call.  It requires challenge id `fc-1`, the fixture's `juror_id`, the normalized `challenged_by` party in `by_party`, a Boolean `granted` value, and nonempty `ruling_reason`.  It compares the grant decision with the fixture label and uses the ruling reason for deterministic explanation matching.
 
-The explanation scorer uses deterministic phrase matching rather than model grading.  It accepts ordinary legal wording for the same reason category, including rehabilitation, credible assurance, refusal to follow instructions, direct interest, lawful skepticism, and fixed damages commitments.  Scorer corrections can be applied through `--rescore-results`, which preserves live model output while improving deterministic label interpretation.
+Outcome correctness also requires Lean acceptance and an accepted runner step.  The summary reports aggregate accuracy, weighted accuracy, invalid rate, false-grant rate, false-denial rate, and explanation matches.  It also provides slices by reason tag, issue family, tier, and challenging party.
 
-## Prompt Iteration
+## Execution and Prompt Selection
 
-Candidate v1 adds explicit for-cause boundary language.  It names grant categories for inability to be impartial or to follow law, and denial categories for lawful attitudes, inconvenience, remote relationships, and credible rehabilitation.  Measured results are in [Rule 47 For-Cause Analysis](analysis.md).
+The command resolves the configured court and model, then gives the resulting response client and ADC state to the opportunity runner.  The runner uses the objective supplied by the judge opportunity by default.  A selected template replaces that objective after fixture substitution.  The evaluator records prompt source, prompt name, per-fixture records, and aggregate metrics in `results.jsonl` and `summary.json`.
+
+```bash
+adc eval judge-for-cause \
+  --opportunity-prompt-file evals/adc/judge/rules/rule47/for-cause-challenge/prompts/candidate-v1.md \
+  --opportunity-prompt-name candidate-v1 \
+  --out-dir evals/out/adc/judge/for-cause-candidate-v1
+```

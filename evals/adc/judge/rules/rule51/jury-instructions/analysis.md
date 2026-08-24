@@ -1,30 +1,19 @@
 # Rule 51 Judge Eval Analysis
 
-These results predate the evaluator's restoration to the current ADC runtime.  The old harness issued one provider response, passed its proposed action through Lean `apply_decision`, and stopped before several production turn stages.  Current comparisons require a new run whose summary identifies `production` or `counterfactual_model` execution mode.
+## Coverage
 
-## Results
+The fixture file contains 16 jury-charge states in three tiers: four tier-1 rows, six tier-2 rows, and six tier-3 rows.  The issue families cover burden standards, burden shifting, claim elements, argumentative language, assumptions of disputed fact, excluded evidence, limiting instructions, damages, credibility, adverse inferences, digital evidence, sympathy, and a complete neutral charge.  Each state supplies competing proposed instructions, any objections, an evidence summary, completed closings, and a six-person jury configuration.
 
-The Rule 51 eval has 16 fixtures and uses the real `settle_jury_instructions` opportunity.  The first production live score was 8/16 under an overly literal prohibited-term scorer that treated quoted rejected language as if it appeared in the final charge.
+The suite scores the settlement summary produced by `settle_jury_instructions`.  Required concepts include fixture-specific claim elements and limiting rules, while prohibited concepts identify language that would make the settled charge argumentative, unsupported, or legally incorrect.  Complete-charge structure and delivery belong to the separate `deliver_jury_instructions` action.
 
-The scorer now distinguishes final-charge contamination from a ruling section that rejects a defective proposal.  It ignores prohibited phrases when the local context shows the instruction was sustained against, rejected, refused, denied, negated, or excluded.  It also accepts equivalent required wording, including `breach caused` for causation, `evidence admitted at trial` for admitted evidence, and `may but are not required to infer` for a permissive adverse inference.
+## Scoring Boundary
 
-| Prompt | Run | Correct | Reason Matches | Invalid | Missing Required | Prohibited Included |
-|---|---|---:|---:|---:|---:|---:|
-| Production | live, rescored | 16/16 | 16/16 | 0 | 0 | 0 |
-| Candidate v1 | live, rescored | 16/16 | 16/16 | 0 | 0 | 0 |
+A valid response contains exactly one `settle_jury_instructions` tool call with a nonempty `summary`.  A row is substantively correct when the summary contains every required term or accepted equivalent and contains no prohibited term in an affirmative final-instruction context.  The runner also requires Lean to accept and execute the decision before counting the row as correct.
 
-## Failure Analysis
+The prohibited-term check examines nearby language so that a ruling may quote a defective proposal while rejecting it.  Context indicating that an objection was sustained or that language was rejected, refused, denied, negated, excluded, or forbidden prevents that quotation from counting as final-charge contamination.  Accepted required-term equivalents include formulations such as `breach caused` for causation, `evidence admitted at trial` for admitted evidence, and permissive language equivalent to `may infer`.
 
-The initial production failures were not prompt failures.  The model often wrote a ruling section that quoted the rejected party proposal, then wrote a neutral final instruction summary.  The first scorer searched the whole summary for prohibited phrases and therefore marked rejected language as if the final charge had adopted it.
+Reason-tag matching is a separate diagnostic.  The tool carries its explanation in `summary`, and the scorer derives tags from that text.  Required- and prohibited-concept checks determine substantive correctness.  The aggregate summary reports accuracy, severity-weighted accuracy, invalid responses, missing required concepts, prohibited inclusions, and slices by reason tag, issue family, and tier.
 
-Two initial misses were required-term equivalence problems.  The production summary used `breach caused` rather than the abstract word `causation`, and it used `must not draw any adverse inference` rather than `no adverse inference`.  The candidate summary used `evidence admitted at trial` and `may but are not required to infer`, which satisfy the same required concepts.
+## Limits
 
-Candidate v1 preserved production behavior but did not improve measured results.  It provides more explicit instruction-settlement guidance, but the current fixture set does not show a production failure after scorer correction.  The measured result therefore supports keeping production prompt text unchanged until a harder Rule 51 set exposes a real failure cluster.
-
-## Recommendation
-
-Do not update the production Rule 51 opportunity prompt from this eval alone.  Production and candidate v1 both scored 16/16 on the measured live fixture set after deterministic scorer corrections.  The next iteration should add a hard set before any prompt change, especially rows where ruling language and final-charge language are close enough to stress the scorer and the judge prompt.
-
-## Next Work
-
-The next Rule 51 set should include close ruling-versus-final-charge language, excluded settlement communications, mitigation instructions, verdict-threshold errors, and limiting instructions that quote defective proposals near the final charge summary.  A later `deliver_jury_instructions` eval should score complete charge text after the settlement-summary scorer remains stable on harder fixtures.  That second eval should verify full-charge structure, neutral wording, and consistency with the settled instruction summary.
+The deterministic checks use configured terms, aliases, and local negation patterns.  A semantically valid formulation outside those aliases can miss a required concept, and an unusual quotation structure can affect prohibited-term classification.  The saved per-row result includes the state, role view, opportunity, prompt input, response exchanges, final state, provider accounting, extracted payload, and individual scoring fields for inspection.

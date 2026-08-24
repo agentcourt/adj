@@ -1,35 +1,62 @@
-# Rule 12 Judge Eval Plan
+# Rule 12 Evaluation Plan
 
 ## Scope
 
-This eval measures judge decisions on Rule 12 motions and closely related jurisdiction dismissals.  It uses real ADC state, the Lean judge opportunity, the `decide_rule12_motion` tool schema, deterministic scoring, and eval-local opportunity prompt candidates.  The first version focuses on disposition, ground, amendment posture, prejudice posture, missing claim elements, jurisdiction-basis rejection, and standing component fields.
+This evaluation measures decisions produced for `decide_rule12_motion`.  Each fixture builds a filed-stage ADC state with one complaint, one Rule 12 motion, one opposition, and an optional reply.  The runner obtains the judge opportunity, executes the opportunity, applies the decision through Lean, and scores disposition, procedural posture, ground-specific fields, and explanation tags.
 
-The eval covers pleading sufficiency, subject-matter jurisdiction, standing, ripeness, and mootness.  These decisions can close a case before evidence development, so the fixture set gives high weight to false dismissals and wrong prejudice decisions.  The first implementation keeps the state compact: one complaint, one Rule 12 motion, one opposition, and an optional reply.
+## Fixture Coverage
 
-## Fixture Set
+The fixture file contains eighteen rows, with six rows in each of three difficulty tiers.  Ten rows expect dismissal, and eight expect denial.  Severity 5 applies to the eight expected denials and the one expected dismissal with prejudice, while every leave-to-amend row has severity 3.
 
-The first fixture file contains 18 rows across three difficulty tiers.  Tier 1 rows test clean grants and denials, tier 2 rows test contextual pleading and jurisdiction issues, and tier 3 rows test adversarial framing.  Each row states the motion ground, the complaint, the motion, the opposition, expected tool fields, reason tags, severity, and a short note about the boundary being tested.
+| Ground | Rows | Ground-specific fields |
+| --- | ---: | --- |
+| `failure_to_state_a_claim` | 7 | `missing_elements` |
+| `lack_subject_matter_jurisdiction` | 3 | `jurisdiction_basis_rejected` |
+| `no_standing` | 4 | `injury_missing`, `traceability_missing`, `redressability_missing` |
+| `not_ripe` | 2 | Disposition and posture. |
+| `moot` | 2 | Disposition and posture. |
 
-| Category | Rows | Scored Fields |
-|---|---:|---|
-| Failure to state a claim | 7 | Disposition, `leave_to_amend`, `with_prejudice`, `missing_elements` |
-| Subject-matter jurisdiction | 3 | Disposition, `leave_to_amend`, `jurisdiction_basis_rejected` |
-| Standing | 4 | Disposition, `leave_to_amend`, missing standing components |
-| Ripeness | 2 | Disposition and amendment posture |
-| Mootness | 2 | Disposition and amendment posture |
+The paired fixtures distinguish a pleading defect from a dispute over proof, credibility, or evidentiary support.  Dismissal is expected when the complaint omits a required claim element, jurisdictional basis, standing component, or live controversy.  Denial is expected when the complaint pleads the required facts and the motion contests their truth or likely proof.
 
-The paired rows distinguish pleading defects from factual disputes.  The judge should deny a Rule 12 motion when the complaint pleads concrete facts and the defendant contests proof, credibility, or later evidentiary support.  The judge should grant a motion when the complaint omits a required element, omits jurisdictional facts, pleads no standing component, presents only a contingent dispute, or admits that the requested relief was already satisfied before filing.
+## Fixture Shape
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Stable row identifier. |
+| `tier` | Difficulty tier. |
+| `issue_family` | Procedural issue used for summary slices. |
+| `case_theme` | Short factual setting placed in ADC state. |
+| `ground` | Rule 12 or jurisdiction ground presented by the motion. |
+| `complaint_text` | Allegations evaluated under the filed ground. |
+| `motion_text` | Movant's dismissal argument. |
+| `opposition_text` | Opposition to dismissal. |
+| `reply_text` | Optional reply. |
+| `jurisdictional_allegations` | Optional structured jurisdiction facts placed in state. |
+| `expected_disposition` | `granted` or `denied`. |
+| `expected_with_prejudice` | Expected prejudice posture. |
+| `expected_leave_to_amend` | Expected amendment posture. |
+| `expected_missing_elements` | Claim elements required from a granted pleading-sufficiency ruling. |
+| `expected_jurisdiction_basis_rejected` | Jurisdictional basis required from a granted jurisdiction ruling. |
+| `expected_injury_missing` | Whether injury must be marked missing on a granted standing ruling. |
+| `expected_traceability_missing` | Whether traceability must be marked missing on a granted standing ruling. |
+| `expected_redressability_missing` | Whether redressability must be marked missing on a granted standing ruling. |
+| `expected_reason_tags` | Reason categories used by deterministic explanation scoring. |
+| `severity` | Weight used in weighted accuracy. |
+| `context_notes` | Explanation of the procedural boundary tested by the row. |
 
 ## Scoring
 
-The scorer requires exactly one `decide_rule12_motion` tool call with `motion_index` 0 and the fixture ground.  It marks the disposition incorrect if the grant or denial differs from the fixture, if `with_prejudice` differs, if `leave_to_amend` differs, or if a granted motion omits required ground-specific fields.  It reports false dismissals, false denials, posture mismatches, invalid responses, weighted accuracy, and slices by reason tag, issue family, ground, and tier.
+The scorer accepts exactly one `decide_rule12_motion` call and requires `motion_index` zero and the fixture's normalized ground.  It rejects an unrecognized disposition or empty reasoning, then compares disposition, prejudice, and leave to amend with the fixture label.  For a granted motion, it also checks the ground-specific fields listed above.  A denied motion uses the disposition and posture checks.
 
-Ground-specific scoring checks the fields that ADC expects the judge to supply.  Failure-to-state-a-claim rows require the expected missing elements, with equivalent labels accepted when the model identifies the same element in more specific wording.  Jurisdiction rows require the rejected basis, and standing rows require the missing component booleans.
+The evaluator accepts equivalent wording for expected missing elements and jurisdictional bases.  Outcome correctness also requires Lean acceptance and an accepted runner step.  The summary records false dismissals, false denials, posture mismatches, invalid responses, aggregate accuracy, weighted accuracy, and slices by reason tag, issue family, ground, and tier.
 
-## Prompt Iteration
+## Execution and Prompt Selection
 
-Candidate v1 addresses mootness amendment posture by stating when leave to amend should be refused.  Candidate v2 narrows that rule to mootness cases where the complaint admits full prefiling satisfaction of all requested relief and seeks no remaining live relief, which leaves curable standing, ripeness, and diversity-amount defects amendable.  Measured results are in [Rule 12 Analysis](analysis.md).
+The command resolves the configured court and model, then gives the resulting response client and ADC state to the opportunity runner.  The runner uses the objective supplied by the judge opportunity by default.  A selected template replaces that objective after fixture substitution.  The evaluator records prompt source, prompt name, per-fixture records, and aggregate metrics in `results.jsonl` and `summary.json`.
 
-## Next Extensions
-
-The next fixture expansion should add paired Rule 12 and Rule 56 themes.  The same factual setting should appear once as a pleading-sufficiency row and once as an evidentiary-sufficiency row, which tests whether the judge applies the procedural standard instead of using a general case-strength judgment.  The expansion should also add court-driven subject-matter jurisdiction screening if ADC exposes a separate judge opportunity for dismissal without a party Rule 12 motion.
+```bash
+adc eval judge-rule12 \
+  --opportunity-prompt-file evals/adc/judge/rules/rule12/dismissal-jurisdiction/prompts/candidate-v2.md \
+  --opportunity-prompt-name candidate-v2 \
+  --out-dir evals/out/adc/judge/rule12-candidate-v2
+```

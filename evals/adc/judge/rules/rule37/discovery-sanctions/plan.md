@@ -1,43 +1,54 @@
-# Rule 37 Judge Eval Plan
+# Rule 37 Evaluation Plan
 
 ## Scope
 
-This eval measures the judge's `decide_rule37_motion` behavior.  Each fixture builds a pretrial ADC state in the discovery phase with a discovery request, a response record, meet-and-confer text when relevant, a Rule 37 motion, and opposition text.  The runner obtains the real Lean judge opportunity, asks the model for one tool call, applies the decision through Lean, and scores the ruling and sanction payload.
+This evaluation measures decisions produced for `decide_rule37_motion`.  Each fixture builds a pretrial ADC state in the discovery phase with a discovery request, response record, optional meet-and-confer text, motion, opposition, and optional reply.  The runner obtains the judge opportunity, executes its action through Lean, and scores the legal outcome and sanction payload.
 
-The first fixture set focuses on the boundary between a concrete discovery failure and an ordinary or justified discovery dispute.  It covers no response, complete response, evasive response, privilege and work-product objections, overbreadth, proportionality, harmless cure, initial-disclosure failure, prior-order violation, RFA nonresponse under Rule 36, premature motion practice, grant without fees, and fee-only requests after production.  The highest-risk failure in this first set is a schema-valid or schema-invalid sanction decision that grants fees on a denied motion or omits the required sanction fields.
+## Fixture Coverage
+
+The fixture file contains sixteen rows across three difficulty tiers.  Seven rows expect a grant, and nine expect a denial.  The `severity` field weights each row when the summary computes weighted accuracy.
+
+The fixtures cover interrogatories, requests for production, initial disclosures, and requests for admission.  They test missing, complete, and evasive responses; privilege and work-product objections; overbreadth and proportionality; cure; disclosure and discovery-order violations; premature motions; and the separation between compelled relief and fees.  The expected sanction types are `fees` and `none`.
 
 ## Fixture Shape
 
 | Field | Meaning |
-|---|---|
+| --- | --- |
 | `id` | Stable row identifier. |
-| `tier` | Difficulty level, with tier 3 for close sanction and cure boundaries. |
-| `issue_family` | Summary slice for the discovery-dispute family. |
-| `case_theme` | Short factual setting placed in the case caption and docket. |
+| `tier` | Difficulty tier. |
+| `issue_family` | Discovery issue used for summary slices. |
+| `case_theme` | Short factual setting placed in ADC state. |
 | `movant` | Party seeking Rule 37 relief. |
-| `target_party` | Opposing party whose discovery conduct is challenged. |
+| `target_party` | Party whose discovery conduct is challenged. |
 | `discovery_type` | `interrogatories`, `rfp`, `rfa`, or `initial_disclosures`. |
-| `set_index` | Discovery set index used in docket text and prompt context. |
+| `set_index` | Discovery-set index placed in ADC state. |
 | `request_text` | Discovery request or disclosure obligation. |
 | `response_text` | Response, objection, cure, or nonresponse record. |
 | `meet_and_confer_text` | Optional meet-and-confer chronology. |
-| `motion_text` | Movant's requested Rule 37 relief. |
-| `opposition_text` | Target party's reason for grant, denial, or sanction limits. |
+| `motion_text` | Motion and requested relief. |
+| `opposition_text` | Opposition and asserted sanction limits. |
+| `reply_text` | Optional reply. |
 | `expected_granted` | Expected grant or denial. |
 | `expected_sanction_type` | `none` or `fees`. |
-| `expected_sanction_amount` | Required amount when fees are expected. |
-| `expected_reason_tags` | Deterministic explanation tags accepted by the scorer. |
+| `expected_sanction_amount` | Expected amount when fees are awarded. |
+| `expected_reason_tags` | Reason categories used by deterministic explanation scoring. |
 | `severity` | Weight used in weighted accuracy. |
-| `context_notes` | Human-readable explanation of the fixture boundary. |
+| `context_notes` | Explanation of the discovery boundary tested by the row. |
 
 ## Scoring
 
-The scorer requires exactly one `decide_rule37_motion` tool call.  It checks `motion_index`, `granted`, `sanction_type`, `sanction_amount`, `order_text`, `reasoning`, reason tags, and Lean acceptance.  A denied motion with `sanction_type: fees`, a fee award without a positive amount, or a missing required sanction type is invalid before Lean application because the payload cannot represent a valid Rule 37 order.
+The scorer accepts exactly one `decide_rule37_motion` call and requires `motion_index` zero.  It validates `granted`, `sanction_type`, `sanction_amount`, and `reasoning` before comparing the grant decision and sanction to the fixture label.  It uses `order_text` together with `reasoning` for deterministic explanation matching.
 
-The summary reports total accuracy, grant accuracy, weighted accuracy, invalid rate, false-grant rate, false-denial rate, sanction mismatches, and slices by reason tag, issue family, tier, movant, and expected sanction type.  Explanation scoring remains deterministic and uses accepted equivalents for ordinary wording such as complete response, cured defect, proportionality, substantially justified objection, and deemed-admitted RFAs.  The runner supports `--rescore-results` so scorer vocabulary corrections can be applied to completed live outputs without repeating model calls.
+A denied motion must use `sanction_type: none`, and a nonzero amount is invalid with that sanction type.  A fee award requires `sanction_type: fees` and a positive amount, while a granted motion may use `none` when fees would be unjust.  Outcome correctness also requires both acceptance fields, and the summary records aggregate rates and slices by reason tag, issue family, tier, movant, and expected sanction type.  In deterministic production mode, a successful step sets both `step_accepted` and `lean_accepted`.  Counterfactual model mode obtains `lean_accepted` from `apply_decision`.
 
-## Prompt Iteration
+## Execution and Prompt Selection
 
-Candidate v1 addresses denial-row sanction handling, where an invalid `granted: false` paired with `sanction_type: fees` fails Lean before the order reasoning can be scored.  Candidate v2 makes the payload requirement explicit: every tool call includes `sanction_type`, a denied motion uses `none`, and `fees` applies only to a granted motion with a fee award.  Measured results are in [Rule 37 Analysis](analysis.md).
+The default command executes the deterministic action supplied by the judge opportunity.  The `--counterfactual-model` flag removes that action and obtains a decision from `--model`.  Candidate prompt execution uses counterfactual-model mode.  The evaluator records prompt source, prompt name, execution mode, per-fixture records, and aggregate metrics in `results.jsonl` and `summary.json`.
 
-One fixture was mislabeled in the first live run.  ARCP Rule 36 treats an unanswered request for admission as admitted, so that row expects denial rather than a compelled response.  The fixture set carries the correction.
+```bash
+adc eval judge-rule37 \
+  --counterfactual-model \
+  --opportunity-prompt-file evals/adc/judge/rules/rule37/discovery-sanctions/prompts/candidate-v2.md \
+  --opportunity-prompt-name candidate-v2 \
+  --out-dir evals/out/adc/judge/rule37-candidate-v2
+```

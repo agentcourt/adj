@@ -1,8 +1,8 @@
 # ADC Evals
 
-`evals/adc/` contains behavior eval assets for ADC actors.  [Judge Evals](judge/README.md) live under `judge/`, organized by procedural rule and evaluated behavior.  Future lawyer and juror evals should use the same split between committed fixtures and ignored run output.
+`evals/adc/` contains the checked-in assets for ADC behavior evals.  [Judge Evals](judge/README.md) are organized by procedural rule and judge action.  Every suite contains fixtures, prompt candidates, and analysis.  Nine suites contain a local `plan.md`, while Rule 47 voir dire uses the cross-rule [Judge Eval Plan](judge/plan.md).
 
-Committed eval directories hold fixtures, prompt candidates, plans, and analysis.  Runner code that depends on ADC runtime types stays under `adc/runtime/eval`.  Generated ADC eval output belongs under `evals/out/adc/`.
+Runner code that depends on ADC runtime types lives under `adc/runtime/eval`, and `adc eval` exposes the registered commands.  Each run writes `results.jsonl` and `summary.json` beneath its selected output directory.  Generated ADC eval output belongs under `evals/out/adc/`.
 
 ## Layout
 

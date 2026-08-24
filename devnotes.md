@@ -351,3 +351,15 @@ The complete Go test suite, the race-enabled evaluator, runner, Lean, and CLI su
 - [ ] Pass model-pool validation, audit, mock scoring, and pipeline construction.
 - [ ] Pass bounded live ADC and complete model-pool runs.
 - [ ] Review the final file set, documentation, and generated ignored output.
+
+## Evaluation documentation
+
+The behavior-eval documentation describes the ten registered ADC judge suites, their checked-in fixtures and prompt templates, the production opportunity runner, deterministic execution for Rules 11, 37, and 58, scoring, and generated outputs.  The rule-specific documents state their fixture distributions, state construction, payload requirements, summary fields, execution modes, rescore support, and limits from the Go implementation and JSONL fixtures.  The Rule 58 candidate identifies the fixture context as the source of `claim_id` and `basis` and the tool schema as the source of their requirement.  The model-pool operator documents describe the inventory, evaluation, filtering, gene inference, PCA, clustering, aggregation, and sampling commands and their retained files.  They also record the persona-path mismatch between generated pools under `results/` and the runtime loaders.
+
+A one-fixture Rule 11 command completed through the ADC engine with the production deterministic action, Lean acceptance, step acceptance, and a correct score.  The focused evaluator and CLI Go tests passed, and the model-pool repository audit and both question-set validations reported no issues.  A mock Core20 evaluation wrote and scored 60 rows with a deliberation score of 1.0 and no operational errors.  Relative Markdown links, prose structure, terminology, and whitespace checks passed across the edited operator documents.
+
+- [x] Check every ADC judge suite document against its runner and fixtures.
+- [x] Check the model-pool operator documents against the command implementations.
+- [x] Run one ADC eval through the production execution path.
+- [x] Run the focused Go tests and local model-pool validation commands.
+- [x] Verify local links, prose structure, terminology, and whitespace.

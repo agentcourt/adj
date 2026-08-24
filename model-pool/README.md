@@ -1,23 +1,23 @@
 # Model Pool
 
-`model-pool/` builds the juror and council model pools that `adc case`, `aar case`, and `aard case` draw from.  The tools evaluate models and pinned OpenRouter provider endpoints against JSON-scored question sets, build endpoint inventories, collect behavior-prompt responses, cluster embeddings, and sample endpoint/persona pools into a `pool.jsonl` of request-spec records.  Generated run files belong under `results/`; versioned inputs belong under `sets/`, `schemas/`, `rubrics/`, `prompts/`, `config/`, `genes.json`, `sampled-genes.json`, and `variants/`.  Persona text comes from `../common/etc/personas/`, the same corpus the runtimes read when a pool record names a persona.
+`model-pool/` constructs juror and council model-pool records for `adc case`, `aar case`, and `aard case`.  The tools evaluate models and pinned OpenRouter provider endpoints against JSON-scored question sets, build endpoint inventories, collect behavior-prompt responses, cluster embeddings, and sample endpoint/persona records into `pool.jsonl`.  Generated run files belong under `results/`.  Versioned procedure inputs belong under `sets/`, `schemas/`, `rubrics/`, `prompts/`, `genes.json`, `sampled-genes.json`, and `variants/`.  `config/` contains reference-only model and pool lists, and persona text comes from `../common/etc/personas/`.
 
-A provider endpoint is the unit of evaluation, because one OpenRouter model ID can route to several endpoints that differ in provider, quantization, context limit, supported parameters, pricing, and behavior.  Behavior evals of the adjudication actors themselves are a separate concern and live under [Evals](../evals/README.md).
+A provider endpoint is the unit of evaluation, because one OpenRouter model ID can route to several endpoints that differ in provider, quantization, context limit, supported parameters, pricing, and behavior.  Pool records retain endpoint identity so runtime requests can preserve the selected route constraints.  Behavior evals of the adjudication actors live under [Evals](../evals/README.md).
 
-Use `model-pool/` as the working directory unless a command says otherwise.  OpenRouter calls require `OPENROUTER_API_KEY` or ignored `secrets/openrouter.api.txt`.  Embedding runs require `OPENAI_API_KEY` or ignored `secrets/openai.api.txt`.
+Use `model-pool/` as the working directory unless a command says otherwise.  OpenRouter calls require `OPENROUTER_API_KEY` in the environment or an ignored `secrets/openrouter.api.txt` file containing `OPENROUTER_API_KEY=<key>` or `export OPENROUTER_API_KEY=<key>`.  Embedding runs require `OPENAI_API_KEY` in the environment or an ignored `secrets/openai.api.txt` file using the corresponding `OPENAI_API_KEY` assignment.  A bare token in either file is rejected.
 
 ## Documentation
 
 | Document | Use |
 | --- | --- |
 | [Model Pool Manual](manual.md) | Command reference, terminology, scoring model, endpoint-variant procedures, pool construction, and troubleshooting. |
-| [Documentation Index](docs/README.md) | Sampling runbook and model inventory notes. |
+| [Documentation Index](docs/README.md) | Sampling runbook and model inventory reference. |
 | [Core20 Rubric](rubrics/core20.md) | Response schemas, deterministic checks, deliberation score, and operational metrics. |
-| [Development Notes](devnotes.md) | Development journal, rationale, and follow-up notes. |
+| [Development Notes](devnotes.md) | Development journal, design rationale, and verification record. |
 
 ## Quick Checks
 
-Run these commands from `model-pool/` before changing items, prompts, schemas, configs, or sampling inputs.  The validation commands check question records and fixture references.  The audit checks repository consistency for the eval inputs and tool references.
+Run these commands from `model-pool/` before changing items, prompts, schemas, or sampling inputs.  The validation commands check question records and fixture references.  The audit checks question modes, schema assumptions, prompt contracts, exact-route defaults, and endpoint filename uniqueness.
 
 ```bash
 uv run tools/score_eval.py validate-items --questions sets/core20/questions.jsonl
@@ -34,7 +34,9 @@ uv run tools/score_eval.py score --run results/mock-perfect
 
 ## Run Data
 
-Model responses, score files, provider inventories, sampled pools, and stage summaries belong under `results/`, or under an intentional snapshot directory in `variants/` when the repository needs a checked-in survivor set.  `results/` is ignored except for `results/.gitkeep`, and credentials are ignored under `secrets/`.  README content stays limited to stable workflow, file locations, and entry points; run IDs, endpoint counts, pass rates, accepted endpoint lists, and dated filter details belong in generated results, snapshot summaries, analysis notes, or the manual.
+Generated model responses, score files, provider inventories, sampled pools, and stage summaries belong under `results/`.  Git ignores that directory except for `results/.gitkeep`, and it ignores credentials under `secrets/`.  The checked-in provider-endpoint snapshot lives under `variants/filtered-20260529/`.
+
+The sampler copies `persona_path` from each gene-stage record into the pool row.  With the default `--persona`, a generated row contains `../common/etc/personas/generic.md`, a path relative to `model-pool/`.  Runtime loaders resolve a relative persona path beside the selected pool file and then under `<pool-dir>/../../etc/`, so they cannot resolve that default value from the nested result directories used by the documented sampler and end-to-end commands.  Pool construction preserves that path unchanged.  The installed default pool at `common/data/personas/pool.jsonl` instead contains `personas/generic.md`, which resolves through the shared-tree path.
 
 ## Layout
 
@@ -44,7 +46,7 @@ Model responses, score files, provider inventories, sampled pools, and stage sum
 | `schemas/` | JSON schemas for items and responses. |
 | `rubrics/` | Deterministic scoring rules and metric definitions. |
 | `prompts/` | Prompt text used by eval or pool-construction tools. |
-| `config/` | Retained model lists and pool selections from earlier runs, kept as reference sets.  No tool reads them. |
+| `config/` | Reference-only model lists and pool selections. |
 | `genes.json`, `sampled-genes.json` | Behavior-prompt source data and sampled prompt sets. |
 | `variants/` | Checked-in provider-endpoint snapshot files. |
 | `tools/run_eval.py`, `tools/score_eval.py`, `tools/audit_eval.py` | Question-set execution, validation, scoring, and repository checks. |

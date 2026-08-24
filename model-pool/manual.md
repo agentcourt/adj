@@ -1,16 +1,16 @@
 # Model Pool Manual
 
-`model-pool/` selects OpenRouter provider endpoints for juror and council model pools.  It evaluates endpoints with JSON-scored question sets, filters endpoints by provider-error count and deliberation score, samples behavior prompts from accepted endpoints, clusters response embeddings, and samples endpoint/persona records for pool use.  Scripts write generated files under `results/`, while checked-in inputs live in `sets/`, `schemas/`, `rubrics/`, `prompts/`, `config/`, `genes.json`, and `sampled-genes.json`.  Persona text comes from `../common/etc/personas/`, shared with the runtimes.
+`model-pool/` selects OpenRouter provider endpoints for juror and council model pools.  It evaluates endpoints with JSON-scored question sets, filters completed endpoint summaries by provider-error count and deliberation score, applies behavior prompts to accepted endpoints, clusters response embeddings, and samples endpoint/persona records.  Scripts write generated files under `results/`, while checked-in procedure inputs live in `sets/`, `schemas/`, `rubrics/`, `prompts/`, `genes.json`, `sampled-genes.json`, and `variants/`.  `config/` contains reference-only model and pool lists, and persona text comes from `../common/etc/personas/`.
 
-Use `model-pool/` as the working directory unless a command says otherwise.  OpenRouter calls require `OPENROUTER_API_KEY` in the environment or an ignored `secrets/openrouter.api.txt` file.  Gene-response embedding calls also require `OPENAI_API_KEY` in the environment or an ignored `secrets/openai.api.txt` file.
+Use `model-pool/` as the working directory unless a command says otherwise.  OpenRouter calls require `OPENROUTER_API_KEY` in the environment or an ignored `secrets/openrouter.api.txt` file containing `OPENROUTER_API_KEY=<key>` or `export OPENROUTER_API_KEY=<key>`.  Gene-response embedding calls also require `OPENAI_API_KEY` in the environment or an ignored `secrets/openai.api.txt` file using the corresponding `OPENAI_API_KEY` assignment.  A bare token in either file is rejected.
 
-The runner requests strict JSON responses and records raw outputs, parsed responses, tool traces, provider metadata, timing data, and cost data.  Generated results stay under `results/`, while the checked-in accepted endpoint set lives under `variants/filtered-20260529/`.  Current-provider claims require a refreshed inventory and fresh evals.
+The runner requests strict JSON responses and records raw outputs, parsed responses, tool traces, provider metadata, timing data, and cost data.  Generated results stay under `results/`, while the checked-in accepted endpoint set lives under `variants/filtered-20260529/`.  Claims about current provider behavior require a refreshed inventory and fresh evals.
 
 ## Purpose
 
-The eval tools serve two jobs for adjudication model pools.  They check whether a model can follow the adjudication response format, use bounded evidence, cite records, and avoid obvious reasoning failures.  They also build endpoint-variant and persona-cluster records that can feed juror and council selection in `adc/`, `arb/`, and `arbd/`.
+The eval tools serve two functions for adjudication model pools.  They check whether a model follows the adjudication response format, uses bounded evidence, cites records, and answers the knowledge, quantitative, reasoning, and juror-deliberation items.  They also build endpoint-variant and persona-cluster records for juror and council selection in `adc/`, `arb/`, and `arbd/`.
 
-The eval sets are sized for manual review.  A high score shows that a model behaved acceptably on these items under the recorded provider route, request parameters, and prompt wrapper.  Later OpenRouter routes, different provider endpoints, and changed model releases require fresh evaluation.
+The eval sets are sized for manual review.  A high score shows that a model behaved acceptably on these items under the recorded provider route, request parameters, and prompt wrapper.  A different route, endpoint, model release, or prompt wrapper requires another evaluation.
 
 ## Task Guide
 
@@ -19,8 +19,8 @@ The eval sets are sized for manual review.  A high score shows that a model beha
 | Check one model or pinned provider endpoint against a question set. | [Question-Set Evaluation](#question-set-evaluation) |
 | Build a pool from OpenRouter model IDs. | [Full Selection Procedure](#full-selection-procedure) |
 | Refresh or inspect the accepted provider endpoint set. | [Provider Endpoint Selection](#provider-endpoint-selection) |
-| Understand behavior prompts, embeddings, PCA, clusters, and pool sampling. | [Behavior Clustering And Pool Sampling](#behavior-clustering-and-pool-sampling) |
-| Render a chart of the per-gene clusters. | [Behavior Clustering And Pool Sampling](#behavior-clustering-and-pool-sampling) |
+| Understand behavior prompts, embeddings, PCA, clusters, and pool sampling. | [Behavior Clustering and Pool Sampling](#behavior-clustering-and-pool-sampling) |
+| Render a chart of the per-gene clusters. | [Behavior Clustering and Pool Sampling](#behavior-clustering-and-pool-sampling) |
 | Interpret score fields. | [Score Model](#score-model) |
 | Diagnose failed validation, endpoint, batch, or clustering runs. | [Troubleshooting](#troubleshooting) |
 | Find the meaning and purpose of a repository term. | [Glossary](#glossary) |
@@ -36,11 +36,13 @@ Refresh endpoint inventories when a claim depends on current provider behavior. 
 
 ## Full Selection Procedure
 
-Input: OpenRouter model IDs.  Output: `pool.jsonl`, a JSONL file of endpoint/persona records.  A provider endpoint is evaluated as its own unit because one OpenRouter model ID can route to multiple provider endpoints with different provider tags, quantization, context limits, supported parameters, pricing, and behavior.
+The procedure accepts OpenRouter model IDs and produces `pool.jsonl`, a JSONL file of endpoint/persona records.  A provider endpoint is evaluated as its own unit because one OpenRouter model ID can route to multiple provider endpoints with different provider tags, quantization, context limits, supported parameters, pricing, and behavior.  Each output row supplies a runtime model request and persona reference.
+
+The gene stage stores the persona path supplied through `--persona`, and aggregation and sampling preserve that value.  With the default option, a generated row contains `../common/etc/personas/generic.md`, a path relative to `model-pool/`.  A runtime resolves a relative persona path beside the selected pool file and then under `<pool-dir>/../../etc/`, so it cannot resolve that default value from the nested result directories used by the documented sampler and end-to-end commands.  Pool construction preserves that path unchanged.  The installed default at `common/data/personas/pool.jsonl` instead contains `personas/generic.md`, which resolves through the shared-tree path.
 
 | Step | Input | Script | Output |
 | --- | --- | --- | --- |
-| Select root models | Explicit OpenRouter model IDs, or `--root-count` plus `--root-seed` | `tools/run_end_to_end.py` or a recorded selection command | Selected OpenRouter model IDs |
+| Select root models | Explicit OpenRouter model IDs, or `--root-count` plus `--root-seed` | `tools/run_end_to_end.py` | Selected OpenRouter model IDs |
 | Inventory provider endpoints | Selected OpenRouter model IDs | `tools/model_inventory.py` | Provider endpoint rows and raw OpenRouter catalog files |
 | Evaluate provider endpoints | Provider endpoint rows and a question file | `tools/run_variant_batch.py`, which calls `tools/run_eval.py` and `tools/score_eval.py` | Response files, score files, exact request specs, and per-endpoint summary rows |
 | Filter endpoints | Provider endpoint rows and evaluation summaries | `tools/run_end_to_end.py` filter stage | Accepted endpoint rows, rejected endpoint records, and filter summary |
@@ -48,7 +50,7 @@ Input: OpenRouter model IDs.  Output: `pool.jsonl`, a JSONL file of endpoint/per
 | Reduce embeddings | Gene completion records with embeddings | `tools/run_embedding_pca.py` | PCA coordinates and PCA summary |
 | Cluster responses | Per-gene PCA records | `tools/run_gene_pca_clustering.py` | Cluster assignments and clustering summary |
 | Aggregate cluster labels | Cluster assignments, cluster fit, and accepted endpoint rows | `tools/aggregate_variant_persona_clusters.py` | Endpoint/persona cluster records |
-| Sample pool | Endpoint/persona cluster records | `tools/sample-tuple-pool.py` | `pool.jsonl` and sampling diagnostics |
+| Sample pool | Endpoint/persona cluster records | `tools/sample-tuple-pool.py` | `pool.jsonl`, sampling diagnostics, and equivalence records |
 
 `tools/run_end_to_end.py` executes those stages in one command.  It prints structured stage and command events while it runs.  Stage directories and `summary.json` contain the results.
 
@@ -67,7 +69,7 @@ uv run --script tools/run_end_to_end.py \
   --pool-size 5
 ```
 
-This example evaluates five sampled root models, uses one trial per question, samples two genes, collects one response per accepted endpoint/gene pair, reduces embeddings to three PCA dimensions, searches K-means values from `2` through `4`, and writes five pool entries.  A production pool should set root model IDs or root sampling parameters, question file, trial count, filter criteria, gene selection, sample count, PCA dimensions, clustering range, pool size, and random seeds explicitly.  `--stop-after` stops after a named stage.
+This example evaluates five sampled root models, uses one trial per question, samples two genes, collects one response per accepted endpoint/gene pair, requests three PCA dimensions, searches K-means values from `2` through `4`, and writes five pool entries.  The end-to-end runner caps the PCA dimensions at the usable embedding-row count unless `--strict-pca-dimensions` makes the mismatch an error.  For a specified pool, set the root models or root sampling parameters, question file, trial count, filter criteria, gene selection, sample count, PCA dimensions, clustering range, pool size, and random seeds explicitly.  `--stop-after` stops after a named stage.
 
 ## Glossary
 
@@ -79,21 +81,21 @@ This example evaluates five sampled root models, uses one trial per question, sa
 | Evaluation output | Raw and parsed responses for a model or provider endpoint over questions and trials. | Preserves model output, tool trace, provider metadata, timing data, and errors before scoring. | `results/*/raw_results.jsonl` |
 | Score | Deterministic checks and aggregate metrics for an evaluation output. | Separates answer quality from formatting failures, provider errors, tool failures, latency, and cost. | `results/*/scores.json` |
 | Provider endpoint | One OpenRouter provider endpoint for one OpenRouter model ID. | Keeps provider routing, quantization, context limits, pricing, and supported parameters separate during evaluation. | `endpoint_variants.jsonl` |
-| Accepted endpoint | A provider endpoint that passed the current operational and deliberation filters. | Supplies eligible endpoints for behavior sampling and pool construction. | `variants/filtered-20260529/*` |
-| Gene | A behavior-eliciting prompt used after endpoint filtering. | Produces response variation used to compare accepted endpoints beyond question-set scores. | `genes.json`, `sampled-genes.json` |
+| Accepted endpoint | A provider endpoint that passed the recorded operational and deliberation filters. | Supplies eligible endpoints for behavior sampling and pool construction. | `variants/filtered-20260529/*` |
+| Gene | A behavior-eliciting prompt applied after endpoint filtering. | Produces response variation used to compare accepted endpoints beyond question-set scores. | `genes.json`, `sampled-genes.json` |
 | Persona | Role text used while sampling gene responses. | Holds the role constant while comparing endpoint behavior on genes and supplies persona text when a sampled pool entry is selected. | `../common/etc/personas/` |
 | Cluster assignment | One sampled completion assigned to a per-gene PCA cluster. | Records the behavior group for one endpoint response to one gene. | `clusters.jsonl` |
 | Cluster record | One endpoint/persona row with one cluster label per sampled gene. | Summarizes endpoint/persona behavior for pool sampling. | `variant-persona-clusters.jsonl` |
-| Pool entry | One selected endpoint/persona row for a model pool. | Provides endpoint/persona records to pool code. | `pool.jsonl` |
+| Pool entry | One selected endpoint/persona row for a model pool. | Provides a model request specification and persona reference to pool code. | `pool.jsonl` |
 
 ## Question-Set Evaluation
 
-Question-set evaluation tests whether a model or pinned provider endpoint answers the question set correctly and returns the required JSON.  It also records formatting failures, provider errors, tool failures, latency, and cost as separate fields.  Pool filtering uses those separate fields instead of mixing operational failures with answer quality.
+Question-set evaluation tests whether a model or pinned provider endpoint answers the question set correctly and returns the required JSON.  It records formatting failures, request errors, tool failures, latency, and cost as separate fields.  Endpoint filtering uses each variant's run exit code, combined provider-error count, and deliberation score.  Completion count, latency, timeout count, schema violations, tool failures, invalid votes, malformed JSON, context-limit errors, and cost remain in the score output but do not independently affect that filter.
 
 | Input | Meaning |
 | --- | --- |
 | Question file | `sets/core20/questions.jsonl` or `sets/deliberation/questions.jsonl` |
-| Prompt file | `--prompt`, default `prompts/juror-single.md`; relative paths resolve from `model-pool/` |
+| Prompt file | `--prompt`, default `prompts/juror-single.md`.  Relative paths resolve from `model-pool/`. |
 | Target endpoint | `--models openrouter://...`, `--model-spec ...`, `--model-spec-jsonl ...`, or a mock model |
 | Trial count | `--trials`, default `3` |
 | Evidence records | `sets/core20/fixtures/*` for record-based adjudication questions |
@@ -104,7 +106,7 @@ Question-set evaluation tests whether a model or pinned provider endpoint answer
 | `raw_results.jsonl` | One response row per target, trial, and question |
 | `scores.json` | Per-response scores and aggregate summaries by model or provider endpoint |
 
-Ordinary questions must return `answer`, `confidence`, `rationale`, and `evidence_ids`.  The evidence list is empty unless the question requires evidence.  Record-based adjudication questions must return `vote`, `confidence`, `rationale`, and `evidence_ids`, and cited evidence IDs must come from the evidence record.
+Ordinary questions must return `answer`, `confidence`, `rationale`, and `evidence_ids`, and the scorer requires an empty evidence list for every ordinary item.  Record-based adjudication questions must return `vote`, `confidence`, `rationale`, and `evidence_ids`.  Their cited evidence IDs must come from the evidence record.
 
 ```json
 {"answer":"A","confidence":0.75,"rationale":"One to three sentences.","evidence_ids":[]}
@@ -116,7 +118,7 @@ Ordinary questions must return `answer`, `confidence`, `rationale`, and `evidenc
 
 `sets/core20/questions.jsonl` contains 20 questions: four human-knowledge questions, four science or quantitative questions, four reasoning questions, four instruction-following questions, and four record-based adjudication questions.  `sets/deliberation/questions.jsonl` contains the first twelve knowledge, science, and reasoning questions from `core20` plus eight juror-deliberation questions.  The juror-deliberation questions test burden of proof, evidentiary sufficiency, source reliability, conflicting records, temporal precision, alternative explanations, confidence calibration, and scope control.
 
-The local baseline needs no API key:
+### Local Verification Without API Keys
 
 ```bash
 uv run tools/score_eval.py validate-items --questions sets/core20/questions.jsonl
@@ -126,7 +128,7 @@ uv run tools/run_eval.py --prompt prompts/juror-single.md --mock perfect --model
 uv run tools/score_eval.py score --run results/mock-perfect
 ```
 
-A two-question OpenRouter evaluation confirms credentials, request formatting, result writing, and scoring:
+### OpenRouter Check
 
 ```bash
 uv run tools/run_eval.py \
@@ -138,7 +140,7 @@ uv run tools/run_eval.py \
 uv run tools/score_eval.py score --run results/openrouter-test
 ```
 
-An exact provider-endpoint evaluation starts from a JSON spec.  `tools/run_eval.py` adds the OpenRouter metadata header, requests the pinned provider endpoint, disables fallbacks, and records returned generation metadata when OpenRouter provides it.  Batch eval directories retain the exact spec used for each endpoint request.
+An exact provider-endpoint evaluation starts from a JSON spec.  For an inventory-derived row, `tools/run_eval.py` adds the OpenRouter metadata header, pins the provider endpoint, disables fallbacks, and records returned generation metadata when OpenRouter provides it.  Batch eval directories retain the exact spec used for each endpoint request.
 
 ```bash
 uv run tools/run_eval.py \
@@ -150,7 +152,7 @@ uv run tools/run_eval.py \
 uv run tools/score_eval.py score --run results/openrouter-provider-endpoint-test
 ```
 
-Endpoint rows can also be evaluated directly from JSONL:
+### Endpoint JSONL
 
 ```bash
 uv run tools/run_eval.py \
@@ -162,7 +164,7 @@ uv run tools/run_eval.py \
 uv run tools/score_eval.py score --run results/openrouter-variant-jsonl-test
 ```
 
-Run one record-backed function-tool item when changing evidence-tool behavior:
+### Function-Tool Check
 
 ```bash
 uv run tools/run_eval.py \
@@ -178,7 +180,7 @@ uv run tools/score_eval.py score \
   --run results/tool-function-openrouter-test
 ```
 
-Run the deliberation eval view when changing deliberation scoring or juror-facing prompts:
+### Deliberation Evaluation
 
 ```bash
 uv run tools/run_eval.py \
@@ -192,9 +194,9 @@ uv run tools/score_eval.py score \
   --run results/deliberation-openrouter-test
 ```
 
-Use `--trials 1` for a single-pass test run.  The default of three trials supports stability fields in the scorer.  Preserve the trial count in run notes when comparing scores across runs.
+Use `--trials 1` for a single-pass test run.  The default of three trials supports stability fields in the scorer.  Score comparisons require the same trial count.
 
-`deliberation_score` is the mean, across trials, of the fraction of deliberation questions answered correctly on the substantive issue.  Operational metrics report latency, provider failures, malformed JSON, schema violations, invalid votes, tool-call failures, context-limit errors, and cost.  The checked-in accepted endpoint set uses `provider_error_count == 0` and `deliberation_score >= 0.90`.
+`deliberation_score` is the mean, across trials that contain a completed deliberation row, of the fraction of completed deliberation rows answered correctly on the substantive issue.  Rows with metadata errors, including timeouts and provider errors, do not enter its denominator, and the scorer omits a trial with no completed deliberation rows.  Operational metrics report latency, request errors, malformed JSON, schema violations, invalid votes, tool-call failures, context-limit errors, and cost.  `provider_error_count` combines provider, rate-limit, credential, and runner errors.  The checked-in accepted endpoint set uses `provider_error_count == 0` and `deliberation_score >= 0.90`.
 
 ## Provider Endpoint Selection
 
@@ -206,7 +208,7 @@ uv run tools/model_inventory.py \
   --model-id deepseek/deepseek-v4-flash
 ```
 
-Inventory outputs:
+### Inventory Outputs
 
 | File | Contents |
 | --- | --- |
@@ -216,15 +218,15 @@ Inventory outputs:
 | `raw/models.json` | Raw OpenRouter model catalog response |
 | `raw/endpoints/*.json` | Raw OpenRouter endpoint metadata responses |
 
-Use these fields from a variant JSON object when constructing an exact OpenRouter request:
+### Request Fields
 
-| Field | Request use |
+| Field | Role |
 | --- | --- |
 | `openrouter_model_id` | `model` |
 | `endpoint_tag` | `provider.only[0]` when present |
 | `provider_name` | Fallback `provider.only` value when `endpoint_tag` is absent |
 | `quantization` | `provider.quantizations` when the value is known |
-| `supported_parameters` | Parameters the endpoint reports that it supports |
+| `supported_parameters` | Endpoint capability metadata retained with the result |
 
 Provider-endpoint evaluations use exact routing constraints.  For known quantization, the request includes `provider.only`, `allow_fallbacks: false`, `require_parameters: true`, and `provider.quantizations`.  For `quantization: "unknown"`, the request still pins the provider endpoint and omits the quantization list.
 
@@ -240,7 +242,7 @@ Provider-endpoint evaluations use exact routing constraints.  For known quantiza
 }
 ```
 
-For `quantization: "unknown"`, the runner pins the endpoint tag or provider and omits `provider.quantizations`:
+### Unknown Quantization
 
 ```json
 {
@@ -253,13 +255,13 @@ For `quantization: "unknown"`, the runner pins the endpoint tag or provider and 
 }
 ```
 
-Exact-variant runs set this HTTP header:
+### Route Metadata Header
 
 ```text
 X-OpenRouter-Experimental-Metadata: enabled
 ```
 
-After each OpenRouter call, verify the routed endpoint from response metadata and `/api/v1/generation?id=<generation_id>`.  Record provider, endpoint, usage, cost, latency, native token counts, and upstream IDs when OpenRouter returns them.  The request measures the routed OpenRouter endpoint product, but exact weights, serving engine, GPU type, KV-cache precision, hidden provider prompts, and provider changes after the inventory snapshot require provider attestations or controlled deployments.
+Eval result rows record the routed endpoint from response metadata and `/api/v1/generation?id=<generation_id>` when OpenRouter returns it.  The metadata can include provider, endpoint, usage, cost, latency, native token counts, and upstream IDs.  The request measures the routed OpenRouter endpoint product, while exact weights, serving engine, GPU type, KV-cache precision, and provider prompts require provider attestations or controlled deployments.
 
 Use `tools/run_variant_batch.py` to evaluate an endpoint inventory one variant at a time.  The batch runner writes one exact spec file per variant, calls `tools/run_eval.py`, scores each completed run with `tools/score_eval.py`, and writes per-variant summary rows.  The output directory must be absent or empty.
 
@@ -273,14 +275,14 @@ uv run --script tools/run_variant_batch.py \
   --timeout 90
 ```
 
-The batch output includes these files:
+### Batch Outputs
 
 | File | Contents |
 | --- | --- |
 | `specs/*.json` | Exact OpenRouter variant specs used for requests. |
 | `variant-runs/*/run_eval.log` | Child-process output for one variant. |
 | `variant-runs/*/raw_results.jsonl` | Raw eval rows for one variant. |
-| `variant-runs/*/scores.json` | Scored summary for one variant. |
+| `variant-runs/*/scores.json` | Scored summary for a variant whose scoring command succeeded. |
 | `variant_summary.csv` | Tabular per-variant summary. |
 | `summary.json` | Batch status and aggregate counts. |
 
@@ -288,26 +290,26 @@ The batch runner accepts `--no-progress-timeout` and `--variant-timeout`.  `--ti
 
 The checked-in accepted endpoint set is `variants/filtered-20260529/`.  It contains 32 accepted provider endpoints from a 72-endpoint source set.  Its filter criteria are recorded in `summary.json`: `provider_error_count == 0` and `deliberation_score >= 0.90`.
 
-New filter-stage files:
+### Filter Outputs
 
 | File | Contents |
 | --- | --- |
 | `endpoint_variants.jsonl` | Full provider endpoint rows for accepted endpoints |
 | `endpoint_variants.csv` | Inspection table for accepted endpoints |
-| `removed_variants.jsonl` | Rejected endpoint identities, filter reasons, and relevant values |
+| `removed_variants.jsonl` | Rejected endpoint identities, filter reasons, and reason-specific exit or score fields |
 | `summary.json` | Filter criteria, source paths, accepted endpoint count, and selected source indexes |
 
-The dated snapshot retains `endpoint_variants.jsonl`, `endpoint_variants.csv`, and `summary.json`.  Its summary records the historical source paths, filter criteria, and accepted source indexes.  New filter runs also retain their rejected rows in `removed_variants.jsonl`.
+The checked-in snapshot contains `endpoint_variants.jsonl`, `endpoint_variants.csv`, and `summary.json`.  Its summary records the filter criteria, total endpoint count, accepted endpoint count, and accepted source indexes.  Generated filter directories also contain rejected rows in `removed_variants.jsonl`.
 
-## Behavior Clustering And Pool Sampling
+## Behavior Clustering and Pool Sampling
 
-Behavior clustering compares accepted endpoints on behavior-eliciting prompts after question-set filtering.  A gene is one behavior prompt, and the current configuration uses `../common/etc/personas/generic.md` as the persona.  For each `gene + provider endpoint + persona`, `tools/run_first_gene_inference_embeddings.py` collects one or more completions and embeds the response text.
+Behavior clustering compares accepted endpoints on behavior-eliciting prompts after question-set filtering.  A gene is one behavior prompt, and `../common/etc/personas/generic.md` is the default persona.  For each `gene + provider endpoint + persona`, `tools/run_first_gene_inference_embeddings.py` collects one or more completions and embeds the response text.
 
 | Input | Meaning |
 | --- | --- |
-| Accepted endpoints | `variants/filtered-20260529/endpoint_variants.jsonl` or a new filtered endpoint file |
+| Accepted endpoints | `variants/filtered-20260529/endpoint_variants.jsonl` or another filtered endpoint file whose rows contain `endpoint_tag` |
 | Genes | `sampled-genes.json` or another sampled gene file |
-| Persona | `../common/etc/personas/generic.md` unless the evaluation config names another persona file |
+| Persona | `../common/etc/personas/generic.md` unless `--persona` names another file |
 | Samples per gene | `--samples` for gene inference and `--expected-samples-per-gene` for aggregation |
 
 | File | Contents |
@@ -318,10 +320,12 @@ Behavior clustering compares accepted endpoints on behavior-eliciting prompts af
 | `clusters.jsonl` | One cluster assignment per sampled completion |
 | `variant-persona-clusters.jsonl` | One endpoint/persona record with cluster labels ordered by `gene_index` |
 | `pool.jsonl` | Sampled endpoint/persona records selected from cluster-label tuples |
+| `diagnostics.jsonl` | Selected tuple and source row for each pool record |
+| `equivalence.jsonl` | Endpoint-equivalence classes and selected representatives |
 
-PCA is computed separately for each gene because each gene has its own response distribution.  Per-gene clustering assigns each sampled completion to a K-means cluster within that gene.  Aggregation converts sample-level labels into one cluster record per endpoint/persona row, ordered by ascending `gene_index`.
+PCA is computed separately for each gene because each gene has its own response distribution.  Per-gene clustering assigns each sampled completion to a selected cluster, using K-means when valid candidates exist and a single fallback cluster otherwise.  Aggregation converts sample-level labels into one cluster record per endpoint/persona row, ordered by ascending `gene_index`.
 
-Run one sampled gene through the filtered variants and embed the responses:
+### Gene Inference and Embedding
 
 ```bash
 uv run --script tools/run_first_gene_inference_embeddings.py \
@@ -335,7 +339,7 @@ uv run --script tools/run_first_gene_inference_embeddings.py \
 
 Check `summary.json` before passing the records to PCA.  `records_written` and `embedding_count` must equal `expected_records`, while both error counts must be zero.  The gene command writes diagnostic rows and its summary before returning a nonzero exit status for a completion or embedding failure, and the end-to-end runner stops on that failed stage.
 
-Run PCA for one gene response set:
+### PCA Reduction
 
 ```bash
 uv run --script tools/run_embedding_pca.py \
@@ -344,7 +348,7 @@ uv run --script tools/run_embedding_pca.py \
   --dimensions 3
 ```
 
-Cluster the per-gene PCA outputs:
+### Per-Gene Clustering
 
 ```bash
 uv run --script tools/run_gene_pca_clustering.py \
@@ -358,7 +362,7 @@ uv run --script tools/run_gene_pca_clustering.py \
   --expected-samples-per-variant 3
 ```
 
-Aggregate sample-level clusters into one variant/persona row per endpoint variant:
+### Cluster Aggregation
 
 ```bash
 uv run --script tools/aggregate_variant_persona_clusters.py \
@@ -369,7 +373,7 @@ uv run --script tools/aggregate_variant_persona_clusters.py \
   --expected-samples-per-gene 3
 ```
 
-Sample a tuple-uniform pool:
+### Tuple-Uniform Sampling
 
 ```bash
 uv run --script tools/sample-tuple-pool.py \
@@ -381,38 +385,36 @@ uv run --script tools/sample-tuple-pool.py \
   --seed 0
 ```
 
-`tools/sample-tuple-pool.py` deduplicates equivalent provider endpoints before sampling.  It groups rows by OpenRouter model ID, endpoint model ID, canonical slug, Hugging Face ID, quantization, and modalities.  The grouping excludes provider name, endpoint tag, context limits, prompt and completion limits, supported parameters, price, latency, and uptime, because those fields describe provider-route capability or serving behavior rather than model-configuration identity.  For each group, it selects one concrete provider endpoint by operational rank: fewer provider errors, higher deliberation score, fewer schema violations, fewer timeouts and context-limit errors, higher context and token capacity, higher uptime, lower latency, lower price, then stable endpoint identifiers.
+`tools/sample-tuple-pool.py` deduplicates equivalent provider endpoints before sampling.  It groups rows by OpenRouter model ID, endpoint model ID, canonical slug, Hugging Face ID, quantization, and modalities.  The grouping excludes provider name, endpoint tag, context limits, prompt and completion limits, supported parameters, price, latency, and uptime, because those fields describe provider-route capability or serving behavior rather than model-configuration identity.  For each group, it ranks representatives by fewer provider errors, higher deliberation score, fewer schema violations, fewer timeouts and context-limit errors, higher context and token capacity, higher uptime, lower latency, lower price, then stable endpoint identifiers.  Missing error counts rank as zero.  Missing deliberation score, capacity, and uptime rank below known values, while missing latency or price ranks after known values.  Standard end-to-end survivor rows contain the filter's provider-error count and deliberation score but omit schema-violation, timeout, and context-limit-error counts, so those three counts rank as zero and do not distinguish rows from that pipeline.
 
-The pool remains executable because each emitted row names one concrete provider endpoint.  `equivalence.jsonl` records every provider endpoint in each equivalent group, including the selected representative, provider name, endpoint tag, quantization, limits, operational fields, and cluster vector.  Use `--no-dedupe-equivalent-endpoints` only when the pool is meant to compare provider routes for the same model configuration.
+Each emitted row names one concrete provider endpoint.  `equivalence.jsonl` records every provider endpoint in each equivalent group, including the selected representative, provider name, endpoint tag, quantization, limits, operational fields, and cluster vector.  Use `--no-dedupe-equivalent-endpoints` only when the pool is meant to compare provider routes for the same model configuration.
 
-After deduplication, the sampler chooses one unique cluster tuple uniformly at random, then chooses one representative row uniformly from rows with that tuple.  Sampling uses replacement by default, so repeated rows can appear in `pool.jsonl`; the diagnostics file records the selected tuple, source row, model ID, provider, endpoint tag, quantization, equivalence class, and cumulative counts.  The diagnostic counts describe the deduplicated sampling frame unless `--no-dedupe-equivalent-endpoints` was used.
+After deduplication, the sampler chooses one unique cluster tuple uniformly at random, then chooses one representative row uniformly from rows with that tuple.  Sampling uses replacement by default, so repeated rows can appear in `pool.jsonl`.  The diagnostics file records the selected tuple, source row, model ID, provider, endpoint tag, quantization, equivalence class, and cumulative counts.  The diagnostic counts describe the deduplicated sampling frame unless `--no-dedupe-equivalent-endpoints` was used.
 
 Pass `--without-replacement` when each row from the sampling frame may appear at most once.  With deduplication enabled, the maximum `--pool-size` is the number of equivalence classes.  The command fails before writing output when the requested size exceeds that frame.
 
 ## Score Model
 
-The scorer separates deliberation quality from operational behavior:
-
 | Field | Meaning |
 | --- | --- |
-| `deliberation_score` | Mean trial score for substantive knowledge, science, reasoning, and juror-deliberation items. |
+| `deliberation_score` | Mean trial score over completed substantive knowledge, science, reasoning, and juror-deliberation rows. |
 | `trial_scores` | Per-trial deliberation scores. |
 | `deliberation_score_stddev` | Population standard deviation over trial scores. |
 | `deliberation_score_min` and `deliberation_score_max` | Trial-score range. |
-| `item_variation_count` | Count of items with different response values across trials. |
+| `item_variation_count` | Count of items with differing outcomes, schema validity, or response values across trials. |
 | `operational_metrics` | Latency, timeouts, provider errors, malformed JSON, schema violations, invalid votes, tool-call failures, context-limit errors, and cost. |
 
-Pool selection filters and ranks over those fields explicitly.  Operational failures and substantive deliberation failures have separate fields.  The score output keeps them separate so endpoint filtering can reject route failures without hiding answer quality.
+Endpoint filtering uses each variant row's `run_exit_code`, `provider_error_count`, and `deliberation_score`.  The provider-error field combines provider, rate-limit, credential, and runner errors, while the deliberation score excludes every row with a metadata error.  Equivalent-endpoint representative ranking uses the score, error, capacity, uptime, latency, price, and identifier fields present in its input.  Missing error counts rank as zero, missing deliberation score, capacity, and uptime rank below known values, and missing latency or price ranks after known values.  Standard end-to-end survivor rows omit schema-violation, timeout, and context-limit-error counts, so those fields rank as zero.  Trial scores, score spread, and item variation do not affect filtering or representative selection.
 
 ## Troubleshooting
 
 If a validation command fails, inspect the reported item ID and schema path first.  The core item schema, response schema, fixtures, and rubric must agree before a run can produce scores.  A fixture-backed tool item should have a manifest and evidence files under the matching `sets/core20/fixtures/` directory.
 
-If an OpenRouter run fails before it writes result rows, check credentials, model IDs, provider constraints, and endpoint availability.  The tools read `OPENROUTER_API_KEY` from the environment first and then from ignored `secrets/openrouter.api.txt`.  Exact-variant runs also depend on the provider route named by the variant spec, so a provider-side endpoint change can fail a spec that used to run.
+If an OpenRouter run fails before it writes result rows, check credentials, model IDs, provider constraints, and endpoint availability.  The tools read `OPENROUTER_API_KEY` from the environment first and then from ignored `secrets/openrouter.api.txt`, which must contain `OPENROUTER_API_KEY=<key>` or `export OPENROUTER_API_KEY=<key>`.  A bare token is rejected.  A provider-side endpoint change can invalidate the route named by an exact-variant spec.
 
 If a batch run stops making progress, inspect `variant-runs/*/run_eval.log`, `variant_summary.csv`, and the timeout fields in the command.  The per-request timeout controls one model call, while `--no-progress-timeout` controls a child process that stops writing output or result rows.  A child crash or scoring failure indicates an eval-tool problem that must be diagnosed before continuing.
 
-If gene-response, PCA, clustering, aggregation, or pool sampling fails, check row counts against the command expectations.  The clustering and aggregation tools validate expected variants, samples per variant, and samples per gene so incomplete upstream data cannot produce a pool without an error.  For reduced tests, set those expected-count flags to the test shape rather than relying on historical full-run constants.
+If gene-response, PCA, clustering, aggregation, or pool sampling fails, check row counts against the command expectations.  The clustering and aggregation tools validate expected variants, samples per variant, and samples per gene so incomplete upstream data cannot produce a pool without an error.  Set those expected-count flags to the input shape for each run.
 
 ## File Reference
 
@@ -426,7 +428,7 @@ If gene-response, PCA, clustering, aggregation, or pool sampling fails, check ro
 | `prompts/` | Single-juror and council-member prompt wrappers |
 | `../common/etc/personas/generic.md` | Generic persona for gene-response sampling |
 | `../common/etc/personas/` | Named persona text files, also read by the runtimes when a pool record names one |
-| `config/` | Retained model lists and pool selections from earlier runs.  No tool reads them |
+| `config/` | Reference-only model lists and pool selections |
 | `tools/run_eval.py` | Model call script for mock models, OpenRouter model IDs, and exact provider specs |
 | `tools/score_eval.py` | Question validation and deterministic scoring |
 | `tools/audit_eval.py` | Repository consistency audit |
@@ -446,7 +448,7 @@ If gene-response, PCA, clustering, aggregation, or pool sampling fails, check ro
 
 ## Scope
 
-The core eval set catches malformed JSON, brittle instruction following, weak record use, unsupported citations, and obvious reasoning failures.  The endpoint-variant tooling evaluates OpenRouter routed products under explicit provider and quantization constraints.  Full adjudication runs are in `adc/`, `arb/`, and `arbd/`.
+The core eval set checks JSON format, instruction following, knowledge, quantitative reasoning, record use, and evidence citations.  The endpoint-variant tooling evaluates OpenRouter routed products under explicit provider and quantization constraints.  Full adjudication runs are in `adc/`, `arb/`, and `arbd/`.
 
 ## Detailed References
 

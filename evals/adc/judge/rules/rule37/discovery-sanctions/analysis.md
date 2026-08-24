@@ -1,36 +1,19 @@
-# Rule 37 Judge Eval Analysis
+# Rule 37 Evaluation Analysis
 
-These results predate the evaluator's restoration to the current ADC runtime.  The old harness issued one provider response, passed its proposed action through Lean `apply_decision`, and stopped before several production turn stages.  Current comparisons require a new run whose summary identifies `production` or `counterfactual_model` execution mode.
+## Evaluation Coverage
 
-## Scope
+The evaluation exercises `decide_rule37_motion` across sixteen discovery-stage states.  Seven fixtures expect a grant, and nine expect a denial.  The issue families cover nonresponse, complete and evasive responses, justified objections, overbreadth, proportionality, harmless cure, disclosure failure, discovery-order violation, requests for admission, premature motions, grants without fees, and fee-only requests without a discovery failure.
 
-This analysis covers the judge eval for `decide_rule37_motion`.  The fixture set contains 16 Rule 37 motions across discovery nonresponse, complete response, evasive response, justified objections, overbroad requests, proportionality, harmless cure, disclosure failure, order violation, RFA nonresponse under Rule 36, premature filing, grant without fees, and fee-only requests.  The eval uses real ADC state, the real Lean opportunity, the production judge prompt or an eval-local prompt candidate, deterministic scoring, and Lean application of each returned payload.
+## Decision Boundaries
 
-The scorer treats sanction fields as part of the decision.  A correct grant-or-denial result is not enough if the payload uses `fees` on a denied motion, omits `sanction_type`, or omits a positive amount for a fee award.  This scoring choice matches Lean's Rule 37 validation and captures failures that would otherwise appear as legally correct reasoning with an unusable tool payload.
+The fixtures distinguish a concrete discovery failure from a complete response, a substantially justified objection, and an overbroad or disproportionate request.  They also test cured defects, premature motion practice, and the Rule 36 consequence that an unanswered request for admission is admitted rather than compelled under Rule 37.  Grant fixtures separate an order compelling discovery from a fee award by testing harmlessness, justification, available fee amounts, and whether fees would be unjust.
 
-## Results
+## Payload and Scoring
 
-| Prompt | Run | Correct | Grant Correct | Reason Matches | Invalid | False Grants | False Denials | Weighted Accuracy |
-|---|---|---:|---:|---:|---:|---:|---:|---:|
-| production | dry 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| production | live 16 | 9 | 9 | 9 | 7 | 0 | 0 | 0.584 |
-| candidate-v1 | dry 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| candidate-v1 | live 16 | 15 | 15 | 15 | 1 | 0 | 0 | 0.935 |
-| candidate-v2 | dry 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| candidate-v2 | live 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
+Each fixture constructs ADC state, obtains the Lean judge opportunity, and executes the opportunity's action through the runner and Lean.  The scorer requires one `decide_rule37_motion` payload with motion index zero, a Boolean grant decision, a recognized `sanction_type`, and nonempty reasoning.  A denial requires `sanction_type: none`, while `fees` requires a grant and a positive `sanction_amount`.  The `none` sanction type rejects a nonzero amount.
 
-## Findings
+Outcome correctness combines the grant decision, expected sanction, `lean_accepted`, and `step_accepted`.  In deterministic production mode, a successful step sets both acceptance fields.  Counterfactual model mode obtains `lean_accepted` from `apply_decision`.  Explanation scoring searches both `reasoning` and `order_text` for deterministic reason tags.  The summary reports accuracy, grant accuracy, severity-weighted accuracy, invalid responses, false grants, false denials, sanction mismatches, and slices by issue family, reason tag, tier, movant, and expected sanction.
 
-Production repeatedly denied motions for correct substantive reasons while setting `sanction_type` to `fees`.  Those payloads are invalid because Lean rejects sanctions on denied Rule 37 motions.  The failures clustered on complete response, justified objection, overbreadth, proportionality, harmless cure, premature motion, and work-product objection rows.
+## Prompt Templates
 
-The first production run also showed that the original RFA fixture label was wrong.  ARCP Rule 36 says a matter is admitted if no timely answer or objection is served, so a motion to compel RFA responses should be denied rather than granted.  Relabeling that row removed a false-denial result and left the sanction-type defect as the real production failure cluster.
-
-Candidate v1 addressed the main sanction-type defect but still omitted `sanction_type` on the fee-only denial row.  Candidate v2 added a direct payload rule requiring `sanction_type` in every tool call and requiring `none` for every denied motion.  That change removed the final invalid payload without adding false grants, false denials, or sanction mismatches.
-
-## Recommendation
-
-Candidate v2 is the best measured Rule 37 opportunity prompt on this fixture set.  It improves production from 9/16 to 16/16 live and eliminates the invalid denied-motion sanction payloads.  Keep the candidate eval-local until the project makes a separate production prompt update decision, but treat its payload rule as the current best text for Rule 37 prompt iteration.
-
-## Next Work
-
-The next Rule 37 set should test close fee awards, partial grants, mixed justified and unjustified objections, repeated violation of a prior discovery order, and proportional sanctions after late cure.  Those rows would determine whether the prompt still handles sanction limits when the grant decision and the fee decision diverge.  They should also keep the denied-motion payload rule under pressure, because that rule was the main production failure.
+The [prompt directory](prompts/) contains two opportunity templates.  Both state the discovery-failure boundary and the conditions for awarding fees, while `candidate-v2.md` enumerates required payload fields and denial categories.  The evaluator substitutes fixture fields and `{{production_objective}}` before sending a selected template to the model in counterfactual-model mode.

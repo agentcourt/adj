@@ -1,12 +1,12 @@
 # Evals
 
-`evals/` holds behavior evals for the adjudication systems: fixture sets that put a system actor in a controlled state, prompt candidates for controlled comparisons, and analysis records from completed runs.  The runners are Go code inside the system runtimes and execute the production opportunity, reference-tool, correction, validation, and state-transition path.  [ADC Evals](adc/README.md) is the current actor tree, and [Judge Evals](adc/judge/README.md) is its current suite family.
+`evals/` contains fixtures, prompt candidates, suite plans, and analysis for adjudication behavior evals.  Go runners under `adc/runtime/eval` construct the fixture state and execute the production opportunity and state transition.  Model-backed turns include correction and decision-validation stages, while deterministic turns execute the action supplied by the opportunity.  The checked-in suites cover [ADC judge behavior](adc/judge/README.md).
 
-Committed eval directories hold fixtures, prompt candidates, plans, and analysis.  Generated run output belongs under `out/`, which is ignored except for `out/.gitkeep`.  Model and provider-endpoint selection is a separate concern and lives in [Model Pool](../model-pool/README.md); it builds the juror and council pools that live runs draw from rather than measuring actor behavior.
+Committed suite directories hold their inputs and documentation.  Generated `results.jsonl` and `summary.json` files belong under `out/`, which Git ignores except for `out/.gitkeep`.  [Model Pool](../model-pool/README.md) evaluates provider endpoints and constructs juror and council pools.
 
 ## Contents
 
 | Path | Contents |
 | --- | --- |
-| [adc/](adc/README.md) | ADC behavior evals, grouped by actor. |
+| [ADC Evals](adc/README.md) | ADC behavior evals, grouped by actor. |
 | `out/` | Ignored generated output from eval runs. |

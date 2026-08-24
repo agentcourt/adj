@@ -1,31 +1,23 @@
-# Rule 12 Judge Eval Analysis
+# Rule 12 Evaluation Analysis
 
-These results predate the evaluator's restoration to the current ADC runtime.  The old harness issued one provider response, passed its proposed action through Lean `apply_decision`, and stopped before several production turn stages.  Current comparisons require a new run whose summary identifies `production` or `counterfactual_model` execution mode.
+## Evaluation Coverage
 
-## Results
+The evaluation exercises `decide_rule12_motion` across eighteen filed-stage states.  Ten fixtures expect dismissal, and eight expect denial.  The grounds comprise seven failure-to-state-a-claim rows, three subject-matter-jurisdiction rows, four standing rows, two ripeness rows, and two mootness rows.
 
-The Rule 12 eval has 18 fixtures and uses the real `decide_rule12_motion` opportunity.  The production live run initially scored 15/18 under the first scorer, but two misses reflected scorer precision rather than model behavior.
+## Decision Boundaries
 
-The scorer now accepts equivalent missing-element labels and jurisdiction-basis wording.  A payload identifying `facts constituting breach` satisfies an expected `breach` element, and a payload rejecting both federal-question and diversity jurisdiction satisfies an expected omitted jurisdiction basis.  After rescoring the same production live result file, production scored 17/18, with 18/18 reason matches, no false dismissals, no false denials, no invalid responses, and one posture mismatch.
+The pleading-sufficiency fixtures distinguish an omitted or conclusory element from a factual dispute about a well-pleaded allegation.  The jurisdiction and standing fixtures distinguish absent jurisdictional or standing facts from allegations sufficient to proceed.  The ripeness and mootness fixtures test whether the complaint presents a live dispute and whether a defect can be cured by amendment.
 
-| Prompt | Run | Correct | Reason Matches | Invalid | False Dismissals | False Denials | Posture Mismatches |
-|---|---|---:|---:|---:|---:|---:|---:|
-| Production | live, rescored | 17/18 | 18/18 | 0 | 0 | 0 | 1 |
-| Candidate v1 | live | 15/18 | 18/18 | 0 | 0 | 0 | 3 |
-| Candidate v2 | live | 18/18 | 18/18 | 0 | 0 | 0 | 0 |
+## Amendment and Prejudice
 
-## Failure Analysis
+The fixture labels treat curable claim, jurisdiction, standing, and ripeness defects as dismissals with leave to amend.  A failure-to-state-a-claim fixture uses dismissal with prejudice when the plaintiff disclaims facts that could supply the missing element.  A mootness fixture denies leave when the complaint admits complete satisfaction before filing and seeks no remaining relief.
 
-Production’s remaining live failure was `r12-014`.  The model correctly granted dismissal as moot because the complaint alleged full payment before filing and sought only the same payment.  It incorrectly set `leave_to_amend` to true, even though the pleaded facts showed no remaining live relief on the current complaint.
+## Payload and Scoring
 
-Candidate v1 fixed `r12-014` but overcorrected.  It told the judge to deny leave when the pleaded facts showed no live controversy, which the model applied to curable standing redressability, ripeness, and diversity-amount defects.  The failed rows were `r12-010`, `r12-011`, and `r12-017`, all of which expected dismissal with leave to amend.
+Each fixture constructs ADC state, obtains the Lean judge opportunity, executes it through the opportunity runner, and applies the resulting decision through Lean.  The scorer requires one `decide_rule12_motion` payload with motion index zero, the filed ground, a recognized disposition, and nonempty reasoning.  It compares disposition, `with_prejudice`, and `leave_to_amend`, then checks missing elements, rejected jurisdictional basis, or missing standing components when the ground requires those fields.
 
-Candidate v2 is the best measured Rule 12 prompt.  It preserves leave to amend for curable jurisdiction, standing, ripeness, and claim-element defects, and it denies leave only for mootness when the complaint admits complete prefiling satisfaction of every requested form of relief.  It scored 18/18 on the full live fixture set without invalid responses or reason-tag failures.
+Outcome correctness also requires successful Lean application and an accepted runner step.  Explanation scoring uses deterministic phrase matching against each fixture's reason tags.  The summary reports accuracy, severity-weighted accuracy, invalid responses, false dismissals, false denials, posture mismatches, and slices by reason tag, issue family, ground, and tier.
 
-## Recommendation
+## Prompt Templates
 
-Candidate v2 should be the production prompt candidate if ADC updates the Rule 12 opportunity text.  The measured improvement is narrow: it fixes complete prefiling satisfaction without changing the treatment of amendable jurisdiction, standing, ripeness, or pleading defects.  The next test set should add more mootness and amendment rows before changing production text, because the current live evidence for v2 comes from one full 18-row pass.
-
-## Next Work
-
-The next Rule 12 set should add more mootness and amendment-posture rows before prompt promotion.  Paired Rule 12 and Rule 56 rows would also test whether the judge preserves the pleading-stage standard when the same factual setting later appears as an evidence-sufficiency problem.  Court-driven subject-matter jurisdiction screening should be added if ADC exposes a judge opportunity for dismissal without a party Rule 12 motion.
+The [prompt directory](prompts/) contains two opportunity templates.  Both preserve the pleading-stage standard and specify the ground-dependent payload fields.  `candidate-v1.md` uses a general curability standard, while `candidate-v2.md` names curable claim, jurisdiction, standing, and ripeness defects, denies leave after admitted complete prefiling satisfaction, and restricts dismissal with prejudice to a plaintiff's disclaimer of curative facts.  The evaluator substitutes the production objective and fixture text before using the selected template as the opportunity objective.

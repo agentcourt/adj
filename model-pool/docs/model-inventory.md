@@ -4,7 +4,7 @@
 
 ## Catalog Inventory
 
-Run the script from `model-pool/`.  Supply one or more `--model-id` values to inventory named models, or use `--sample-models` and `--sample-seed` to choose a deterministic sample from the catalog.  The script requires `OPENROUTER_API_KEY` in the environment or `secrets/openrouter.api.txt`.
+Run the script from `model-pool/`.  Supply one or more `--model-id` values to inventory named models.  Use `--sample-models` and `--sample-seed` to choose a deterministic sample from the catalog, or omit both selection options to inventory every catalog model.  The script requires `OPENROUTER_API_KEY` in the environment or an ignored `secrets/openrouter.api.txt` file containing `OPENROUTER_API_KEY=<key>` or `export OPENROUTER_API_KEY=<key>`.  A bare token in the file is rejected.
 
 ```bash
 uv run --script tools/model_inventory.py \
@@ -12,7 +12,7 @@ uv run --script tools/model_inventory.py \
   --model-id deepseek/deepseek-v4-flash
 ```
 
-The script fetches `/api/v1/models`, followed by `/api/v1/models/{author}/{slug}/endpoints` for each selected model.  A failed catalog or endpoint request aborts the inventory after the configured retries.  `--request-timeout`, `--retries`, and `--sleep` control request timing without changing which endpoint rows the script records.
+The script fetches `/api/v1/models`, followed by `/api/v1/models/{author}/{slug}/endpoints` for each selected model.  HTTP 408, 429, 500, 502, 503, and 504 responses, URL errors, and timeouts use the configured retries.  Other HTTP failures and malformed successful responses abort immediately.  `--request-timeout`, `--retries`, and `--sleep` control request timing without changing which endpoint rows the script records.
 
 | File | Contents |
 | --- | --- |
@@ -22,7 +22,7 @@ The script fetches `/api/v1/models`, followed by `/api/v1/models/{author}/{slug}
 | `endpoint_variants.csv` | Inspection table for the normalized rows. |
 | `summary.json` | Snapshot times, selected model IDs, row counts, endpoint fetches, and provider, quantization, and status counts. |
 
-Each row records the catalog snapshot, OpenRouter model identity, model architecture and limits, provider and endpoint identity, quantization, endpoint limits, supported parameters, pricing, status, and paths to the raw catalog responses.  `endpoint_variant_id` is a readable identifier built from the model ID, endpoint tag or provider, and quantization.  Duplicate endpoint identifiers abort the inventory because downstream eval, clustering, and sampling stages use that field as the endpoint key.
+Each row records the catalog snapshot, OpenRouter model identity, model architecture and limits, provider and endpoint identity, quantization, endpoint limits, supported parameters, pricing, status, and paths to the raw catalog responses.  `endpoint_variant_id` uses `openrouter:<model>@<endpoint-tag-or-provider>#<quantization>`, with components percent-encoded where required.  Duplicate endpoint identifiers abort the inventory because downstream eval, clustering, and sampling stages use that field as the endpoint key.
 
 An endpoint with `quantization: "unknown"` remains a distinct endpoint variant.  Provider, endpoint tag, endpoint name, limits, supported parameters, pricing, status, and raw metadata continue to distinguish that row.  The inventory does not infer an unreported quantization or combine endpoints that share the `unknown` value.
 
@@ -46,8 +46,8 @@ For an endpoint whose catalog quantization is `unknown`, the request omits `prov
 
 ## Route Metadata
 
-Exact-endpoint requests set `X-OpenRouter-Experimental-Metadata: enabled`.  Eval result rows retain the response ID, returned model, inline OpenRouter metadata, usage, finish reasons, latency, provider errors, requested provider constraints, and request parameters.  The runner also queries `/api/v1/generation?id=<generation_id>` after completion and retries briefly because OpenRouter can delay that record.
+Exact-endpoint requests set `X-OpenRouter-Experimental-Metadata: enabled`.  Eval result rows retain the response ID, returned model, inline OpenRouter metadata, usage, finish reasons, latency, provider errors, requested provider constraints, and request parameters.  The runner queries `/api/v1/generation?id=<generation_id>` immediately for each exact response and retries a missing record up to five times after all items finish.
 
-The generation record can supply provider-response endpoint IDs, model permaslugs, upstream IDs, token counts, cost, latency, and native finish reasons.  Compare the selected route in that metadata with the requested provider constraint and the inventory snapshot.  Missing generation metadata remains an explicit error field in the result row.
+The generation record can supply provider-response endpoint IDs, model permaslugs, upstream IDs, token counts, cost, latency, and native finish reasons.  Compare the selected route in that metadata with the requested provider constraint and the inventory snapshot.  When an exact-endpoint response has an ID but its generation lookup fails, the result row records the lookup error.
 
-The inventory and route metadata describe the OpenRouter product served during the recorded requests.  They do not identify unreported model weights, serving software, hardware, cache precision, provider prompt changes, or later provider changes.  Research that depends on those properties requires a controlled deployment or a provider attestation.
+The inventory and route metadata describe the OpenRouter product served during the recorded requests.  They do not identify unreported model weights, serving software, hardware, cache precision, provider prompts, or provider state outside the request interval.  Research that depends on those properties requires a controlled deployment or a provider attestation.

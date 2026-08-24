@@ -1,8 +1,8 @@
 # Sampling Runbook
 
-This procedure starts with OpenRouter model IDs and produces a JSONL pool of provider-endpoint and persona records.  Run each command from `model-pool/`, and place generated files under `results/`.  OpenRouter requests require `OPENROUTER_API_KEY`, while gene-response embeddings require `OPENAI_API_KEY`.
+This procedure starts with OpenRouter model IDs and produces a JSONL pool of provider-endpoint and persona records.  Run each command from `model-pool/`, and place generated files under `results/`.  OpenRouter requests read `OPENROUTER_API_KEY` from the environment or an ignored `secrets/openrouter.api.txt` file containing `OPENROUTER_API_KEY=<key>` or `export OPENROUTER_API_KEY=<key>`.  Gene-response embeddings read `OPENAI_API_KEY` from the environment or the corresponding assignments in ignored `secrets/openai.api.txt`.  A bare token in either credential file is rejected.
 
-## End-To-End Runner
+## End-to-End Runner
 
 `tools/run_end_to_end.py` runs inventory, endpoint eval, filtering, gene inference, PCA, clustering, cluster aggregation, and tuple sampling in order.  It accepts explicit repeated `--model-id` values or samples `--root-count` catalog models with `--root-seed`.  Each stage writes beneath `results/<run-id>/`, and the top-level `summary.json` identifies the completed stages and their summaries.
 
@@ -21,17 +21,17 @@ uv run --script tools/run_end_to_end.py \
   --pool-size 5
 ```
 
-The default sizes support a bounded test of the procedure.  Set the model IDs or root sample, question file, prompt, trial count, filter criteria, genes, sample count, PCA dimensions, cluster range, pool size, and seeds for the intended pool.  `--stop-after` accepts `inventory`, `eval`, `filter`, `genes`, `pca`, `clusters`, `aggregate`, or `pool` and returns after writing that stage's summary.
+The command defaults to five root models, one eval trial, two genes, one sample per endpoint/gene pair, three PCA dimensions, a cluster range from `2` through `10`, and twenty pool rows.  Set the model IDs or root sample, question file, prompt, trial count, filter criteria, genes, sample count, PCA dimensions, cluster range, pool size, and seeds for the intended pool.  `--stop-after` accepts `inventory`, `eval`, `filter`, `genes`, `pca`, `clusters`, `aggregate`, or `pool` and returns after writing that stage's summary.
 
-The eval stage applies a per-request `--timeout` and a per-child `--eval-no-progress-timeout`.  `--eval-variant-timeout` adds an absolute limit for one endpoint eval and must be at least the no-progress timeout.  The runner rejects an incomplete gene stage before PCA, including missing records, completion errors, embedding errors, or missing embeddings.
+The eval stage applies a per-request `--timeout` and a per-child `--eval-no-progress-timeout`.  `--eval-variant-timeout` adds an absolute limit for one endpoint eval and must be at least the no-progress timeout.  The runner rejects an incomplete gene stage before PCA, including missing records, completion errors, embedding errors, or missing embeddings.  It caps the requested PCA dimensions at the usable embedding-row count unless `--strict-pca-dimensions` makes the mismatch an error.
 
 ## Staged Procedure
 
-The following commands expose each data-producing tool for inspection and focused runs.  The end-to-end runner provides the filter stage because the repository has no separate filter command.  Paths in later commands must refer to outputs from the same selection run.
+The commands below run the individual data-producing stages.  Filtering runs through `tools/run_end_to_end.py`.  Each later command accepts the output paths shown by the preceding stages.
 
 ### Endpoint Inventory
 
-Inventory explicit model IDs when the root set has already been chosen.  The script fetches the model catalog and the endpoint response for every selected model, writes raw responses, and normalizes one row per provider endpoint.  A failed catalog or endpoint request aborts the inventory after the configured retries.
+Inventory explicit model IDs when the root set has already been chosen.  The script fetches the model catalog and the endpoint response for every selected model, writes raw responses, and normalizes one row per provider endpoint.  HTTP 408, 429, 500, 502, 503, and 504 responses, URL errors, and timeouts use the configured retries.  Other HTTP failures and malformed successful responses abort immediately.
 
 ```bash
 uv run --script tools/model_inventory.py \
@@ -44,7 +44,7 @@ The inventory directory contains `raw/models.json`, percent-encoded files under 
 
 ### Endpoint Evals
 
-The batch runner creates one exact request spec and one eval directory for each endpoint variant.  It pins the endpoint route, disables fallback, requires supported parameters, and includes a known quantization constraint.  The output directory must be absent or empty.
+The batch runner creates one exact request spec and one eval directory for each endpoint variant.  It pins the endpoint route, disables fallback, sets `require_parameters: true`, and includes the quantization constraint when the inventory reports a known value.  The output directory must be absent or empty.
 
 ```bash
 uv run --script tools/run_variant_batch.py \
@@ -60,15 +60,15 @@ A successful directory under `variant-runs/` contains `raw_results.jsonl`, `scor
 
 ### Endpoint Filtering
 
-The end-to-end filter joins inventory rows to `variant_summary.csv` by source index.  It rejects nonzero eval exit codes, a provider-error count different from `--filter-provider-error-count`, and a deliberation score below `--filter-min-deliberation-score`.  The default criteria require zero provider errors and a deliberation score of at least `0.90`.
+The end-to-end filter joins inventory rows to `variant_summary.csv` by source index.  It rejects a nonzero per-variant `run_exit_code`, a `provider_error_count` different from `--filter-provider-error-count`, and a missing or below-threshold `deliberation_score`.  The provider-error count includes provider, rate-limit, credential, and runner errors.  The deliberation score excludes rows with metadata errors, including timeouts, and omits a trial that has no completed deliberation rows.  The default criteria require zero counted errors and a deliberation score of at least `0.90`.
 
 Run the end-to-end command with `--stop-after filter` to produce a filtered set.  The filter directory contains accepted rows in `endpoint_variants.jsonl` and `endpoint_variants.csv`, rejection records in `removed_variants.jsonl`, and counts, source paths, criteria, and accepted source indexes in `summary.json`.  A filter that accepts no endpoints fails the run.
 
-The checked-in snapshot under `variants/filtered-20260529/` retains `endpoint_variants.jsonl`, `endpoint_variants.csv`, and `summary.json`.  Use a new end-to-end run for current-provider claims because routes, availability, pricing, and behavior can change.  Pass that run's filtered `endpoint_variants.jsonl` to every downstream stage.
+The checked-in snapshot under `variants/filtered-20260529/` contains `endpoint_variants.jsonl`, `endpoint_variants.csv`, and `summary.json`.  Run the end-to-end command for claims about current provider behavior because routes, availability, pricing, and behavior can change.  Pass the resulting filtered `endpoint_variants.jsonl` to every downstream stage.
 
-### Gene Inference And Embeddings
+### Gene Inference and Embeddings
 
-Run one gene index at a time against the accepted endpoint set.  Each sample uses the endpoint's exact route policy and records the completion, request parameters, route metadata, status, and embedding.  The command writes directly to `records.jsonl` and summarizes expected rows, status counts, errors, and embeddings in `summary.json`.
+Run one gene index at a time against the accepted endpoint set.  Each sample uses the endpoint's exact route policy and records the completion, request parameters, route metadata, status, and embedding.  The command writes directly to `records.jsonl` and summarizes expected rows, status counts, errors, and embeddings in `summary.json`.  Its output directory must be absent or empty.
 
 ```bash
 uv run --script tools/run_first_gene_inference_embeddings.py \
@@ -80,8 +80,7 @@ uv run --script tools/run_first_gene_inference_embeddings.py \
   --out results/gene-1-inference-embeddings-YYYYMMDDTHHMMSSZ
 ```
 
-Repeat the command with a distinct output directory for every selected gene index.  Before PCA, require `records_written == expected_records`, `embedding_count == expected_records`, and zero completion and embedding errors.  The end-to-end runner enforces those conditions and stops on the first incomplete gene stage.
-The gene command writes its diagnostic rows and summary, then returns a nonzero exit status when a completion or embedding failed.
+Repeat the command with a distinct output directory for every selected gene index.  Before PCA, require `records_written == expected_records`, `embedding_count == expected_records`, and zero completion and embedding errors.  The end-to-end runner enforces those conditions and stops on the first incomplete gene stage.  The gene command writes its diagnostic rows and summary, then returns a nonzero exit status when a completion or embedding failed.
 
 ### PCA
 
@@ -96,7 +95,7 @@ uv run --script tools/run_embedding_pca.py \
 
 ### Per-Gene Clustering
 
-The clustering tool validates row counts, endpoint coverage, samples per endpoint, and PCA dimensions when their expected values are supplied.  It fits K-means separately for each gene, selects a candidate by silhouette score, and writes `clusters.jsonl`, `clusters.csv`, `cluster-fit.json`, and `summary.json`.  Cluster labels have meaning only within their gene index.
+The clustering tool validates row counts, endpoint coverage, samples per endpoint, and PCA dimensions when their expected values are supplied.  It evaluates K-means candidates separately for each gene and selects the candidate with the highest silhouette score.  Too few rows or no valid candidate produces a single fallback cluster.  The tool writes `clusters.jsonl`, `clusters.csv`, `cluster-fit.json`, and `summary.json`, and cluster labels have meaning only within their gene index.
 
 ```bash
 uv run --script tools/run_gene_pca_clustering.py \
@@ -123,7 +122,7 @@ env MPLBACKEND=Agg uv run --script tools/clusters-graph.py \
 
 ### Cluster Vector Aggregation
 
-Aggregation produces one cluster vector for each endpoint and persona.  For each gene, it chooses a unanimous label, a majority label, or the label of the sample nearest its assigned cluster center when all samples differ.  The output directory contains the canonical `variant-persona-clusters.jsonl` and `summary.json`.
+Aggregation produces one cluster vector for each endpoint and persona.  For each gene, it chooses a unanimous label, the unique highest-count label, or the label of the sample nearest its assigned cluster center when the highest counts tie.  The output record calls a unique nonunanimous winner `majority`, including a plurality, and the output directory contains `variant-persona-clusters.jsonl` and `summary.json`.
 
 ```bash
 uv run --script tools/aggregate_variant_persona_clusters.py \
@@ -150,6 +149,8 @@ uv run --script tools/sample-tuple-pool.py \
   --seed 0
 ```
 
-The equivalence key uses model identity, quantization, and modalities.  Representative selection ranks operational results, capacity, availability, latency, price, and stable endpoint identifiers, while `equivalence.jsonl` records the members and selected representative of every class.  `--no-dedupe-equivalent-endpoints` retains provider routes as separate sampling rows when the pool is intended to compare those routes.
+The equivalence key uses OpenRouter model ID, endpoint model ID, canonical slug, Hugging Face ID, quantization, and input and output modalities.  Representative selection ranks provider-error count, deliberation score, capacity, uptime, latency, price, and stable endpoint identifiers for standard end-to-end rows.  It can also rank schema violations, timeouts, and context-limit errors when the sampler input contains those fields.  Missing error counts rank as zero.  Missing deliberation score, capacity, and uptime rank below known values, while missing latency or price ranks after known values.  `equivalence.jsonl` records the members and selected representative of every class.  `--no-dedupe-equivalent-endpoints` retains provider routes as separate sampling rows when the pool is intended to compare those routes.
 
 `pool.jsonl` contains the sampled request-spec records, and `diagnostics.jsonl` identifies the tuple and source row selected for each output row.  With `--without-replacement`, the requested pool size cannot exceed the post-deduplication sampling frame.  The sampler validates the input rows and frame size before opening the output files.
+
+The sampled rows preserve the gene stage's `persona_path`.  With the default `--persona`, a generated row contains `../common/etc/personas/generic.md`, a path relative to `model-pool/`.  A runtime resolves a relative persona path beside `pool.jsonl` and then under `<pool-dir>/../../etc/`, so it cannot resolve that default value from the nested result directories used by the documented sampler and end-to-end commands.  Pool construction preserves that path unchanged.  The installed default at `common/data/personas/pool.jsonl` instead contains `personas/generic.md`, which resolves through the shared-tree path.

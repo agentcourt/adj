@@ -1,34 +1,25 @@
 # Rule 60 Judge Eval Analysis
 
-These results predate the evaluator's restoration to the current ADC runtime.  The old harness issued one provider response, passed its proposed action through Lean `apply_decision`, and stopped before several production turn stages.  Current comparisons require a new run whose summary identifies `production` or `counterfactual_model` execution mode.
-
 ## Scope
 
-This analysis covers the judge eval for `resolve_rule60_motion`.  The fixture set contains 16 judgment-entered postures with pending Rule 60 motions and oppositions.  The eval uses real ADC state, the real Lean opportunity, the production judge prompt or an eval-local prompt candidate, deterministic scoring, opportunity validation, and a Lean step that executes the accepted Rule 60 action.
+The fixture file contains 16 judgment-entered states with a pending Rule 60 motion and opposition.  The set divides evenly between eight expected grants and eight expected denials, and three rows arise from default judgments.  Four rows are tier 1, six are tier 2, and six are tier 3.
 
-The scorer checks both the tool payload and the accepted engine path.  It requires the correct `motion_index`, the expected grant or denial, a reason-bearing `relief_summary`, required concepts, prohibited-concept absence with negation handling, reason tags, Lean acceptance, and step acceptance.  The negation handling was needed because correct Rule 60 denials often state the absent ground, such as "no extraordinary circumstances" or "does not show fraud."
+The issue families cover clerical mistake, excusable neglect, newly discovered evidence, void and satisfied judgments, fraud, diligence, timeliness, prospective inequity, extraordinary circumstances, settlement, buyer's remorse, and ordinary merits reargument.  Each state records the judgment, motion ground, motion text, opposition, and traces for judgment entry and the Rule 60 filing.  Default-judgment fixtures also include a default-judgment docket entry and decision trace.
 
-## Results
+## Decision Boundary
 
-| Prompt | Run | Correct | Grant Correct | Required Correct | Prohibited Correct | Reason Correct | Invalid | Lean Rejected | Step Rejected | Weighted Accuracy |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| production | dry 16 | 16 | 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| production | live 16, rescored | 16 | 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| candidate-v1 | dry 16 | 16 | 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| candidate-v1 | live 16, rescored | 16 | 16 | 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
+Grant fixtures require a recognized Rule 60 ground supported by the motion record.  The newly discovered evidence row states diligence, unavailability, materiality, and a likely effect on the judgment, while the fraud and voidness rows distinguish operative defects from unsupported accusations.  Denial fixtures cover known evidence, impeachment-only material, ordinary legal error or credibility reargument, missed time limits, and regret without extraordinary circumstances.
 
-## Findings
+The suite also distinguishes relief under Rule 60 from other procedural devices.  Full payment and a post-judgment settlement followed by full payment support relief based on satisfaction, while regret over a consent judgment does not.  Attempts to substitute Rule 60 for Rule 59 or appeal are denied.  The tool resolves the pending motion and leaves damages and the entered judgment unchanged.
 
-Production made the correct Rule 60 grant or denial decision on all 16 live rows.  The initial live score was lower because the scorer treated correct denial language as prohibited-ground reliance and missed ordinary synonyms such as "lack of valid service," "newly discovered," "not reasonably obtainable before judgment," and "amend the judgment to correct."  After scorer correction, the saved production responses scored 16/16 with no invalid payloads, no Lean rejections, and no step rejections.
+## Scoring Boundary
 
-The fixture set was also corrected during iteration.  The first new-evidence grant row stated diligence and unavailability, but it did not state materiality or likely effect on the judgment.  The production model denied that row for a real Rule 60(b)(2) reason, so the fixture was revised to state that the logs bear directly on the access issue, liability, and damages.
+A scored response contains exactly one `resolve_rule60_motion` call with `motion_index: 0` and a nonempty `relief_summary`.  The scorer reads a Boolean `granted` value but treats a missing or non-Boolean value as false instead of marking the payload invalid.  A malformed denial payload can therefore pass the grant component when its other fields and execution pass.  Correctness also requires every required concept, no affirmative prohibited concept, at least one expected reason tag, Lean acceptance, and successful execution.
 
-Candidate v1 matched production on the measured decision behavior.  It made all 16 grant or denial decisions correctly, and its lower pre-rescore score came from thinner but legally adequate `relief_summary` wording.  The candidate prompt remains useful as an eval-local checklist, but the measured results do not justify copying it into production.
+The prohibited-concept check is sensitive to negation.  A denial may state that the movant showed `no extraordinary circumstances` or `does not show fraud` without being treated as affirmative reliance on that ground.  The scorer maps each configured concept to its accepted alternative phrases before matching.
 
-## Recommendation
+The aggregate summary reports accuracy, weighted accuracy, false-grant and false-denial rates, invalid rate, rejection counters, component counts, and slices by reason tag, issue family, tier, and expected disposition.  The `lean_rejected` and `step_rejected` counters include only rows without an `invalid_reason`.  An uncorrected decision or step rejection becomes invalid and does not increment those counters.  A nonprocedural execution error aborts the run.  The per-row result preserves the attempted acceptance fields, complete state, judge view, opportunity, prompt input, response exchanges, final state, provider accounting, payload, and scoring details.
 
-Do not update the production Rule 60 opportunity prompt from this eval alone.  The production prompt reached 16/16 after the deterministic scorer and the under-specified fixture were corrected.  The next Rule 60 work should add harder rows before any prompt promotion decision, especially multiple motions, mixed prospective and monetary relief, jurisdictional voidness, fraud on the court, and Rule 60(b)(6) attempts to avoid Rule 59 or appeal deadlines.
+## Limits
 
-## Next Work
-
-The next Rule 60 set should add harder finality rows, including multiple motions, partial relief, mistake versus legal error, independent action language, fraud on the court, jurisdictional voidness, and prospective relief with mixed monetary and nonmonetary terms.  Rows where Lean should produce no Rule 60 opportunity should live in a separate transition eval because this runner assumes an available required judge opportunity.  The scorer should keep its negation-aware prohibited-concept checks, since correct denials often name the absent Rule 60 ground.
+The runner requires one Rule 60 opportunity for `motion_index` 0.  The fixture scope covers a single motion seeking grant or denial of relief.  The scorer's deterministic concept and reason checks depend on configured phrases and aliases, so per-row output identifies legally equivalent formulations that fall outside those forms.

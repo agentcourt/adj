@@ -1,42 +1,52 @@
-# Rule 11 Judge Eval Plan
+# Rule 11 Evaluation Plan
 
 ## Scope
 
-This eval measures the judge's `decide_rule11_motion` behavior.  Each fixture builds a filed-stage ADC state with a complaint, a challenged filing, a Rule 11 safe-harbor notice, an optional correction record, a Rule 11 motion, and opposition text.  The runner obtains the real Lean judge opportunity, asks the model for one tool call, applies the payload through Lean, and scores the ruling, sanction fields, explanation tags, and Lean acceptance.
+This evaluation measures decisions produced for `decide_rule11_motion`.  Each fixture builds a filed-stage ADC state containing a complaint, the challenged filing, safe-harbor notice and dates, an optional correction, the sanctions motion, and the opposition.  The runner obtains the judge opportunity, executes its action through Lean, and scores the legal outcome and payload.
 
-The first fixture set focuses on restraint and enforcement.  It includes frivolous legal contentions, factual contentions with no evidentiary support, factual denials contradicted by records available before filing, improper-purpose filings, nonfrivolous extension arguments, allegations likely to have support after discovery, weak merits positions, safe-harbor defects, timely correction, and discovery conduct that belongs under Rule 37.  The highest-risk failures are false grants against legitimate advocacy, invalid sanction payloads on denied motions, and disproportionate monetary sanctions.
+## Fixture Coverage
+
+The fixture file contains sixteen rows across three difficulty tiers.  The rows test both enforcement and restraint, with seven expected grants and nine expected denials.  Every row has severity 5, so weighted accuracy equals ordinary accuracy.
 
 ## Fixture Shape
 
 | Field | Meaning |
-|---|---|
+| --- | --- |
 | `id` | Stable row identifier. |
-| `tier` | Difficulty level, with tier 3 for adversarial or close boundaries. |
-| `issue_family` | Summary slice for the Rule 11 issue family. |
-| `case_theme` | Short factual setting placed in the case caption and docket. |
-| `movant` | Party seeking Rule 11 sanctions. |
+| `tier` | Difficulty tier. |
+| `issue_family` | Rule 11 issue used for summary slices. |
+| `case_theme` | Short factual setting placed in ADC state. |
+| `movant` | Party seeking sanctions. |
 | `target_party` | Party whose filing is challenged. |
-| `challenged_filing` | Name of the filing or paper under Rule 11 review. |
-| `filing_text` | Challenged filing content. |
-| `notice_text` | Safe-harbor notice text. |
+| `challenged_filing` | Filing or paper under review. |
+| `filing_text` | Content of the challenged filing. |
+| `notice_text` | Safe-harbor notice. |
 | `notice_served_at` | Safe-harbor service date. |
-| `motion_filed_at` | Rule 11 motion filing date. |
-| `correction_text` | Optional withdrawal or correction during the safe-harbor period. |
-| `motion_text` | Movant's Rule 11 motion and requested sanction. |
-| `opposition_text` | Target party's reason for denial or sanction limits. |
+| `motion_filed_at` | Sanctions-motion filing date. |
+| `correction_text` | Optional withdrawal or correction. |
+| `motion_text` | Motion and requested sanction. |
+| `opposition_text` | Opposition and asserted sanction limits. |
 | `expected_granted` | Expected grant or denial. |
 | `expected_sanction_type` | `none`, `admonition`, `non_monetary_directive`, `monetary_penalty`, or `fee_shift`. |
-| `expected_sanction_amount` | Required amount when the expected sanction is monetary. |
-| `expected_reason_tags` | Deterministic explanation tags accepted by the scorer. |
+| `expected_sanction_amount` | Expected amount for a monetary sanction. |
+| `expected_reason_tags` | Reason categories used by deterministic explanation scoring. |
 | `severity` | Weight used in weighted accuracy. |
-| `context_notes` | Human-readable explanation of the fixture boundary. |
+| `context_notes` | Explanation of the legal boundary tested by the row. |
 
 ## Scoring
 
-The scorer requires exactly one `decide_rule11_motion` tool call.  It checks `motion_index`, `granted`, `sanction_type`, `sanction_amount`, `sanction_detail`, `reasoning`, deterministic reason tags, and Lean acceptance.  Denied motions are invalid if they include a nonempty `sanction_type`, any nonzero `sanction_amount`, or a nonempty `sanction_detail`, because Lean treats those fields as sanctions despite the denial.
+The scorer accepts exactly one `decide_rule11_motion` call and requires `motion_index` zero.  It validates `granted`, `sanction_type`, `sanction_amount`, `sanction_detail`, and `reasoning` before comparing the grant decision and sanction to the fixture label.  It then combines those comparisons with the acceptance fields to determine outcome correctness.  In deterministic production mode, a successful step sets both `step_accepted` and `lean_accepted`.  Counterfactual model mode obtains `lean_accepted` from `apply_decision`.
 
-Granted motions require a nonempty sanction type and sanction detail.  `monetary_penalty` and `fee_shift` require a positive amount, while `admonition` and `non_monetary_directive` reject monetary amounts.  The summary reports total accuracy, grant accuracy, weighted accuracy, invalid rate, false-grant rate, false-denial rate, sanction mismatches, and slices by reason tag, issue family, tier, movant, and expected sanction type.
+Denied motions use an empty or omitted `sanction_type`, a zero or omitted `sanction_amount`, and an empty `sanction_detail`.  Granted motions require a recognized sanction type and nonempty detail, with a positive amount for `monetary_penalty` or `fee_shift` and a zero or omitted amount for `admonition` or `non_monetary_directive`.  The summary records aggregate rates and slices by reason tag, issue family, tier, movant, and expected sanction type.
 
-## Prompt Iteration
+## Execution and Prompt Selection
 
-Candidate v1 states the payload rules directly: a denied Rule 11 order carries no sanction fields, and a monetary sanction carries an amount.  Candidate v2 keeps those rules and narrows the sanction ladder, reserving non-monetary directives for correction-focused records or motion-specific requests.  Measured results are in [Rule 11 Sanctions Analysis](analysis.md).
+The default command executes the deterministic action supplied by the judge opportunity.  The `--counterfactual-model` flag removes that action and obtains a decision from `--model`.  Candidate prompt execution uses counterfactual-model mode.  The evaluator records prompt source, prompt name, execution mode, per-fixture records, and aggregate metrics in `results.jsonl` and `summary.json`.
+
+```bash
+adc eval judge-rule11 \
+  --counterfactual-model \
+  --opportunity-prompt-file evals/adc/judge/rules/rule11/sanctions/prompts/candidate-v2.md \
+  --opportunity-prompt-name candidate-v2 \
+  --out-dir evals/out/adc/judge/rule11-candidate-v2
+```

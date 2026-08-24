@@ -1,28 +1,19 @@
-# Rule 47 For-Cause Eval Analysis
+# Rule 47 For-Cause Evaluation Analysis
 
-These results predate the evaluator's restoration to the current ADC runtime.  The old harness issued one provider response, passed its proposed action through Lean `apply_decision`, and stopped before several production turn stages.  Current comparisons require a new run whose summary identifies `production` or `counterfactual_model` execution mode.
+## Evaluation Coverage
 
-## Scope
+The evaluation exercises `decide_juror_for_cause_challenge` across sixteen voir dire states.  Nine fixtures expect the challenge to be granted, and seven expect it to be denied.  The issue families cover refusal to follow law, fixed bias, lawful attitudes, damages commitments, digital-evidence refusal, direct or remote relationships, sympathy, rehabilitation, language or attention limits, and hardship.
 
-This analysis covers the judge eval for `decide_juror_for_cause_challenge`.  The fixture set contains 16 pending challenges across fixed bias, follow-law refusal, damages precommitment, digital-evidence refusal, relationship interest, sympathy bias, language or attention limitations, hardship, lawful attitudes, and rehabilitation.  Each row builds a real ADC voir dire state with an answered exchange and a pending challenge, then runs the judge through the Lean opportunity and tool schema.
+## Decision Boundaries
 
-The eval uses deterministic scoring.  Outcome scoring checks the grant or denial decision and required payload identifiers.  Explanation scoring checks reason tags in `ruling_reason`, and Lean acceptance confirms that the returned payload can be applied to the constructed ADC state.
+The fixtures distinguish inability to decide impartially or follow the court's instructions from inconvenience, skepticism, preference, and remote relationships.  They test fixed views about liability, proof, evidence categories, and damages against answers showing a willingness to apply the law.  Rehabilitation fixtures require the ruling to consider the completed answer record rather than isolate an awkward statement from a credible assurance.
 
-## Results
+## Payload and Scoring
 
-| Prompt | Run | Correct | Reason Matches | False Grants | False Denials | Invalid | Weighted Accuracy |
-|---|---|---:|---:|---:|---:|---:|---:|
-| production | dry 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| production | live 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| candidate-v1 | dry 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
-| candidate-v1 | live 16 | 16 | 16 | 0 | 0 | 0 | 1.000 |
+Each fixture constructs ADC state with one answered voir dire exchange and one pending for-cause challenge, obtains the Lean judge opportunity, executes it through the opportunity runner, and applies the ruling through Lean.  The scorer requires one `decide_juror_for_cause_challenge` payload with challenge id `fc-1`, the fixture's juror and challenging party, a Boolean `granted` field, and nonempty `ruling_reason`.  A mismatch in any required identifier makes the response invalid.
 
-## Findings
+Outcome correctness compares the grant decision with the fixture label and also requires successful Lean application and an accepted runner step.  Explanation scoring uses deterministic phrase matching against each fixture's reason tags.  The summary reports accuracy, severity-weighted accuracy, invalid responses, false grants, false denials, and slices by reason tag, issue family, tier, and challenging party.
 
-Production made no outcome errors on the first for-cause set.  The initial live production summary reported 14 explanation matches because the scorer did not recognize ordinary wording for rehabilitation and lawful preference.  Rescoring fixed those deterministic vocabulary gaps by accepting phrases such as “rehabilitation,” “assurance,” “follow the instructions,” “general preference,” and “not disqualifying.”
+## Prompt Template
 
-Candidate v1 also made no outcome errors.  The candidate prompt states the central for-cause boundary more directly, but the current fixture set does not show an improvement over production.  Its value is as an eval-local reference for future hard rows, especially rows that mix awkward first answers, later assurances, and party attempts to convert lawful skepticism into cause.
-
-## Recommendation
-
-Do not change production opportunity text based on this set.  Production and candidate v1 both scored perfectly after deterministic explanation rescoring, and the candidate did not expose a distinct improvement.  The next Rule 47 expansion should add harder rehabilitation pairs, juror answers that hedge on following limiting instructions, and challenges based on unpopular but lawful attitudes toward damages or corporate parties.
+The [prompt candidate](prompts/candidate-v1.md) states the categories that support or defeat a for-cause challenge.  It directs the judge to use the required identifiers from the opportunity constraints and to explain the decisive record fact.  The evaluator substitutes the production objective and fixture record before using the template as the opportunity objective.

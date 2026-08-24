@@ -30,9 +30,9 @@ The shared `common/` tree contains document import and verification, record writ
 
 ## Evaluations and Model Pools
 
-The [behavior evals](evals/README.md) place an ADC actor in controlled Lean states, run the production opportunity executor, and score the resulting legal action against committed fixtures.  ADC provides ten judge suites through `adc eval`, with fixtures, candidate prompts, plans, and historical analyses under `evals/adc/judge/`.  Generated behavior-eval records belong under the ignored `evals/out/` directory.
+The [behavior evals](evals/README.md) place an ADC actor in controlled Lean states, run the production opportunity executor, and score the resulting legal action against committed fixtures.  ADC provides ten judge suites through `adc eval`, with fixtures, candidate prompts, plans, and analyses under `evals/adc/judge/`.  Generated behavior-eval records belong under the ignored `evals/out/` directory.
 
-The [model-pool tools](model-pool/README.md) inventory provider endpoints, evaluate and score models, collect behavior responses, calculate embeddings, cluster the results, and sample request-specification pools.  Quick, ARB, AARD, and ADC consume the resulting JSONL records through their council or juror pool options.  Generated pool runs belong under the ignored `model-pool/results/` directory, while the distributed runtime default remains `common/data/personas/pool.jsonl`.
+The [model-pool tools](model-pool/README.md) inventory provider endpoints, evaluate and score models, collect behavior responses, calculate embeddings, cluster the results, and sample request-specification pools.  Quick, ARB, AARD, and ADC load installed JSONL pool records through their council or juror pool options, resolving each relative persona path beside the pool or through the shared common-tree layout.  Generated pool runs belong under the ignored `model-pool/results/` directory, while the installed runtime default remains `common/data/personas/pool.jsonl`.
 
 ## Command-Line Cases
 

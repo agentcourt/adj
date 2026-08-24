@@ -1,16 +1,16 @@
 # Rule 11 Sanctions
 
-This suite evaluates `decide_rule11_motion`.  The fixture set covers frivolous legal contentions, factual-contention support, improper purpose, safe-harbor effects, discovery-filing limits, reasonable extension arguments, and sanction proportionality.  The scorer checks the grant or denial, sanction type, amount fields, reason tags, and invalid payloads.
+This suite evaluates `decide_rule11_motion`.  Its sixteen fixtures cover unsupported legal and factual contentions, improper purpose, reasonable inquiry, safe-harbor effects, discovery-filing limits, and sanction proportionality.  The scorer checks the grant decision, sanction fields, explanation tags, payload validity, and action execution.
 
 ## Files
 
 | File | Use |
 | --- | --- |
-| [Rule 11 Sanctions Analysis](analysis.md) | Results, findings, recommendation, and next fixture work. |
-| [Rule 11 Sanctions Plan](plan.md) | Fixture shape, scoring design, and prompt-iteration plan. |
-| [Rule 11 Sanctions Fixtures](fixtures.jsonl) | Sixteen committed fixture rows. |
-| [Prompt Candidates](prompts/) | Eval-local opportunity prompt candidates. |
+| [Rule 11 Evaluation Analysis](analysis.md) | Fixture coverage, decision boundaries, and scoring. |
+| [Rule 11 Evaluation Plan](plan.md) | Fixture schema, scoring rules, and execution procedure. |
+| [Rule 11 Fixtures](fixtures.jsonl) | Sixteen fixture rows. |
+| [Prompt Candidates](prompts/) | Opportunity prompt templates for model-backed evaluation. |
 
 ## Runner
 
-Run the suite from the repository root with `adc eval judge-rule11` or the corresponding `go run ./adc/runtime/cmd/adc eval judge-rule11` form.  The CLI default fixture path points to this directory.  Generated results belong under `evals/out/adc/judge/`.
+Run the default suite from the repository root with `adc eval judge-rule11` or `go run ./adc/runtime/cmd/adc eval judge-rule11`.  The command reads this directory's fixture file and writes `results.jsonl` and `summary.json` under `evals/out/adc/judge/rule11-latest`.  The `--fixtures` and `--out-dir` options select alternate paths.  Model-backed prompt evaluation requires `--counterfactual-model` together with `--opportunity-prompt-file`.

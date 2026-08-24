@@ -1,38 +1,23 @@
 # Rule 52 Judge Eval Analysis
 
-These results predate the evaluator's restoration to the current ADC runtime.  The old harness issued one provider response, passed its proposed action through Lean `apply_decision`, and stopped before several production turn stages.  Current comparisons require a new run whose summary identifies `production` or `counterfactual_model` execution mode.
-
 ## Scope
 
-This analysis covers the judge eval for `file_bench_opinion`.  The fixture set contains 16 completed bench trials across contract formation, breach proof, credibility, causation, excluded evidence, damages proof, damages limitation, authentication, agency, and notice.  The eval uses real ADC state, the real Lean opportunity, the production judge prompt or an eval-local prompt candidate, deterministic scoring, and Lean application of each returned payload.
+The fixture file contains 16 completed bench-trial states, balanced between eight plaintiff judgments and eight defense judgments.  Four rows are tier 1, six are tier 2, and six are tier 3.  The issue families cover contract formation, breach, credibility, causation, damages proof, damages limits, excluded evidence, authentication, agency, and contractual notice.
 
-The scorer treats Rule 52 form and substance as part of the decision.  It requires the opinion to state the required element reasoning, avoid excluded evidence, include the proved amount, and separate findings, conclusions, and judgment.  This scoring choice captures bench-opinion failures that would otherwise look like correct final outcomes with incomplete adjudicative reasoning.
+Each state places the pleadings, trial theories, admitted and excluded evidence, rests, and closing arguments in the docket.  Lean receives matching traces for filing, trial mode, exhibits, rests, closings, and advancement to the `verdict_return` phase.  The resulting judge opportunity permits `file_bench_opinion` and the runner executes the accepted action through the ordinary ADC turn path.
 
-## Results
+## Decision Boundary
 
-| Prompt | Run | Correct | Winner Correct | Amount Correct | Reason Matches | Invalid | Weighted Accuracy |
-|---|---|---:|---:|---:|---:|---:|---:|
-| production | dry 16 | 16 | 16 | 16 | 16 | 0 | 1.000 |
-| production | live, initial score | 8 | 16 | 16 | 16 | 0 | 0.500 |
-| production | live, rescored | 16 | 16 | 16 | 16 | 0 | 1.000 |
-| candidate-v1 | dry 16 | 16 | 16 | 16 | 16 | 0 | 1.000 |
-| candidate-v1 | live, initial score | 9 | 16 | 16 | 16 | 0 | 0.563 |
-| candidate-v1 | live, rescored | 16 | 16 | 16 | 16 | 0 | 1.000 |
+The suite scores the opinion's terms and substance separately.  The `verdict_for` payload field supplies the winner, while the opinion text must contain the expected amount when the fixture specifies one, express all required concepts, and contain none of the prohibited concepts or aliases.  A separate check requires the normalized text to contain `finding`, `conclusion`, and `judgment`.
 
-## Findings
+Several fixtures test the evidence boundary.  Party theories and closing arguments appear in the state, but they do not constitute proof, and excluded exhibits may appear in the docket only as excluded material.  The required and prohibited concept lists therefore test whether the opinion grounds its findings in admitted evidence and keeps the judgment within the proved elements and damages.
 
-The current production prompt performed well on the measured Rule 52 set.  In the live run, production selected the correct winner and amount on all 16 rows, used a valid `file_bench_opinion` payload every time, kept excluded evidence out of the judgment reasoning, and produced findings, conclusions, and judgment language.  The initial 8/16 score came from deterministic scorer wording gaps rather than wrong judicial decisions.
+## Scoring Boundary
 
-The scorer corrections were specific to observed equivalent legal language.  Production used phrases such as `resale failed because`, `additional freight charges`, `audit log (AL-3) was authenticated`, `did not prove any damages amount`, and `previously accepted two prior Lee-initiated orders`.  Candidate v1 used additional valid phrases, including `contains no completed signature block`, `does not identify source data`, `did not meet the contractual written-notice requirement`, and `contemporaneous service log and receiving message were more reliable`.
+A valid response contains exactly one `file_bench_opinion` tool call, a `verdict_for` value of `plaintiff` or `defendant`, and nonempty `text`.  Substantive correctness requires the expected winner, the expected amount, all required concepts, no prohibited concepts, and the three required opinion terms.  Lean acceptance, successful execution, and the absence of a procedural execution error are required before the runner counts the row as correct.
 
-Candidate v1 preserved the measured production behavior but did not improve it.  It gave more explicit Rule 52 section and record-confinement instructions, and it also selected the correct winner and amount in every live row.  After scorer correction, candidate v1 and production both scored 16/16 with no invalid payloads and no Lean rejections.
+Reason tags provide a separate diagnostic, while the winner, amount, concept, and term-presence checks determine substantive correctness.  The aggregate summary reports accuracy, winner accuracy, severity-weighted accuracy, invalid responses, component counts, and slices by reason tag, issue family, tier, and expected winner.  False-plaintiff and false-defense counts distinguish the direction of an incorrect judgment.
 
-The fixture set was corrected during iteration.  Several plaintiff-win rows needed admitted damages or duty evidence stated more concretely, including unpaid invoice records, replacement cost records, a preservation duty for audit records, delivery plus nonpayment evidence, and a repair reimbursement duty.  Those fixture edits kept the expected judgments tied to admitted evidence rather than trial-theory conclusions.
+## Limits
 
-## Recommendation
-
-Do not update the production Rule 52 opportunity prompt from this eval alone.  Production and candidate v1 both scored 16/16 after deterministic scorer corrections, so the candidate prompt does not show a measured improvement.  The next Rule 52 iteration should add harder fixtures before prompt changes, especially mixed-claim bench trials, counterclaims, nominal damages, equitable relief, admitted-but-low-weight evidence, and credibility findings that affect only one element.
-
-## Next Work
-
-The next Rule 52 set should add harder bench-trial rows.  Useful additions include mixed claims, counterclaims, nominal damages, equitable relief, adverse inference, admitted evidence assigned low weight, and credibility findings that affect only one element.  A later runner can test separate findings and conclusions if Lean exposes `add_bench_finding` and `add_bench_conclusion` before `file_bench_opinion`.  Those rows should keep winner and amount scoring separate from the quality of the Rule 52 reasoning.
+The amount and concept checks use deterministic textual forms and configured aliases.  The prohibited-concept matcher treats a literal concept or alias as present even when the opinion negates, quotes, or rejects it.  A legally equivalent expression outside the configured forms can fail a check, and the opinion-term check establishes only that the three normalized words appear somewhere in the text.  The fixture scope is one contract claim resolved through a single `file_bench_opinion` action.

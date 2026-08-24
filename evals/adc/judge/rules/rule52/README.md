@@ -1,6 +1,6 @@
 # Rule 52
 
-ARCP Rule 52 requires the court, in an action tried on the facts without a jury, to find the facts specially and state its conclusions of law separately.  A bench trial has no jury to separate fact from law, so the judge's own opinion is the entire factfinding record.  The judge must confine findings to admitted evidence, cover the elements of each claim, and enter a judgment consistent with those findings.  The failure with consequences is a finding resting on material never admitted, because nothing else in the proceeding will catch it.
+The Rule 52 suite evaluates `file_bench_opinion`.  Its sixteen fixtures cover admitted evidence, conflicting testimony, claim elements, causation, damages, credibility, excluded proof, and fact-law separation.  The scorer checks winner, amount, required and prohibited reasoning, the presence of findings, conclusions, and judgment language, invalid payloads, and Lean acceptance.
 
 ## Suites
 

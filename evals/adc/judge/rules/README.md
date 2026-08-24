@@ -1,8 +1,6 @@
 # Judge Rules
 
-Judge eval suites live under the ARCP rule that governs the decision being tested.  A rule directory may contain one behavior suite or several behavior suites when the same rule covers distinct judge actions.  Each suite README links to its analysis file, fixtures, prompt candidates, and implementation plan.
-
-Generated reports stay under `evals/out/adc/judge/`.  The committed rule directories contain source eval assets only.  The parent judge README lists runner names, while this index preserves the rule grouping.
+Each judge eval suite lives under the ARCP rule that governs its decision.  A rule directory can contain several suites when the rule covers distinct judge actions.  Every suite directory contains fixtures, prompts, and analysis.  Nine contain a local `plan.md`, while Rule 47 voir dire uses the cross-rule [Judge Eval Plan](../plan.md).  The [Judge Eval Index](../README.md) lists the CLI command for every suite, and generated `results.jsonl` and `summary.json` files belong under `evals/out/adc/judge/`.
 
 ## Rule Index
 
@@ -16,4 +14,4 @@ Generated reports stay under `evals/out/adc/judge/`.  The committed rule directo
 | [Rule 52](rule52/README.md) | [Bench Opinion](rule52/bench-opinion/README.md) |
 | [Rule 56](rule56/README.md) | [Summary Judgment](rule56/summary-judgment/README.md) |
 | [Rule 58](rule58/README.md) | [Judgment Entry](rule58/judgment-entry/README.md) |
-| [Rule 60](rule60/README.md) | [Relief From Judgment](rule60/relief-from-judgment/README.md) |
+| [Rule 60](rule60/README.md) | [Relief from Judgment](rule60/relief-from-judgment/README.md) |

@@ -1,14 +1,14 @@
 # Judge Evals
 
-Judge evals are grouped first by ARCP rule and then by the judge behavior under test.  Each behavior suite keeps stable inputs beside its prompt candidates, implementation plan, and analysis.  Rule 47 has separate suites for voir dire question screening and for-cause challenges because those decisions use different ADC tools and different scoring boundaries.
+Judge evals are grouped by ARCP rule and judge action.  Each suite keeps its fixtures, prompt candidates, and analysis together.  Nine suites also contain a local `plan.md`, while Rule 47 voir dire uses the cross-rule [Judge Eval Plan](plan.md).  Rule 47 has separate suites for voir dire question screening and for-cause challenges because they use different ADC tools and scorers.
 
-The Go runners live under `adc/runtime/eval`, with CLI defaults in `adc/runtime/cli/eval.go`.  Generated reports belong under `evals/out/adc/judge/`, which is ignored except for `.gitkeep` files.  The cross-rule plan is [Judge Eval Plan](plan.md), and the rule-grouped suite index is [Judge Rule Index](rules/README.md).
+The Go runners live under `adc/runtime/eval`, with CLI defaults in `adc/runtime/cli/eval.go`.  Generated reports belong under ignored `evals/out/adc/judge/` paths.  The cross-rule plan is [Judge Eval Plan](plan.md), and the rule-grouped suite index is [Judge Rule Index](rules/README.md).
 
-The default runner uses ADC's production opportunity executor.  A model may call the production reference tools, receive correction requests, submit a decision through Lean `apply_decision`, and execute the accepted action through Lean `step`.  Provider, prompt, Lean-process, persistence, and case-file errors abort the run, while an exhausted bounded correction loop produces an invalid scored result.
+Each runner constructs ADC state from a fixture and obtains the corresponding Lean opportunity.  Model-backed turns render the judge view, request a model decision, handle corrections, call Lean `apply_decision`, and execute the accepted `step`.  Default production turns for Rules 11, 37, and 58 execute the opportunity's deterministic action through `step` without a model request or `apply_decision` call.  A procedural attempt-limit or decision-budget failure produces an invalid result row, while other execution errors abort the run.
 
-Rules 11, 37, and 58 currently supply deterministic judge actions in their Lean opportunities, so a default run executes those actions without a provider request.  `--counterfactual-model` removes the deterministic action from a cloned opportunity and permits model and candidate-prompt research without changing the production Lean rule.  The summary records the execution mode, and these three suites require counterfactual mode when `--opportunity-prompt-file` is present.
+Rules 11, 37, and 58 supply deterministic actions in their Lean opportunities, so their default eval mode executes those actions without a model request.  `--counterfactual-model` removes the deterministic action from the eval opportunity and runs the selected model.  These three commands require counterfactual mode when `--opportunity-prompt-file` is present, and their result rows identify the execution mode.
 
-Prompt candidates live under each suite's `prompts/` and replace the objective inside a cloned ADC opportunity.  The runner preserves the allowed tool, constraints, role view, tool schema, production turn semantics, and prompt source.  Each suite's `analysis.md` records historical measurements, while its `plan.md` describes fixture design and candidate text; the [prompt-authoring guide](../../../docs/prompt-authoring.md#adc-eval-candidate-templates) lists every candidate token and its validation rules.
+Prompt candidates live under each suite's `prompts/` and replace the opportunity objective.  The runner retains the opportunity's allowed tool, constraints, role view, tool schema, and direct-turn semantics, and records the prompt source in its results.  The [prompt-authoring guide](../../../docs/prompt-authoring.md#adc-eval-candidate-templates) defines the candidate tokens and validation rules.
 
 ## Suites
 
@@ -23,4 +23,4 @@ Prompt candidates live under each suite's `prompts/` and replace the objective i
 | Rule 52 | [Bench Opinion](rules/rule52/bench-opinion/README.md) | `judge-rule52` | [Rule 52 Analysis](rules/rule52/bench-opinion/analysis.md) |
 | Rule 56 | [Summary Judgment](rules/rule56/summary-judgment/README.md) | `judge-rule56` | [Rule 56 Analysis](rules/rule56/summary-judgment/analysis.md) |
 | Rule 58 | [Judgment Entry](rules/rule58/judgment-entry/README.md) | `judge-rule58` | [Rule 58 Analysis](rules/rule58/judgment-entry/analysis.md) |
-| Rule 60 | [Relief From Judgment](rules/rule60/relief-from-judgment/README.md) | `judge-rule60` | [Rule 60 Analysis](rules/rule60/relief-from-judgment/analysis.md) |
+| Rule 60 | [Relief from Judgment](rules/rule60/relief-from-judgment/README.md) | `judge-rule60` | [Rule 60 Analysis](rules/rule60/relief-from-judgment/analysis.md) |
