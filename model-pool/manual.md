@@ -32,7 +32,7 @@ Validate checked-in inputs before OpenRouter calls.  `tools/score_eval.py valida
 
 Preserve each stage directory as a unit.  Raw result rows show model behavior, score files show deterministic evaluation, logs show provider or runner failures, and batch spec files record exact endpoint-routing requests.  Moving one file without its related results makes later comparison harder and can hide provider-route differences.
 
-Refresh endpoint inventories when a claim depends on current provider behavior.  OpenRouter providers can change routing, availability, pricing, metadata, and serving behavior after the checked-in snapshot.  Rebuild the inventory, batch eval, filtered endpoint set, gene responses, PCA records, clusters, aggregate records, and sampled pool when producing a new pool for current runs.
+Refresh endpoint inventories when a claim depends on current provider behavior.  OpenRouter providers can change routing, availability, pricing, metadata, and serving behavior after the checked-in snapshot.  Rebuild the inventory, tool-use screen, batch eval, filtered endpoint set, gene responses, PCA records, clusters, aggregate records, and sampled pool when producing a new pool for current runs.
 
 ## Full Selection Procedure
 
@@ -44,7 +44,8 @@ The gene stage stores the persona path supplied through `--persona`, and aggrega
 | --- | --- | --- | --- |
 | Select root models | Explicit OpenRouter model IDs, or `--root-count` plus `--root-seed` | `tools/run_end_to_end.py` | Selected OpenRouter model IDs |
 | Inventory provider endpoints | Selected OpenRouter model IDs | `tools/model_inventory.py` | Provider endpoint rows and raw OpenRouter catalog files |
-| Evaluate provider endpoints | Provider endpoint rows and a question file | `tools/run_variant_batch.py`, which calls `tools/run_eval.py` and `tools/score_eval.py` | Response files, score files, exact request specs, and per-endpoint summary rows |
+| Screen runtime tool use | Inventory endpoint rows | `tools/run_model_screen.py` and `.bin/model-config-screen` | Accepted rows, rejected rows, direct-call results, Pi transcripts, MCP calls, usage, and costs |
+| Evaluate provider endpoints | Screened endpoint rows and a question file | `tools/run_variant_batch.py`, which calls `tools/run_eval.py` and `tools/score_eval.py` | Response files, score files, exact request specs, and per-endpoint summary rows |
 | Filter endpoints | Provider endpoint rows and evaluation summaries | `tools/run_end_to_end.py` filter stage | Accepted endpoint rows, rejected endpoint records, and filter summary |
 | Collect behavior responses | Accepted endpoint rows, sampled genes, persona file, sample count | `tools/run_first_gene_inference_embeddings.py` | Gene completions, OpenRouter metadata, embeddings, and per-gene summary |
 | Reduce embeddings | Gene completion records with embeddings | `tools/run_embedding_pca.py` | PCA coordinates and PCA summary |
@@ -54,11 +55,14 @@ The gene stage stores the persona path supplied through `--persona`, and aggrega
 
 `tools/run_end_to_end.py` executes those stages in one command.  It prints structured stage and command events while it runs.  Stage directories and `summary.json` contain the results.
 
+Run `make pool RUN_ID=pool-YYYYMMDDTHHMMSSZ` from `model-pool/` to use the full-catalog Makefile configuration.  That configuration uses eight screening processes and eight evaluation processes, runs three evaluation trials, samples fourteen genes with five responses per endpoint and gene, requests eight PCA dimensions, searches cluster counts from `2` through `20`, and selects 100 records without replacement with at most one record per model.  The completed pool appears at `results/<run-id>/pool/pool.jsonl`, and Make variables override each setting.
+
 ```bash
-uv run --script tools/run_end_to_end.py \
+uv run --no-cache --script tools/run_end_to_end.py \
   --run-id e2e-YYYYMMDDTHHMMSSZ \
   --root-count 5 \
   --root-seed 0 \
+  --screen-processes 8 \
   --prompt prompts/juror-single.md \
   --eval-trials 1 \
   --gene-count 2 \
@@ -69,7 +73,7 @@ uv run --script tools/run_end_to_end.py \
   --pool-size 5
 ```
 
-This example evaluates five sampled root models, uses one trial per question, samples two genes, collects one response per accepted endpoint/gene pair, requests three PCA dimensions, searches K-means values from `2` through `4`, and writes five pool entries.  The end-to-end runner caps the PCA dimensions at the usable embedding-row count unless `--strict-pca-dimensions` makes the mismatch an error.  For a specified pool, set the root models or root sampling parameters, question file, trial count, filter criteria, gene selection, sample count, PCA dimensions, clustering range, pool size, and random seeds explicitly.  `--stop-after` stops after a named stage.
+This example screens the endpoint inventory in eight separate processes, evaluates the accepted configurations with one trial per question, samples two genes, collects one response per accepted endpoint/gene pair, requests three PCA dimensions, searches K-means values from `2` through `4`, and writes five pool entries.  Each screening process handles its assigned configurations sequentially.  The end-to-end runner caps the PCA dimensions at the usable embedding-row count unless `--strict-pca-dimensions` makes the mismatch an error.  For a specified pool, set the root models or root sampling parameters, question file, trial count, filter criteria, gene selection, sample count, PCA dimensions, clustering range, pool size, and random seeds explicitly.  `--stop-after` stops after a named stage.
 
 ## Glossary
 
@@ -121,53 +125,53 @@ Ordinary questions must return `answer`, `confidence`, `rationale`, and `evidenc
 ### Local Verification Without API Keys
 
 ```bash
-uv run tools/score_eval.py validate-items --questions sets/core20/questions.jsonl
-uv run tools/score_eval.py validate-items --questions sets/deliberation/questions.jsonl
-uv run tools/audit_eval.py --json
-uv run tools/run_eval.py --prompt prompts/juror-single.md --mock perfect --models mock:perfect --out results/mock-perfect
-uv run tools/score_eval.py score --run results/mock-perfect
+uv run --no-cache tools/score_eval.py validate-items --questions sets/core20/questions.jsonl
+uv run --no-cache tools/score_eval.py validate-items --questions sets/deliberation/questions.jsonl
+uv run --no-cache tools/audit_eval.py --json
+uv run --no-cache tools/run_eval.py --prompt prompts/juror-single.md --mock perfect --models mock:perfect --out results/mock-perfect
+uv run --no-cache tools/score_eval.py score --run results/mock-perfect
 ```
 
 ### OpenRouter Check
 
 ```bash
-uv run tools/run_eval.py \
+uv run --no-cache tools/run_eval.py \
   --prompt prompts/juror-single.md \
   --models openrouter://openai/gpt-4.1-mini \
   --limit 2 \
   --out results/openrouter-test
 
-uv run tools/score_eval.py score --run results/openrouter-test
+uv run --no-cache tools/score_eval.py score --run results/openrouter-test
 ```
 
 An exact provider-endpoint evaluation starts from a JSON spec.  For an inventory-derived row, `tools/run_eval.py` adds the OpenRouter metadata header, pins the provider endpoint, disables fallbacks, and records returned generation metadata when OpenRouter provides it.  Batch eval directories retain the exact spec used for each endpoint request.
 
 ```bash
-uv run tools/run_eval.py \
+uv run --no-cache tools/run_eval.py \
   --prompt prompts/juror-single.md \
   --model-spec results/<batch-run>/specs/<variant>.json \
   --limit 2 \
   --out results/openrouter-provider-endpoint-test
 
-uv run tools/score_eval.py score --run results/openrouter-provider-endpoint-test
+uv run --no-cache tools/score_eval.py score --run results/openrouter-provider-endpoint-test
 ```
 
 ### Endpoint JSONL
 
 ```bash
-uv run tools/run_eval.py \
+uv run --no-cache tools/run_eval.py \
   --prompt prompts/juror-single.md \
   --model-spec-jsonl variants/filtered-20260529/endpoint_variants.jsonl \
   --limit 2 \
   --out results/openrouter-variant-jsonl-test
 
-uv run tools/score_eval.py score --run results/openrouter-variant-jsonl-test
+uv run --no-cache tools/score_eval.py score --run results/openrouter-variant-jsonl-test
 ```
 
 ### Function-Tool Check
 
 ```bash
-uv run tools/run_eval.py \
+uv run --no-cache tools/run_eval.py \
   --prompt prompts/juror-single.md \
   --questions sets/core20/questions.jsonl \
   --item-id core20.tool.001 \
@@ -175,7 +179,7 @@ uv run tools/run_eval.py \
   --models openrouter://openai/gpt-4.1-mini \
   --out results/tool-function-openrouter-test
 
-uv run tools/score_eval.py score \
+uv run --no-cache tools/score_eval.py score \
   --questions sets/core20/questions.jsonl \
   --run results/tool-function-openrouter-test
 ```
@@ -183,13 +187,13 @@ uv run tools/score_eval.py score \
 ### Deliberation Evaluation
 
 ```bash
-uv run tools/run_eval.py \
+uv run --no-cache tools/run_eval.py \
   --prompt prompts/juror-single.md \
   --questions sets/deliberation/questions.jsonl \
   --models openrouter://openai/gpt-4.1-mini \
   --out results/deliberation-openrouter-test
 
-uv run tools/score_eval.py score \
+uv run --no-cache tools/score_eval.py score \
   --questions sets/deliberation/questions.jsonl \
   --run results/deliberation-openrouter-test
 ```
@@ -203,7 +207,7 @@ Use `--trials 1` for a single-pass test run.  The default of three trials suppor
 Provider endpoint selection records the provider endpoints available for selected OpenRouter model IDs, evaluates each endpoint separately, and applies explicit filter criteria.  `tools/model_inventory.py` fetches the OpenRouter model catalog and endpoint metadata, then writes one normalized row per provider endpoint.  It saves the raw responses separately and records their paths with the provider name, endpoint tag, quantization, limits, supported parameters, pricing, and status fields.
 
 ```bash
-uv run tools/model_inventory.py \
+uv run --no-cache tools/model_inventory.py \
   --run-id model-roots-10-YYYYMMDDTHHMMSSZ \
   --model-id deepseek/deepseek-v4-flash
 ```
@@ -217,6 +221,32 @@ uv run tools/model_inventory.py \
 | `summary.json` | Counts, selected model IDs, endpoint fetches, and provider, quantization, and status counts |
 | `raw/models.json` | Raw OpenRouter model catalog response |
 | `raw/endpoints/*.json` | Raw OpenRouter endpoint metadata responses |
+
+### Runtime Tool-Use Screen
+
+The screen runs two checks for every endpoint configuration.  The direct check sends the Quick council preflight prompt through the Responses API and requires one valid `submit_council_vote` call.  It uses Quick's 20-second preflight limit and three provider attempts.  The Pi check starts the Pi container and MCP proxy extension used by ARB, ARBD, and ADC, then requires `wait_for_opportunity` and `submit_council_vote` through MCP.
+
+Both checks use the inventory row's model, exact provider route, request parameters, and disabled-fallback policy.  Endpoint capability metadata controls the Chat Completions parameter names used by Pi, while endpoint prices populate Pi's token accounting.  A model passes only when both checks submit a schema-valid vote.
+
+```bash
+make screen-command
+uv run --no-cache --script tools/run_model_screen.py \
+  --variants results/model-roots-10-YYYYMMDDTHHMMSSZ/endpoint_variants.jsonl \
+  --out results/model-roots-10-screen-YYYYMMDDTHHMMSSZ \
+  --screen-command ../.bin/model-config-screen
+```
+
+The coordinator rejects rows whose metadata lacks a model, provider route, text input, text output, or tool support.  A model or provider refusal rejects that configuration and allows the next configuration to run.  Missing credentials, container startup failures, and malformed Pi transcripts stop the partition as infrastructure errors.  Each rejection record identifies the failing check and its returned error.
+
+| File | Contents |
+| --- | --- |
+| `endpoint_variants.jsonl` | Configurations that passed both checks. |
+| `rejected_variants.jsonl` | Inventory rows with their rejection records. |
+| `results.jsonl` | One summary row per configuration. |
+| `configurations/*/result.json` | Direct and Pi status, tool calls, token usage, and cost. |
+| `configurations/*/pi.stdout.jsonl` | Pi event transcript. |
+| `configurations/*/pi.stderr.log`, `configurations/*/mcp.log` | Pi and MCP diagnostics. |
+| `summary.json` | Counts, cumulative cost, and output paths. |
 
 ### Request Fields
 
@@ -266,7 +296,7 @@ Eval result rows record the routed endpoint from response metadata and `/api/v1/
 Use `tools/run_variant_batch.py` to evaluate an endpoint inventory one variant at a time.  The batch runner writes one exact spec file per variant, calls `tools/run_eval.py`, scores each completed run with `tools/score_eval.py`, and writes per-variant summary rows.  The output directory must be absent or empty.
 
 ```bash
-uv run --script tools/run_variant_batch.py \
+uv run --no-cache --script tools/run_variant_batch.py \
   --variants results/model-roots-10-YYYYMMDDTHHMMSSZ/endpoint_variants.jsonl \
   --out results/model-roots-10-eval-YYYYMMDDTHHMMSSZ \
   --questions sets/core20/questions.jsonl \
@@ -328,7 +358,7 @@ PCA is computed separately for each gene because each gene has its own response 
 ### Gene Inference and Embedding
 
 ```bash
-uv run --script tools/run_first_gene_inference_embeddings.py \
+uv run --no-cache --script tools/run_first_gene_inference_embeddings.py \
   --variants variants/filtered-20260529/endpoint_variants.jsonl \
   --genes sampled-genes.json \
   --persona ../common/etc/personas/generic.md \
@@ -342,7 +372,7 @@ Check `summary.json` before passing the records to PCA.  `records_written` and `
 ### PCA Reduction
 
 ```bash
-uv run --script tools/run_embedding_pca.py \
+uv run --no-cache --script tools/run_embedding_pca.py \
   --records results/gene-1-inference-embeddings-YYYYMMDDTHHMMSSZ/records.jsonl \
   --out results/gene-1-pca-3d-YYYYMMDDTHHMMSSZ \
   --dimensions 3
@@ -351,7 +381,7 @@ uv run --script tools/run_embedding_pca.py \
 ### Per-Gene Clustering
 
 ```bash
-uv run --script tools/run_gene_pca_clustering.py \
+uv run --no-cache --script tools/run_gene_pca_clustering.py \
   --pca-records results/gene-1-pca-3d-YYYYMMDDTHHMMSSZ/pca-records.jsonl \
   --pca-records results/gene-2-pca-3d-YYYYMMDDTHHMMSSZ/pca-records.jsonl \
   --pca-records results/gene-3-pca-3d-YYYYMMDDTHHMMSSZ/pca-records.jsonl \
@@ -365,7 +395,7 @@ uv run --script tools/run_gene_pca_clustering.py \
 ### Cluster Aggregation
 
 ```bash
-uv run --script tools/aggregate_variant_persona_clusters.py \
+uv run --no-cache --script tools/aggregate_variant_persona_clusters.py \
   --clusters results/gene-clusters-YYYYMMDDTHHMMSSZ/clusters.jsonl \
   --cluster-fit results/gene-clusters-YYYYMMDDTHHMMSSZ/cluster-fit.json \
   --variants variants/filtered-20260529/endpoint_variants.jsonl \
@@ -376,7 +406,7 @@ uv run --script tools/aggregate_variant_persona_clusters.py \
 ### Tuple-Uniform Sampling
 
 ```bash
-uv run --script tools/sample-tuple-pool.py \
+uv run --no-cache --script tools/sample-tuple-pool.py \
   results/variant-persona-clusters-YYYYMMDDTHHMMSSZ/variant-persona-clusters.jsonl \
   --out results/sample-tuple-pool-YYYYMMDDTHHMMSSZ/pool.jsonl \
   --diagnostics-out results/sample-tuple-pool-YYYYMMDDTHHMMSSZ/diagnostics.jsonl \
@@ -434,6 +464,7 @@ If gene-response, PCA, clustering, aggregation, or pool sampling fails, check ro
 | `tools/audit_eval.py` | Repository consistency audit |
 | `tools/tool_server.py` | Local read-only evidence tools used by the runner |
 | `tools/model_inventory.py` | OpenRouter model and provider endpoint inventory |
+| `tools/run_model_screen.py` | Sequential direct and Pi/MCP screening for one endpoint partition |
 | `tools/run_variant_batch.py` | Provider-endpoint batch evaluation |
 | `tools/run_end_to_end.py` | Full selection procedure from root models to `pool.jsonl` |
 | `tools/run_first_gene_inference_embeddings.py` | Gene completion and embedding collection |

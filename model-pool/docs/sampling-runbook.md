@@ -4,13 +4,14 @@ This procedure starts with OpenRouter model IDs and produces a JSONL pool of pro
 
 ## End-to-End Runner
 
-`tools/run_end_to_end.py` runs inventory, endpoint eval, filtering, gene inference, PCA, clustering, cluster aggregation, and tuple sampling in order.  It accepts explicit repeated `--model-id` values or samples `--root-count` catalog models with `--root-seed`.  Each stage writes beneath `results/<run-id>/`, and the top-level `summary.json` identifies the completed stages and their summaries.
+`tools/run_end_to_end.py` runs inventory, runtime tool-use screening, endpoint eval, filtering, gene inference, PCA, clustering, cluster aggregation, and tuple sampling in order.  It accepts explicit repeated `--model-id` values or samples `--root-count` catalog models with `--root-seed`.  Each stage writes beneath `results/<run-id>/`, and the top-level `summary.json` identifies the completed stages and their summaries.
 
 ```bash
-uv run --script tools/run_end_to_end.py \
+uv run --no-cache --script tools/run_end_to_end.py \
   --run-id e2e-YYYYMMDDTHHMMSSZ \
   --root-count 5 \
   --root-seed 0 \
+  --screen-processes 8 \
   --prompt prompts/juror-single.md \
   --eval-trials 1 \
   --gene-count 2 \
@@ -21,7 +22,7 @@ uv run --script tools/run_end_to_end.py \
   --pool-size 5
 ```
 
-The command defaults to five root models, one eval trial, two genes, one sample per endpoint/gene pair, three PCA dimensions, a cluster range from `2` through `10`, and twenty pool rows.  Set the model IDs or root sample, question file, prompt, trial count, filter criteria, genes, sample count, PCA dimensions, cluster range, pool size, and seeds for the intended pool.  `--stop-after` accepts `inventory`, `eval`, `filter`, `genes`, `pca`, `clusters`, `aggregate`, or `pool` and returns after writing that stage's summary.
+The command defaults to five root models, one screening process, one eval trial, two genes, one sample per endpoint/gene pair, three PCA dimensions, a cluster range from `2` through `10`, and twenty pool rows.  `make pool` sets eight screening processes and eight eval processes.  Set the model IDs or root sample, question file, prompt, process counts, trial count, filter criteria, genes, sample count, PCA dimensions, cluster range, pool size, and seeds for the intended pool.  `--stop-after` accepts `inventory`, `screen`, `eval`, `filter`, `genes`, `pca`, `clusters`, `aggregate`, or `pool` and returns after writing that stage's summary.
 
 The eval stage applies a per-request `--timeout` and a per-child `--eval-no-progress-timeout`.  `--eval-variant-timeout` adds an absolute limit for one endpoint eval and must be at least the no-progress timeout.  The runner rejects an incomplete gene stage before PCA, including missing records, completion errors, embedding errors, or missing embeddings.  It caps the requested PCA dimensions at the usable embedding-row count unless `--strict-pca-dimensions` makes the mismatch an error.
 
@@ -34,21 +35,35 @@ The commands below run the individual data-producing stages.  Filtering runs thr
 Inventory explicit model IDs when the root set has already been chosen.  The script fetches the model catalog and the endpoint response for every selected model, writes raw responses, and normalizes one row per provider endpoint.  HTTP 408, 429, 500, 502, 503, and 504 responses, URL errors, and timeouts use the configured retries.  Other HTTP failures and malformed successful responses abort immediately.
 
 ```bash
-uv run --script tools/model_inventory.py \
+uv run --no-cache --script tools/model_inventory.py \
   --run-id model-roots-10-YYYYMMDDTHHMMSSZ \
   --model-id root/model-a \
   --model-id root/model-b
 ```
 
-The inventory directory contains `raw/models.json`, percent-encoded files under `raw/endpoints/`, `endpoint_variants.jsonl`, `endpoint_variants.csv`, and `summary.json`.  Keep unknown-quantization endpoints separate because the provider, endpoint tag, limits, pricing, supported parameters, and runtime behavior can differ.  Inspect `summary.json` for the selected IDs and endpoint count before starting evals.
+The inventory directory contains `raw/models.json`, percent-encoded files under `raw/endpoints/`, `endpoint_variants.jsonl`, `endpoint_variants.csv`, and `summary.json`.  Keep unknown-quantization endpoints separate because the provider, endpoint tag, limits, pricing, supported parameters, and runtime behavior can differ.  Inspect `summary.json` for the selected IDs and endpoint count before screening.
+
+### Runtime Tool-Use Screen
+
+Build `.bin/model-config-screen`, then pass the inventory rows to the Python coordinator.  Each configuration receives a Quick-style direct `submit_council_vote` check and a Pi/MCP check using the ARB council tool sequence.  The output directory must be absent or empty.
+
+```bash
+make screen-command
+uv run --no-cache --script tools/run_model_screen.py \
+  --variants results/model-roots-10-YYYYMMDDTHHMMSSZ/endpoint_variants.jsonl \
+  --out results/model-roots-10-screen-YYYYMMDDTHHMMSSZ \
+  --screen-command ../.bin/model-config-screen
+```
+
+The screen preserves the exact provider route, fallback policy, request parameters, Pi transcript, MCP calls, usage, and cost for each configuration.  It writes passing rows to `endpoint_variants.jsonl`, failures to `rejected_variants.jsonl`, per-configuration summaries to `results.jsonl`, and aggregate counts to `summary.json`.  Standard-output events report cumulative cost after every configuration and report an in-progress configuration every sixty seconds.
 
 ### Endpoint Evals
 
-The batch runner creates one exact request spec and one eval directory for each endpoint variant.  It pins the endpoint route, disables fallback, sets `require_parameters: true`, and includes the quantization constraint when the inventory reports a known value.  The output directory must be absent or empty.
+The batch runner creates one exact request spec and one eval directory for each screened endpoint variant.  It pins the endpoint route, disables fallback, sets `require_parameters: true`, and includes the quantization constraint when the inventory reports a known value.  The output directory must be absent or empty.
 
 ```bash
-uv run --script tools/run_variant_batch.py \
-  --variants results/model-roots-10-YYYYMMDDTHHMMSSZ/endpoint_variants.jsonl \
+uv run --no-cache --script tools/run_variant_batch.py \
+  --variants results/model-roots-10-screen-YYYYMMDDTHHMMSSZ/endpoint_variants.jsonl \
   --out results/model-roots-10-eval-YYYYMMDDTHHMMSSZ \
   --questions sets/core20/questions.jsonl \
   --prompt prompts/juror-single.md \
@@ -71,7 +86,7 @@ The checked-in snapshot under `variants/filtered-20260529/` contains `endpoint_v
 Run one gene index at a time against the accepted endpoint set.  Each sample uses the endpoint's exact route policy and records the completion, request parameters, route metadata, status, and embedding.  The command writes directly to `records.jsonl` and summarizes expected rows, status counts, errors, and embeddings in `summary.json`.  Its output directory must be absent or empty.
 
 ```bash
-uv run --script tools/run_first_gene_inference_embeddings.py \
+uv run --no-cache --script tools/run_first_gene_inference_embeddings.py \
   --variants variants/filtered-20260529/endpoint_variants.jsonl \
   --genes sampled-genes.json \
   --persona ../common/etc/personas/generic.md \
@@ -87,7 +102,7 @@ Repeat the command with a distinct output directory for every selected gene inde
 PCA runs separately for each gene because each prompt produces its own response distribution.  `pca-records.jsonl` contains the projected rows, `pca-fit.json` contains the fitted components and variance data, and `summary.json` reports source counts and dimensions.  The requested dimension count cannot exceed the number of usable embedding rows.
 
 ```bash
-uv run --script tools/run_embedding_pca.py \
+uv run --no-cache --script tools/run_embedding_pca.py \
   --records results/gene-1-inference-embeddings-YYYYMMDDTHHMMSSZ/records.jsonl \
   --out results/gene-1-pca-3d-YYYYMMDDTHHMMSSZ \
   --dimensions 3
@@ -98,7 +113,7 @@ uv run --script tools/run_embedding_pca.py \
 The clustering tool validates row counts, endpoint coverage, samples per endpoint, and PCA dimensions when their expected values are supplied.  It evaluates K-means candidates separately for each gene and selects the candidate with the highest silhouette score.  Too few rows or no valid candidate produces a single fallback cluster.  The tool writes `clusters.jsonl`, `clusters.csv`, `cluster-fit.json`, and `summary.json`, and cluster labels have meaning only within their gene index.
 
 ```bash
-uv run --script tools/run_gene_pca_clustering.py \
+uv run --no-cache --script tools/run_gene_pca_clustering.py \
   --pca-records results/gene-1-pca-3d-YYYYMMDDTHHMMSSZ/pca-records.jsonl \
   --pca-records results/gene-2-pca-3d-YYYYMMDDTHHMMSSZ/pca-records.jsonl \
   --pca-records results/gene-3-pca-3d-YYYYMMDDTHHMMSSZ/pca-records.jsonl \
@@ -115,7 +130,7 @@ uv run --script tools/run_gene_pca_clustering.py \
 `tools/clusters-graph.py` renders the inspection CSV as a faceted chart.  Each provider occupies one row, each gene occupies one column, and model markers show `pc1` against `pc2`.  Set a noninteractive Matplotlib backend for file-only rendering.
 
 ```bash
-env MPLBACKEND=Agg uv run --script tools/clusters-graph.py \
+env MPLBACKEND=Agg uv run --no-cache --script tools/clusters-graph.py \
   --clusters results/gene-clusters-YYYYMMDDTHHMMSSZ/clusters.csv \
   --out results/gene-clusters-YYYYMMDDTHHMMSSZ/clusters.png
 ```
@@ -125,7 +140,7 @@ env MPLBACKEND=Agg uv run --script tools/clusters-graph.py \
 Aggregation produces one cluster vector for each endpoint and persona.  For each gene, it chooses a unanimous label, the unique highest-count label, or the label of the sample nearest its assigned cluster center when the highest counts tie.  The output record calls a unique nonunanimous winner `majority`, including a plurality, and the output directory contains `variant-persona-clusters.jsonl` and `summary.json`.
 
 ```bash
-uv run --script tools/aggregate_variant_persona_clusters.py \
+uv run --no-cache --script tools/aggregate_variant_persona_clusters.py \
   --clusters results/gene-clusters-YYYYMMDDTHHMMSSZ/clusters.jsonl \
   --cluster-fit results/gene-clusters-YYYYMMDDTHHMMSSZ/cluster-fit.json \
   --variants variants/filtered-20260529/endpoint_variants.jsonl \
@@ -140,7 +155,7 @@ Check that every accepted endpoint has one aggregate row and that every `cluster
 The tuple sampler deduplicates equivalent provider endpoints before sampling.  It chooses a distinct cluster tuple uniformly, then chooses a representative endpoint/persona row uniformly within that tuple.  Sampling uses replacement unless `--without-replacement` is present.
 
 ```bash
-uv run --script tools/sample-tuple-pool.py \
+uv run --no-cache --script tools/sample-tuple-pool.py \
   results/variant-persona-clusters-YYYYMMDDTHHMMSSZ/variant-persona-clusters.jsonl \
   --out results/sample-tuple-pool-YYYYMMDDTHHMMSSZ/pool.jsonl \
   --diagnostics-out results/sample-tuple-pool-YYYYMMDDTHHMMSSZ/diagnostics.jsonl \

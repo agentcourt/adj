@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run --script
+#!/usr/bin/env -S uv run --no-cache --script
 # /// script
 # requires-python = ">=3.11"
 # dependencies = []
@@ -348,6 +348,14 @@ def main() -> int:
         action="store_true",
         help="Emit each row from the sampling frame at most once. Fails if --pool-size exceeds the frame size.",
     )
+    parser.add_argument(
+        "--one-per-model",
+        action="store_true",
+        help=(
+            "Emit at most one row for each openrouter_model_id. "
+            "Fails if --pool-size exceeds the eligible unique-model count."
+        ),
+    )
     parser.add_argument("--pool-size", type=int, default=20, help="Number of rows to emit. Default: %(default)s")
     parser.add_argument("--seed", type=int, help="Optional deterministic random seed")
     args = parser.parse_args()
@@ -361,6 +369,22 @@ def main() -> int:
     sample_rows = rows if args.no_dedupe_equivalent_endpoints else representatives
     grouped = group_by_tuple(sample_rows)
     tuples = sorted(grouped)
+    if args.one_per_model:
+        missing_model_rows = [
+            row["_source_row"] for row in sample_rows if text_field(row, "openrouter_model_id") is None
+        ]
+        if missing_model_rows:
+            joined_rows = ", ".join(str(source_row) for source_row in missing_model_rows)
+            raise RuntimeError(
+                "--one-per-model requires a non-empty openrouter_model_id in every sampling-frame row; "
+                f"missing at source rows: {joined_rows}"
+            )
+        unique_model_count = len({text_field(row, "openrouter_model_id") for row in sample_rows})
+        if args.pool_size > unique_model_count:
+            raise RuntimeError(
+                f"--pool-size={args.pool_size} exceeds eligible unique models "
+                f"({unique_model_count}) with --one-per-model"
+            )
     if args.without_replacement and args.pool_size > len(sample_rows):
         raise RuntimeError(
             f"--pool-size={args.pool_size} exceeds sampling frame rows "
@@ -390,13 +414,30 @@ def main() -> int:
     try:
         with args.out.open("w") as output_handle:
             for step in range(1, args.pool_size + 1):
-                if args.without_replacement:
+                if args.without_replacement or args.one_per_model:
                     cluster_tuple = available_tuples[rng.randrange(len(available_tuples))]
                     candidates = available_grouped[cluster_tuple]
                     available_before = len(candidates)
-                    row = candidates.pop(rng.randrange(len(candidates)))
-                    if not candidates:
-                        available_tuples.remove(cluster_tuple)
+                    selected_index = rng.randrange(len(candidates))
+                    row = candidates[selected_index]
+                    if args.one_per_model:
+                        selected_model_id = text_field(row, "openrouter_model_id")
+                        assert selected_model_id is not None
+                        for candidate_tuple, tuple_rows in list(available_grouped.items()):
+                            remaining = [
+                                candidate
+                                for candidate in tuple_rows
+                                if text_field(candidate, "openrouter_model_id") != selected_model_id
+                            ]
+                            if remaining:
+                                available_grouped[candidate_tuple] = remaining
+                            else:
+                                del available_grouped[candidate_tuple]
+                        available_tuples = sorted(available_grouped)
+                    else:
+                        candidates.pop(selected_index)
+                        if not candidates:
+                            available_tuples.remove(cluster_tuple)
                 else:
                     cluster_tuple = tuples[rng.randrange(len(tuples))]
                     candidates = grouped[cluster_tuple]
@@ -405,7 +446,7 @@ def main() -> int:
 
                 tuple_counts[cluster_tuple] += 1
                 row_counts[row["_source_row"]] += 1
-                model_id = str(row.get("openrouter_model_id", ""))
+                model_id = text_field(row, "openrouter_model_id") or ""
                 provider_name = str(row.get("provider_name", ""))
                 endpoint = endpoint_key(row)
                 model_counts[model_id] += 1
@@ -442,6 +483,7 @@ def main() -> int:
                         "representative_endpoint_variant_id": row.get("_representative_endpoint_variant_id", row.get("endpoint_variant_id")),
                         "equivalent_endpoints": row.get("_equivalent_endpoints", [endpoint_summary(row)]),
                         "without_replacement": args.without_replacement,
+                        "one_per_model": args.one_per_model,
                     }, ensure_ascii=False, sort_keys=True) + "\n")
     finally:
         if diagnostics_handle:
@@ -451,6 +493,7 @@ def main() -> int:
         f"summary: input_rows={len(rows)} deduped_rows={len(sample_rows)} "
         f"equivalence_classes={len(equivalence_records)} gene_count={cluster_count} "
         f"unique_tuples={len(tuples)} without_replacement={args.without_replacement} "
+        f"one_per_model={args.one_per_model} "
         f"emitted={args.pool_size} "
         f"emitted_unique_tuples={len(tuple_counts)} unique_rows={len(row_counts)} "
         f"unique_models={len(model_counts)} unique_providers={len(provider_counts)} "

@@ -1,6 +1,6 @@
 # Model-Pool Documentation
 
-`docs/` contains the sampling runbook and OpenRouter model-inventory reference.  The manual and rubric provide operational commands and scoring definitions.  Generated run summaries belong under ignored `results/` directories.
+`docs/` contains the sampling runbook and OpenRouter model-inventory reference.  The runbook covers runtime tool-use screening between inventory and endpoint evaluation, while the manual and rubric provide command and scoring details.  Generated run summaries belong under ignored `results/` directories.
 
 ## Documents
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run
+#!/usr/bin/env -S uv run --no-cache --script
 # /// script
 # requires-python = ">=3.11"
 # dependencies = []
@@ -53,8 +53,11 @@ CSV_FIELDS = [
     "model_supported_voices",
     "model_raw_path",
     "endpoint_index",
+    "endpoint_route_id",
     "endpoint_variant_id",
     "endpoint_variant_key",
+    "exact_route_ambiguous",
+    "exact_route_row_count",
     "provider_name",
     "endpoint_name",
     "endpoint_tag",
@@ -101,10 +104,25 @@ def endpoint_id_component(value: Any) -> str:
     return urllib.parse.quote(str(value or ""), safe="/:._-~+")
 
 
-def make_endpoint_variant_id(model_id: str, endpoint: dict[str, Any]) -> str:
+def make_endpoint_route_id(model_id: str, endpoint: dict[str, Any]) -> str:
     route = endpoint.get("tag") or endpoint.get("endpoint_tag") or endpoint.get("provider_name") or "unknown-provider"
     quantization = endpoint.get("quantization") or "unknown"
     return f"openrouter:{endpoint_id_component(model_id)}@{endpoint_id_component(route)}#{endpoint_id_component(quantization)}"
+
+
+def assign_endpoint_variant_ids(rows: list[dict[str, Any]]) -> None:
+    route_groups: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        route_groups.setdefault(str(row["endpoint_route_id"]), []).append(row)
+
+    for route_id, group in route_groups.items():
+        row_count = len(group)
+        ambiguous = row_count > 1
+        for row in group:
+            row["exact_route_ambiguous"] = ambiguous
+            row["exact_route_row_count"] = row_count
+            if ambiguous:
+                row["endpoint_variant_id"] = f"{route_id}~catalog-row-{row['endpoint_index']}"
 
 
 def load_openrouter_key() -> str | None:
@@ -254,6 +272,7 @@ def normalized_row(
     pricing = endpoint.get("pricing") if isinstance(endpoint.get("pricing"), dict) else {}
     model_id = str(model.get("id") or endpoint.get("model_id") or "")
     quantization = endpoint.get("quantization") or "unknown"
+    route_id = make_endpoint_route_id(model_id, endpoint)
     return {
         "catalog_snapshot_id": snapshot_id,
         "snapshot_timestamp_utc": snapshot_timestamp,
@@ -278,8 +297,11 @@ def normalized_row(
         "model_supported_voices": model.get("supported_voices"),
         "model_raw_path": model_raw_path,
         "endpoint_index": endpoint_index,
-        "endpoint_variant_id": make_endpoint_variant_id(model_id, endpoint),
+        "endpoint_route_id": route_id,
+        "endpoint_variant_id": route_id,
         "endpoint_variant_key": endpoint_variant_key(snapshot_id, model_id, endpoint_index, endpoint),
+        "exact_route_ambiguous": False,
+        "exact_route_row_count": 1,
         "provider_name": endpoint.get("provider_name"),
         "endpoint_name": endpoint.get("name"),
         "endpoint_tag": endpoint.get("tag"),
@@ -365,27 +387,23 @@ def main(argv: list[str]) -> int:
 
     rows: list[dict[str, Any]] = []
     endpoint_fetches: list[dict[str, Any]] = []
-    models_by_id = {str(model.get("id")): model for model in models}
-
     for model_number, model in enumerate(selected, start=1):
         model_id = str(model.get("id") or "")
         endpoint_path = endpoint_path_for_model(model)
         endpoint_body = api_get(endpoint_path, key, args.request_timeout, args.retries)
-        endpoint_payload, endpoints = extract_endpoint_payload(endpoint_body)
+        _, endpoints = extract_endpoint_payload(endpoint_body)
 
         endpoint_file = endpoint_dir / endpoint_raw_filename(model_id)
         endpoint_file.write_text(pretty_json(endpoint_body), encoding="utf-8")
         endpoint_rel = endpoint_file.relative_to(out_dir).as_posix()
         endpoint_fetches.append({"model_id": model_id, "endpoint_count": len(endpoints), "endpoint_path": endpoint_path, "raw_path": endpoint_rel})
 
-        endpoint_model = endpoint_payload if endpoint_payload.get("id") else model
-        model_for_rows = models_by_id.get(str(endpoint_model.get("id")), model)
         for endpoint_index, endpoint in enumerate(endpoints):
             rows.append(
                 normalized_row(
                     snapshot_id=run_id,
                     snapshot_timestamp=snapshot_timestamp,
-                    model=model_for_rows,
+                    model=model,
                     model_raw_path="raw/models.json",
                     endpoint_raw_path=endpoint_rel,
                     endpoint_index=endpoint_index,
@@ -394,6 +412,8 @@ def main(argv: list[str]) -> int:
             )
         if args.sleep and model_number < len(selected):
             time.sleep(args.sleep)
+
+    assign_endpoint_variant_ids(rows)
 
     seen_variant_ids: set[str] = set()
     duplicate_ids: set[str] = set()
@@ -427,6 +447,8 @@ def main(argv: list[str]) -> int:
         "sample_models": args.sample_models,
         "sample_seed": args.sample_seed if args.sample_models is not None else None,
         "endpoint_variant_count": len(rows),
+        "ambiguous_exact_route_row_count": sum(bool(row["exact_route_ambiguous"]) for row in rows),
+        "ambiguous_exact_route_count": len({row["endpoint_route_id"] for row in rows if row["exact_route_ambiguous"]}),
         "endpoint_fetch_count": len(endpoint_fetches),
         "model_endpoint_fetches": endpoint_fetches,
         "selected_model_ids": [str(model.get("id")) for model in selected],
@@ -444,6 +466,7 @@ def main(argv: list[str]) -> int:
         "notes": [
             "This run used only OpenRouter catalog and endpoint APIs. It did not run inference probes.",
             "Rows are endpoint variants. Unknown quantization is endpoint-specific and rows are not collapsed by quantization label.",
+            "Rows sharing one exact request route remain separate catalog variants and are marked exact_route_ambiguous.",
         ],
     }
     (out_dir / "summary.json").write_text(pretty_json(summary), encoding="utf-8")

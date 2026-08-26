@@ -7,7 +7,7 @@
 Run the script from `model-pool/`.  Supply one or more `--model-id` values to inventory named models.  Use `--sample-models` and `--sample-seed` to choose a deterministic sample from the catalog, or omit both selection options to inventory every catalog model.  The script requires `OPENROUTER_API_KEY` in the environment or an ignored `secrets/openrouter.api.txt` file containing `OPENROUTER_API_KEY=<key>` or `export OPENROUTER_API_KEY=<key>`.  A bare token in the file is rejected.
 
 ```bash
-uv run --script tools/model_inventory.py \
+uv run --no-cache --script tools/model_inventory.py \
   --run-id model-roots-10-YYYYMMDDTHHMMSSZ \
   --model-id deepseek/deepseek-v4-flash
 ```
@@ -43,6 +43,10 @@ An endpoint with `quantization: "unknown"` remains a distinct endpoint variant. 
 ```
 
 For an endpoint whose catalog quantization is `unknown`, the request omits `provider.quantizations` and retains the provider constraint.  Eval result metadata records the requested route, quantization constraint, fallback policy, parameter policy, and request parameters.  It also retains the normalized endpoint fields from the inventory row under `variant_metadata`.
+
+## Runtime Tool-Use Screening
+
+`tools/run_model_screen.py` checks every inventory row before endpoint evaluation.  Its direct check uses the Quick council preflight request and requires one `submit_council_vote` function call.  Its Pi check uses the Pi container and MCP proxy extension used by ARB, ARBD, and ADC, requiring `wait_for_opportunity` and `submit_council_vote`.  Both checks retain the inventory row's model and provider route.  The screen rejects metadata that lacks text input, text output, or tool support, and it rejects a runtime configuration unless both checks pass.  The screen retains request status, response IDs, MCP calls, Pi output, token usage, and endpoint-price cost accounting.
 
 ## Route Metadata
 

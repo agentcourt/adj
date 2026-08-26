@@ -1,5 +1,13 @@
 # Development Notes
 
+## 2026-08-25 Runtime Tool-Use Screening
+
+Added a screen between endpoint inventory and question-set evaluation.  Each endpoint configuration must complete a Quick-style direct `submit_council_vote` call and an ARB-style Pi/MCP sequence containing `wait_for_opportunity` and `submit_council_vote`.  The screen uses the same model, provider route, fallback policy, parameter limits, Pi image, and MCP proxy extension that the runtimes use.
+
+Pi's OpenRouter Chat Completions client sends `store` and chooses a maximum-token field from its model definition.  The screen and the ARB, ARBD, and ADC runtimes derive those settings from the endpoint's advertised parameters, which prevents exact routing from excluding an otherwise valid endpoint.  They also convert OpenRouter's per-token endpoint prices to Pi's per-million-token cost fields, allowing Pi to report request costs from its observed usage.
+
+The Python coordinator processes one partition sequentially and retains one result directory per configuration.  The end-to-end runner partitions configurations by model and starts separate coordinator processes, with eight processes set by `make pool`.  Candidate failures remain in `rejected_variants.jsonl`, while credential, container, and transcript failures stop the affected partition.
+
 ## 2026-08-23 Restoration to adj
 
 Restored `model-pool/` from adjudication commit `dde9b3fe3b83e0139534da340cb17d5e4522f256`.  The restored tools remain at the repository root and continue to read personas from `common/etc/personas/`.  Current commands use `adc case`, `aar case`, and `aard case`, and OpenRouter request metadata names `agentcourt/adj` as the repository.
@@ -38,7 +46,7 @@ An implementation and user-documentation search found none of the removed contin
 
 The evaluator now keeps response rows in `raw_results.jsonl`, and the scorer reads that file and writes `scores.json`.  Batch progress uses standard-output events and `variant_summary.csv`.  The end-to-end runner keeps stage outputs and `summary.json`.  Filtering keeps accepted endpoint rows, removed endpoint rows, its CSV view, and its summary.  Gene records omit duplicate run and gene-hash fields, and end-to-end validation rejects incomplete completions or embeddings before PCA.  Aggregation writes one JSONL pool input and its summary.
 
-Inventory aborts on an endpoint-fetch failure.  Endpoint raw filenames percent-encode the model ID, and endpoint variant IDs use `openrouter:<model>@<route>#<quantization>`.  Inventory rejects duplicate route IDs before writing normalized rows.  The checked-in filtered variants and default pool use the readable IDs consistently across root, representative, variant, and equivalent-endpoint fields.  Removed response hashes from the normalized inventory and runtime metadata.
+Inventory aborts on an endpoint-fetch failure.  Endpoint raw filenames percent-encode the model ID, and request-selectable route IDs use `openrouter:<model>@<route>#<quantization>`.  When OpenRouter returns multiple catalog rows with the same route, inventory retains each row, adds a readable `~catalog-row-<index>` suffix to its variant ID, and marks every member of the route group as ambiguous.  The endpoint-evaluation stage rejects those rows before model calls because OpenRouter's documented [Chat API](https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request?explorer=true) and [provider routing](https://openrouter.ai/docs/guides/routing/provider-selection) can select the model, provider tag, and quantization but cannot select one row within the group.  Different provider tags remain independently routable.  The checked-in filtered variants and default pool use the readable IDs consistently across root, representative, variant, and equivalent-endpoint fields.  Removed response hashes from the normalized inventory and runtime metadata.
 
 Deleted the unused pool samplers, duplicate filter artifacts and checked-in specs, duplicate aggregate JSON, duplicate scorer and evaluator outputs, inventory Markdown summary, gene manifest, and obsolete result schema.  Local verification compiled every model-pool tool, validated both item sets, passed the repository audit, completed a four-row mock evaluator run and scoring pass, and confirmed that the evaluator directory contains only `raw_results.jsonl` and `scores.json`.
 

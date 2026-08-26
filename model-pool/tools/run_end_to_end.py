@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run
+#!/usr/bin/env -S uv run --no-cache --script
 # /// script
 # requires-python = ">=3.11"
 # dependencies = []
@@ -8,14 +8,16 @@ import csv
 import datetime as dt
 import json
 import os
+import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 
-STAGES = ["inventory", "eval", "filter", "genes", "pca", "clusters", "aggregate", "pool"]
+STAGES = ["inventory", "screen", "eval", "filter", "genes", "pca", "clusters", "aggregate", "pool"]
 
 
 def utc_now() -> str:
@@ -71,9 +73,7 @@ def event(kind: str, **data: Any) -> None:
 
 
 def command_env() -> dict[str, str]:
-    env = os.environ.copy()
-    env.setdefault("UV_CACHE_DIR", "/tmp/uv-cache")
-    return env
+    return os.environ.copy()
 
 
 def run_command(
@@ -120,6 +120,7 @@ def run_inventory(args: argparse.Namespace, run_dir: Path) -> Path:
     cmd = [
         "uv",
         "run",
+        "--no-cache",
         "--script",
         "tools/model_inventory.py",
         "--out-root",
@@ -136,7 +137,7 @@ def run_inventory(args: argparse.Namespace, run_dir: Path) -> Path:
     if args.model_id:
         for model_id in args.model_id:
             cmd.extend(["--model-id", model_id])
-    else:
+    elif not args.full_catalog:
         cmd.extend(["--sample-models", str(args.root_count)])
     if args.inventory_sleep:
         cmd.extend(["--sleep", str(args.inventory_sleep)])
@@ -144,15 +145,28 @@ def run_inventory(args: argparse.Namespace, run_dir: Path) -> Path:
     return out_dir
 
 
-def run_eval(args: argparse.Namespace, run_dir: Path, inventory_dir: Path) -> Path:
-    out_dir = run_dir / "eval"
+def partition_variants_by_model(variants: list[dict[str, Any]], process_count: int) -> list[list[dict[str, Any]]]:
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for variant in variants:
+        model_id = str(variant.get("openrouter_model_id") or "")
+        groups.setdefault(model_id, []).append(variant)
+    partitions: list[list[dict[str, Any]]] = [
+        [] for _ in range(min(process_count, len(groups)))
+    ]
+    for group in sorted(groups.values(), key=len, reverse=True):
+        min(partitions, key=len).extend(group)
+    return partitions
+
+
+def eval_command(args: argparse.Namespace, variants_path: Path, out_dir: Path) -> list[str]:
     cmd = [
         "uv",
         "run",
+        "--no-cache",
         "--script",
         "tools/run_variant_batch.py",
         "--variants",
-        display_path(inventory_dir / "endpoint_variants.jsonl"),
+        display_path(variants_path),
         "--out",
         display_path(out_dir),
         "--questions",
@@ -168,7 +182,214 @@ def run_eval(args: argparse.Namespace, run_dir: Path, inventory_dir: Path) -> Pa
     ]
     if args.eval_variant_timeout is not None:
         cmd.extend(["--variant-timeout", str(args.eval_variant_timeout)])
-    run_command(cmd, cwd=ROOT, stage="eval")
+    return cmd
+
+
+def terminate_process(process: subprocess.Popen) -> None:
+    if process.poll() is not None:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            return
+        process.wait()
+
+
+def run_processes(stage: str, commands: list[tuple[str, list[str]]]) -> None:
+    processes: list[tuple[str, list[str], subprocess.Popen]] = []
+    try:
+        for label, command in commands:
+            event("command_started", stage=f"{stage}:{label}", cmd=command)
+            process = subprocess.Popen(
+                command,
+                cwd=ROOT,
+                env=command_env(),
+                start_new_session=True,
+            )
+            processes.append((label, command, process))
+        pending = list(processes)
+        while pending:
+            for entry in list(pending):
+                label, command, process = entry
+                code = process.poll()
+                if code is None:
+                    continue
+                pending.remove(entry)
+                event("command_finished", stage=f"{stage}:{label}", exit_code=code)
+                if code != 0:
+                    for _, _, other in pending:
+                        terminate_process(other)
+                    raise RuntimeError(
+                        f"{stage}:{label} command failed with exit code {code}: {' '.join(command)}"
+                    )
+            if pending:
+                time.sleep(1)
+    except BaseException:
+        for _, _, process in processes:
+            terminate_process(process)
+        raise
+
+
+def combine_eval_partitions(out_dir: Path, partition_dirs: list[Path]) -> None:
+    rows: list[dict[str, Any]] = []
+    summaries: list[dict[str, Any]] = []
+    for partition_dir in partition_dirs:
+        rows.extend(load_eval_summary(partition_dir / "variant_summary.csv"))
+        summaries.append(load_json(partition_dir / "summary.json"))
+    rows.sort(key=lambda row: row_index(row, 0))
+    if rows:
+        fieldnames = sorted({key for row in rows for key in row})
+        with (out_dir / "variant_summary.csv").open("w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(rows)
+    summary = {
+        "finished_at": utc_now(),
+        "run_dir": display_path(out_dir),
+        "partition_count": len(partition_dirs),
+        "total_variants": sum(int(item["total_variants"]) for item in summaries),
+        "completed_variants": sum(int(item["completed_variants"]) for item in summaries),
+        "succeeded": sum(int(item["succeeded"]) for item in summaries),
+        "failed": sum(int(item["failed"]) for item in summaries),
+        "timed_out": sum(int(item["timed_out"]) for item in summaries),
+        "score_failed": sum(int(item["score_failed"]) for item in summaries),
+        "command_failed": sum(int(item["command_failed"]) for item in summaries),
+        "observed_cost": sum(float(item.get("observed_cost") or 0) for item in summaries),
+        "cost_observation_count": sum(int(item.get("cost_observation_count") or 0) for item in summaries),
+        "partition_summaries": [display_path(path / "summary.json") for path in partition_dirs],
+        "summary_csv": display_path(out_dir / "variant_summary.csv"),
+    }
+    write_json(out_dir / "summary.json", summary)
+    event("eval_finished", **summary)
+
+
+def screen_command(args: argparse.Namespace, variants_path: Path, out_dir: Path) -> list[str]:
+    return [
+        "uv",
+        "run",
+        "--no-cache",
+        "--script",
+        "tools/run_model_screen.py",
+        "--variants",
+        display_path(variants_path),
+        "--out",
+        display_path(out_dir),
+        "--screen-command",
+        args.screen_command,
+        "--direct-timeout",
+        str(args.screen_direct_timeout),
+        "--pi-timeout",
+        str(args.screen_pi_timeout),
+        "--max-attempts",
+        str(args.screen_max_attempts),
+        "--podman-command",
+        args.podman_command,
+        "--pi-image",
+        args.pi_image,
+        "--pi-mcp-adapter",
+        args.pi_mcp_adapter,
+        "--pi-mcp-host",
+        args.pi_mcp_host,
+    ]
+
+
+def combine_screen_partitions(out_dir: Path, partition_dirs: list[Path]) -> None:
+    results: list[dict[str, Any]] = []
+    accepted: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    summaries: list[dict[str, Any]] = []
+    for partition_dir in partition_dirs:
+        results.extend(load_jsonl(partition_dir / "results.jsonl"))
+        accepted.extend(load_jsonl(partition_dir / "endpoint_variants.jsonl"))
+        rejected.extend(load_jsonl(partition_dir / "rejected_variants.jsonl"))
+        summaries.append(load_json(partition_dir / "summary.json"))
+    results.sort(key=lambda row: row_index(row, 0))
+    accepted.sort(key=lambda row: row_index(row, 0))
+    rejected.sort(key=lambda row: row_index(row, 0))
+    write_jsonl(out_dir / "results.jsonl", results)
+    write_jsonl(out_dir / "endpoint_variants.jsonl", accepted)
+    write_jsonl(out_dir / "rejected_variants.jsonl", rejected)
+    summary = {
+        "created_at": utc_now(),
+        "partition_count": len(partition_dirs),
+        "total_configurations": sum(int(item["total_configurations"]) for item in summaries),
+        "accepted": len(accepted),
+        "rejected": len(rejected),
+        "observed_cost_usd": sum(float(item.get("observed_cost_usd") or 0) for item in summaries),
+        "cost_observation_count": sum(int(item.get("cost_observation_count") or 0) for item in summaries),
+        "partition_summaries": [display_path(path / "summary.json") for path in partition_dirs],
+        "outputs": {
+            "accepted_variants": display_path(out_dir / "endpoint_variants.jsonl"),
+            "rejected_variants": display_path(out_dir / "rejected_variants.jsonl"),
+            "results": display_path(out_dir / "results.jsonl"),
+        },
+    }
+    write_json(out_dir / "summary.json", summary)
+    event("screen_finished", **summary)
+
+
+def run_screen(args: argparse.Namespace, run_dir: Path, inventory_dir: Path) -> Path:
+    out_dir = run_dir / "screen"
+    variants_path = inventory_dir / "endpoint_variants.jsonl"
+    if args.screen_processes == 1:
+        run_command(screen_command(args, variants_path, out_dir), cwd=ROOT, stage="screen")
+        if line_count(out_dir / "endpoint_variants.jsonl") == 0:
+            raise RuntimeError("screen accepted zero model configurations")
+        return out_dir
+
+    variants = load_jsonl(variants_path)
+    partitions = partition_variants_by_model(variants, args.screen_processes)
+    inputs_dir = out_dir / "partition-inputs"
+    inputs_dir.mkdir(parents=True, exist_ok=False)
+    partition_root = out_dir / "partitions"
+    partition_root.mkdir()
+    commands: list[tuple[str, list[str]]] = []
+    partition_dirs: list[Path] = []
+    for index, rows in enumerate(partitions, 1):
+        label = f"partition-{index:02d}"
+        partition_input = inputs_dir / f"{label}.jsonl"
+        partition_dir = partition_root / label
+        write_jsonl(partition_input, rows)
+        partition_dirs.append(partition_dir)
+        commands.append((label, screen_command(args, partition_input, partition_dir)))
+    run_processes("screen", commands)
+    combine_screen_partitions(out_dir, partition_dirs)
+    if line_count(out_dir / "endpoint_variants.jsonl") == 0:
+        raise RuntimeError("screen accepted zero model configurations")
+    return out_dir
+
+
+def run_eval(args: argparse.Namespace, run_dir: Path, screen_dir: Path) -> Path:
+    out_dir = run_dir / "eval"
+    variants_path = screen_dir / "endpoint_variants.jsonl"
+    if args.eval_processes == 1:
+        run_command(eval_command(args, variants_path, out_dir), cwd=ROOT, stage="eval")
+        return out_dir
+
+    variants = load_jsonl(variants_path)
+    partitions = partition_variants_by_model(variants, args.eval_processes)
+    inputs_dir = out_dir / "partition-inputs"
+    inputs_dir.mkdir(parents=True, exist_ok=False)
+    partition_root = out_dir / "partitions"
+    partition_root.mkdir()
+    commands: list[tuple[str, list[str]]] = []
+    partition_dirs: list[Path] = []
+    for index, rows in enumerate(partitions, 1):
+        label = f"partition-{index:02d}"
+        partition_input = inputs_dir / f"{label}.jsonl"
+        partition_dir = partition_root / label
+        write_jsonl(partition_input, rows)
+        partition_dirs.append(partition_dir)
+        commands.append((label, eval_command(args, partition_input, partition_dir)))
+    run_processes("eval", commands)
+    combine_eval_partitions(out_dir, partition_dirs)
     return out_dir
 
 
@@ -196,10 +417,10 @@ def load_eval_summary(path: Path) -> list[dict[str, Any]]:
     return load_jsonl(path)
 
 
-def filter_variants(args: argparse.Namespace, run_dir: Path, inventory_dir: Path, eval_dir: Path) -> Path:
+def filter_variants(args: argparse.Namespace, run_dir: Path, screen_dir: Path, eval_dir: Path) -> Path:
     out_dir = run_dir / "filtered"
     summary_path = out_dir / "summary.json"
-    variant_path = inventory_dir / "endpoint_variants.jsonl"
+    variant_path = screen_dir / "endpoint_variants.jsonl"
     eval_summary_path = eval_dir / "variant_summary.csv"
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -216,6 +437,7 @@ def filter_variants(args: argparse.Namespace, run_dir: Path, inventory_dir: Path
             raise RuntimeError(f"missing eval summary for variant index {index}")
         run_exit_code = int_field(eval_row, "run_exit_code")
         if run_exit_code != 0:
+            variant_status = eval_row.get("variant_status")
             removed_variants.append(
                 {
                     "combined_index": index,
@@ -223,9 +445,10 @@ def filter_variants(args: argparse.Namespace, run_dir: Path, inventory_dir: Path
                     "provider_name": variant.get("provider_name"),
                     "endpoint_tag": variant.get("endpoint_tag"),
                     "quantization": variant.get("quantization"),
-                    "reason": "run_exit_code",
+                    "reason": "precheck_rejected" if variant_status == "precheck_rejected" else "run_exit_code",
                     "run_exit_code": run_exit_code,
-                    "variant_status": eval_row.get("variant_status"),
+                    "variant_status": variant_status,
+                    "precheck_reasons": eval_row.get("precheck_reasons"),
                     "timeout_kind": eval_row.get("timeout_kind"),
                 }
             )
@@ -323,6 +546,21 @@ def selected_gene_indexes(args: argparse.Namespace) -> list[int]:
     return list(range(args.gene_count))
 
 
+def validate_pool_capacity(args: argparse.Namespace, filtered_dir: Path) -> None:
+    if not args.one_per_model:
+        return
+    variants = load_jsonl(filtered_dir / "endpoint_variants.jsonl")
+    model_ids = [str(row.get("openrouter_model_id") or "").strip() for row in variants]
+    if any(not model_id for model_id in model_ids):
+        raise RuntimeError("--one-per-model requires openrouter_model_id in every filtered variant")
+    unique_model_count = len(set(model_ids))
+    if args.pool_size > unique_model_count:
+        raise RuntimeError(
+            f"--pool-size={args.pool_size} exceeds {unique_model_count} filtered unique models with --one-per-model"
+        )
+    event("pool_capacity_checked", pool_size=args.pool_size, unique_model_count=unique_model_count)
+
+
 def run_genes(args: argparse.Namespace, run_dir: Path, filtered_dir: Path) -> dict[int, Path]:
     out: dict[int, Path] = {}
     for gene_index in selected_gene_indexes(args):
@@ -332,6 +570,7 @@ def run_genes(args: argparse.Namespace, run_dir: Path, filtered_dir: Path) -> di
         cmd = [
             "uv",
             "run",
+            "--no-cache",
             "--script",
             "tools/run_first_gene_inference_embeddings.py",
             "--variants",
@@ -340,6 +579,8 @@ def run_genes(args: argparse.Namespace, run_dir: Path, filtered_dir: Path) -> di
             args.genes,
             "--persona",
             args.persona,
+            "--persona-record-path",
+            args.persona_record_path,
             "--samples",
             str(args.samples_per_gene),
             "--gene-index",
@@ -396,6 +637,7 @@ def run_pca(args: argparse.Namespace, run_dir: Path, gene_dirs: dict[int, Path],
         cmd = [
             "uv",
             "run",
+            "--no-cache",
             "--script",
             "tools/run_embedding_pca.py",
             "--records",
@@ -421,6 +663,7 @@ def run_clustering(
     cmd = [
         "uv",
         "run",
+        "--no-cache",
         "--script",
         "tools/run_gene_pca_clustering.py",
         "--out",
@@ -453,6 +696,7 @@ def run_aggregate(args: argparse.Namespace, run_dir: Path, filtered_dir: Path, c
     cmd = [
         "uv",
         "run",
+        "--no-cache",
         "--script",
         "tools/aggregate_variant_persona_clusters.py",
         "--clusters",
@@ -475,6 +719,7 @@ def run_pool(args: argparse.Namespace, run_dir: Path, aggregate_dir: Path) -> Pa
     cmd = [
         "uv",
         "run",
+        "--no-cache",
         "--script",
         "tools/sample-tuple-pool.py",
         display_path(aggregate_dir / "variant-persona-clusters.jsonl"),
@@ -491,6 +736,10 @@ def run_pool(args: argparse.Namespace, run_dir: Path, aggregate_dir: Path) -> Pa
     ]
     if args.no_dedupe_equivalent_endpoints:
         cmd.append("--no-dedupe-equivalent-endpoints")
+    if args.without_replacement:
+        cmd.append("--without-replacement")
+    if args.one_per_model:
+        cmd.append("--one-per-model")
     run_command(cmd, cwd=ROOT, stage="pool", stdout_path=out_dir / "sample.log")
     return out_dir
 
@@ -506,6 +755,7 @@ def collect_summary(run_dir: Path, pca_dimensions: int | None = None) -> dict[st
     }
     paths = {
         "inventory": run_dir / "inventory" / "summary.json",
+        "screen": run_dir / "screen" / "summary.json",
         "eval": run_dir / "eval" / "summary.json",
         "filtered": run_dir / "filtered" / "summary.json",
         "clusters": run_dir / "clusters" / "summary.json",
@@ -547,19 +797,31 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--out-root", default="results")
     parser.add_argument("--root-count", type=int, default=5)
     parser.add_argument("--root-seed", type=int, default=0)
+    parser.add_argument("--full-catalog", action="store_true", help="Inventory every model in the OpenRouter catalog.")
     parser.add_argument("--model-id", action="append", help="Specific OpenRouter model id. May be repeated. Overrides --root-count sampling.")
     parser.add_argument("--inventory-request-timeout", type=int, default=60)
     parser.add_argument("--inventory-retries", type=int, default=2)
     parser.add_argument("--inventory-sleep", type=float, default=0.0)
+    parser.add_argument("--screen-command", default="../.bin/model-config-screen")
+    parser.add_argument("--screen-processes", type=int, default=1)
+    parser.add_argument("--screen-direct-timeout", type=int, default=20)
+    parser.add_argument("--screen-pi-timeout", type=int, default=300)
+    parser.add_argument("--screen-max-attempts", type=int, default=3)
+    parser.add_argument("--podman-command", default="podman")
+    parser.add_argument("--pi-image", default="agentcourt-pi-sandbox")
+    parser.add_argument("--pi-mcp-adapter", default="/opt/pi-extensions/pi-mcp-adapter/node_modules/pi-mcp-adapter")
+    parser.add_argument("--pi-mcp-host", default="127.0.0.1")
     parser.add_argument("--questions", default="sets/core20/questions.jsonl")
     parser.add_argument("--prompt", default="prompts/juror-single.md", help="Prompt file passed through the endpoint-evaluation stage.")
     parser.add_argument("--eval-trials", type=int, default=1)
+    parser.add_argument("--eval-processes", type=int, default=1)
     parser.add_argument("--filter-provider-error-count", type=int, default=0)
     parser.add_argument("--filter-min-deliberation-score", type=float, default=0.90)
     parser.add_argument("--genes", default="sampled-genes.json")
     parser.add_argument("--gene-count", type=int, default=2)
     parser.add_argument("--gene-index", action="append", type=int, help="Specific gene index. May be repeated. Overrides --gene-count.")
     parser.add_argument("--persona", default="../common/etc/personas/generic.md")
+    parser.add_argument("--persona-record-path", default="personas/generic.md")
     parser.add_argument("--samples-per-gene", type=int, default=1)
     parser.add_argument("--embedding-model", default="text-embedding-3-small")
     parser.add_argument("--temperature", type=float, default=0.7)
@@ -574,6 +836,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--pool-size", type=int, default=20)
     parser.add_argument("--pool-seed", type=int, default=0)
     parser.add_argument("--no-dedupe-equivalent-endpoints", action="store_true")
+    parser.add_argument("--without-replacement", action="store_true")
+    parser.add_argument("--one-per-model", action="store_true")
     parser.add_argument("--timeout", type=int, default=120)
     parser.add_argument("--eval-no-progress-timeout", type=int)
     parser.add_argument("--eval-variant-timeout", type=int)
@@ -582,8 +846,18 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
     if args.root_count < 1:
         raise SystemExit("--root-count must be positive")
+    if args.full_catalog and args.model_id:
+        raise SystemExit("--full-catalog and --model-id cannot be used together")
+    if args.screen_processes < 1:
+        raise SystemExit("--screen-processes must be positive")
+    if args.screen_direct_timeout < 1 or args.screen_pi_timeout < 1:
+        raise SystemExit("screen timeouts must be positive")
+    if args.screen_max_attempts < 1 or args.screen_max_attempts > 4:
+        raise SystemExit("--screen-max-attempts must be between 1 and 4")
     if args.eval_trials < 1:
         raise SystemExit("--eval-trials must be positive")
+    if args.eval_processes < 1:
+        raise SystemExit("--eval-processes must be positive")
     if args.filter_provider_error_count < 0:
         raise SystemExit("--filter-provider-error-count cannot be negative")
     if args.gene_count < 1:
@@ -633,17 +907,23 @@ def main(argv: list[str]) -> int:
             write_json(summary_path, collect_summary(run_dir))
             return 0
 
-        eval_dir = run_eval(args, run_dir, inventory_dir)
+        screen_dir = run_screen(args, run_dir, inventory_dir)
+        if should_stop(args, "screen"):
+            write_json(summary_path, collect_summary(run_dir))
+            return 0
+
+        eval_dir = run_eval(args, run_dir, screen_dir)
         if should_stop(args, "eval"):
             write_json(summary_path, collect_summary(run_dir))
             return 0
 
-        filtered_dir = filter_variants(args, run_dir, inventory_dir, eval_dir)
+        filtered_dir = filter_variants(args, run_dir, screen_dir, eval_dir)
         if should_stop(args, "filter"):
             write_json(summary_path, collect_summary(run_dir))
             return 0
 
         survivor_count = int(load_json(filtered_dir / "summary.json")["survivor_count"])
+        validate_pool_capacity(args, filtered_dir)
         gene_dirs = run_genes(args, run_dir, filtered_dir)
         pca_dimensions = validate_gene_summaries(args, gene_dirs, survivor_count)
         if should_stop(args, "genes"):

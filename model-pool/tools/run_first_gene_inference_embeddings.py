@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run
+#!/usr/bin/env -S uv run --no-cache --script
 # /// script
 # requires-python = ">=3.11"
 # dependencies = []
@@ -241,6 +241,7 @@ def main() -> int:
     parser.add_argument("--variants", default="variants/filtered-20260529/endpoint_variants.jsonl")
     parser.add_argument("--genes", default="sampled-genes.json")
     parser.add_argument("--persona", default="../common/etc/personas/generic.md")
+    parser.add_argument("--persona-record-path", help="Persona path stored in output records; defaults to --persona.")
     parser.add_argument("--samples", type=int, default=3)
     parser.add_argument("--gene-index", type=int, default=0)
     parser.add_argument("--timeout", type=int, default=120)
@@ -252,6 +253,11 @@ def main() -> int:
     parser.add_argument("--retry-sleep", type=float, default=2.0)
     args = parser.parse_args()
 
+    persona_record_path = args.persona_record_path
+    if persona_record_path is not None:
+        persona_record_path = persona_record_path.strip()
+        if not persona_record_path:
+            raise RuntimeError("--persona-record-path must not be empty")
     if not load_openrouter_key():
         raise RuntimeError("OPENROUTER_API_KEY not found in environment or secrets/openrouter.api.txt")
     if not load_openai_key():
@@ -264,6 +270,8 @@ def main() -> int:
     variants_path = ROOT / args.variants
     genes_path = ROOT / args.genes
     persona_path = ROOT / args.persona
+    if persona_record_path is None:
+        persona_record_path = display_path(persona_path)
     out = Path(args.out)
     if not out.is_absolute():
         out = ROOT / out
@@ -304,7 +312,7 @@ def main() -> int:
                     "gene_index": args.gene_index,
                     "gene": gene,
                     "persona_id": "generic",
-                    "persona_path": display_path(persona_path),
+                    "persona_path": persona_record_path,
                     "variant_order": variant_order,
                     "combined_index": row.get("combined_index"),
                     "endpoint_variant_id": row.get("endpoint_variant_id"),
@@ -384,7 +392,7 @@ def main() -> int:
         "finished_at": utc_now(),
         "gene_index": args.gene_index,
         "gene": gene,
-        "persona_path": display_path(persona_path),
+        "persona_path": persona_record_path,
         "variants_path": display_path(variants_path),
         "variant_count": len(variants),
         "samples_per_variant": args.samples,

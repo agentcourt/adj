@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run
+#!/usr/bin/env -S uv run --no-cache --script
 # /// script
 # requires-python = ">=3.11"
 # dependencies = []
@@ -17,6 +17,24 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TIMEOUT_EXIT_CODE = 124
+
+OPERATIONAL_METRICS = (
+    "provider_error_count",
+    "timeout_count",
+    "context_limit_error_count",
+    "schema_violation_count",
+    "tool_call_failure_count",
+    "malformed_json_count",
+    "invalid_vote_count",
+    "disallowed_tool_call_count",
+    "missing_required_tool_call_count",
+)
+
+DIMENSION_RATES = {
+    "schema_valid_rate": "schema_valid",
+    "instruction_valid_rate": "instruction_valid",
+    "tool_valid_rate": "tool_valid",
+}
 
 
 @dataclass(frozen=True)
@@ -93,18 +111,83 @@ def summarize_variant(run_dir: Path) -> dict:
         if summary:
             model, model_summary = next(iter(summary.items()))
             ops = model_summary.get("operational_metrics") or {}
+            dimensions = model_summary.get("dimensions") or {}
             out.update(
                 {
                     "model": model,
-                    "completed_count": ops.get("completed_count", 0),
-                    "provider_error_count": ops.get("provider_error_count", 0),
-                    "timeout_count": ops.get("timeout_count", 0),
-                    "context_limit_error_count": ops.get("context_limit_error_count", 0),
-                    "schema_violation_count": ops.get("schema_violation_count", 0),
+                    "completed_count": ops.get("completed_count"),
                     "deliberation_score": model_summary.get("deliberation_score"),
+                    "cost": ops.get("cost"),
                 }
             )
+            out.update({key: ops.get(key) for key in OPERATIONAL_METRICS})
+            out.update({rate: dimensions.get(dimension) for rate, dimension in DIMENSION_RATES.items()})
     return out
+
+
+def variant_combined_index(spec: dict, fallback: int) -> int:
+    value = spec.get("combined_index")
+    if value in (None, ""):
+        return fallback
+    return int(value)
+
+
+def precheck_reasons(spec: dict) -> list[str]:
+    reasons: list[str] = []
+    if spec.get("exact_route_ambiguous") is True:
+        reasons.append("exact_route_ambiguous")
+    if not str(spec.get("openrouter_model_id") or "").strip():
+        reasons.append("missing_openrouter_model_id")
+    if not str(spec.get("endpoint_tag") or spec.get("provider_name") or "").strip():
+        reasons.append("missing_provider_route")
+    input_modalities = spec.get("input_modalities")
+    if isinstance(input_modalities, list) and "text" not in {
+        str(value).strip().lower() for value in input_modalities
+    }:
+        reasons.append("text_input_unsupported")
+    output_modalities = spec.get("output_modalities")
+    if isinstance(output_modalities, list) and "text" not in {
+        str(value).strip().lower() for value in output_modalities
+    }:
+        reasons.append("text_output_unsupported")
+    supported_parameters = spec.get("supported_parameters")
+    if isinstance(supported_parameters, list) and "tools" not in {
+        str(value).strip().lower() for value in supported_parameters
+    }:
+        reasons.append("tools_unsupported")
+    return reasons
+
+
+def eval_command(
+    *,
+    questions_path: Path,
+    prompt: str,
+    spec_path: Path,
+    variant_dir: Path,
+    trials: int,
+    timeout: int,
+    tool_mode: str,
+) -> list[str]:
+    return [
+        "uv",
+        "run",
+        "--no-cache",
+        "tools/run_eval.py",
+        "--questions",
+        display_path(questions_path),
+        "--prompt",
+        prompt,
+        "--model-spec",
+        display_path(spec_path),
+        "--out",
+        display_path(variant_dir),
+        "--trials",
+        str(trials),
+        "--timeout",
+        str(timeout),
+        "--tool-mode",
+        tool_mode,
+    ]
 
 
 def exit_code_value(row: dict) -> int | None:
@@ -123,12 +206,32 @@ def row_score_failed(row: dict) -> bool:
 
 
 def row_command_failed(row: dict) -> bool:
+    if row.get("variant_status") == "precheck_rejected":
+        return False
     if row.get("variant_status") == "command_failed":
         return True
     code = exit_code_value(row)
     if code in (None, 0, TIMEOUT_EXIT_CODE):
         return False
     return not row_score_failed(row)
+
+
+def observed_cost(rows: list[dict]) -> tuple[float, int]:
+    total = 0.0
+    count = 0
+    for row in rows:
+        value = row.get("cost")
+        if value in (None, "") or isinstance(value, bool):
+            continue
+        try:
+            cost = float(value)
+        except (TypeError, ValueError):
+            continue
+        if cost < 0:
+            continue
+        total += cost
+        count += 1
+    return total, count
 
 
 def terminate_process(proc: subprocess.Popen, grace_seconds: int = 10) -> int:
@@ -161,12 +264,13 @@ def run_command(
     variant_timeout: int,
 ) -> CommandResult:
     started = time.monotonic()
-    last_report = 0.0
+    last_report = started
     last_activity = started
     last_rows = line_count(raw_path)
     last_log_size = file_size(log_path)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_handle = log_path.open("w", encoding="utf-8")
+    proc: subprocess.Popen | None = None
     try:
         proc = subprocess.Popen(
             cmd,
@@ -258,10 +362,12 @@ def run_command(
                 )
             time.sleep(2)
     finally:
+        if proc is not None and proc.poll() is None:
+            terminate_process(proc)
         log_handle.close()
 
 
-def main() -> int:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Run adj model-pool evals over OpenRouter endpoint variants one variant at a time.")
     ap.add_argument("--variants", required=True)
     ap.add_argument("--out", required=True)
@@ -269,9 +375,14 @@ def main() -> int:
     ap.add_argument("--prompt", default="prompts/juror-single.md", help="Prompt file passed to run_eval.py. Relative paths resolve from model-pool/.")
     ap.add_argument("--trials", type=int, default=3)
     ap.add_argument("--timeout", type=int, default=90)
+    ap.add_argument("--tool-mode", choices=["context", "function"], default="context")
     ap.add_argument("--no-progress-timeout", type=int)
     ap.add_argument("--variant-timeout", type=int)
-    args = ap.parse_args()
+    return ap.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
 
     variants_path = Path(args.variants)
     if not variants_path.is_absolute():
@@ -313,6 +424,7 @@ def main() -> int:
         expected_rows_per_variant=expected_rows,
         questions=display_path(questions_path),
         prompt=args.prompt,
+        tool_mode=args.tool_mode,
         trials=args.trials,
         request_timeout=args.timeout,
         no_progress_timeout=args.no_progress_timeout,
@@ -323,8 +435,8 @@ def main() -> int:
     succeeded = 0
     failed = 0
     summaries: list[dict] = []
-
     for index, spec in enumerate(variants, 1):
+        combined_index = variant_combined_index(spec, index)
         provider = spec.get("provider_name") or "unknown-provider"
         tag = spec.get("endpoint_tag") or "unknown-endpoint"
         quant = spec.get("quantization") or "unknown"
@@ -337,6 +449,41 @@ def main() -> int:
         raw_path = variant_dir / "raw_results.jsonl"
         log_path = variant_dir / "run_eval.log"
 
+        reasons = precheck_reasons(spec)
+        if reasons:
+            completed += 1
+            failed += 1
+            summary = {
+                "index": index,
+                "combined_index": combined_index,
+                "openrouter_model_id": model_id,
+                "provider_name": provider,
+                "endpoint_tag": tag,
+                "quantization": quant,
+                "variant_run_dir": display_path(variant_dir),
+                "run_log": display_path(log_path),
+                "run_exit_code": 2,
+                "variant_status": "precheck_rejected",
+                "precheck_reasons": reasons,
+                "timeout_kind": None,
+                "elapsed_seconds": 0.0,
+                "expected_rows": expected_rows,
+            }
+            summaries.append(summary)
+            cost, cost_count = observed_cost(summaries)
+            send_event(
+                "variant_finished",
+                completed_variants=completed,
+                total_variants=len(variants),
+                succeeded=succeeded,
+                failed=failed,
+                observed_cost=cost,
+                cost_observation_count=cost_count,
+                current_variant=variant_label,
+                **summary,
+            )
+            continue
+
         send_event(
             "variant_started",
             completed_variants=completed,
@@ -345,23 +492,15 @@ def main() -> int:
             variant_run_dir=display_path(variant_dir),
         )
 
-        cmd = [
-            "uv",
-            "run",
-            "tools/run_eval.py",
-            "--questions",
-            display_path(questions_path),
-            "--prompt",
-            args.prompt,
-            "--model-spec",
-            display_path(spec_path),
-            "--out",
-            display_path(variant_dir),
-            "--trials",
-            str(args.trials),
-            "--timeout",
-            str(args.timeout),
-        ]
+        cmd = eval_command(
+            questions_path=questions_path,
+            prompt=args.prompt,
+            spec_path=spec_path,
+            variant_dir=variant_dir,
+            trials=args.trials,
+            timeout=args.timeout,
+            tool_mode=args.tool_mode,
+        )
         result = run_command(
             cmd,
             ROOT,
@@ -378,7 +517,7 @@ def main() -> int:
         variant_status = result.status
 
         if code == 0:
-            score_cmd = ["uv", "run", "tools/score_eval.py", "score", "--run", display_path(variant_dir), "--questions", display_path(questions_path)]
+            score_cmd = ["uv", "run", "--no-cache", "tools/score_eval.py", "score", "--run", display_path(variant_dir), "--questions", display_path(questions_path)]
             score = subprocess.run(score_cmd, cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             if score.returncode != 0:
                 failed += 1
@@ -393,6 +532,7 @@ def main() -> int:
         completed += 1
         summary = {
             "index": index,
+            "combined_index": combined_index,
             "openrouter_model_id": model_id,
             "provider_name": provider,
             "endpoint_tag": tag,
@@ -403,18 +543,24 @@ def main() -> int:
             "variant_status": variant_status,
             "timeout_kind": result.timeout_kind,
             "elapsed_seconds": result.elapsed_seconds,
+            "expected_rows": expected_rows,
             **summarize_variant(variant_dir),
         }
         summaries.append(summary)
+        cost, cost_count = observed_cost(summaries)
         send_event(
             "variant_finished",
             completed_variants=completed,
             total_variants=len(variants),
             succeeded=succeeded,
             failed=failed,
+            observed_cost=cost,
+            cost_observation_count=cost_count,
             current_variant=variant_label,
             **summary,
         )
+
+    cost, cost_count = observed_cost(summaries)
 
     if summaries:
         fieldnames = sorted({key for row in summaries for key in row})
@@ -434,6 +580,12 @@ def main() -> int:
         "score_failed": sum(1 for row in summaries if row_score_failed(row)),
         "command_failed": sum(1 for row in summaries if row_command_failed(row)),
         "prompt": args.prompt,
+        "questions": display_path(questions_path),
+        "tool_mode": args.tool_mode,
+        "trials": args.trials,
+        "expected_rows_per_variant": expected_rows,
+        "observed_cost": cost,
+        "cost_observation_count": cost_count,
         "summary_csv": display_path(summary_csv),
     }
     (out_dir / "summary.json").write_text(json.dumps(final, indent=2, sort_keys=True) + "\n")

@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run
+#!/usr/bin/env -S uv run --no-cache --script
 # /// script
 # requires-python = ">=3.11"
 # dependencies = []
@@ -103,7 +103,8 @@ def schema_valid(item: dict, resp) -> tuple[bool, str]:
             return False, f"keys {sorted(resp)} != {sorted(keys)}"
         if not isinstance(resp.get("answer"), str):
             return False, "invalid answer"
-    if not isinstance(resp.get("confidence"), (int, float)) or not (0 <= resp["confidence"] <= 1):
+    confidence = resp.get("confidence")
+    if isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not (0 <= confidence <= 1):
         return False, "invalid confidence"
     if not isinstance(resp.get("rationale"), str):
         return False, "invalid rationale"
@@ -143,6 +144,18 @@ def is_deliberation_item(item: dict) -> bool:
     return item.get("category") in DELIBERATION_CATEGORIES or item.get("eval_family") == "deliberation"
 
 
+def tool_execution_failed(row: dict) -> bool:
+    meta = row.get("metadata")
+    error_count = meta.get("tool_error_count", 0) if isinstance(meta, dict) else 0
+    if isinstance(error_count, (int, float)) and not isinstance(error_count, bool) and error_count > 0:
+        return True
+    return any(
+        isinstance(call.get("result"), dict) and bool(call["result"].get("error"))
+        for call in row.get("tool_trace", [])
+        if isinstance(call, dict)
+    )
+
+
 def tool_protocol(item: dict, row: dict) -> tuple[bool, bool, bool]:
     if item.get("mode") != "tool_record":
         return True, False, False
@@ -150,7 +163,7 @@ def tool_protocol(item: dict, row: dict) -> tuple[bool, bool, bool]:
     used = {t.get("tool") for t in row.get("tool_trace", [])}
     disallowed = bool(used - allowed)
     missing_required = not ({"list_evidence", "read_evidence"} <= used)
-    tool_valid = bool(used) and not disallowed and not missing_required
+    tool_valid = bool(used) and not disallowed and not missing_required and not tool_execution_failed(row)
     return tool_valid, disallowed, missing_required
 
 
@@ -203,6 +216,15 @@ def score_one(item: dict, row: dict) -> dict:
     if isinstance(resp, dict):
         response_value = resp.get("answer", resp.get("vote"))
     deliberation_ok = deliberation_correct(item, resp) if is_deliberation_item(item) else bool(correct)
+    batch_usage = meta.get("openrouter_batch_usage") if isinstance(meta, dict) else None
+    batch_cost = batch_usage.get("cost") if isinstance(batch_usage, dict) else None
+    if isinstance(batch_cost, str):
+        try:
+            batch_cost = float(batch_cost)
+        except ValueError:
+            batch_cost = None
+    if isinstance(batch_cost, bool) or not isinstance(batch_cost, (int, float)):
+        batch_cost = None
     return {
         "item_id": item["id"],
         "model": row["model"],
@@ -224,6 +246,8 @@ def score_one(item: dict, row: dict) -> dict:
         "error_type": meta.get("error_type", ""),
         "elapsed_ms": meta.get("elapsed_ms"),
         "cost": meta.get("cost"),
+        "openrouter_batch_cost": batch_cost,
+        "openrouter_batch_usage_batch_ids": meta.get("openrouter_batch_usage_batch_ids"),
         "malformed_json": malformed_json,
         "invalid_vote": invalid_vote,
         "disallowed_tool_call": disallowed_tool_call,
@@ -255,6 +279,7 @@ def stddev(values: list[float]) -> float | None:
 def cost_sum(rows: list[dict]) -> float | None:
     total = 0.0
     seen = False
+    batch_costs: dict[tuple[str, ...], float] = {}
     for r in rows:
         c = r.get("cost")
         if isinstance(c, (int, float)):
@@ -266,6 +291,21 @@ def cost_sum(rows: list[dict]) -> float | None:
                 seen = True
             except ValueError:
                 pass
+        batch_cost = r.get("openrouter_batch_cost")
+        if isinstance(batch_cost, bool) or not isinstance(batch_cost, (int, float)):
+            continue
+        batch_ids = r.get("openrouter_batch_usage_batch_ids")
+        if not isinstance(batch_ids, list) or not batch_ids or not all(isinstance(value, str) and value for value in batch_ids):
+            raise ValueError("OpenRouter batch cost has no batch ids")
+        key = tuple(batch_ids)
+        value = float(batch_cost)
+        prior = batch_costs.get(key)
+        if prior is not None and prior != value:
+            raise ValueError(f"OpenRouter batch cost differs for batch ids {key}")
+        batch_costs[key] = value
+    if batch_costs:
+        total += sum(batch_costs.values())
+        seen = True
     return total if seen else None
 
 
