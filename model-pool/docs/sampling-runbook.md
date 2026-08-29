@@ -24,7 +24,7 @@ uv run --no-cache --script tools/run_end_to_end.py \
 
 The command defaults to five root models, one screening process, one eval trial, two genes, one sample per endpoint/gene pair, three PCA dimensions, a cluster range from `2` through `10`, and twenty pool rows.  `make pool` sets eight screening processes and eight eval processes.  Set the model IDs or root sample, question file, prompt, process counts, trial count, filter criteria, genes, sample count, PCA dimensions, cluster range, pool size, and seeds for the intended pool.  `--stop-after` accepts `inventory`, `screen`, `eval`, `filter`, `genes`, `pca`, `clusters`, `aggregate`, or `pool` and returns after writing that stage's summary.
 
-The eval stage applies a per-request `--timeout` and a per-child `--eval-no-progress-timeout`.  `--eval-variant-timeout` adds an absolute limit for one endpoint eval and must be at least the no-progress timeout.  The runner rejects an incomplete gene stage before PCA, including missing records, completion errors, embedding errors, or missing embeddings.  It caps the requested PCA dimensions at the usable embedding-row count unless `--strict-pca-dimensions` makes the mismatch an error.
+The eval stage applies a per-attempt `--timeout` and a per-child `--eval-no-progress-timeout`.  Completion requests use the council client's four-attempt policy for HTTP 408, 409, 429, 5xx, timeout, and network failures, with delays of zero, five, and thirty seconds.  `--eval-variant-timeout` adds an absolute limit for one endpoint eval and must be at least the no-progress timeout.  Each gene command finishes every configured sample and records request errors.  After all genes finish, the runner excludes a configuration from every gene when any of its completion or embedding requests failed.  PCA and later stages use the common eligible set.  The runner caps the requested PCA dimensions at the eligible embedding-row count unless `--strict-pca-dimensions` makes the mismatch an error.
 
 ## Staged Procedure
 
@@ -55,7 +55,7 @@ uv run --no-cache --script tools/run_model_screen.py \
   --screen-command ../.bin/model-config-screen
 ```
 
-The screen preserves the exact provider route, fallback policy, request parameters, Pi transcript, MCP calls, usage, and cost for each configuration.  It writes passing rows to `endpoint_variants.jsonl`, failures to `rejected_variants.jsonl`, per-configuration summaries to `results.jsonl`, and aggregate counts to `summary.json`.  Standard-output events report cumulative cost after every configuration and report an in-progress configuration every sixty seconds.
+The screen preserves the exact provider route, fallback policy, request parameters, Pi transcript, MCP calls, usage, and cost for each configuration.  After MCP accepts the Pi vote, the screen allows five seconds for Pi to exit and then stops the test container because ARB has completed the council opportunity at that point.  It writes passing rows to `endpoint_variants.jsonl`, failures to `rejected_variants.jsonl`, per-configuration summaries to `results.jsonl`, and aggregate counts to `summary.json`.  Standard-output events report cumulative cost after every configuration and report an in-progress configuration every sixty seconds.
 
 ### Endpoint Evals
 
@@ -68,16 +68,19 @@ uv run --no-cache --script tools/run_variant_batch.py \
   --questions sets/core20/questions.jsonl \
   --prompt prompts/juror-single.md \
   --trials 3 \
-  --timeout 90
+  --timeout 90 \
+  --tool-mode function
 ```
 
-A successful directory under `variant-runs/` contains `raw_results.jsonl`, `scores.json`, and `run_eval.log`.  The batch directory also contains request files under `specs/`, per-endpoint results in `variant_summary.csv`, and aggregate counts in `summary.json`.  Timed-out endpoints remain in `variant_summary.csv` so the filter can reject them, while a child command or scoring failure gives the batch a nonzero exit status.
+A successful directory under `variant-runs/` contains `raw_results.jsonl`, `scores.json`, and `run_eval.log`.  The evaluator requests JSON-object responses for ordinary questions.  Record questions expose the evidence functions without a response-format parameter, matching the direct-council request, and the scorer validates the final JSON answer.  The batch directory also contains request files under `specs/`, per-endpoint results in `variant_summary.csv`, and aggregate counts in `summary.json`.  Timed-out endpoints remain in `variant_summary.csv` so the filter can reject them, while a child command or scoring failure gives the batch a nonzero exit status.
 
 ### Endpoint Filtering
 
-The end-to-end filter joins inventory rows to `variant_summary.csv` by source index.  It rejects a nonzero per-variant `run_exit_code`, a `provider_error_count` different from `--filter-provider-error-count`, and a missing or below-threshold `deliberation_score`.  The provider-error count includes provider, rate-limit, credential, and runner errors.  The deliberation score excludes rows with metadata errors, including timeouts, and omits a trial that has no completed deliberation rows.  The default criteria require zero counted errors and a deliberation score of at least `0.90`.
+The end-to-end filter joins inventory rows to `variant_summary.csv` by source index.  It rejects a nonzero per-variant `run_exit_code`, a `provider_error_count` different from `--filter-provider-error-count`, and a deliberation score outside the selected threshold.  `--filter-min-deliberation-score` applies an inclusive minimum, while `--filter-deliberation-score-gt` applies a strict greater-than threshold.  The provider-error count includes provider, rate-limit, credential, and runner errors.  The deliberation score excludes rows with metadata errors, including timeouts, and omits a trial that has no completed deliberation rows.  The default criteria require zero counted errors and a deliberation score of at least `0.90`.
 
 Run the end-to-end command with `--stop-after filter` to produce a filtered set.  The filter directory contains accepted rows in `endpoint_variants.jsonl` and `endpoint_variants.csv`, rejection records in `removed_variants.jsonl`, and counts, source paths, criteria, and accepted source indexes in `summary.json`.  A filter that accepts no endpoints fails the run.
+
+To continue from completed screening and evaluation data, pass `--start-at filter`, `--existing-screen-variants`, and `--existing-eval-summary`.  The two source files must contain matching `combined_index` values.  The command creates a new run directory for the filter and every later stage.
 
 The checked-in snapshot under `variants/filtered-20260529/` contains `endpoint_variants.jsonl`, `endpoint_variants.csv`, and `summary.json`.  Run the end-to-end command for claims about current provider behavior because routes, availability, pricing, and behavior can change.  Pass the resulting filtered `endpoint_variants.jsonl` to every downstream stage.
 
@@ -95,7 +98,7 @@ uv run --no-cache --script tools/run_first_gene_inference_embeddings.py \
   --out results/gene-1-inference-embeddings-YYYYMMDDTHHMMSSZ
 ```
 
-Repeat the command with a distinct output directory for every selected gene index.  Before PCA, require `records_written == expected_records`, `embedding_count == expected_records`, and zero completion and embedding errors.  The end-to-end runner enforces those conditions and stops on the first incomplete gene stage.  The gene command writes its diagnostic rows and summary, then returns a nonzero exit status when a completion or embedding failed.
+Repeat the command with a distinct output directory for every selected gene index.  `--gene-processes` controls how many separate gene commands the end-to-end runner starts together.  It waits for each group before starting the next group.  A standalone gene command returns a nonzero exit status when a completion or embedding failed.  The end-to-end runner passes `--allow-record-errors`, which makes the command return success after writing every expected record.  Once all genes finish, the runner writes the shared eligible endpoint set, excluded endpoint records with their errors, and per-gene eligible records under `gene-filter/`.  A configuration enters PCA only when every selected gene contains the expected sample indexes, successful statuses, and embeddings for that configuration.
 
 ### PCA
 

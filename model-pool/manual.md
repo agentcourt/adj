@@ -48,7 +48,8 @@ The gene stage stores the persona path supplied through `--persona`, and aggrega
 | Evaluate provider endpoints | Screened endpoint rows and a question file | `tools/run_variant_batch.py`, which calls `tools/run_eval.py` and `tools/score_eval.py` | Response files, score files, exact request specs, and per-endpoint summary rows |
 | Filter endpoints | Provider endpoint rows and evaluation summaries | `tools/run_end_to_end.py` filter stage | Accepted endpoint rows, rejected endpoint records, and filter summary |
 | Collect behavior responses | Accepted endpoint rows, sampled genes, persona file, sample count | `tools/run_first_gene_inference_embeddings.py` | Gene completions, OpenRouter metadata, embeddings, and per-gene summary |
-| Reduce embeddings | Gene completion records with embeddings | `tools/run_embedding_pca.py` | PCA coordinates and PCA summary |
+| Filter gene errors | Every selected gene's records and accepted endpoint rows | `tools/run_end_to_end.py` | One shared eligible endpoint set, excluded endpoint records, and eligible records for each gene |
+| Reduce embeddings | Eligible gene completion records | `tools/run_embedding_pca.py` | PCA coordinates and PCA summary |
 | Cluster responses | Per-gene PCA records | `tools/run_gene_pca_clustering.py` | Cluster assignments and clustering summary |
 | Aggregate cluster labels | Cluster assignments, cluster fit, and accepted endpoint rows | `tools/aggregate_variant_persona_clusters.py` | Endpoint/persona cluster records |
 | Sample pool | Endpoint/persona cluster records | `tools/sample-tuple-pool.py` | `pool.jsonl`, sampling diagnostics, and equivalence records |
@@ -73,7 +74,32 @@ uv run --no-cache --script tools/run_end_to_end.py \
   --pool-size 5
 ```
 
-This example screens the endpoint inventory in eight separate processes, evaluates the accepted configurations with one trial per question, samples two genes, collects one response per accepted endpoint/gene pair, requests three PCA dimensions, searches K-means values from `2` through `4`, and writes five pool entries.  Each screening process handles its assigned configurations sequentially.  The end-to-end runner caps the PCA dimensions at the usable embedding-row count unless `--strict-pca-dimensions` makes the mismatch an error.  For a specified pool, set the root models or root sampling parameters, question file, trial count, filter criteria, gene selection, sample count, PCA dimensions, clustering range, pool size, and random seeds explicitly.  `--stop-after` stops after a named stage.
+This example screens the endpoint inventory in eight separate processes, evaluates the accepted configurations with one trial per question, samples two genes, collects one response per accepted endpoint/gene pair, requests three PCA dimensions, searches K-means values from `2` through `4`, and writes five pool entries.  Each screening process handles its assigned configurations sequentially.  Each gene process writes every configured sample, including request failures.  After all genes finish, the runner removes a configuration from every gene when any selected gene has a completion error, embedding error, missing sample, or missing embedding for that configuration.  PCA and later stages use that shared eligible set.  The runner caps the PCA dimensions at the eligible embedding-row count unless `--strict-pca-dimensions` makes the mismatch an error.  For a specified pool, set the root models or root sampling parameters, question file, trial count, filter criteria, gene selection, sample count, PCA dimensions, clustering range, pool size, and random seeds explicitly.  `--gene-processes` starts that many separate gene commands at a time, and `--stop-after` stops after a named stage.
+
+Completed screen and evaluation files can begin a new run at filtering:
+
+```bash
+uv run --no-cache --script tools/run_end_to_end.py \
+  --run-id pool-from-eval \
+  --start-at filter \
+  --existing-screen-variants results/source/endpoint_variants.jsonl \
+  --existing-eval-summary results/source/variant_summary.csv \
+  --filter-provider-error-count 0 \
+  --filter-deliberation-score-gt 0.70 \
+  --genes genes.json \
+  --gene-count 14 \
+  --gene-processes 2 \
+  --samples-per-gene 5 \
+  --pca-dimensions 8 \
+  --strict-pca-dimensions \
+  --min-k 2 \
+  --max-k 20 \
+  --pool-size 100 \
+  --without-replacement \
+  --one-per-model
+```
+
+The command requires both source files and joins them by `combined_index`.  `--filter-deliberation-score-gt` uses strict greater-than comparison.  The new run directory contains endpoint filtering, gene inference, gene-error filtering, PCA, clustering, aggregation, and sampling output.
 
 ## Glossary
 
@@ -139,6 +165,7 @@ uv run --no-cache tools/run_eval.py \
   --prompt prompts/juror-single.md \
   --models openrouter://openai/gpt-4.1-mini \
   --limit 2 \
+  --tool-mode function \
   --out results/openrouter-test
 
 uv run --no-cache tools/score_eval.py score --run results/openrouter-test
@@ -151,6 +178,7 @@ uv run --no-cache tools/run_eval.py \
   --prompt prompts/juror-single.md \
   --model-spec results/<batch-run>/specs/<variant>.json \
   --limit 2 \
+  --tool-mode function \
   --out results/openrouter-provider-endpoint-test
 
 uv run --no-cache tools/score_eval.py score --run results/openrouter-provider-endpoint-test
@@ -163,6 +191,7 @@ uv run --no-cache tools/run_eval.py \
   --prompt prompts/juror-single.md \
   --model-spec-jsonl variants/filtered-20260529/endpoint_variants.jsonl \
   --limit 2 \
+  --tool-mode function \
   --out results/openrouter-variant-jsonl-test
 
 uv run --no-cache tools/score_eval.py score --run results/openrouter-variant-jsonl-test
@@ -226,7 +255,7 @@ uv run --no-cache tools/model_inventory.py \
 
 The screen runs two checks for every endpoint configuration.  The direct check sends the Quick council preflight prompt through the Responses API and requires one valid `submit_council_vote` call.  It uses Quick's 20-second preflight limit and three provider attempts.  The Pi check starts the Pi container and MCP proxy extension used by ARB, ARBD, and ADC, then requires `wait_for_opportunity` and `submit_council_vote` through MCP.
 
-Both checks use the inventory row's model, exact provider route, request parameters, and disabled-fallback policy.  Endpoint capability metadata controls the Chat Completions parameter names used by Pi, while endpoint prices populate Pi's token accounting.  A model passes only when both checks submit a schema-valid vote.
+Both checks use the inventory row's model, exact provider route, request parameters, and disabled-fallback policy.  Endpoint capability metadata controls the Chat Completions parameter names used by Pi, while endpoint prices populate Pi's token accounting.  A model passes only when both checks submit a schema-valid vote.  After MCP accepts the Pi vote, the screen allows five seconds for Pi to exit and then stops the test container because ARB has completed the council opportunity at that point.
 
 ```bash
 make screen-command
@@ -316,7 +345,7 @@ uv run --no-cache --script tools/run_variant_batch.py \
 | `variant_summary.csv` | Tabular per-variant summary. |
 | `summary.json` | Batch status and aggregate counts. |
 
-The batch runner accepts `--no-progress-timeout` and `--variant-timeout`.  `--timeout` remains the per-request timeout passed to `tools/run_eval.py`, while `--no-progress-timeout` terminates a child process that stops writing output or result rows.  A timed-out variant remains in `variant_summary.csv`, and downstream filtering excludes it before gene inference.
+The batch runner accepts `--no-progress-timeout` and `--variant-timeout`.  `--timeout` sets the timeout for each completion attempt.  Completion requests use the council client's four-attempt policy for HTTP 408, 409, 429, 5xx, timeout, and network failures, with delays of zero, five, and thirty seconds.  `--no-progress-timeout` terminates a child process that stops writing output or result rows.  A timed-out variant remains in `variant_summary.csv`, and downstream filtering excludes it before gene inference.
 
 The checked-in accepted endpoint set is `variants/filtered-20260529/`.  It contains 32 accepted provider endpoints from a 72-endpoint source set.  Its filter criteria are recorded in `summary.json`: `provider_error_count == 0` and `deliberation_score >= 0.90`.
 

@@ -7,6 +7,7 @@ import argparse
 import datetime as dt
 import http.client
 import json
+import math
 import os
 import re
 import socket
@@ -235,6 +236,17 @@ def error_row(base: dict, status: str, exc: Exception) -> dict:
     return {**base, "status": status, "response_text": "", "embedding": None, "metadata": meta}
 
 
+def completion_cost(metadata: dict) -> float | None:
+    value = metadata.get("cost")
+    try:
+        cost = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(cost) or cost < 0:
+        return None
+    return cost
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run one sampled gene through filtered variants and embed responses.")
     parser.add_argument("--out", required=True)
@@ -251,6 +263,7 @@ def main() -> int:
     parser.add_argument("--max-tokens", type=int, default=512)
     parser.add_argument("--completion-attempts", type=int, default=3)
     parser.add_argument("--retry-sleep", type=float, default=2.0)
+    parser.add_argument("--allow-record-errors", action="store_true")
     args = parser.parse_args()
 
     persona_record_path = args.persona_record_path
@@ -301,6 +314,8 @@ def main() -> int:
     print(json.dumps({"event": "started", "expected": expected, "out": str(out)}, sort_keys=True), flush=True)
 
     rows: list[dict] = []
+    observed_completion_cost = 0.0
+    completion_cost_observations = 0
     with records_path.open("w") as handle:
         completed = 0
         for variant_order, row in enumerate(variants, 1):
@@ -361,6 +376,10 @@ def main() -> int:
                             "metadata": metadata,
                         }
                 rows.append(record)
+                cost = completion_cost(record["metadata"])
+                if cost is not None:
+                    observed_completion_cost += cost
+                    completion_cost_observations += 1
                 handle.write(json.dumps(record, ensure_ascii=False) + "\n")
                 handle.flush()
                 completed += 1
@@ -373,6 +392,8 @@ def main() -> int:
                             "combined_index": row.get("combined_index"),
                             "sample_index": sample_index,
                             "status": record["status"],
+                            "observed_completion_cost": observed_completion_cost,
+                            "completion_cost_observations": completion_cost_observations,
                         },
                         sort_keys=True,
                     ),
@@ -380,6 +401,7 @@ def main() -> int:
                 )
 
     hydrate_posthoc_generation_metadata(rows, args.timeout)
+    costs = [cost for row in rows if (cost := completion_cost(row["metadata"])) is not None]
     with records_path.open("w") as handle:
         for row in rows:
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -401,15 +423,22 @@ def main() -> int:
         "embedding_model": args.embedding_model,
         "completion_attempts": args.completion_attempts,
         "retry_sleep_seconds": args.retry_sleep,
+        "allow_record_errors": args.allow_record_errors,
         "records_path": display_path(records_path),
         "records_written": len(rows),
         "status_counts": counts,
         "completion_error_count": counts.get("completion_error", 0),
         "embedding_error_count": counts.get("embedding_error", 0),
         "embedding_count": sum(1 for row in rows if isinstance(row.get("embedding"), list)),
+        "observed_completion_cost": sum(costs),
+        "completion_cost_observations": len(costs),
     }
     summary_path.write_text(json.dumps(summary, indent=2) + "\n")
     print(json.dumps({"event": "finished", "summary": summary}, sort_keys=True), flush=True)
+    if summary["records_written"] != expected:
+        return 1
+    if args.allow_record_errors:
+        return 0
     return 1 if summary["completion_error_count"] or summary["embedding_error_count"] or summary["embedding_count"] != expected else 0
 
 

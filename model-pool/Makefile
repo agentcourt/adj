@@ -20,6 +20,7 @@ FILTER_PROVIDER_ERROR_COUNT ?= 0
 FILTER_MIN_DELIBERATION_SCORE ?= 0.90
 GENES ?= genes.json
 GENE_COUNT ?= 14
+GENE_PROCESSES ?= 2
 PERSONA ?= ../common/etc/personas/generic.md
 PERSONA_RECORD_PATH ?= personas/generic.md
 SAMPLES_PER_GENE ?= 5
@@ -63,6 +64,7 @@ pool: screen-command
 		--filter-min-deliberation-score "$(FILTER_MIN_DELIBERATION_SCORE)" \
 		--genes "$(GENES)" \
 		--gene-count "$(GENE_COUNT)" \
+		--gene-processes "$(GENE_PROCESSES)" \
 		--persona "$(PERSONA)" \
 		--persona-record-path "$(PERSONA_RECORD_PATH)" \
 		--samples-per-gene "$(SAMPLES_PER_GENE)" \

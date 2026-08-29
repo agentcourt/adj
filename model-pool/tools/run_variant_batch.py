@@ -375,7 +375,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--prompt", default="prompts/juror-single.md", help="Prompt file passed to run_eval.py. Relative paths resolve from model-pool/.")
     ap.add_argument("--trials", type=int, default=3)
     ap.add_argument("--timeout", type=int, default=90)
-    ap.add_argument("--tool-mode", choices=["context", "function"], default="context")
+    ap.add_argument("--tool-mode", choices=["context", "function"], default="function")
     ap.add_argument("--no-progress-timeout", type=int)
     ap.add_argument("--variant-timeout", type=int)
     return ap.parse_args(argv)

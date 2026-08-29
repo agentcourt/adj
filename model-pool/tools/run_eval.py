@@ -5,6 +5,7 @@
 # ///
 import argparse
 import datetime as dt
+import http.client
 import json
 import os
 import re
@@ -110,6 +111,8 @@ TOOL_DEFS = [
         },
     },
 ]
+
+COMPLETION_RETRY_DELAYS = (0, 5, 30)
 
 
 def load_items(path: Path) -> list[dict]:
@@ -357,58 +360,6 @@ def item_prompt(item: dict, base_prompt: str, tool_mode: str = "context") -> tup
     return "\n".join(lines), trace
 
 
-def response_format_for_item(item: dict) -> dict:
-    common_properties = {
-        "confidence": {
-            "type": "number",
-            "description": "Confidence from 0 through 1.",
-        },
-        "rationale": {
-            "type": "string",
-            "description": "A concise explanation of the answer.",
-        },
-        "evidence_ids": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "Identifiers for supporting record evidence, or an empty array when the item has no record.",
-        },
-    }
-    if item.get("mode") == "tool_record":
-        properties = {
-            "vote": {
-                "type": "string",
-                "enum": item.get("vote_options") or ["demonstrated", "not_demonstrated", "indeterminate"],
-                "description": "The decision supported by the record.",
-            },
-            **common_properties,
-        }
-        required = ["vote", "confidence", "rationale", "evidence_ids"]
-        name = "record_decision"
-    else:
-        answer = {
-            "type": "string",
-            "description": "The answer in the format required by the item.",
-        }
-        if item.get("answer_type") == "multiple_choice":
-            answer["enum"] = ["A", "B", "C", "D"]
-        properties = {"answer": answer, **common_properties}
-        required = ["answer", "confidence", "rationale", "evidence_ids"]
-        name = "item_answer"
-    return {
-        "type": "json_schema",
-        "json_schema": {
-            "name": name,
-            "strict": True,
-            "schema": {
-                "type": "object",
-                "properties": properties,
-                "required": required,
-                "additionalProperties": False,
-            },
-        },
-    }
-
-
 def mock_response(item: dict, mode: str) -> dict:
     if item["mode"] == "tool_record":
         vote = item["gold"]["vote"] if mode == "perfect" else "indeterminate"
@@ -481,15 +432,36 @@ def openrouter_json_request(
         raise OpenRouterHTTPError(e.code, detail, body_json, retry_after_seconds) from e
 
 
+def retryable_completion_error(exc: Exception) -> bool:
+    if isinstance(exc, OpenRouterHTTPError):
+        return exc.status_code in {408, 409, 429} or 500 <= exc.status_code <= 599
+    return isinstance(exc, (TimeoutError, socket.timeout, urllib.error.URLError, http.client.IncompleteRead, OSError))
+
+
 def openrouter_request(payload: dict, timeout: int, extra_headers: dict | None = None) -> dict:
-    _, body = openrouter_json_request(
-        "https://openrouter.ai/api/v1/chat/completions",
-        "POST",
-        timeout,
-        payload,
-        extra_headers,
-    )
-    return body
+    attempts = 1 + len(COMPLETION_RETRY_DELAYS)
+    for attempt in range(attempts):
+        try:
+            _, body = openrouter_json_request(
+                "https://openrouter.ai/api/v1/chat/completions",
+                "POST",
+                timeout,
+                payload,
+                extra_headers,
+            )
+            return body
+        except Exception as exc:
+            if attempt == attempts - 1 or not retryable_completion_error(exc):
+                raise
+            delay = COMPLETION_RETRY_DELAYS[attempt]
+            code = exc.status_code if isinstance(exc, OpenRouterHTTPError) else type(exc).__name__
+            print(
+                f"openrouter request retryable error attempt={attempt + 1}/{attempts} code={code} cause={exc} retry_in={delay}s",
+                file=sys.stderr,
+                flush=True,
+            )
+            time.sleep(delay)
+    raise RuntimeError("completion retry loop ended without a result")
 
 
 def openrouter_generation_metadata(generation_id: str, timeout: int) -> tuple[dict | None, str]:
@@ -809,12 +781,12 @@ def attach_request_spec_meta(meta: dict, spec: dict, timeout: int, fetch_generat
     return meta
 
 
-def call_openrouter(spec: dict, item: dict, prompt: str, timeout: int) -> tuple[str, dict, list[dict]]:
+def call_openrouter(spec: dict, prompt: str, timeout: int) -> tuple[str, dict, list[dict]]:
     messages = [
-        {"role": "system", "content": "Return only strict JSON matching the requested schema. No markdown."},
+        {"role": "system", "content": "Return only the requested JSON object. No markdown."},
         {"role": "user", "content": prompt},
     ]
-    payload = openrouter_payload(spec, messages, 1000, {"response_format": response_format_for_item(item)})
+    payload = openrouter_payload(spec, messages, 1000, {"response_format": {"type": "json_object"}})
     started = time.time()
     body = openrouter_request(payload, timeout, spec.get("headers"))
     content, meta, _ = response_meta(body, started)
@@ -888,7 +860,7 @@ def validated_tool_calls(message: dict, finish_reason, body: dict) -> list[dict]
 
 def call_openrouter_tools(spec: dict, item: dict, prompt: str, timeout: int, max_rounds: int = 6) -> tuple[str, dict, list[dict]]:
     messages = [
-        {"role": "system", "content": "Use tools when required. Return only strict JSON matching the requested schema as the final answer. No markdown."},
+        {"role": "system", "content": "Use tools when required. Return only the requested JSON object as the final answer. No markdown."},
         {"role": "user", "content": prompt},
     ]
     trace: list[dict] = []
@@ -901,7 +873,6 @@ def call_openrouter_tools(spec: dict, item: dict, prompt: str, timeout: int, max
         payload = openrouter_payload(spec, messages, 1200, {
             "tools": TOOL_DEFS,
             "tool_choice": "auto",
-            "response_format": response_format_for_item(item),
         })
         try:
             body = openrouter_request(payload, timeout, spec.get("headers"))
@@ -945,11 +916,11 @@ def call_openrouter_tools(spec: dict, item: dict, prompt: str, timeout: int, max
 
 
 def batch_request_body(spec: dict, task: dict) -> dict:
-    extra = {"response_format": response_format_for_item(task["item"])}
+    extra = {"response_format": {"type": "json_object"}}
     default_max_tokens = 1000
     if task["uses_tools"]:
         default_max_tokens = 1200
-        extra.update({"tools": TOOL_DEFS, "tool_choice": "auto"})
+        extra = {"tools": TOOL_DEFS, "tool_choice": "auto"}
     payload = openrouter_payload(spec, task["messages"], default_max_tokens, extra)
     payload.pop("model")
     return payload
@@ -987,9 +958,9 @@ def run_openrouter_batch_spec(
             request_number += 1
             prompt, trace = item_prompt(item, base_prompt, tool_mode)
             uses_tools = item.get("mode") == "tool_record" and tool_mode == "function"
-            system = "Return only strict JSON matching the requested schema. No markdown."
+            system = "Return only the requested JSON object. No markdown."
             if uses_tools:
-                system = "Use tools when required. Return only strict JSON matching the requested schema as the final answer. No markdown."
+                system = "Use tools when required. Return only the requested JSON object as the final answer. No markdown."
             meta = {
                 "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                 "prompt_chars": len(prompt),
@@ -1212,7 +1183,7 @@ def main() -> int:
     ap.add_argument("--item-id", action="append")
     ap.add_argument("--mock", choices=["perfect", "weak"])
     ap.add_argument("--timeout", type=int, default=90)
-    ap.add_argument("--tool-mode", choices=["context", "function"], default="context")
+    ap.add_argument("--tool-mode", choices=["context", "function"], default="function")
     ap.add_argument("--trials", type=int, default=3, help="Number of repeated trials per model/item. Defaults to 3.")
     args = ap.parse_args()
 
@@ -1286,7 +1257,7 @@ def main() -> int:
                         if item.get("mode") == "tool_record" and args.tool_mode == "function":
                             raw, api_meta, trace = call_openrouter_tools(spec, item, prompt, args.timeout)
                         else:
-                            raw, api_meta, api_trace = call_openrouter(spec, item, prompt, args.timeout)
+                            raw, api_meta, api_trace = call_openrouter(spec, prompt, args.timeout)
                             if api_trace:
                                 trace = api_trace
                         meta.update({"runner": "openrouter", "tool_mode": args.tool_mode, **api_meta})

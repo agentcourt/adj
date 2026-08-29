@@ -1,12 +1,32 @@
 # Development Notes
 
+## 2026-08-29 Model-Pool Generation
+
+Run `pool-20260828-score-gt-070-r2` reused the completed endpoint screen and evaluation results, retained 283 configurations with no provider errors and a deliberation score greater than `0.70`, and evaluated each configuration five times on each of 14 genes.  The runner used two gene processes.  It wrote all 19,810 expected records: 19,494 successful completions, 316 completion errors, 19,494 embeddings, and no embedding errors.  Three successful completions lacked a cost observation.  The observed completion cost was `$25.780984833363004`.
+
+The cross-gene filter excluded all 18 configurations that had at least one error, leaving 265 configurations and 1,325 records per gene.  Five excluded configurations had only rate-limit errors, twelve had only provider errors, and one had both.  The eligible set contained 104 distinct model IDs, so the requested one-per-model pool of 100 remained possible.
+
+PCA used eight dimensions for every gene.  Clustering selected `k=2` for twelve genes, `k=19` for gene 5, and `k=10` for gene 10.  Aggregation produced 265 configuration/persona rows.  Tuple-uniform sampling with seed `0`, endpoint-equivalence deduplication, no replacement, and one row per model produced 100 rows containing 100 distinct model IDs, 30 providers, 100 endpoint variants, and 69 distinct cluster tuples.
+
+## 2026-08-28 Gene-Error Exclusion
+
+The end-to-end runner now lets each gene command finish every configured sample and record per-request completion or embedding errors.  After every selected gene finishes, it excludes a configuration from the common downstream set when any gene has an error, missing sample, or missing embedding for that configuration.  It writes the eligible variants, excluded variants with failure details, and eligible records for each gene under `gene-filter/`.  PCA, clustering, aggregation, and sampling use those files, and the runner checks one-per-model pool capacity again after the exclusion.
+
+The standalone gene command retains its nonzero exit status for record errors unless the caller passes `--allow-record-errors`.  The end-to-end runner passes that option so record-level endpoint failures do not terminate another gene process.  Missing output records and command failures still stop the run.
+
 ## 2026-08-25 Runtime Tool-Use Screening
 
-Added a screen between endpoint inventory and question-set evaluation.  Each endpoint configuration must complete a Quick-style direct `submit_council_vote` call and an ARB-style Pi/MCP sequence containing `wait_for_opportunity` and `submit_council_vote`.  The screen uses the same model, provider route, fallback policy, parameter limits, Pi image, and MCP proxy extension that the runtimes use.
+Added a screen between endpoint inventory and question-set evaluation.  Each endpoint configuration must complete a Quick-style direct `submit_council_vote` call and an ARB-style Pi/MCP sequence containing `wait_for_opportunity` and `submit_council_vote`.  The screen uses the same model, provider route, fallback policy, parameter limits, Pi image, and MCP proxy extension that the runtimes use.  MCP acceptance completes the Pi check, and the screen stops a test container that remains active after a five-second exit period.
 
 Pi's OpenRouter Chat Completions client sends `store` and chooses a maximum-token field from its model definition.  The screen and the ARB, ARBD, and ADC runtimes derive those settings from the endpoint's advertised parameters, which prevents exact routing from excluding an otherwise valid endpoint.  They also convert OpenRouter's per-token endpoint prices to Pi's per-million-token cost fields, allowing Pi to report request costs from its observed usage.
 
 The Python coordinator processes one partition sequentially and retains one result directory per configuration.  The end-to-end runner partitions configurations by model and starts separate coordinator processes, with eight processes set by `make pool`.  Candidate failures remain in `rejected_variants.jsonl`, while credential, container, and transcript failures stop the affected partition.
+
+OpenRouter returned HTTP 401 for one exact AtlasCloud route with `provider_name` set to AtlasCloud and `is_byok` set to false.  The same OpenRouter key continued to serve other routes.  OpenRouter's [provider documentation](https://openrouter.ai/docs/guides/community/for-providers) identifies provider 401 responses as endpoint-uptime failures.  The screen rejects a route when OpenRouter attributes an authentication error to a shared provider, while an OpenRouter or BYOK authentication error stops the partition.
+
+OpenRouter also returned HTTP 403 for a model restricted to approved agent applications.  OpenRouter documents 403 for [guardrail and access restrictions](https://openrouter.ai/docs/guides/features/guardrails/overview).  The screen therefore rejects an OpenRouter configuration that returns 403.  Missing credentials and unattributed 401 responses continue to stop the partition.
+
+A Pi container exited successfully during the grace period after its accepted vote, after the screen had decided to issue `stop` but before the container runtime processed that command.  Because the container uses `--rm`, the runtime returned exit status 125 and “no such container.”  The screen now accepts the successful process exit in that race.  A failed process exit or a failed stop against a running process remains an error.
 
 ## 2026-08-23 Restoration to adj
 

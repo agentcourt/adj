@@ -1,4 +1,5 @@
 import importlib.util
+import http.client
 import json
 import sys
 import tempfile
@@ -79,7 +80,7 @@ class ToolRoundMetadataTests(unittest.TestCase):
         spec = run_eval.model_spec_from_string("openrouter://example/model")
         item = {"record_dir": "/record"}
 
-        with mock.patch.object(run_eval, "openrouter_request", side_effect=responses), mock.patch.object(
+        with mock.patch.object(run_eval, "openrouter_request", side_effect=responses) as request, mock.patch.object(
             run_eval, "execute_tool", return_value={"evidence": [{"id": "E1"}]}
         ):
             raw, metadata, trace = run_eval.call_openrouter_tools(spec, item, "question", 30)
@@ -94,6 +95,53 @@ class ToolRoundMetadataTests(unittest.TestCase):
         self.assertAlmostEqual(metadata["cost"], 0.03)
         self.assertEqual(metadata["tool_call_count"], 1)
         self.assertEqual(len(trace), 1)
+        for call in request.call_args_list:
+            self.assertNotIn("response_format", call.args[0])
+
+    def test_batch_request_format_depends_on_tool_use(self):
+        spec = run_eval.model_spec_from_string("openrouter://example/model")
+        messages = [{"role": "user", "content": "question"}]
+
+        ordinary = run_eval.batch_request_body(spec, {"messages": messages, "uses_tools": False})
+        tool = run_eval.batch_request_body(spec, {"messages": messages, "uses_tools": True})
+
+        self.assertEqual(ordinary["response_format"], {"type": "json_object"})
+        self.assertNotIn("response_format", tool)
+        self.assertEqual(tool["tool_choice"], "auto")
+
+
+class CompletionRetryTests(unittest.TestCase):
+    def test_completion_request_uses_council_retry_delays(self):
+        failures = [
+            run_eval.OpenRouterHTTPError(503, "unavailable"),
+            run_eval.OpenRouterHTTPError(429, "limited"),
+            TimeoutError("timed out"),
+        ]
+        success = (200, {"choices": [{"message": {"content": "{}"}}]})
+
+        with mock.patch.object(run_eval, "openrouter_json_request", side_effect=[*failures, success]) as request, mock.patch.object(
+            run_eval.time, "sleep"
+        ) as sleep, mock.patch("builtins.print"):
+            body = run_eval.openrouter_request({"model": "example/model"}, 90)
+
+        self.assertEqual(body, success[1])
+        self.assertEqual(request.call_count, 4)
+        self.assertEqual([call.args[0] for call in sleep.call_args_list], [0, 5, 30])
+
+    def test_completion_request_does_not_retry_http_400(self):
+        failure = run_eval.OpenRouterHTTPError(400, "bad request")
+
+        with mock.patch.object(run_eval, "openrouter_json_request", side_effect=failure) as request, mock.patch.object(
+            run_eval.time, "sleep"
+        ) as sleep:
+            with self.assertRaises(run_eval.OpenRouterHTTPError):
+                run_eval.openrouter_request({"model": "example/model"}, 90)
+
+        self.assertEqual(request.call_count, 1)
+        sleep.assert_not_called()
+
+    def test_incomplete_read_is_retryable(self):
+        self.assertTrue(run_eval.retryable_completion_error(http.client.IncompleteRead(b"partial", 10)))
 
     def test_later_failure_preserves_completed_round_metadata_and_trace(self):
         first_response = tool_call_response(
