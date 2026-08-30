@@ -1,0 +1,246 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\tool}[1]{\nolinkurl{#1}}
+
+\title{Evaluating Judge Actions Through a Production Adjudication Runtime}
+\author{Jamie Stephens}
+\date{August 30, 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Agent District Court (ADC) evaluates judge behavior by reconstructing controlled procedural states, obtaining the corresponding opportunity from its Lean rule engine, and executing that opportunity through the Go runtime used for cases.  Ten suites cover 220 baseline fixture rows, with a 30-row hard extension for voir dire question screening.  Seven suites evaluate model decisions by default.  Three suites evaluate deterministic actions supplied by Lean and can remove those actions to run a counterfactual model turn.  A correct row requires a valid structured action, the suite-specific legal outcome, and an accepted state transition.  Some suites also require specified reasoning concepts or final-state effects.  Each run preserves the fixture, constructed state, opportunity, model exchanges, correction history, provider accounting, action payload, final state, and component scores.  This report specifies the fixture design, execution modes, scoring rules, aggregate measures, prompt experiments, and limits of the implemented method.
+\end{abstract}
+
+\section{Introduction}
+
+Evaluating a legal decision from its final text omits two failure classes.  A model may state the expected result but fail to produce the required structured action.  It may also produce a valid action whose execution violates the current procedural state.  Agent District Court (ADC) addresses these cases by evaluating judge actions inside its adjudication runtime.  ADC implements civil adjudication with a Lean rule engine and a Go runtime.  The engine determines which role may act, which action the role may take, and whether a proposed action can change the state.  The runtime renders the role's information, obtains a decision, handles correctable failures, asks Lean to validate a model decision, and executes the accepted action~\cite{adcrepo,runtime}.
+
+The evaluation unit is one fixture execution.  A \emph{fixture} is a JSON object that specifies a controlled procedural record, the expected decision fields, accepted textual concepts or reason tags, a difficulty tier, and a positive severity weight.  The runner converts the fixture into ADC state and asks Lean for the judge's current \emph{opportunity}.  An opportunity identifies the role, phase, objective, allowed tools, required payload fields, and decision-step budget.  It may also contain a deterministic action.  The runner then uses the production opportunity executor and scores the result against the fixture.
+
+The implementation contains ten judge suites under nine Agent Rules for Civil Procedure (ARCP) rule directories~\cite{evalassets,arcp}.  The baseline fixture files contain 220 rows.  A separate voir dire file adds 30 difficult rows, bringing the available set to 250.  The suites test motion decisions, sanctions, voir dire, jury instructions, a bench opinion, judgment entry, and post-judgment relief.  Sixteen candidate opportunity prompts support controlled prompt comparisons.
+
+The method separates model behavior from deterministic rule-engine behavior.  Seven suites obtain a model decision in their default mode.  Rules 11, 37, and 58 receive a deterministic action in the production Lean opportunity and execute that action by default.  Their optional counterfactual mode removes the action and requests a model decision.  A default result from one of those three suites therefore measures opportunity generation and deterministic state execution.  Its counterfactual result measures model behavior on a modified opportunity.
+
+This report describes the method implemented at revision \code{36316f3} of the AgentCourt \code{adj} repository~\cite{evalcode}.  Generated result files are excluded from the repository.  The report therefore covers methods and fixture coverage.
+
+\section{Evaluation Objects}
+
+\subsection{Controlled procedural states}
+
+Each suite defines a fixture type that contains enough information to construct the procedural posture needed for one judge action.  The construction code creates the case, roles, docket entries, evidence records, motions, rulings, and prior traces required by that posture.  It then runs the same Lean next-opportunity operation used by ADC cases.  The returned opportunity supplies the action evaluated by the suite.
+
+Fixtures keep procedural inputs separate from scoring labels.  Inputs include pleadings, motion papers, proposed instructions, admitted or excluded evidence, verdict data, and prior judgments.  Labels include an expected Boolean, disposition, winner, sanction, surviving-issue set, claim identifier, amount, required concepts, prohibited concepts, reason tags, and severity.  Each suite uses only the fields needed for its action.
+
+The fixture collections use three difficulty tiers in most suites and place close legal boundaries in the higher tiers.  Examples include a permissible impartiality question beside a merits commitment, a partial summary-judgment request beside a request for judgment on the full claim, and excluded evidence beside admitted evidence in a bench-trial record.  Several collections balance the principal outcome.  The voir dire baseline contains 30 allowed and 30 disallowed questions, its hard extension contains 15 of each, the bench-opinion suite contains eight plaintiff and eight defense outcomes, and the Rule 60 suite contains eight grants and eight denials.
+
+\subsection{Suite coverage}
+
+The ten suites use one judge tool each.  Table~\ref{tab:suites} lists the committed fixture counts and the default execution mode.
+
+\begin{table}[htbp]
+\centering
+\scriptsize
+\caption{Judge evaluation suites.}
+\label{tab:suites}
+\begin{tabularx}{\textwidth}{@{}llrXX@{}}
+\toprule
+Rule & Action & Rows & Tool & Default decision source \\
+\midrule
+11 & Sanctions & 16 & \tool{decide_rule11_motion} & Lean deterministic action \\
+12 & Dismissal and jurisdiction & 18 & \tool{decide_rule12_motion} & Model \\
+37 & Discovery sanctions & 16 & \tool{decide_rule37_motion} & Lean deterministic action \\
+47 & Voir dire question & 60 + 30 & \tool{decide_voir_dire_question} & Model \\
+47 & For-cause challenge & 16 & \tool{decide_juror_for_cause_challenge} & Model \\
+51 & Jury instructions & 16 & \tool{settle_jury_instructions} & Model \\
+52 & Bench opinion & 16 & \tool{file_bench_opinion} & Model \\
+56 & Summary judgment & 30 & \tool{decide_rule56_motion} & Model \\
+58 & Judgment entry & 16 & \tool{enter_judgment} & Lean deterministic action \\
+60 & Relief from judgment & 16 & \tool{resolve_rule60_motion} & Model \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The Rule 11 fixtures cover improper purpose, unsupported contentions, reasonable inquiry, correction, safe-harbor timing, the discovery boundary, and sanction proportionality.  The Rule 12 collection covers failure to state a claim, subject-matter jurisdiction, standing, ripeness, and mootness.  Rule 37 covers absent and incomplete discovery responses, justification, overbreadth, proportionality, cure, fees, and other sanctions.
+
+The two Rule 47 suites divide question screening from juror removal because ADC exposes separate tools and state transitions for those decisions.  Question screening covers impartiality, legal burdens, evidence categories, damages skepticism, attention, instructions, precommitment, assumed facts, inadmissible material, and merits argument.  For-cause fixtures cover fixed bias, willingness to follow law, evidence and damages commitments, relationships, sympathy, rehabilitation, language, attention, and hardship.
+
+The Rule 51 suite evaluates settled jury-instruction summaries for burden standards, claim elements, disputed facts, excluded evidence, limiting instructions, damages, credibility, adverse inferences, digital evidence, and sympathy.  Rule 52 evaluates a one-claim bench opinion across formation, breach, credibility, causation, damages, authentication, agency, and notice.  Rule 56 includes ten rows per tier and expects 17 denials, seven grants, and six partial grants.  Rule 58 covers nine jury verdicts and seven bench opinions.  Rule 60 covers clerical mistake, excusable neglect, new evidence, void and satisfied judgments, fraud, timeliness, prospective inequity, extraordinary circumstances, settlement, regret, and merits reargument.
+
+\section{Production-Path Execution}
+
+\subsection{Common setup}
+
+For each row, the suite runner validates the fixture, constructs state and roles, applies the selected court profile, and requests the next Lean opportunity with \code{max\_steps\_per\_turn} set to 3.  It records the returned opportunity and calls the production direct-opportunity entry point.  That function creates the production \code{OpportunityRunner}, which uses the ADC prompt catalog, tool schemas, role view, correction prompts, Lean client, state transition code, and model client configured for the run~\cite{runtime}.
+
+The command accepts a fixture path, output directory, court profile, model request specification, response timeout, temperature, fixture limit, prompt catalog overrides, and Lean engine command.  The command-line default timeout is 180 seconds.  A fixture timeout applies to its complete execution.  The command processes fixtures sequentially and appends one result row after each completed execution.
+
+\subsection{Model-backed turns}
+
+A model-backed turn renders the judge role, role-visible state, opportunity objective, constraints, allowed tools, and their JSON Schemas.  The model must return one allowed tool call.  The runner rejects a missing call, multiple calls, an unrecognized tool, malformed arguments, a required-field error, or a type error.  It sends a correction prompt and requests another response after a correctable failure.
+
+The default invalid-attempt limit is three.  The opportunity supplies a separate decision-step budget.  Each model response that attempts a decision consumes one decision step.  When the model returns a valid action, the runner calls Lean \code{apply\_decision} with the current state version, opportunity identifier, role, decision, roles, and opportunity step budget.  Lean may reject the decision with a correction.  An accepted decision returns an executable action, which the runtime applies through its ordinary \code{step} path.  A rejected step also produces a correction while budget remains.
+
+The result records every model request and response, including corrections.  A request record contains its sequence number, model or complete request specification, input items, tool schemas, previous response identifier, and temperature.  A response record retains text, tool calls, usage, cost, citations, web-search records when present, provider metadata, and any request error.
+
+Exhausting the invalid-attempt limit or opportunity decision budget yields a procedural failure.  The evaluator preserves the last response, scores it when possible, and marks the row invalid with a specific reason.  Fixture validation errors, prompt-rendering errors, provider setup errors, Lean process errors, and other execution errors abort the suite run because they prevent a valid row-level measurement.
+
+\subsection{Deterministic production turns}
+
+Rules 11, 37, and 58 receive a single-tool deterministic action inside the Lean opportunity.  Their default evaluation executes that action through the same runtime \code{step} path used by a case.  No model request, role-view rendering, correction loop, or \code{apply\_decision} call occurs.  The evaluator converts the opportunity action into the same response shape used by the scorer, then records the transition transcript and final state.
+
+The deterministic path tests fixture construction, opportunity selection, deterministic payload generation, action validation, state transition, and suite scoring.  A successful step sets both \code{step\_accepted} and \code{lean\_accepted} in the result.  The latter field denotes successful Lean-controlled execution on this path because no separate decision-validation call exists.
+
+The \code{--counterfactual-model} option first requires a deterministic action in the opportunity, removes that field from the evaluation copy, and runs the model-backed path.  The result and summary identify the execution mode.  A production-mode score and a counterfactual-model score answer different questions and require separate reporting.
+
+\subsection{Prompt candidates}
+
+ADC builds ordinary evaluation turns from its production prompt catalog.  A suite candidate changes only the opportunity objective.  The runner preserves the judge role, court rules, visible state, allowed tools, constraints, schemas, tool guidance, correction behavior, and transition path.
+
+Candidate files use literal replacement tokens written between two opening and two closing braces.  Every suite exposes the production objective, actor message, phase, allowed tools, fixture identifier, tier, case theme, and context notes.  Each suite also exposes its relevant fixture fields.  The renderer rejects an unknown token, an unmatched opening delimiter, an unresolved token, or an empty result before it sends a model request~\cite{promptguide}.
+
+The repository contains 16 candidate files.  Rules 11, 37, and 58 allow a candidate objective only with \code{--counterfactual-model}, since their production opportunities do not ask a model to decide the action.  A prompt comparison can therefore hold the model request specification, fixtures, court, temperature, and runtime prompts fixed while changing the objective.  Repeated stochastic trials require separate runs because one invocation executes each selected fixture once.
+
+\section{Scoring}
+
+\subsection{Validity, substance, and execution}
+
+Scoring has three layers.  Payload validity first requires exactly one expected tool call and well-formed suite fields.  Substantive scoring compares the parsed payload with the fixture's expected outcome and component labels.  Execution scoring requires Lean acceptance and an accepted step for model-backed turns, or an accepted deterministic step for production deterministic turns.  A row contributes to the correct count only when its invalid-reason field is empty and every suite-specific outcome condition holds.
+
+The scorer retains component results even when the composite outcome fails.  These fields distinguish a wrong legal disposition from a malformed call, an incomplete remedy, a reasoning-text mismatch, a Lean rejection, and an unexpected final state.  Table~\ref{tab:scoring} gives each suite's composite substantive conditions.  Every condition also requires accepted execution.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Composite outcome conditions by suite.}
+\label{tab:scoring}
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+Suite & Required substantive components & Reason-tag role \\
+\midrule
+Rule 11 & Grant or denial and sanction fields & Diagnostic \\
+Rule 12 & Disposition, prejudice, leave to amend, and ground-specific fields & Diagnostic \\
+Rule 37 & Grant or denial and sanction fields & Diagnostic \\
+Voir dire question & Allowed or disallowed ruling & Diagnostic \\
+For-cause challenge & Grant or denial & Diagnostic \\
+Rule 51 & Every required concept and no prohibited final-instruction concept & Diagnostic \\
+Rule 52 & Winner, amount, required concepts, prohibited concepts, and opinion-structure terms & Diagnostic \\
+Rule 56 & Disposition and exact normalized surviving-issue set & Diagnostic \\
+Rule 58 & Claim, basis concepts, reason tag, judgment status, and state-derived amount & Required \\
+Rule 60 & Grant or denial, required concepts, prohibited concepts, and reason tag & Required \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The Rule 12 ground-specific checks follow the selected ground.  A failure-to-state-a-claim disposition compares missing elements.  A jurisdiction disposition compares the rejected jurisdictional basis.  Standing checks injury, traceability, and redressability fields, while the remaining grounds use their corresponding payload fields.  A denial still requires the expected prejudice and amendment values.
+
+Rules 11 and 37 score the sanction separately from the grant decision.  A correct grant with the wrong sanction fails the composite outcome.  The Rule 56 scorer normalizes the surviving-issue list and requires set equality, preventing an otherwise correct disposition from concealing relief beyond the motion's supported scope.
+
+Rules 51, 52, and 60 score generated legal text through fixture-specific phrases and aliases.  Rule 51's prohibited-term matcher examines nearby rejection and negation language so that an opinion about a defective proposal does not insert the proposal into the settled charge.  Rule 60 also treats configured negated phrases as nonaffirmative.  Rule 52's prohibited-concept matcher uses literal concepts and aliases without that contextual exception.  Its separate structure check requires normalized forms of \code{finding}, \code{conclusion}, and \code{judgment}.
+
+Rule 58 evaluates state effects that do not appear in the action payload.  The \code{enter\_judgment} call provides a claim identifier and basis but no amount.  The scorer checks that the final case status is \code{judgment\_entered} and that the final monetary judgment equals the amount already determined by the jury verdict or bench opinion.  This check tests whether the transition carries the adjudicated amount into the entered judgment.
+
+\subsection{Aggregate measures}
+
+Let $N$ be the number of completed fixture rows, let $c_i=1$ when row $i$ is correct and noninvalid, and let $c_i=0$ otherwise.  The reported accuracy is
+\[
+  A=\frac{1}{N}\sum_{i=1}^{N}c_i.
+\]
+Each fixture has a severity value $s_i$.  The scorer replaces a nonpositive value with 1 and sets $w_i=s_i$ otherwise.  Weighted accuracy is
+\[
+  A_w=\frac{\sum_{i=1}^{N}w_i c_i}{\sum_{i=1}^{N}w_i}.
+\]
+If $v_i=1$ when the row has a nonempty invalid reason, invalid rate is
+\[
+  R_{invalid}=\frac{1}{N}\sum_{i=1}^{N}v_i.
+\]
+
+Suite summaries also report relevant component rates and directional errors.  Binary suites distinguish false grants from false denials or false allows from false disallows.  Rule 56 distinguishes false grants, false denials, and partial mismatches.  Rule 52 distinguishes false plaintiff judgments from false defense judgments.  Rule 58 and Rule 60 report Lean and step rejection counters for noninvalid rows.
+
+Each suite divides its results by fields defined in its fixtures.  Common slices include difficulty tier, issue family, expected reason tag, party, expected disposition, trial mode, and expected sanction.  Slice-level accuracy and weighted accuracy use the same formulas on the selected rows.  These slices identify concentration of errors within the committed fixture set.  They do not estimate prevalence in a court population.
+
+\section{Records and Analysis}
+
+\subsection{Per-row records}
+
+Every suite writes \code{results.jsonl} and \code{summary.json} under the selected output directory.  Generated outputs belong under \code{evals/out/}, which Git ignores.  The runner writes a result after each completed fixture, so a later suite-level failure leaves prior rows available for diagnosis.
+
+A result row retains the fixture fields, constructed pre-action state, selected court and model, prompt source, Lean opportunity, parsed payload, raw response, final state, provider accounting, execution acceptance fields, invalid reason, component scores, and composite outcome.  Model-backed rows add the judge view, rendered model input, turn transcript, and all request-response exchanges.  Deterministic rows encode the opportunity action as a synthetic response for the common scorer and omit model exchanges.
+
+This record supports three forms of inspection.  The input and opportunity show whether the fixture constructed the intended procedural posture.  The exchanges and correction transcript show how the model interacted with the required action schema.  The pre-action state, Lean acceptance, action result, and final state show whether the decision executed as expected.
+
+Eight commands can rescore an existing result file without another model call: Rules 11, 12, 37, 47 question screening, 47 for-cause challenges, 51, 52, and 60.  Rescoring re-parses preserved payload or text fields, recomputes component and composite scores, and writes a new result and summary directory.  Rule 56 and Rule 58 do not expose this command in the current implementation.
+
+\subsection{Comparison design}
+
+The implementation supports comparisons across models, provider request specifications, court profiles, production prompt catalogs, and candidate objectives.  A controlled comparison keeps fixtures, execution mode, court, runtime prompts, request parameters, and scorer revision fixed except for the selected factor.  Provider and model changes require the complete request specification because one model name can route to different inference endpoints.
+
+The three execution modes require distinct labels in an analysis:
+
+\begin{enumerate}
+\item A model-backed production run measures the model, prompt catalog, correction loop, Lean decision validation, and state transition together.
+\item A deterministic production run measures the constructed state, Lean opportunity and payload, and state transition without model behavior.
+\item A counterfactual-model run measures a model after the evaluator removes a deterministic action from the opportunity.
+\end{enumerate}
+
+Comparing a candidate objective with the production objective isolates one prompt component.  It does not establish the performance of a later production catalog until that candidate becomes part of the catalog and receives a production-path run.  Comparing two stochastic models once per fixture also leaves sampling variance unmeasured.  Repeated runs with recorded request specifications and temperatures provide the observations needed to estimate that variance.
+
+Invalid rate requires separate interpretation from accuracy.  Accuracy uses every completed row in its denominator, including invalid rows.  A high invalid rate identifies failures in response format, tool selection, corrections, or executable procedure.  A low invalid rate with low accuracy identifies well-formed actions that fail substantive checks.  The per-row components preserve that distinction.
+
+\section{Limitations}
+
+The fixtures form a hand-authored collection of controlled examples.  The collection does not sample filed cases.  Its accuracy and weighted-accuracy measures describe performance on the committed rows.  They do not estimate error rates over legal disputes, courts, motions, or litigants.  Severity values encode author judgments and have no empirical population calibration.
+
+The suite collection has no documented held-out partition.  Candidate prompts can be read and revised against the same fixtures and scorers used for reporting.  Repeated prompt development on these rows can produce improvements specific to their facts, labels, phrases, or issue distribution.  A separate unreleased set or a declared development and test split would support stronger claims about generalization.
+
+Seven default suites evaluate a model while three evaluate deterministic Lean actions.  Aggregating all ten into one accuracy value would combine different decision sources.  Counterfactual model mode changes the opportunity by deleting its deterministic action, so it does not reproduce the production decision policy for those rules.
+
+The text scorers depend on configured concepts, aliases, and local context rules.  A legally equivalent expression outside the configured forms can fail a required-concept check.  A matched phrase can pass without establishing full legal reasoning.  Rule 52 can count a prohibited concept when the opinion negates, quotes, or rejects it because its prohibited matcher lacks the contextual handling used by Rules 51 and 60.  Reason tags in eight suites remain diagnostics outside the composite correctness conditions.
+
+Most suites model one claim, one pending action, and one selected opportunity.  Their scope covers local judge decisions.  It does not cover long-case behavior, cumulative evidence management, interactions among several motions, lawyer strategy, jury deliberation, or final appellate correctness.  The correction loop tests recovery within one turn, subject to three invalid attempts and the opportunity's decision-step budget.
+
+One command invocation executes one response per selected fixture.  Model sampling, provider behavior, and provider routing can vary across time.  A result therefore identifies one model request specification, prompt revision, court, fixture set, temperature, provider response, and code revision.  Comparisons that omit one of those fields can attribute variation to the wrong component.
+
+The suite aborts on infrastructure and construction failures other than the two typed procedural failures.  Completed rows before an abort remain in the JSONL file, but a partial run does not have the same fixture denominator as a complete run.  Result comparisons require matching fixture identifiers or an explicit common subset.
+
+\section{Conclusion}
+
+ADC's judge evaluations reconstruct controlled procedural states and execute their Lean opportunities through the same runtime components used by cases.  The method combines structured-action validity, suite-specific legal labels, Lean decision acceptance, action execution, and selected final-state effects.  Ten suites provide 220 baseline rows and a 30-row hard extension, with seven model-backed defaults and three deterministic production defaults.  Per-row records retain enough state, prompt, exchange, transition, and scoring data to distinguish substantive errors from protocol and execution failures.  The resulting measures describe the committed fixtures and execution mode.  General claims require held-out cases, repeated sampling, and separate reporting for model-backed, deterministic, and counterfactual runs.
+
+\begingroup
+\small
+\setlength{\emergencystretch}{3em}
+\begin{thebibliography}{99}
+\raggedright
+
+\bibitem{adcrepo}
+AgentCourt, ``Agent District Court,'' \code{adj} revision \code{36316f3}, 2026.  \href{https://github.com/agentcourt/adj/tree/36316f37ba577fdef69b8c6fe1247ce3509eab63/adc}{\code{adc}}
+
+\bibitem{runtime}
+AgentCourt, ``ADC opportunity runner,'' \code{adj} revision \code{36316f3}, 2026.  \href{https://github.com/agentcourt/adj/tree/36316f37ba577fdef69b8c6fe1247ce3509eab63/adc/runtime/runner}{\code{adc/runtime/runner}}
+
+\bibitem{evalassets}
+AgentCourt, ``ADC judge evaluation fixtures and analyses,'' \code{adj} revision \code{36316f3}, 2026.  \href{https://github.com/agentcourt/adj/tree/36316f37ba577fdef69b8c6fe1247ce3509eab63/evals/adc/judge}{\code{evals/adc/judge}}
+
+\bibitem{evalcode}
+AgentCourt, ``ADC judge evaluation implementation,'' \code{adj} revision \code{36316f3}, 2026.  \href{https://github.com/agentcourt/adj/tree/36316f37ba577fdef69b8c6fe1247ce3509eab63/adc/runtime/eval}{\code{adc/runtime/eval}}
+
+\bibitem{arcp}
+AgentCourt, ``Agent Rules for Civil Procedure,'' \code{adj} revision \code{36316f3}, 2026.  \href{https://github.com/agentcourt/adj/blob/36316f37ba577fdef69b8c6fe1247ce3509eab63/adc/docs/ARCP.md}{\code{adc/docs/ARCP.md}}
+
+\bibitem{promptguide}
+AgentCourt, ``Prompt authoring and runtime overrides,'' \code{adj} revision \code{36316f3}, 2026.  \href{https://github.com/agentcourt/adj/blob/36316f37ba577fdef69b8c6fe1247ce3509eab63/docs/prompt-authoring.md}{\code{docs/prompt-authoring.md}}
+
+\end{thebibliography}
+\endgroup
+
+\end{document}
