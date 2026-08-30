@@ -2,9 +2,11 @@
 
 ## Repository Scope
 
-This repository owns the ADC, ARB, AARD, simple, and quick procedures.  Each procedure includes the rules, one-case Go runtime, command-line program, durable record, and tests that its design requires, while ADC, ARB, and AARD also include Lean engines and proofs.  Operational consumers use the documented process interface without importing procedure implementation packages.
+This repository owns complete one-case execution for ADC, ARB, AARD, simple, and quick.  It contains the unified `adjudicate` command, the formal `adc-run`, `aar-run`, and `aard-run` commands, local participant launchers, MCP adapters, prompt catalogs, retained participant state, and native case records.  ADC, ARB, and AARD also include their Lean engines and proofs.
 
-The shared `common/` tree contains code required by more than one procedure.  New shared packages must have at least two current consumers and a narrower API than the code they replace.  Procedure-specific behavior belongs in its procedure tree.
+The shared `common/` tree contains code required by more than one procedure.  The `runtime/` tree contains common one-case supervision and procedure adapters, while `internal/` contains launcher implementation that no external Go package imports.  New shared packages must have at least two current consumers and a narrower API than the code they replace.
+
+The optional `adjservices` repository manages multiple cases, deployment, attestation, artifact publication, reporting, and web applications.  Its service programs execute installed `adj` commands and consume documented private HTTP and artifact interfaces.  No `adj` package imports `adjservices`.
 
 ## Error and Command Policy
 
@@ -363,3 +365,46 @@ A one-fixture Rule 11 command completed through the ADC engine with the producti
 - [x] Run one ADC eval through the production execution path.
 - [x] Run the focused Go tests and local model-pool validation commands.
 - [x] Verify local links, prose structure, terminology, and whitespace.
+
+## ADC payload validation and model-pool accounting
+
+The runner validates the required Rule 60 `granted` Boolean after applying opportunity payload defaults and before calling `ApplyDecision`.  The shared payload boundary covers internal model turns and external role submissions.  Fresh scoring and rescoring both derive `Granted` from the preserved tool payload and classify a missing or non-Boolean value as `malformed_granted`.
+
+The model-pool tool loop accumulates usage and cost across provider rounds.  A later provider failure carries completed-round metadata and tool traces into the written result row while retaining the original error for classification and OpenRouter error details.  The scorer treats either a positive `tool_error_count` or an error in a tool-trace result as a tool-call failure.
+
+`go test ./adc/...`, `uv run python -m unittest discover -s tests -p 'test_*.py' -v`, and `git diff --check` passed.  The Go run covered the production payload boundary and Rule 60 rescore behavior.  The Python tests covered aggregate usage and cost, preservation after a later timeout, result-row persistence, and both metadata- and trace-based tool failures.
+
+- [x] Reject malformed Rule 60 decisions before engine execution.
+- [x] Validate preserved Rule 60 payloads during rescoring.
+- [x] Preserve completed provider-round accounting and tool traces after a later failure.
+- [x] Document and run the model-pool unit-test command.
+
+## Standalone procedure execution
+
+The `adj` repository owns complete one-case execution for Simple, Quick, ARB, ARBD, and ADC.  It contains the unified `adjudicate` command, the formal-procedure run commands, local lawyer launchers, launcher prompt catalogs, and the local Pi lawyer image recipe.  `adjservices` starts installed `adj` commands when a managed service needs a case and retains deployment, attestation, artifact, report, and web responsibilities.
+
+The unified command guide uses the root `make build` target and names every procedure command, MCP command, and working directory in its settings example.  It records the location, permissions, active lifetime, and cleanup of each manual-lawyer skill, while the prompt guide distinguishes same-host loopback access from remote access through a public MCP base URL.  The AAR and AARD specifications assign managed case admission and public routing to `adjservices`, and the one-case runner documentation and command help use launcher terminology.
+
+A live ARB run started both Claude lawyers from `adj`, issued their MCP capabilities, retained their working directories, and enabled native web search and local execution.  The plaintiff read all eleven exhibits, reconstructed their bytes, verified the supplied signature with OpenSSL, searched the web, downloaded a primary text, and sent two work-note updates before its opening.  The run exposed a fixed `/home/user/work-product` journal path in the court prompt even though the headless launcher assigned a different retained directory.  The ARB and ARBD standing prompts now place `work-product/case-notes.md` inside the workspace assigned by the launcher or external harness, and their compiled fallbacks carry the same instruction.
+
+The selected council endpoint returned HTTP 503 maintenance responses from DigitalOcean during that run.  The request client applied its bounded retry policy.  The next live test will use an explicit council model to separate standalone-runner verification from provider-pool availability.
+
+Active temporary-directory prefixes, helper environment variables, MCP bearer-token variable names, and the Codex usage-checkpoint schema now use the `adj` namespace.  Historic experiment outputs retain the namespace recorded when they ran.  Focused tests cover MCP-child startup, process helpers, participant configuration, resumed usage accounting, and unified runner behavior under the current names.
+
+The complete Go test suite, build, vet, and whitespace checks pass.  The full service-side tests, builds, vet, dependency listing, and paired ADC, ARB, and AARD compatibility suites also pass against explicit binaries from this checkout.  These checks reused the existing formal engines and did not rebuild Lean.
+
+- [x] Confirm retained lawyer files, local execution, web search, and incremental work notes in a live ARB run.
+- [x] Remove the fixed journal path from ARB and ARBD prompts and fallbacks.
+- [ ] Complete a fresh standalone ARB case with a working council provider.
+- [x] Run the complete Go tests, builds, and whitespace checks for the repository split.
+
+## ARBD lawyer profiles
+
+ARBD resolves separate plaintiff and defendant profiles for OpenClaw, Pi, Codex, and Claude.  Unified settings use `plaintiff_profile` and `defendant_profile`, while `lawyer_profile` supplies any omitted automatic role.  The `aard-run` command exposes the same per-role runner, provider, model, command, reasoning, authentication, credential, API-key source, and resume settings.
+
+Pi profiles keep the public OpenAI provider and `openai/gpt-5.6-sol` model names.  Subscription authentication reads Codex credentials and the shared agent runtime selects Pi's `openai-codex` provider internally.  Each role receives its own environment, retained work directory, state directory, authentication source, MCP assignment, and participant prompt.
+
+- [x] Add independent ARBD plaintiff and defendant profiles.
+- [x] Add ARBD headless and Pi launcher prompts with compiled fallbacks.
+- [x] Test Pi subscription, role credential separation, settings resolution, command flags, and launcher prompt resolution.
+- [x] Run the focused Go tests, vet checks, and `aard-run` build.

@@ -9,9 +9,11 @@ build:
 	install -m 755 engine/.lake/build/bin/adcengine $(BIN_DIR)/adcengine
 	cd runtime && $(GO_ENV) go build -o ../$(BIN_DIR)/adc ./cmd/adc
 	cd runtime && $(GO_ENV) go build -o ../$(BIN_DIR)/adc-mcp ./cmd/adc-mcp
+	cd .. && $(GO_ENV) go build -buildvcs=false -o adc/$(BIN_DIR)/adc-run ./cmd/adc-run
 
 test:
 	cd runtime && $(GO_ENV) go test ./...
+	cd .. && $(GO_ENV) go test ./runtime/localrun/adc ./cmd/adc-run
 
 prove:
 	cd engine && lake build Proofs

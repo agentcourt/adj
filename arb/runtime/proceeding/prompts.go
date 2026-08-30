@@ -96,7 +96,7 @@ var promptDefinitions = func() []promptDefinition {
 		{
 			id:           promptAttorneyStanding,
 			relativePath: "attorney/standing.md",
-			fallback:     "Represent {{ROLE}}. Follow the current opportunity and the Lawyer API instructions.",
+			fallback:     "Represent {{ROLE}} within the court instructions. Keep work-product/case-notes.md inside the retained case workspace assigned by the launcher or external harness, and update it before each later submission. Follow the current opportunity and the Lawyer API instructions.",
 			tokens:       []string{"ROLE", "PHASE", "OPPORTUNITY_ID"},
 		},
 		{

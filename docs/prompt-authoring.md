@@ -1,8 +1,8 @@
 # Prompt Authoring
 
-The five procedures resolve model-facing instructions and tool descriptions through procedure prompt catalogs.  The public procedure names are Simple, Quick, ARB, ARBD, and ADC.  The `arb` and `arbd` selections use the AAR and AARD core commands.  Each procedure has a checked-in catalog beneath `prompts/` and compiled fallbacks, while Quick, AAR, AARD, and ADC also provide standalone MCP adapters in this repository, so `adj` can run every core and adapter without `adjservices`.
+The five procedures resolve model-facing instructions and tool descriptions through catalogs owned by this repository.  The public procedure names are Simple, Quick, ARB, ARBD, and ADC, with the `arb` and `arbd` selections using the AAR and AARD core commands.  Each procedure has checked-in sources beneath `prompts/` and compiled fallbacks.  Quick, AAR, AARD, and ADC also have MCP and participant-launcher catalogs, and `adj` runs each case from these catalogs.
 
-The command pairs below build from this repository and communicate through each core's private case API.  A caller starts the selected core, starts its adapter against the published case API address, and gives each participant an MCP capability for its assignment.  Simple makes one model request inside its core and therefore has no participant adapter.
+`adjudicate`, `aar-run`, `aard-run`, and `adc-run` start the required one-case components.  The table below names the cores and MCP adapters that those commands coordinate.  A caller can also start a core, attach its adapter to the published private case API, and issue each participant an assignment-bound MCP capability.  Simple makes one model request inside its core and uses only its core catalog.
 
 | Procedure | Core command | Standalone MCP command |
 | --- | --- | --- |
@@ -23,6 +23,48 @@ All relative command-line paths resolve from the working directory of the comman
 Prompt rendering performs literal string replacement.  A token has the exact form `{{TOKEN}}`, with the spelling declared for that catalog entry.  Go template actions, functions, conditionals, loops, and field expressions have no meaning.  A source may omit a declared token, but an undeclared complete token, an unmatched opening `{{`, or an empty rendered prompt returns an error.
 
 The loader validates the source before inserting runtime values.  A proposition, document, record, error message, or other runtime value that contains text such as `{{EXAMPLE}}` remains literal data and does not become a second template pass.  Closing braces without an opening `{{` also remain ordinary prompt text.
+
+## Launcher catalogs
+
+Quick, AAR, AARD, and ADC use launcher catalogs for the first instructions given to automatic participants and for the remote-lawyer skill written for a caller-owned participant.  Simple runs its model request inside the procedure and uses its core catalog.  The launcher catalogs cover MCP connection mechanics, the wait and submission loop, retained work, search policy, work notes, and terminal conditions, while the procedure and MCP catalogs provide the substantive case instructions and tool descriptions.
+
+The unified settings fields are `launcher_prompt_dir` for a complete launcher catalog and `launcher_prompt_files` for a partial ID-to-path map.  The standalone `aar-run`, `aard-run`, and `adc-run` commands expose the same choices through `--launcher-prompt-dir` and repeatable `--launcher-prompt-file ID=PATH`; their `--prompt-dir` and `--prompt-file` flags select procedure and MCP sources.  The unified settings loader resolves all four prompt settings relative to the settings file, while direct command-line paths resolve from the command's working directory.
+
+Launcher resolution has four levels, listed from lowest to highest precedence: the compiled fallback, the conventional path beneath the process working directory, the corresponding file in `launcher_prompt_dir`, and an individual path in `launcher_prompt_files`.  Conventional files begin at `prompts/PROCEDURE/`, where the procedure directory is `quick`, `arb`, `arbd`, or `adc`.  A missing conventional file selects the fallback, while an unreadable complete-directory file or individual override returns an error.  A complete directory must supply every launcher entry that lacks an individual override.
+
+| Procedure | Launcher ID | Relative path |
+| --- | --- | --- |
+| Quick | `participant` | `participants/default.md` |
+| Quick | `participant.pi` | `participants/pi.md` |
+| Quick | `skill.openclaw` | `skills/openclaw-remote.md` |
+| AAR | `participant.openclaw` | `participants/openclaw.md` |
+| AAR | `participant.headless` | `participants/headless.md` |
+| AAR | `participant.pi` | `participants/pi.md` |
+| AAR | `skill.openclaw` | `skills/openclaw-remote.md` |
+| AAR | `council.pi` | `council/pi.md` |
+| AARD | `participant.openclaw` | `participants/openclaw.md` |
+| AARD | `participant.headless` | `participants/headless.md` |
+| AARD | `participant.pi` | `participants/pi.md` |
+| AARD | `skill.openclaw` | `skills/openclaw-remote.md` |
+| AARD | `council.pi` | `council/pi.md` |
+| ADC | `participant.openclaw` | `participants/openclaw.md` |
+| ADC | `participant.pi` | `participants/pi.md` |
+| ADC | `skill.openclaw` | `skills/openclaw-remote.md` |
+| ADC | `juror.pi` | `jurors/pi.md` |
+
+| Procedures and launcher IDs | Available tokens |
+| --- | --- |
+| Quick `participant`, `participant.pi` | `{{ROLE}}`, `{{CASE}}`, `{{SERVER}}`, `{{WORKSPACE}}`, `{{EVIDENCE_DIR}}` |
+| AAR `participant.openclaw`, `participant.headless`, `participant.pi` | `{{CASE_ID}}`, `{{ROLE_ID}}`, `{{MCP_SERVER}}`, `{{WORKSPACE}}`, `{{SEARCH_INSTRUCTIONS}}` |
+| AARD `participant.openclaw`, `participant.headless`, `participant.pi` | `{{CASE_ID}}`, `{{ROLE_ID}}`, `{{MCP_SERVER}}`, `{{WORKSPACE}}`, `{{SEARCH_INSTRUCTIONS}}` |
+| ADC `participant.openclaw`, `participant.pi` | `{{CASE_ID}}`, `{{ROLE_ID}}`, `{{MCP_SERVER}}`, `{{WORKSPACE}}`, `{{SEARCH_INSTRUCTIONS}}` |
+| Quick, AAR, AARD, and ADC `skill.openclaw` | `{{CASE_ID}}`, `{{ROLE_ID}}`, `{{MCP_SERVER}}`, `{{MCP_URL}}`, `{{MCP_JSON}}`, `{{SEARCH_INSTRUCTIONS}}` |
+| AAR and AARD `council.pi` | `{{CASE_ID}}`, `{{MEMBER_ID}}`, `{{MCP_SERVER}}` |
+| ADC `juror.pi` | `{{CASE_ID}}`, `{{PRINCIPAL_ID}}`, `{{OPPORTUNITY_ID}}`, `{{OPPORTUNITY_PHASE}}`, `{{MCP_SERVER}}` |
+
+The formal participant entries require `{{WORKSPACE}}` and `{{SEARCH_INSTRUCTIONS}}`, and every `skill.openclaw` entry requires `{{SEARCH_INSTRUCTIONS}}`.  Other declared tokens may be omitted.  Quick's participant entries use absolute retained-work and staged-evidence paths for Codex and Claude, `/home/user/work` and `/home/user/evidence` for Pi, and `/home/node/work` and `/home/node/evidence` for OpenClaw.  Formal participant entries use the same runner-specific workspace paths.
+
+The `auto_lawyers` setting accepts `both`, `plaintiff`, `defendant`, or `none` and defaults to `both`.  The launcher starts the selected automatic roles and writes a mode-`0600` `skill.openclaw` file for each other lawyer, using a capability bound to that role.  For a manual lawyer on the same host, `mcp_listen` should use `127.0.0.1:0`.  The generated skill contains the selected loopback port.  For a remote manual lawyer, `mcp_listen` must bind an address that accepts the intended connection, and `mcp_public_base_url` must supply the externally reachable HTTP or HTTPS base URL placed in the skill.  A wildcard listener with a manual lawyer requires `mcp_public_base_url`.  The direct formal commands expose these values as `--auto-lawyers`, `--mcp-listen`, and `--mcp-public-base-url`.
 
 ## Core catalogs
 
@@ -123,9 +165,9 @@ An adapter validates its complete MCP subset when it starts.  Repeated `--prompt
 
 Each MCP command has `keygen`, `issue`, and `serve` modes.  `keygen --signing-key-file PATH` creates a new private key file with mode `0600` and fails when the path exists.  `serve` requires the same `--signing-key-file PATH`, while `--api-bearer-token` remains available for authentication from the adapter to its case API.
 
-A key file contains `adjmcpkey1.` followed by the unpadded base64url encoding of at least 32 key bytes and one final newline.  A capability has the form `adjmcp1.PAYLOAD.SIGNATURE`, where the payload is the unpadded base64url encoding of JSON fields `version`, `audience`, `case_id`, `assignment_type`, and `principal_id` in that order, with `version` fixed at `adj.mcp.capability.v1`.  The signature is HMAC-SHA-256 over `adj.mcp.capability.v1`, one newline, and the encoded payload segment.  A capability remains valid for the lifetime of the server process that loaded its signing key, and stopping that process revokes the capability.  A managed launcher removes the key file after server readiness, while a standalone caller removes it after shutdown to prevent reuse.
+A key file contains `adjmcpkey1.` followed by the unpadded base64url encoding of at least 32 key bytes and one final newline.  A capability has the form `adjmcp1.PAYLOAD.SIGNATURE`, where the payload is the unpadded base64url encoding of JSON fields `version`, `audience`, `case_id`, `assignment_type`, and `principal_id` in that order, with `version` fixed at `adj.mcp.capability.v1`.  The signature is HMAC-SHA-256 over `adj.mcp.capability.v1`, one newline, and the encoded payload segment.  A capability remains valid for the lifetime of the server process that loaded its signing key, and stopping that process revokes the capability.  An `adj` one-case launcher removes the key file after server readiness, while a standalone caller removes it after shutdown to prevent reuse.
 
-The signing-key file grants authority to issue every participant capability and must remain outside participant-readable filesystems.  Mode `0600` does not isolate processes running under the same Unix account.  Managed launchers remove the private key file before participants start.
+The signing-key file grants authority to issue every participant capability and must remain outside participant-readable filesystems.  Mode `0600` does not isolate processes running under the same Unix account.  `adjudicate`, `aar-run`, `aard-run`, and `adc-run` remove the private key file before starting participants.
 
 `issue` prints one bearer capability bound to a procedure, case, assignment type, and principal.  Quick accepts `--role-id plaintiff`, `--role-id defendant`, or `--role-id observer`.  AAR and AARD accept those role IDs or `--member-id ID` for a council member, while ADC accepts a plaintiff, defendant, or observer role, or `--role-id juror --principal-id ID`.
 
@@ -247,12 +289,12 @@ adc-mcp issue \
 
 ## Catalog boundary
 
-The catalogs own text that a model reads as instructions or descriptions.  This includes role prompts, assembled case and document text, search guidance, correction and tool-result guidance, case-file attachment text, council and juror prompts, MCP session and wait-state guidance, core and MCP tool descriptions, and model-facing schema-property descriptions.  Replacing that text changes how a participant understands the procedure without changing the procedure's authority.
+The catalogs own text that a model reads as instructions or descriptions.  This includes launcher bootstrap text, remote participant skills, role prompts, assembled case and document text, search guidance, correction and tool-result guidance, case-file attachment text, council and juror prompts, MCP session and wait-state guidance, core and MCP tool descriptions, and model-facing schema-property descriptions.  Replacing that text changes how a participant understands the procedure without changing the procedure's authority.
 
 Code owns tool names, JSON-schema structure, enum values, HTTP and MCP routes, authentication, role and case binding, opportunity identity, turn order, deadlines, attempt accounting, evidence visibility, state transitions, record formats, and validation.  API and protocol errors also remain code-owned, even when cataloged guidance explains the resulting state to a model.  A prompt cannot grant a tool, relax a limit, admit evidence, alter a vote rule, or make an invalid action valid.
 
 ## Maintaining prompt sets
 
-A complete experimental set preserves the catalog directory layout and uses one directory per revision.  A partial experiment names only the changed IDs through repeated `--prompt-file` flags, leaving the remaining entries to a complete directory, the conventional tree, or compiled fallbacks.  The run record and experiment notes retain the command, prompt paths, models, documents, procedure settings, tool activity, source use, accepted filings, decision rationale, elapsed time, token use, and provider cost.
+A complete experimental set preserves the catalog directory layout and uses one directory per revision.  A partial experiment names changed procedure or MCP IDs through repeated `--prompt-file` flags and changed launcher IDs through repeated `--launcher-prompt-file` flags, leaving the remaining entries to a complete directory, the conventional tree, or compiled fallbacks.  The run record and experiment notes retain the command, prompt paths, models, documents, procedure settings, tool activity, source use, accepted filings, decision rationale, elapsed time, token use, and provider cost.
 
 Prompt changes require representative cases whose evidence demands differ.  Representative cases include ordinary established facts, time-dependent public facts, conflicting sources, local files, signatures, PDFs, images, audiovisual material, and evidence that benefits from computation or transformation.  Evaluation examines whether the participant used the available sources and tools, read the supplied files, respected the evidentiary boundary, filed the required action, and stopped at the correct terminal condition.

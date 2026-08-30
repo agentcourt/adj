@@ -5,7 +5,47 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"sort"
+	"strings"
 )
+
+type Assignments struct {
+	values map[string]string
+}
+
+func (a *Assignments) Set(value string) error {
+	key, path, ok := strings.Cut(value, "=")
+	key = strings.TrimSpace(key)
+	path = strings.TrimSpace(path)
+	if !ok || key == "" || path == "" {
+		return fmt.Errorf("assignment must have the form ID=PATH")
+	}
+	if a.values == nil {
+		a.values = make(map[string]string)
+	}
+	if _, exists := a.values[key]; exists {
+		return fmt.Errorf("assignment ID %q was repeated", key)
+	}
+	a.values[key] = path
+	return nil
+}
+
+func (a *Assignments) String() string {
+	values := make([]string, 0, len(a.values))
+	for key, path := range a.values {
+		values = append(values, key+"="+path)
+	}
+	sort.Strings(values)
+	return strings.Join(values, ",")
+}
+
+func (a *Assignments) Map() map[string]string {
+	result := make(map[string]string, len(a.values))
+	for key, path := range a.values {
+		result[key] = path
+	}
+	return result
+}
 
 type ErrorWriter struct {
 	dst io.Writer

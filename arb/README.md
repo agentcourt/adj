@@ -31,7 +31,7 @@ make test
 make prove
 ```
 
-`make build` writes `.bin/aar`, `.bin/aar-mcp`, and `.bin/aarengine`.  `aar-mcp` exposes the running core's participant APIs to caller-owned lawyers and council members.  The [prompt-authoring guide](../docs/prompt-authoring.md#mcp-capabilities) documents MCP key creation, assignment capabilities, and server startup.  `make test` rebuilds `.bin/aarengine` and then runs the Go runtime tests against that binary.  `make prove` builds the Lean proof tree.
+`make build` writes `.bin/aar`, `.bin/aar-mcp`, `.bin/aar-run`, and `.bin/aarengine`.  `aar-mcp` exposes the running core's participant APIs to caller-owned lawyers and council members.  `aar-run` starts the core, MCP adapter, selected local lawyers, and council, or issues MCP capabilities for caller-owned lawyers.  The [prompt-authoring guide](../docs/prompt-authoring.md#mcp-capabilities) documents MCP key creation, assignment capabilities, and server startup.  `make test` rebuilds `.bin/aarengine` and then runs the Go runtime tests against that binary.  `make prove` builds the Lean proof tree.
 
 ## First Run
 

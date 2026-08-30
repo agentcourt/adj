@@ -2,7 +2,7 @@
 
 ## Scope
 
-This specification defines the external behavior of one `aar case` process.  It covers process startup, standard streams, the private Lawyer and Council APIs, records, results, and participant failures.  Multi-case management and participant transport belong to the `adjservices` repository.
+This specification defines the external behavior of one `aar case` process.  It covers process startup, standard streams, the private Lawyer and Council APIs, records, results, and participant failures.  The `adjservices` repository owns managed case admission and public routing.
 
 ## Process Model
 

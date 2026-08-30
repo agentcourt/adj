@@ -233,7 +233,22 @@ func ensureParentDir(path string) error {
 }
 
 func defaultEngineCommand() string {
-	return defaultADCPath(".bin", "adcengine")
+	executablePath, err := os.Executable()
+	if err != nil {
+		executablePath = ""
+	}
+	return defaultEngineCommandFrom(executablePath, defaultADCPath(".bin", "adcengine"))
+}
+
+func defaultEngineCommandFrom(executablePath string, fallback string) string {
+	executablePath = strings.TrimSpace(executablePath)
+	if executablePath != "" {
+		candidate := filepath.Join(filepath.Dir(executablePath), "adcengine")
+		if fileExists(candidate) {
+			return candidate
+		}
+	}
+	return fallback
 }
 
 func defaultADCPath(parts ...string) string {

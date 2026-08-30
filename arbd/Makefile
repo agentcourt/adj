@@ -13,9 +13,11 @@ aardengine:
 build: aardengine
 	cd runtime && $(GO_ENV) go build -o ../$(BIN_DIR)/aard ./cmd/aard
 	cd runtime && $(GO_ENV) go build -o ../$(BIN_DIR)/aard-mcp ./cmd/aard-mcp
+	cd .. && $(GO_ENV) go build -buildvcs=false -o arbd/$(BIN_DIR)/aard-run ./cmd/aard-run
 
 test: build
 	cd runtime && $(GO_ENV) go test -p 1 -parallel 1 ./...
+	cd .. && $(GO_ENV) go test -p 1 -parallel 1 ./runtime/localrun/arbd ./cmd/aard-run
 
 prove:
 	cd engine && LEAN_NUM_THREADS=1 lake build Proofs

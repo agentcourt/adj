@@ -24,7 +24,7 @@ The manual documents the core commands, case-owned HTTP APIs, outputs, and certi
 
 ## Build
 
-Build from `arbd/` with the targets below.  `make build` writes `.bin/aard`, `.bin/aard-mcp`, and `.bin/aardengine`.  `aard-mcp` exposes the running core's participant APIs to caller-owned lawyers and council members.  The [prompt-authoring guide](../docs/prompt-authoring.md#mcp-capabilities) documents MCP key creation, assignment capabilities, and server startup.  `make test` depends on that build and therefore rebuilds `aardengine` before the Go tests.  `make prove` checks the Lean proof tree separately.
+Build from `arbd/` with the targets below.  `make build` writes `.bin/aard`, `.bin/aard-mcp`, `.bin/aard-run`, and `.bin/aardengine`.  `aard-mcp` exposes the running core's participant APIs to caller-owned lawyers and council members.  `aard-run` starts the core, MCP adapter, council, and an independently selected OpenClaw, Pi, Codex, or Claude runner for each automatic lawyer role.  It issues MCP capabilities for caller-owned lawyer roles.  The [prompt-authoring guide](../docs/prompt-authoring.md#mcp-capabilities) documents MCP key creation, assignment capabilities, and server startup.  `make test` depends on that build and therefore rebuilds `aardengine` before the Go tests.  `make prove` checks the Lean proof tree separately.
 
 ```bash
 make build

@@ -1,6 +1,6 @@
 # Adjudication Core
 
-The [`agentcourt/adj`](https://github.com/agentcourt/adj) repository contains five one-case adjudication procedures: ADC, ARB, AARD, simple, and quick.  ADC, ARB, and AARD use Lean engines, replay proofs, Go runtimes, participant APIs, and certificate verification.  Simple and quick are smaller Go procedures for direct model decisions and one-round adversarial decisions.  The repository also provides standalone MCP adapters for every procedure with external participants.  Multi-case services, local-agent launchers, deployment programs, and web applications live in the [`agentcourt/adjservices`](https://github.com/agentcourt/adjservices) repository.
+The [`agentcourt/adj`](https://github.com/agentcourt/adj) repository contains five one-case adjudication procedures: ADC, ARB, AARD, simple, and quick.  It owns complete one-case execution, including procedure runtimes, local participant launchers, MCP adapters, prompts, records, and verification.  ADC, ARB, and AARD use Lean engines and replay proofs, while simple and quick provide direct model decisions and one-round adversarial decisions.  The optional [`agentcourt/adjservices`](https://github.com/agentcourt/adjservices) repository provides managed multi-case services, deployment, web applications, and reporting by executing commands installed from this repository.
 
 ## Procedures
 
@@ -16,9 +16,12 @@ The three formal procedures use Lean to control procedural phases, opportunities
 
 ## Build and Test
 
-Go 1.25 builds all five procedures, and Lean 4.32.0 builds the ADC, ARB, and AARD engines and proof trees.  Each procedure Makefile writes its commands beneath that procedure's `.bin/` directory.  The Simple and Quick Makefiles run only Go builds and tests, while the three formal-procedure Makefiles also build their Lean engines and proof trees.
+Go 1.25 builds all five procedures, and Lean 4.32.0 builds the ADC, ARB, and AARD engines and proof trees.  The root Makefile builds the procedure commands, the three formal local-run commands, and `.bin/adjudicate`.  Each procedure Makefile writes its commands beneath that procedure's `.bin/` directory, including `aar-run`, `aard-run`, or `adc-run` for a complete formal case with local or remote lawyers.
 
 ```bash
+make build
+make test
+
 make -C adc build test prove
 make -C arb build test prove
 make -C arbd build test prove
@@ -70,11 +73,16 @@ quick/.bin/quick case \
   --council-size 3 \
   --required-votes 2 \
   --evidence-standard preponderance_of_the_evidence \
+  --lawyerapi-bearer-token-file ./private/quick-caseapi.token \
   --max-document-files 100 \
   --max-document-file-bytes 1048576 \
   --max-documents-total-bytes 8388608 \
   --allow-api-key
 ```
+
+This command waits for external plaintiff and defendant clients to connect through `quick-mcp`.  The [Quick guide](quick/README.md) describes the lawyer API and client setup.
+
+The unified `.bin/adjudicate` command selects any of the five procedures from one settings file.  It starts the selected core, MCP adapter, automatic participants, and council or jury processes required for one case.  A procedure can instead set `auto_lawyers` to `plaintiff`, `defendant`, or `none` and supply the remaining lawyer through the generated MCP capability.  The [unified command reference](adjudication-cli.md) defines its request, settings, participant profiles, and result.
 
 Quick uses `./pool.jsonl` when present, then the shared `common/data/personas/pool.jsonl`.  `--council-pool` and `--common-root` override those paths.  The resolved pool path appears in `input.json`.
 
@@ -86,7 +94,7 @@ Every procedure writes `case-manifest.json`, `run.json`, and an event record in 
 
 ## Documentation
 
-The [ADC manual](adc/manual.md), [ARB manual](arb/manual.md), and [AARD manual](arbd/manual.md) document their commands, case APIs, records, failure rules, and certificate verification.  The [simple manual](simple/manual.md) defines its direct-model request and record, while the [quick guide](quick/README.md) defines its lawyer API, council execution, and record.  The formal-procedure `docs/` directories contain governing rules, practice guides, engine notes, and proof references, and the [cross-procedure proof status](docs/proof-notes.md) summarizes the maintained Lean results.
+The [unified command reference](adjudication-cli.md) documents one-case execution across the five procedures, and the [prompt-authoring guide](docs/prompt-authoring.md) covers core, MCP, and launcher prompt catalogs.  The [ADC manual](adc/manual.md), [ARB manual](arb/manual.md), and [AARD manual](arbd/manual.md) document procedure commands, case APIs, records, failure rules, and certificate verification.  The [simple manual](simple/manual.md) defines its direct-model request and record, while the [quick guide](quick/README.md) defines its lawyer API, council execution, and record.  The formal-procedure `docs/` directories contain governing rules, practice guides, engine notes, and proof references, and the [cross-procedure proof status](docs/proof-notes.md) summarizes the maintained Lean results.
 
 ## License
 

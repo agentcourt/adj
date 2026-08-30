@@ -2,7 +2,7 @@
 
 ## Scope
 
-This specification defines the external behavior of one `aard case` process and its certificate verifier.  It covers startup, standard streams, private Lawyer and Council APIs, evidence custody, durable records, and participant failures.  Multi-case management and participant transport belong to the `adjservices` repository.
+This specification defines the external behavior of one `aard case` process and its certificate verifier.  It covers startup, standard streams, private Lawyer and Council APIs, evidence custody, durable records, and participant failures.  The `adjservices` repository owns managed case admission and public routing.
 
 ## Process Model
 
@@ -123,5 +123,3 @@ Every Lean invocation has a finite engine timeout, and a participant step also o
 ## Test Obligations
 
 Process tests use the real command and private APIs where the behavior crosses package boundaries.  They cover startup claims, opportunity identity, request strictness, error classes, deadlines, attempt exhaustion, evidence custody, submission publication, participant failure, final snapshots, durable records, process cleanup, and certificate tampering.  The [implementation record](update.md#verification-results) gives the exact in-tree proof, runtime, formatting, and documentation checks.
-
-The complete in-tree Lean, Go, race, vet, process, proof-catalog, documentation, and diff checks pass.  The direct AARD service now stores its child streams beneath its registry, leaving the requested output directory to the core's exclusive claim.  The paired AARD compatibility package passes against the rebuilt service commands and current AARD binaries.

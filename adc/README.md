@@ -4,7 +4,7 @@ Agent District Court (ADC) implements civil adjudication with a Lean rule engine
 
 ADC accepts either a complaint or a scenario JSON file.  Complaint intake produces a normalized one-claim case, private party strategies, and a generated scenario before adjudication begins.  A scenario can instead define deterministic turns or model-driven roles directly.
 
-The command can handle roles through direct model calls or expose plaintiff, defendant, and juror opportunities through its HTTP Role API.  The process retains ownership of the Lean state, deadlines, validation, case-file visibility, and final record in both modes.  This repository owns `adc-mcp` and the runtime components required for standalone ADC operation.  The `adjservices` repository supplies optional agent launchers, Clerk services, attestation, and deployment material.
+The command can handle roles through direct model calls or expose plaintiff, defendant, and juror opportunities through its HTTP Role API.  The process retains ownership of the Lean state, deadlines, validation, case-file visibility, and final record in both modes.  This repository owns `adc-mcp`, `adc-run`, the participant launchers, and the runtime components required for standalone ADC operation.  The `adjservices` repository supplies optional Clerk services, attestation, deployment, reporting, and web programs.
 
 ## Documentation
 

@@ -6,6 +6,30 @@ import (
 	"testing"
 )
 
+func TestDefaultEngineCommandPrefersExecutableSibling(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	executablePath := filepath.Join(dir, "adc")
+	enginePath := filepath.Join(dir, "adcengine")
+	writePathTestFile(t, enginePath)
+	fallback := filepath.Join(t.TempDir(), "adc", ".bin", "adcengine")
+
+	if got := defaultEngineCommandFrom(executablePath, fallback); got != enginePath {
+		t.Fatalf("defaultEngineCommandFrom = %q, want %q", got, enginePath)
+	}
+}
+
+func TestDefaultEngineCommandUsesFallbackWithoutExecutableSibling(t *testing.T) {
+	t.Parallel()
+
+	executablePath := filepath.Join(t.TempDir(), "adc")
+	fallback := filepath.Join(t.TempDir(), "adc", ".bin", "adcengine")
+	if got := defaultEngineCommandFrom(executablePath, fallback); got != fallback {
+		t.Fatalf("defaultEngineCommandFrom = %q, want %q", got, fallback)
+	}
+}
+
 func TestDefaultADCPathStopsAtModuleRoot(t *testing.T) {
 	root := t.TempDir()
 	moduleRoot := filepath.Join(root, "work", "adj")

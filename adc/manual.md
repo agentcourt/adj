@@ -8,7 +8,7 @@ The case process owns the Lean state, current opportunity, case-file visibility,
 
 `adc case` prepares and runs either a complaint or a proposition.  `adc scenario` runs an existing scenario, including a deterministic offline scenario.  The remaining commands prepare inputs, validate scenarios, inspect records, and replay completed cases.
 
-All examples assume the working directory is `adc/`.  `make build` writes `.bin/adc`, `.bin/adc-mcp`, and `.bin/adcengine`.  The `adc-mcp` command exposes a running case to caller-owned lawyers and jurors.  The `adjservices` repository supplies optional Clerk processes, agent launchers, attestation, and deployment material.
+All examples assume the working directory is `adc/`.  `make build` writes `.bin/adc`, `.bin/adc-mcp`, `.bin/adc-run`, and `.bin/adcengine`.  The `adc-mcp` command exposes a running case to caller-owned lawyers and jurors, while `adc-run` can start local lawyers or issue MCP capabilities for caller-owned lawyers.  The `adjservices` repository supplies optional Clerk processes, attestation, deployment, reporting, and web programs.
 
 ## Commands
 
