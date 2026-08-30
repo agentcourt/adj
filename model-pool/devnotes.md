@@ -1,5 +1,11 @@
 # Development Notes
 
+## 2026-08-30 Default Pool Installation
+
+Copied `results/pool-20260828-score-gt-070-r2/pool/pool.jsonl` to `common/data/personas/pool.jsonl`.  The shared runtime default now contains 100 distinct model IDs, 30 providers, 100 endpoint variants, and the `personas/generic.md` persona reference.  Quick, ARB, ARBD, and ADC use this file when the caller supplies neither an explicit pool nor a working-directory `pool.jsonl`.
+
+Updated the Quick example settings to use the shared pool with five council members and three required votes.  Live runs of `ex06`, `ex08`, and `ex11` recorded the shared pool path, and all 15 selected endpoint variants matched installed pool rows.  `ex06` and `ex11` received five votes; `ex08` received three votes after StreamLake returned HTTP 429 and AionLabs returned HTTP 400.  The three runs recorded $0.1671622148 in OpenRouter costs.
+
 ## 2026-08-29 Model-Pool Generation
 
 Run `pool-20260828-score-gt-070-r2` reused the completed endpoint screen and evaluation results, retained 283 configurations with no provider errors and a deliberation score greater than `0.70`, and evaluated each configuration five times on each of 14 genes.  The runner used two gene processes.  It wrote all 19,810 expected records: 19,494 successful completions, 316 completion errors, 19,494 embeddings, and no embedding errors.  Three successful completions lacked a cost observation.  The observed completion cost was `$25.780984833363004`.

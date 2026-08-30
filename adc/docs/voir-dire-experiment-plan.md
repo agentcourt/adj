@@ -14,8 +14,8 @@ attorney-instruction text and tested in full runs.
 
 A juror is a pool record: a model, its configuration (provider,
 quantization, inference parameters), and a persona.  The current pool
-is `common/data/personas/pool.jsonl` (25 records); the persona files
-are in `common/etc/personas/persons/` (14).  The lawyer never sees any
+is `common/data/personas/pool.jsonl` (100 records); every record uses
+`common/etc/personas/generic.md`.  The lawyer never sees any
 of that.  The lawyer sees answers: eight standard questionnaire
 answers per candidate, plus one oral question per side per candidate,
 screened by the judge.  Each side gets one for-cause challenge and one
@@ -116,10 +116,11 @@ work reports.
 
 Loop findings are hypotheses until the harness confirms a sample.
 The interrogation format differs from the runtime format, where a
-juror gets one packet and votes once.  The pool is small (25 records,
-14 personas), so held-out validation is thin, and provider behavior
-can drift after the pool snapshot (2026-06-18).  Rules must also hold
-on new cases, which is why the full test uses unseen complaints.
+juror gets one packet and votes once.  The pool contains 100 records
+and one persona, so persona-level validation is unavailable, and
+provider behavior can drift after the pool snapshot (2026-08-25).
+Rules must also hold on new cases, which is why the full test uses
+unseen complaints.
 
 ## Open Questions
 

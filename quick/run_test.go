@@ -1329,7 +1329,7 @@ func TestLoadCouncilExcludesRecordsWithoutToolSupport(t *testing.T) {
 	}
 }
 
-func TestSharedCouncilPoolPreservesPinnedEndpointVariants(t *testing.T) {
+func TestSharedCouncilPoolPreservesPinnedEndpointRoutes(t *testing.T) {
 	poolPath, err := filepath.Abs(filepath.Join("..", "common", "data", "personas", "pool.jsonl"))
 	if err != nil {
 		t.Fatal(err)
@@ -1341,7 +1341,6 @@ func TestSharedCouncilPoolPreservesPinnedEndpointVariants(t *testing.T) {
 	if len(candidates) == 0 {
 		t.Fatal("shared council pool has no tool-compatible candidates")
 	}
-	variantsByModel := make(map[string]map[string]struct{})
 	for _, candidate := range candidates {
 		member := councilMemberFromCandidate(candidate, "C1")
 		if member.EndpointVariantID == "" || member.ProviderName == "" || member.EndpointTag == "" {
@@ -1353,19 +1352,7 @@ func TestSharedCouncilPoolPreservesPinnedEndpointVariants(t *testing.T) {
 		if member.ProviderAllowFallbacks == nil || *member.ProviderAllowFallbacks || member.ProviderRequireParameters == nil || !*member.ProviderRequireParameters {
 			t.Fatalf("shared council candidate provider flags = allow_fallbacks %v, require_parameters %v", member.ProviderAllowFallbacks, member.ProviderRequireParameters)
 		}
-		variants := variantsByModel[member.Model]
-		if variants == nil {
-			variants = make(map[string]struct{})
-			variantsByModel[member.Model] = variants
-		}
-		variants[member.EndpointVariantID] = struct{}{}
 	}
-	for _, variants := range variantsByModel {
-		if len(variants) > 1 {
-			return
-		}
-	}
-	t.Fatal("shared council pool contains no repeated model with distinct endpoint variants")
 }
 
 func TestCouncilMemberJSONIncludesRouteAndOmitsRequestSpec(t *testing.T) {
