@@ -981,33 +981,26 @@ func buildActionSchemas() map[string]map[string]any {
 
 	register(schemaObj(
 		map[string]any{
-			"reason":      map[string]any{"type": "string"},
-			"scope":       map[string]any{"type": "string"},
-			"entered_at":  map[string]any{"type": "string"},
-			"duration":    map[string]any{"type": "string"},
-			"stay_type":   map[string]any{"type": "string"},
-			"order_text":  map[string]any{"type": "string"},
-			"target_case": map[string]any{"type": "string"},
+			"start_on": map[string]any{"type": "string"},
+			"end_on":   map[string]any{"type": "string"},
+			"reason":   map[string]any{"type": "string"},
 		},
 		"reason",
 	), "order_discretionary_stay")
 
 	register(schemaObj(
 		map[string]any{
-			"reason":    map[string]any{"type": "string"},
-			"lifted_at": map[string]any{"type": "string"},
+			"stay_index": map[string]any{"type": "integer", "minimum": 0},
+			"reason":     map[string]any{"type": "string"},
 		},
+		"stay_index",
 	), "lift_stay")
 
 	register(schemaObj(
 		map[string]any{
-			"amount":     map[string]any{"type": "number"},
-			"bond_id":    map[string]any{"type": "string"},
-			"posted_by":  map[string]any{"type": "string"},
-			"posted_at":  map[string]any{"type": "string"},
-			"conditions": map[string]any{"type": "string"},
+			"effective_until": map[string]any{"type": "string"},
+			"note":            map[string]any{"type": "string"},
 		},
-		"amount",
 	), "post_supersedeas_bond")
 
 	register(schemaObj(
@@ -1022,9 +1015,9 @@ func buildActionSchemas() map[string]map[string]any {
 
 	register(schemaObj(
 		map[string]any{
-			"motion_index":   map[string]any{"type": "integer", "minimum": 0},
-			"granted":        map[string]any{"type": "boolean"},
-			"relief_summary": map[string]any{"type": "string"},
+			"motion_index": map[string]any{"type": "integer", "minimum": 0},
+			"granted":      map[string]any{"type": "boolean"},
+			"order_text":   map[string]any{"type": "string"},
 		},
 		"motion_index",
 		"granted",

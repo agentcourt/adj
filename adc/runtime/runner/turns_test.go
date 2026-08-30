@@ -160,6 +160,43 @@ func TestCompletionResultPayloadIncludesMalformedToolCallDetails(t *testing.T) {
 	}
 }
 
+func TestApplyOpportunityPayloadDefaultsRequiresRule60Granted(t *testing.T) {
+	r := &Runner{}
+	tests := []struct {
+		name      string
+		arguments map[string]any
+		wantIssue bool
+	}{
+		{name: "missing", arguments: map[string]any{}, wantIssue: true},
+		{name: "non-Boolean", arguments: map[string]any{"granted": "false"}, wantIssue: true},
+		{name: "false", arguments: map[string]any{"granted": false}},
+		{name: "true", arguments: map[string]any{"granted": true}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			payload, issue, err := r.applyOpportunityPayloadDefaults("resolve_rule60_motion", test.arguments, leanOpportunity{})
+			if err != nil {
+				t.Fatalf("applyOpportunityPayloadDefaults error = %v", err)
+			}
+			if got := issue != nil; got != test.wantIssue {
+				t.Fatalf("issue = %#v, want issue %t", issue, test.wantIssue)
+			}
+			if test.wantIssue {
+				if issue.Error != "required field granted must be a Boolean" {
+					t.Fatalf("issue error = %q", issue.Error)
+				}
+				if payload != nil {
+					t.Fatalf("payload = %#v, want nil", payload)
+				}
+				return
+			}
+			if payload["granted"] != test.arguments["granted"] {
+				t.Fatalf("payload = %#v", payload)
+			}
+		})
+	}
+}
+
 func TestEnforceResponseSizeLimit(t *testing.T) {
 	resp := openaiapi.Response{Text: "0123456789"}
 	if err := enforceResponseSizeLimit(resp, 0); err != nil {

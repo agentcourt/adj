@@ -29,6 +29,7 @@ const (
 	directMaxOutputTokens = 1024
 	piMaxOutputTokens     = 4096
 	piMCPServer           = "aar"
+	piSubmissionExitGrace = 5 * time.Second
 )
 
 type options struct {
@@ -60,6 +61,7 @@ type checkResult struct {
 	MetadataError        string             `json:"metadata_error,omitempty"`
 	ExitCode             *int               `json:"exit_code,omitempty"`
 	ContainerName        string             `json:"container_name,omitempty"`
+	StoppedAfterVote     bool               `json:"stopped_after_vote,omitempty"`
 	ToolCalls            []recordedToolCall `json:"tool_calls,omitempty"`
 }
 
@@ -267,7 +269,8 @@ func runDirectCheck(parent context.Context, opts options, spec modelrequest.Spec
 	if err != nil {
 		result.Error = err.Error()
 		result.ErrorClass = string(openaiapi.ErrorClass(err))
-		result.InfrastructureError = openaiapi.ErrorClass(err) == openaiapi.ProviderErrorAuthentication
+		result.InfrastructureError = openaiapi.ErrorClass(err) == openaiapi.ProviderErrorAuthentication &&
+			!openaiapi.IsOpenRouterConfigurationError(err)
 		return result
 	}
 	parsed, err := parseCouncilVote(response)
@@ -332,10 +335,11 @@ func parseCouncilVote(response openaiapi.Response) (vote, error) {
 }
 
 type screenAdapter struct {
-	mu        sync.Mutex
-	submitted bool
-	vote      vote
-	calls     []recordedToolCall
+	mu                 sync.Mutex
+	submitted          bool
+	submissionAccepted chan struct{}
+	vote               vote
+	calls              []recordedToolCall
 }
 
 func (a *screenAdapter) OpenSession(assignment mcpbridge.Assignment) (mcpbridge.Profile, error) {
@@ -417,6 +421,7 @@ func (a *screenAdapter) CallTool(_ context.Context, _ mcpbridge.Profile, name st
 		a.vote = parsed
 		call.Accepted = true
 		a.calls = append(a.calls, call)
+		close(a.submissionAccepted)
 		return mcpbridge.CallResult{StructuredContent: map[string]any{
 			"ok": true, "status": "accepted", "vote": parsed.Vote, "rationale": parsed.Rationale,
 		}}, nil
@@ -429,6 +434,10 @@ func (a *screenAdapter) snapshot() (bool, vote, []recordedToolCall) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.submitted, a.vote, append([]recordedToolCall(nil), a.calls...)
+}
+
+func (a *screenAdapter) accepted() <-chan struct{} {
+	return a.submissionAccepted
 }
 
 func parseVoteArguments(arguments map[string]any) (vote, error) {
@@ -488,7 +497,7 @@ func runPiCheck(parent context.Context, opts options, spec modelrequest.Spec) (r
 		return result
 	}
 
-	adapter := &screenAdapter{}
+	adapter := &screenAdapter{submissionAccepted: make(chan struct{})}
 	key := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, key); err != nil {
 		result.Error = fmt.Sprintf("generate MCP signing key: %v", err)
@@ -549,8 +558,9 @@ func runPiCheck(parent context.Context, opts options, spec modelrequest.Spec) (r
 	result.ContainerName = containerName
 	stdoutPath := filepath.Join(opts.outputDir, "pi.stdout.jsonl")
 	stderrPath := filepath.Join(opts.outputDir, "pi.stderr.log")
-	exitCode, runErr := runPiProcess(parent, opts, home, spec.UpstreamModel(), containerName, stdoutPath, stderrPath)
+	exitCode, stoppedAfterVote, runErr := runPiProcess(parent, opts, home, spec.UpstreamModel(), containerName, stdoutPath, stderrPath, adapter.accepted())
 	result.ExitCode = &exitCode
+	result.StoppedAfterVote = stoppedAfterVote
 	cancelServer()
 	if err := <-serverDone; err != nil && !errors.Is(err, context.Canceled) {
 		result.Error = fmt.Sprintf("MCP server: %v", err)
@@ -575,11 +585,14 @@ func runPiCheck(parent context.Context, opts options, spec modelrequest.Spec) (r
 		result.CostSource = "pi_catalog"
 	}
 	if runErr != nil {
-		result.Error = runErr.Error()
-		result.InfrastructureError = exitCode < 0 || exitCode == 125
-		return result
+		var exitErr *exec.ExitError
+		if !submitted || stoppedAfterVote || !errors.As(runErr, &exitErr) {
+			result.Error = runErr.Error()
+			result.InfrastructureError = exitCode < 0 || exitCode == 125
+			return result
+		}
 	}
-	if exitCode != 0 {
+	if exitCode != 0 && !submitted {
 		result.Error = fmt.Sprintf("Pi exited with code %d", exitCode)
 		return result
 	}
@@ -703,15 +716,15 @@ When the result has state: ready, follow the returned instructions and submit th
 Stop after the vote is accepted. Report the terminal state. Do not ask the user for another turn, create a scheduled job, or listen for inbound HTTP.`
 }
 
-func runPiProcess(parent context.Context, opts options, home, model, containerName, stdoutPath, stderrPath string) (int, error) {
+func runPiProcess(parent context.Context, opts options, home, model, containerName, stdoutPath, stderrPath string, submissionAccepted <-chan struct{}) (int, bool, error) {
 	stdout, err := os.Create(stdoutPath)
 	if err != nil {
-		return -1, fmt.Errorf("create Pi stdout: %w", err)
+		return -1, false, fmt.Errorf("create Pi stdout: %w", err)
 	}
 	defer stdout.Close()
 	stderr, err := os.Create(stderrPath)
 	if err != nil {
-		return -1, fmt.Errorf("create Pi stderr: %w", err)
+		return -1, false, fmt.Errorf("create Pi stderr: %w", err)
 	}
 	defer stderr.Close()
 	ctx, cancel := context.WithTimeout(parent, opts.piTimeout)
@@ -728,28 +741,66 @@ func runPiProcess(parent context.Context, opts options, home, model, containerNa
 	cmd.Stderr = stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := cmd.Start(); err != nil {
-		return -1, fmt.Errorf("start Pi container: %w", err)
+		return -1, false, fmt.Errorf("start Pi container: %w", err)
 	}
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
-	select {
-	case err := <-done:
-		return processExitCode(cmd.ProcessState), err
-	case <-ctx.Done():
+	stopProcess := func() (int, error) {
 		stopCtx, stopCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		stop := exec.CommandContext(stopCtx, opts.podmanCommand, "stop", "--time", "5", containerName)
 		stop.Stdout = stderr
 		stop.Stderr = stderr
 		stopErr := stop.Run()
 		stopCancel()
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
 		select {
-		case <-done:
+		case waitErr := <-done:
+			if waitErr == nil {
+				stopErr = nil
+			}
+			return processExitCode(cmd.ProcessState), stopErr
 		case <-time.After(5 * time.Second):
-			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-			<-done
 		}
-		return processExitCode(cmd.ProcessState), errors.Join(ctx.Err(), stopErr)
+		termErr := syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
+		if errors.Is(termErr, syscall.ESRCH) {
+			termErr = nil
+		}
+		select {
+		case waitErr := <-done:
+			if waitErr == nil {
+				return processExitCode(cmd.ProcessState), nil
+			}
+			return processExitCode(cmd.ProcessState), errors.Join(stopErr, termErr)
+		case <-time.After(5 * time.Second):
+		}
+		killErr := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		if errors.Is(killErr, syscall.ESRCH) {
+			killErr = nil
+		}
+		waitErr := <-done
+		if waitErr == nil {
+			return processExitCode(cmd.ProcessState), nil
+		}
+		return processExitCode(cmd.ProcessState), errors.Join(stopErr, termErr, killErr)
+	}
+	select {
+	case err := <-done:
+		return processExitCode(cmd.ProcessState), false, err
+	case <-submissionAccepted:
+		timer := time.NewTimer(piSubmissionExitGrace)
+		defer timer.Stop()
+		select {
+		case err := <-done:
+			return processExitCode(cmd.ProcessState), false, err
+		case <-timer.C:
+			exitCode, stopErr := stopProcess()
+			if stopErr != nil {
+				return exitCode, true, fmt.Errorf("stop Pi container after accepted vote: %w", stopErr)
+			}
+			return exitCode, true, nil
+		}
+	case <-ctx.Done():
+		exitCode, stopErr := stopProcess()
+		return exitCode, false, errors.Join(ctx.Err(), stopErr)
 	}
 }
 

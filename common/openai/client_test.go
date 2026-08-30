@@ -748,3 +748,31 @@ func TestProviderAttemptsClassAndCost(t *testing.T) {
 		t.Fatalf("openRouterGenerationCost = %v, want %v", got, want)
 	}
 }
+
+func TestOpenRouterConfigurationError(t *testing.T) {
+	request := &http.Request{
+		Method: http.MethodPost,
+		URL:    &url.URL{Scheme: "https", Host: "openrouter.ai", Path: "/api/v1/responses"},
+	}
+	apiErr := &openaisdk.Error{StatusCode: http.StatusUnauthorized, Request: request}
+	if err := apiErr.UnmarshalJSON([]byte(`{"message":"Provider returned error","code":401,"metadata":{"provider_name":"AtlasCloud","is_byok":false}}`)); err != nil {
+		t.Fatal(err)
+	}
+	wrapped := &ProviderError{Class: ProviderErrorAuthentication, Err: apiErr}
+	if !IsOpenRouterConfigurationError(wrapped) {
+		t.Fatal("shared provider error was not identified")
+	}
+
+	byokErr := &openaisdk.Error{StatusCode: http.StatusUnauthorized, Request: request}
+	if err := byokErr.UnmarshalJSON([]byte(`{"message":"Provider returned error","code":401,"metadata":{"provider_name":"AtlasCloud","is_byok":true}}`)); err != nil {
+		t.Fatal(err)
+	}
+	if IsOpenRouterConfigurationError(byokErr) {
+		t.Fatal("BYOK error was identified as a shared provider error")
+	}
+
+	forbidden := &openaisdk.Error{StatusCode: http.StatusForbidden, Request: request}
+	if !IsOpenRouterConfigurationError(forbidden) {
+		t.Fatal("OpenRouter forbidden error was not identified")
+	}
+}

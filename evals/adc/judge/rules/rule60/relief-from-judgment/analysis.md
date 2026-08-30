@@ -14,7 +14,7 @@ The suite also distinguishes relief under Rule 60 from other procedural devices.
 
 ## Scoring Boundary
 
-A scored response contains exactly one `resolve_rule60_motion` call with `motion_index: 0` and a nonempty `relief_summary`.  The scorer reads a Boolean `granted` value but treats a missing or non-Boolean value as false instead of marking the payload invalid.  A malformed denial payload can therefore pass the grant component when its other fields and execution pass.  Correctness also requires every required concept, no affirmative prohibited concept, at least one expected reason tag, Lean acceptance, and successful execution.
+A scored response contains exactly one `resolve_rule60_motion` call with `motion_index: 0`, a Boolean `granted` value, and a nonempty `relief_summary`.  The scorer rejects a missing or non-Boolean `granted` value as `malformed_granted`.  Correctness also requires every required concept, no affirmative prohibited concept, at least one expected reason tag, Lean acceptance, and successful execution.
 
 The prohibited-concept check is sensitive to negation.  A denial may state that the movant showed `no extraordinary circumstances` or `does not show fraud` without being treated as affirmative reliance on that ground.  The scorer maps each configured concept to its accepted alternative phrases before matching.
 

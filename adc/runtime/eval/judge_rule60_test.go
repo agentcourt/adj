@@ -67,6 +67,84 @@ func TestScoreJudgeRule60ResponseRejectsWrongGrant(t *testing.T) {
 	}
 }
 
+func TestScoreJudgeRule60ResponseRejectsMalformedGranted(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		granted any
+		include bool
+	}{
+		{name: "missing"},
+		{name: "non-Boolean", granted: "false", include: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			arguments := map[string]any{
+				"motion_index":   0,
+				"relief_summary": "ordinary litigation argument",
+			}
+			if test.include {
+				arguments["granted"] = test.granted
+			}
+			resp := openai.Response{ToolCalls: []openai.ToolCall{{
+				Name:      JudgeRule60Tool,
+				Arguments: arguments,
+			}}}
+			result := scoreJudgeRule60Response(testRule60Fixture(false), "test-model", nil, nil, nil, nil, resp)
+			if result.InvalidReason != "malformed_granted" {
+				t.Fatalf("InvalidReason = %q, want malformed_granted", result.InvalidReason)
+			}
+		})
+	}
+}
+
+func TestRescoreJudgeRule60ResultUsesPreservedGranted(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		payload     map[string]any
+		wantInvalid string
+		wantOutcome bool
+	}{
+		{name: "missing", payload: map[string]any{}, wantInvalid: "malformed_granted"},
+		{name: "non-Boolean", payload: map[string]any{"granted": "false"}, wantInvalid: "malformed_granted"},
+		{name: "Boolean", payload: map[string]any{"granted": false}, wantOutcome: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := JudgeRule60Result{
+				ExpectedGranted:    false,
+				ExpectedReasonTags: []string{"ordinary_reargument"},
+				ToolPayload:        test.payload,
+				Granted:            true,
+				ReliefSummary:      "ordinary litigation argument",
+				GrantCorrect:       true,
+				RequiredCorrect:    true,
+				ProhibitedCorrect:  true,
+				ReasonCorrect:      true,
+				OutcomeCorrect:     true,
+				LeanAccepted:       true,
+				StepAccepted:       true,
+			}
+			rescoreJudgeRule60Result(&result)
+			if result.InvalidReason != test.wantInvalid {
+				t.Fatalf("InvalidReason = %q, want %q", result.InvalidReason, test.wantInvalid)
+			}
+			if result.Granted {
+				t.Fatal("Granted = true, want false")
+			}
+			if result.OutcomeCorrect != test.wantOutcome {
+				t.Fatalf("OutcomeCorrect = %t, want %t", result.OutcomeCorrect, test.wantOutcome)
+			}
+			if test.wantInvalid != "" && (result.GrantCorrect || result.RequiredCorrect || result.ProhibitedCorrect || result.ReasonCorrect) {
+				t.Fatalf("invalid result retains scoring flags: %+v", result)
+			}
+		})
+	}
+}
+
 func TestScoreJudgeRule60ResponseAcceptsOrdinaryLitigationReason(t *testing.T) {
 	t.Parallel()
 

@@ -640,7 +640,12 @@ func scoreJudgeRule60Response(fixture JudgeRule60Fixture, model string, state ma
 	}
 	result.ToolPayload = payload
 	result.MotionIndex = intField(payload, "motion_index")
-	result.Granted, _ = payload["granted"].(bool)
+	granted, ok := judgeRule60Granted(payload)
+	if !ok {
+		result.InvalidReason = "malformed_granted"
+		return result
+	}
+	result.Granted = granted
 	result.ReliefSummary = strings.TrimSpace(stringField(payload, "relief_summary"))
 	if result.MotionIndex != 0 {
 		result.InvalidReason = "wrong_motion_index"
@@ -680,6 +685,7 @@ func rescoreJudgeRule60Result(result *JudgeRule60Result) {
 	if result == nil || result.InvalidReason != "" {
 		return
 	}
+	result.Granted = false
 	result.MissingRequiredConcepts = nil
 	result.PresentProhibitedConcepts = nil
 	result.MatchedReasonTags = nil
@@ -688,8 +694,19 @@ func rescoreJudgeRule60Result(result *JudgeRule60Result) {
 	result.ProhibitedCorrect = false
 	result.ReasonCorrect = false
 	result.OutcomeCorrect = false
+	granted, ok := judgeRule60Granted(result.ToolPayload)
+	if !ok {
+		result.InvalidReason = "malformed_granted"
+		return
+	}
+	result.Granted = granted
 	scoreJudgeRule60Payload(result)
 	finalizeJudgeRule60Result(result)
+}
+
+func judgeRule60Granted(payload map[string]any) (bool, bool) {
+	granted, ok := payload["granted"].(bool)
+	return granted, ok
 }
 
 func extractJudgeRule60Payload(resp openai.Response) (map[string]any, string) {

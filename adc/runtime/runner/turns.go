@@ -756,9 +756,6 @@ func appendOpportunityAllowedTools(allowed []string, reference []string, mayPass
 
 func (r *Runner) applyOpportunityPayloadDefaults(toolName string, arguments map[string]any, opportunity leanOpportunity) (map[string]any, *correctionIssue, error) {
 	defaults := mapOrEmpty(opportunity.Constraints["payload_defaults"])
-	if len(defaults) == 0 {
-		return clonePayload(arguments), nil, nil
-	}
 	merged := clonePayload(arguments)
 	conflicts := make([]string, 0)
 	for key, want := range defaults {
@@ -771,22 +768,27 @@ func (r *Runner) applyOpportunityPayloadDefaults(toolName string, arguments map[
 			conflicts = append(conflicts, fmt.Sprintf("%s=%s", key, marshalString(want)))
 		}
 	}
-	if len(conflicts) == 0 {
-		return merged, nil, nil
+	if len(conflicts) > 0 {
+		sort.Strings(conflicts)
+		fixedFields := strings.Join(conflicts, ", ")
+		actorMessage, err := r.prompts.Render(adcprompts.RuntimeCorrectionFixedID, map[string]string{
+			"{{FIXED_FIELDS}}": fixedFields,
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+		return nil, &correctionIssue{
+			Tool:         toolName,
+			Error:        "fixed opportunity field set incorrectly: " + fixedFields,
+			ActorMessage: actorMessage,
+		}, nil
 	}
-	sort.Strings(conflicts)
-	fixedFields := strings.Join(conflicts, ", ")
-	actorMessage, err := r.prompts.Render(adcprompts.RuntimeCorrectionFixedID, map[string]string{
-		"{{FIXED_FIELDS}}": fixedFields,
-	})
-	if err != nil {
-		return nil, nil, err
+	if toolName == "resolve_rule60_motion" {
+		if _, ok := merged["granted"].(bool); !ok {
+			return nil, &correctionIssue{Tool: toolName, Error: "required field granted must be a Boolean"}, nil
+		}
 	}
-	return nil, &correctionIssue{
-		Tool:         toolName,
-		Error:        "fixed opportunity field set incorrectly: " + fixedFields,
-		ActorMessage: actorMessage,
-	}, nil
+	return merged, nil, nil
 }
 
 func clonePayload(arguments map[string]any) map[string]any {

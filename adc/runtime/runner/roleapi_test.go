@@ -136,6 +136,33 @@ func TestObserverCannotReportFailureForActiveTurn(t *testing.T) {
 	}
 }
 
+func TestRoleAPIRejectsMalformedRule60GrantedBeforeEngine(t *testing.T) {
+	api, turn := testRoleAPIWithActiveTurn(t)
+	turn.opportunity.AllowedTools = []string{"resolve_rule60_motion"}
+
+	response, statusCode := api.doLocked(roleAPIRequest{
+		CaseID:        "case-1",
+		RoleID:        "plaintiff",
+		OpportunityID: "opp-1",
+		Tool:          "submit_decision",
+		Arguments: map[string]any{
+			"kind":      "tool",
+			"tool_name": "resolve_rule60_motion",
+			"payload":   map[string]any{"motion_index": 0},
+		},
+	})
+	if statusCode != http.StatusOK || response["ok"] != false {
+		t.Fatalf("response = (%d, %#v)", statusCode, response)
+	}
+	errorObject, _ := response["error"].(map[string]any)
+	if errorObject["code"] != "invalid_decision" || errorObject["message"] != "required field granted must be a Boolean" {
+		t.Fatalf("error = %#v", errorObject)
+	}
+	if turn.attemptsRemaining != 2 || turn.completed {
+		t.Fatalf("turn = %+v", turn)
+	}
+}
+
 func TestWorkNotesStayOutOfTurnTranscript(t *testing.T) {
 	api, turn := testRoleAPIWithActiveTurn(t)
 

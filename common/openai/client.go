@@ -120,6 +120,31 @@ func ErrorClass(err error) ProviderErrorClass {
 	return ""
 }
 
+func IsOpenRouterConfigurationError(err error) bool {
+	var apiErr *openai.Error
+	if !errors.As(err, &apiErr) || apiErr.Request == nil || apiErr.Request.URL == nil ||
+		!strings.EqualFold(apiErr.Request.URL.Hostname(), "openrouter.ai") {
+		return false
+	}
+	if apiErr.StatusCode == http.StatusForbidden {
+		return true
+	}
+	if apiErr.StatusCode != http.StatusUnauthorized {
+		return false
+	}
+	var envelope struct {
+		Metadata struct {
+			ProviderName string `json:"provider_name"`
+			IsBYOK       *bool  `json:"is_byok"`
+		} `json:"metadata"`
+	}
+	if err := json.Unmarshal([]byte(apiErr.RawJSON()), &envelope); err != nil {
+		return false
+	}
+	return strings.TrimSpace(envelope.Metadata.ProviderName) != "" &&
+		envelope.Metadata.IsBYOK != nil && !*envelope.Metadata.IsBYOK
+}
+
 var defaultRetryDelays = []time.Duration{0, 5 * time.Second, 30 * time.Second}
 
 type Client struct {

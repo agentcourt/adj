@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"testing"
 
 	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
@@ -59,5 +60,40 @@ func TestToolSchemasAndPromptCatalog(t *testing.T) {
 	sourceFilename := importProperties["source_filename"].(map[string]any)
 	if got := sourceFilename["description"]; got != "Custom source filename guidance." {
 		t.Fatalf("source_filename description = %#v", got)
+	}
+}
+
+func TestPostJudgmentToolSchemasMatchEnginePayloads(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		wantProperties []string
+		wantRequired   []string
+	}{
+		{name: "resolve_rule59_motion", wantProperties: []string{"granted", "motion_index", "order_text"}, wantRequired: []string{"motion_index", "granted"}},
+		{name: "post_supersedeas_bond", wantProperties: []string{"effective_until", "note"}, wantRequired: []string{}},
+		{name: "order_discretionary_stay", wantProperties: []string{"end_on", "reason", "start_on"}, wantRequired: []string{"reason"}},
+		{name: "lift_stay", wantProperties: []string{"reason", "stay_index"}, wantRequired: []string{"stay_index"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			schema := toolSchema(test.name)
+			properties, ok := schema["properties"].(map[string]any)
+			if !ok {
+				t.Fatalf("properties = %#v", schema["properties"])
+			}
+			gotProperties := make([]string, 0, len(properties))
+			for name := range properties {
+				gotProperties = append(gotProperties, name)
+			}
+			sort.Strings(gotProperties)
+			if !reflect.DeepEqual(gotProperties, test.wantProperties) {
+				t.Fatalf("properties = %v, want %v", gotProperties, test.wantProperties)
+			}
+			if got := schema["required"]; !reflect.DeepEqual(got, test.wantRequired) {
+				t.Fatalf("required = %#v, want %#v", got, test.wantRequired)
+			}
+		})
 	}
 }

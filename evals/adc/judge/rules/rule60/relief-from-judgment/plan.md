@@ -23,7 +23,7 @@ The fixture file contains 16 rows across three difficulty tiers and balances eig
 
 ## Scoring
 
-The scorer accepts exactly one `resolve_rule60_motion` tool call with `motion_index: 0` and a nonempty `relief_summary`.  It reads a Boolean `granted` value but treats a missing or non-Boolean value as false instead of invalid.  It checks the resulting grant or denial, required concepts, prohibited concepts, reason tags, decision acceptance, and action execution.  The summary reports accuracy, weighted accuracy, invalid rate, false-grant and false-denial rates, rejection counters, and slices by issue family, tier, expected disposition, and reason tag.  The `lean_rejected` and `step_rejected` counters exclude rows with an `invalid_reason`.
+The scorer accepts exactly one `resolve_rule60_motion` tool call with `motion_index: 0`, a Boolean `granted` value, and a nonempty `relief_summary`.  It rejects a missing or non-Boolean `granted` value as `malformed_granted`.  It checks the resulting grant or denial, required concepts, prohibited concepts, reason tags, decision acceptance, and action execution.  The summary reports accuracy, weighted accuracy, invalid rate, false-grant and false-denial rates, rejection counters, and slices by issue family, tier, expected disposition, and reason tag.  The `lean_rejected` and `step_rejected` counters exclude rows with an `invalid_reason`.
 
 The prohibited-concept scorer is negation-aware.  Rule 60 denials often state the absent ground, such as "no extraordinary circumstances," "does not show fraud," or a list of grounds that are not shown.  The scorer treats those forms as correct denials rather than assertions of the prohibited ground, while still flagging a summary that relies on an improper ground affirmatively.
 
