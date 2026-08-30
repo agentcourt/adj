@@ -1,0 +1,193 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\title{Five Adjudication Procedures by Procedural Complexity}
+\author{Jamie Stephens}
+\date{August 30, 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+AgentCourt provides five adjudication procedures that share model-request and record-keeping components but differ in procedural structure.  This report defines procedural complexity through the number and dependency of decision stages, participant roles, mutable state, terminal branches, and replay operations.  Under those criteria, the order is Simple, Quick, Agent Arbitration Degree (ARBD), Agent Arbitration (ARB), and Agent District Court (ADC).  Simple makes one provider request.  Quick adds two opposed arguments and one council ballot.  ARBD adds eight lawyer opportunities across five phases, evidence submission and custody, a Lean state machine, and replay verification.  ARB adds thresholded deliberation over as many as three rounds under its default policy and a no-majority outcome.  ADC adds case preparation, pleadings, motions, discovery, trial, judge and clerk decisions, six to twelve jurors, verdict derivation, judgment, a SQLite court record, and formal replay.  Accuracy, latency, and cost require separate measurements.
+\end{abstract}
+
+\section{Scope and Ordering}
+
+AgentCourt's \code{adj} repository contains five executable adjudication procedures: Simple, Quick, Agent Arbitration Degree (ARBD), Agent Arbitration (ARB), and Agent District Court (ADC)~\cite{adjrepo}.  The repository uses \code{aard} for the ARBD command and Lean engine, and \code{aar} for the ARB command and Lean engine.  This report uses the public procedure names except when naming commands or record schemas.
+
+Procedural complexity here consists of five observable properties.  Decision stages count the ordered opportunities that can change an outcome.  Participant structure counts role classes and dependencies among their actions.  Mutable state includes filings, evidence, votes, rulings, and other facts that constrain later actions.  Terminal branching counts the distinct ways a procedure can close or fail.  Verification counts the operations needed to reproduce the accepted state transitions.  These properties describe the procedure implemented at repository revision \code{3caef52}.
+
+Table~\ref{tab:order} gives the resulting order.  Each row includes the structure added to the preceding procedure.  ARBD and ARB share most of their implementation pattern, but ARB has the more complex deliberation rule.  ARBD closes after each council seat has supplied one answer or left the council through a recorded failure.  ARB can begin another ballot round when neither binary choice reaches the required strict majority.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Procedures in increasing procedural complexity.}
+\label{tab:order}
+\begin{tabularx}{\textwidth}{@{}L{0.09\textwidth}L{0.15\textwidth}L{0.19\textwidth}Y@{}}
+\toprule
+Order & Procedure & Decision form & Principal structure \\
+\midrule
+1 & Simple & One binary decision & One model request and one terminal tool call \\
+2 & Quick & Binary council result & Two opposed arguments followed by one ballot \\
+3 & ARBD & Council answers from 0 through 100 & Five lawyer phases, admitted evidence, one answer round, Lean transitions, and replay \\
+4 & ARB & Binary council resolution & ARBD's advocacy structure plus a strict-majority threshold and repeated ballot rounds \\
+5 & ADC & Civil judgment & Case preparation, court and party roles, pleadings, discovery, motions, trial, verdict, judgment, and replay \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A submitted question's intellectual difficulty varies independently from the procedure.  A Simple case can contain a difficult factual record, while an ADC case can contain one uncomplicated claim.  The order describes the machinery that receives the input, controls participants, changes state, reaches a terminal result, and records that result.
+
+\section{Shared Runtime Components}
+
+Every procedure accepts a prompt catalog with compiled fallback strings, conventional repository paths, a complete directory override, and individual file overrides.  Literal replacement tokens insert case and opportunity data into the selected source.  The catalogs differ because a one-request decision, an adversarial filing, a council ballot, and a court ruling expose different facts and tools~\cite{promptguide}.
+
+Every procedure writes a durable case record.  The common files identify the procedure, case, run, inputs, runtime settings, events, terminal result, provider use, and human-readable transcript or digest.  Simple and Quick record their direct state changes without a formal transition engine.  ARBD, ARB, and ADC also write the terminal Lean state and a replay certificate containing initialization and accepted actions.
+
+Quick, ARBD, ARB, and ADC can sample council members or jurors from a JSON Lines model pool.  Each pool record specifies a model-provider route, request parameters, and persona.  The pool-generation pipeline checks direct function calls and the Pi agent harness through an ARB-style Model Context Protocol (MCP) council interaction, evaluates repeated responses, clusters behavior samples, and samples over the observed cluster assignments~\cite{poolpaper}.  Pool construction therefore supplies eligible request specifications.  The procedure still controls participant opportunities, admissible actions, failure handling, and the terminal rule.
+
+The formal procedures separate the public record from private work notes.  Lawyer and court-role clients can send concise planning notes during an active opportunity.  The runtime stores those notes outside the evidentiary record and outside the replay certificate.  Evidence and filings enter state only through actions accepted under the current opportunity.
+
+\section{Simple}
+
+Simple evaluates one proposition against one evidence standard in one model request~\cite{manuals}.  The caller selects one model or request-specification file and may import a bounded document tree.  The runtime sends the proposition, standard, supported documents, prompt, hosted-search option, and one custom function named \code{submit\_simple\_decision}.  A valid response contains exactly one call to that function with either \code{demonstrated} or \code{not\_demonstrated} and a nonempty rationale.
+
+The provider request is the sole decision interface.  The one-attempt policy ends a protocol error immediately.  A missing decision call, several decision calls, an unknown function, malformed arguments, an invalid decision value, or an empty rationale ends the run with a provider-protocol error.  Provider-hosted web-search calls may precede the decision call when search is enabled.
+
+Document handling precedes the model request.  The importer sorts relative paths, enforces count and byte limits, rejects symbolic links and source changes, copies each accepted file, and records its media type, size, and digest.  Text, images, and PDF files become provider input items in their supported forms.  The proposition and imported documents form the complete record for the sole decision.
+
+Simple writes the imported documents, request and response records, parsed decision, terminal state, event sequence, transcript, digest, and run summary.  Its verification boundary consists of the preserved inputs, one model response, and one parsed decision.
+
+\section{Quick}
+
+Quick introduces adversarial advocacy and collective decision-making while retaining a fixed, short sequence~\cite{manuals}.  A proponent submits one argument.  An opponent then receives that accepted argument and submits one response.  The runtime sends the proposition, evidence standard, both arguments, and verified documents to each selected council member.  Each member calls \code{submit\_council\_vote} with \code{demonstrated} or \code{not\_demonstrated} and a rationale.
+
+The two lawyers act through a local HTTP Lawyer API, which the \code{quick-mcp} adapter exposes to an external agent as MCP tools.  A lawyer can inspect the immutable documents, use its assigned analysis tools, and submit private work notes before its final argument.  The runtime owns authentication, turn order, deadlines, document visibility, and acceptance of the final filing.  Council members use direct provider requests rather than the Lawyer API.
+
+Quick samples distinct council records from the configured pool and checks candidate endpoints before opening the first lawyer turn.  Council calls run in roster order unless the caller selects parallel execution.  A failed member loses its seat after the configured attempts.  The original vote requirement remains fixed.  After every seat has voted or failed, the procedure returns \code{demonstrated}, \code{not\_demonstrated}, or \code{no\_majority}.
+
+The procedure adds four dependencies to Simple: the second lawyer depends on the first argument, every council vote depends on both arguments, the final result depends on a fixed threshold across seats, and a member failure can prevent either side from reaching that threshold.  Quick stops after one argument per side and one ballot, and it records transitions directly.
+
+The record contains the two arguments, council roster, votes, member failures, documents, work notes, ordered events, and provider accounting.  Its verification material consists of the ordered events, transcript, and preserved provider records.
+
+\section{Agent Arbitration Degree}
+
+Agent Arbitration Degree asks one degree question and collects an integer from 0 through 100 from each seated council member~\cite{manuals}.  Two lawyers argue for higher or lower support under a stated judgment standard.  The procedure uses five filing phases in a fixed order: openings, arguments, rebuttal, surrebuttal, and closings.  Plaintiff and defendant each receive an opening, argument, and closing opportunity.  Plaintiff receives the rebuttal opportunity, and defendant receives the surrebuttal opportunity.  The latter two opportunities permit a pass.  The full sequence therefore contains eight lawyer opportunities before deliberation.
+
+Arguments, rebuttal, and surrebuttal may add evidence.  A lawyer can offer an item from the immutable initial catalog, submit a new item, identify a derived item's parent and derivation method, and include a bounded technical report.  Openings and closings may read evidence but may not add it.  The runtime stores admitted bytes in an evidence store and records identifiers, sizes, digests, and lineage in the case state and evidence manifest.
+
+The case process owns the Lawyer, Council, and Observer APIs.  Lawyers always run as external clients.  Council members either use the Council API or receive direct provider requests from the case process.  Each accepted action carries an opportunity identifier, role, phase, and source-state version.  The Lean engine checks that authority, the allowed action, turn order, filing limits, evidence chronology, council membership, and answer range before returning the next state.
+
+Deliberation has one answer round.  Each seated council member submits one integer and a nonempty rationale.  A failed member can be removed before answering.  When every remaining seated member has answered, the engine closes the case.  The runtime reports the member answers and computes count, minimum, maximum, and mean for the final round.  The terminal merits output is this answer distribution.
+
+ARBD writes the engine state, initialization, accepted action sequence, evidence custody, council snapshots, filings, events, work notes, transcript, digest, and run summary.  Its verification command replays initialization and every accepted public action through the selected Lean engine, then compares the replayed state with the claimed terminal state and recorded \code{state.json}.  A separate custody or attestation record authenticates the execution because the replay certificate carries no signature.
+
+\section{Agent Arbitration}
+
+Agent Arbitration uses ARBD's two-lawyer advocacy and evidence procedure to decide whether one proposition has been demonstrated under a stated evidence standard~\cite{manuals}.  The same five phases provide the same eight lawyer opportunities.  The same evidence rules distinguish an immutable initial catalog, later submissions, offered evidence, derived evidence, technical reports, and private work notes.  The Lean engine applies the same form of opportunity authority and source-state versioning.
+
+ARB's council submits binary votes.  Its policy sets a council size, a required number of votes, and a maximum number of deliberation rounds.  The engine requires the vote threshold to be a strict majority of the constituted council.  After every seated member votes in a round, the engine closes with \code{demonstrated} or \code{not\_demonstrated} if either choice reaches the threshold.  When neither choice reaches it, the engine starts another round if the policy permits and enough seated members remain.  It closes with \code{no\_majority} after the last permitted round or when member failures make the threshold unreachable.  The default policy permits three rounds.
+
+Repeated deliberation adds state and terminal branches to the ARBD structure.  The engine must identify the next voter within the current round, prevent duplicate votes, retain prior rounds, count each choice, test the threshold, determine whether another round remains possible, and account for council-member removal.  A member can vote again in a later round because each round creates a new opportunity for every seated member.
+
+The ARB packet follows the same replay pattern as ARBD.  Its certificate records initialization, council membership, and every accepted public action.  \code{aar verify-certificate} replays those actions and compares the result with the claimed terminal state and recorded \code{state.json}.  Council vote counts and the resolution arise from the replayed state rather than a separate post-processing decision.
+
+\section{Agent District Court}
+
+Agent District Court runs a one-claim civil case through a Lean rule engine and Go runtime~\cite{manuals}.  It accepts a complaint, a proposition, or an existing scenario.  Complaint input adds a preparation stage that normalizes the claim, develops private plaintiff and defense strategies, and generates the scenario consumed by the case runtime.  Proposition input constructs a declaratory claim and supporting documents without model-driven intake.  Scenario input begins at the adjudication boundary.
+
+ADC has five role classes: plaintiff, defendant, judge, clerk, and juror.  A jury contains from six through twelve jurors.  Plaintiff, defendant, and juror opportunities may run through the case-owned Role API, while the process handles other roles through direct model calls.  The judge decides motions, trial mode, voir dire questions and challenges, jury instructions, bench findings, and judgment.  The clerk records administrative acts and advances stages.  Jurors answer questionnaires and voir dire questions, then vote during deliberation.
+
+The case sequence spans pleadings, motions, discovery, trial preparation, trial, verdict, post-verdict decisions, and judgment.  Party actions can file pleadings, request or produce discovery, move for relief, offer evidence, examine witnesses, object, close, and seek post-verdict relief.  Judge and clerk actions determine which later opportunities exist.  Bench and jury trials follow different decision paths.  Jury policy adds unanimity or minimum-concurrence rules, candidate replacement during voir dire, and juror removal during deliberation~\cite{arcp}.
+
+Lean determines the current opportunity and its permitted legal actions.  A role response can inspect its role-visible state and case files, keep private work notes, and submit one allowed decision.  The runtime checks tool-call form and arguments, while Lean checks the opportunity identifier, source-state version, role, action authority, and rule-specific conditions.  A valid action changes the case state and determines the next opportunity.  A correctable model response can receive another request within the opportunity's attempt and decision-step limits.
+
+ADC stores the accepted actions in both human-readable records and a SQLite court database.  Its output includes prepared case files, the scenario, events, work notes, provider exchanges and accounting, terminal Lean state, replay certificate, transcript, digest, and PACER-style docket records.  \code{adc verify-certificate} replays initialization and accepted transitions through the selected engine and compares the result with the certificate and \code{state.json}.  The repository's ten judge-evaluation suites exercise controlled ADC opportunities through the production prompt, tool, validation, Lean, and state-transition paths~\cite{evalpaper}.
+
+ADC has the greatest procedural complexity in this set because its current state can select different actors, tools, and later phases.  Motions can terminate or narrow a claim.  Discovery and evidentiary decisions affect trial inputs.  The trial-mode decision selects a judge or jury fact finder.  Jury composition and failures affect verdict formation.  The verdict or bench opinion supplies facts used by judgment and post-judgment actions.  Replaying the case therefore requires the complete ordered transition sequence rather than one fixed list of participant responses.
+
+\section{Structural Comparison}
+
+Table~\ref{tab:structure} compares the properties used for the ordering.  A model request counts as a decision opportunity when its accepted response can change the terminal result or later procedure.  The ARBD and ARB counts state the lawyer sequence separately from a configurable council size.  ADC has a state-dependent opportunity count, so one fixed total would misdescribe its branches.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Procedure structure at revision \code{3caef52}.}
+\label{tab:structure}
+\begin{tabularx}{\textwidth}{@{}L{0.11\textwidth}L{0.22\textwidth}Y L{0.18\textwidth}@{}}
+\toprule
+Procedure & Decision sequence & State and terminal result & Verification \\
+\midrule
+Simple & One decision request & Proposition, documents, and one binary decision & Preserved request and response \\
+Quick & Two lawyer turns, then one ballot per seat & Arguments, fixed documents, votes, failures, and a binary or no-majority result & Ordered events and transcript \\
+ARBD & Eight lawyer opportunities, then one answer per seated member & Filings, evidence, reports, failures, and one 0--100 answer per seated member & Lean replay of accepted actions \\
+ARB & Eight lawyer opportunities, then up to three ballot rounds under the default policy & ARBD advocacy record, round-indexed votes, and a binary or no-majority result & Lean replay of accepted actions \\
+ADC & State-dependent party, judge, clerk, and juror opportunities & Pleadings, discovery, motions, evidence, rulings, trial acts, verdict, and judgment & Lean replay, SQLite, and packet records \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The procedures also differ in where they place discretion.  Simple gives one model the complete decision.  Quick gives two lawyers one submission each and assigns the result to a thresholded council.  ARBD and ARB give lawyers several opportunities to develop and test an evidentiary record, while their councils decide only after closings.  ADC distributes authority among parties, judge, clerk, and fact finder throughout the case.  Earlier decisions determine the record and opportunities available to later actors.
+
+Formal replay begins with ARBD because its record permits evidence submission across phases and binds actions to versioned opportunities.  ARB adds round-sensitive vote authority.  ADC extends the same principle to a larger state machine in which different legal actions produce different branches.  Replay verifies that the recorded accepted actions produce the claimed terminal state under the selected engine.  Provider responses, rejected attempts, private work notes, evidence bytes, signatures, and execution identity require their corresponding records and checks.
+
+\section{Procedure Selection}
+
+The desired result form and procedural record determine which procedure applies.  Simple produces one binary decision from one provider response.  Quick produces a binary council result after one submission from each side.  ARBD produces a distribution of degree answers after a developed evidentiary argument.  ARB produces a thresholded binary resolution after the same developed record and permits renewed deliberation.  ADC produces a civil case record in which procedural rulings, fact finding, verdict, and judgment occur as separate state transitions.
+
+The procedures expose different review material.  Simple preserves the complete request boundary.  Quick adds opposing arguments, member rationales, and council failures.  ARBD and ARB add admitted-evidence custody, phase-specific filings, versioned engine actions, and replay.  ADC adds party strategies, court rulings, jury administration, a docket database, and the state relationships among verdict, judgment, and post-judgment actions.
+
+Model-pool diversity and prompt evaluation apply across these structures but answer separate questions.  The pool report documents how request specifications enter a behavior-stratified population~\cite{poolpaper}.  The evaluation report documents how ADC judge actions can be scored against controlled fixtures through the production execution path~\cite{evalpaper}.  A procedure-level evaluation must also measure complete-case outcomes, participant failures, record development, cost, and variation across repeated runs.
+
+\section{Limitations}
+
+The ordering uses implemented procedure structure at one repository revision.  A later change to phase count, role authority, deliberation, or verification can change the comparison.  Configuration options also change the number of model requests within one procedure.  Council size changes Quick, ARBD, and ARB request counts.  ARB can end in its first round or continue through the configured maximum.  ADC can use a bench or jury trial, skip voir dire, resolve a claim before trial, or start from a prepared scenario.
+
+The five criteria have no scalar weighting.  They establish the order here because each successive procedure adds a concrete dependency or state branch, and because ARB's repeated threshold deliberation exceeds ARBD's single answer round.  Another study could measure source size, proof size, runtime cost, operator effort, latency, number of provider requests, or legal coverage.  Those measures can produce a different order.
+
+Formal replay has a bounded claim.  It checks the transition sequence and terminal state under the selected Lean engine.  It does not prove that a model produced a recorded action, that the evidence bytes came from a stated source, that a rationale is sound, or that the final result is factually or legally correct.  The surrounding request, evidence, work-note, database, and custody records support those separate inquiries.
+
+\section{Conclusion}
+
+The five procedures form a structural sequence from one model decision to a state-dependent civil case.  Simple contains one request and one terminal call.  Quick adds two opposed submissions and a thresholded council.  ARBD adds five advocacy phases, evidence development, versioned Lean opportunities, one degree-answer round, and replay.  ARB adds strict-majority resolution, repeated ballot rounds, and no-majority termination.  ADC distributes decisions across parties, judge, clerk, and jurors from case preparation through judgment.  This order provides a precise account of the procedure each command executes and the record available for later review.
+
+\begingroup
+\small
+\setlength{\emergencystretch}{3em}
+\begin{thebibliography}{99}
+\raggedright
+
+\bibitem{adjrepo}
+AgentCourt, ``Adjudication procedures,'' \code{adj} revision \code{3caef52}, 2026.  \href{https://github.com/agentcourt/adj/tree/3caef52dfcd38009f87dd3965c9c2491c2e49fea}{\code{adj}}
+
+\bibitem{manuals}
+AgentCourt, ``Procedure manuals,'' \code{adj} revision \code{3caef52}, 2026.  \href{https://github.com/agentcourt/adj/blob/3caef52dfcd38009f87dd3965c9c2491c2e49fea/simple/manual.md}{Simple}, \href{https://github.com/agentcourt/adj/blob/3caef52dfcd38009f87dd3965c9c2491c2e49fea/quick/README.md}{Quick}, \href{https://github.com/agentcourt/adj/blob/3caef52dfcd38009f87dd3965c9c2491c2e49fea/arbd/manual.md}{ARBD}, \href{https://github.com/agentcourt/adj/blob/3caef52dfcd38009f87dd3965c9c2491c2e49fea/arb/manual.md}{ARB}, and \href{https://github.com/agentcourt/adj/blob/3caef52dfcd38009f87dd3965c9c2491c2e49fea/adc/manual.md}{ADC}.
+
+\bibitem{arcp}
+AgentCourt, ``Agent Rules of Civil Procedure,'' \code{adj} revision \code{3caef52}, 2026.  \href{https://github.com/agentcourt/adj/blob/3caef52dfcd38009f87dd3965c9c2491c2e49fea/adc/docs/ARCP.md}{\code{adc/docs/ARCP.md}}
+
+\bibitem{promptguide}
+AgentCourt, ``Prompt Authoring Guide,'' \code{adj} revision \code{3caef52}, 2026.  \href{https://github.com/agentcourt/adj/blob/3caef52dfcd38009f87dd3965c9c2491c2e49fea/docs/prompt-authoring.md}{\code{docs/prompt-authoring.md}}
+
+\bibitem{poolpaper}
+J. Stephens, ``Generating Tool-Capable, Behavior-Stratified Model Pools for Adjudication,'' marXiv:2608.00051, 2026.  \href{http://127.0.0.1:8405/abs/2608.00051}{\code{marXiv:2608.00051}}
+
+\bibitem{evalpaper}
+J. Stephens, ``Evaluating Judge Actions Through a Production Adjudication Runtime,'' marXiv:2608.00053, 2026.  \href{http://127.0.0.1:8405/abs/2608.00053}{\code{marXiv:2608.00053}}
+
+\end{thebibliography}
+\endgroup
+
+\end{document}
