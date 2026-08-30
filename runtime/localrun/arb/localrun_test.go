@@ -1014,6 +1014,41 @@ func TestStopAgentsRemovesOwnedContainerAndPreservesPriorExit(t *testing.T) {
 	assertFakeRuntimeLog(t, "container rm -f "+containerID)
 }
 
+func TestStopContainerProcessAcceptsExitedAutoRemovedContainer(t *testing.T) {
+	dir := t.TempDir()
+	containerIDPath, containerIDDir, err := createContainerIDPath(dir, "aar-case-1-c1")
+	if err != nil {
+		t.Fatalf("create container ID path: %v", err)
+	}
+	cmd := exec.Command("true")
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start client: %v", err)
+	}
+	proc := &processRecord{
+		name:            "pi-C1",
+		kind:            "podman",
+		command:         cmd,
+		done:            make(chan processExit, 1),
+		stopCommand:     fakeContainerRuntime(t, 0, ""),
+		containerIDPath: containerIDPath,
+		containerIDDir:  containerIDDir,
+		finished:        make(chan struct{}),
+	}
+	go func() {
+		exit := processExit{waitErr: cmd.Wait()}
+		proc.markExited()
+		proc.done <- exit
+	}()
+	select {
+	case <-proc.finished:
+	case <-time.After(2 * time.Second):
+		t.Fatal("client did not exit")
+	}
+	if err := stopContainerProcess(proc); err != nil {
+		t.Fatalf("stop exited client: %v", err)
+	}
+}
+
 func TestContainerRemovalMissingOutput(t *testing.T) {
 	for _, message := range []string{
 		"Error response from daemon: No such container: aar-case-1-c1",

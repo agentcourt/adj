@@ -36,7 +36,7 @@ The command rejects a missing proposition, evidence standard, output directory, 
 
 `openai://` models use `OPENAI_API_KEY`, while `openrouter://` models use `OPENROUTER_API_KEY`.  The command rejects a model reference containing a query or fragment without reproducing the rejected value.  It reads credential values only after `--allow-api-key` has authorized a provider request.  A missing or rejected credential produces a typed `provider_authentication` error and a nonzero exit status.
 
-Hosted web search is available by default.  The provider request uses the current Responses API `web_search` tool, and the model decides whether the proposition requires a search.  `--web-search=false` removes that tool from the request.
+Hosted web search is available by default.  The provider request uses the Responses API `web_search` tool for OpenAI and the `openrouter:web_search` server tool for OpenRouter.  The model decides whether the proposition requires a search.  `--web-search=false` removes that tool from the request.
 
 `--reasoning-effort` overrides `request.reasoning_effort` in a request-spec file.  When both sources omit the value, Simple omits the [Responses API `reasoning` field](https://developers.openai.com/api/reference/cli/resources/responses/methods/create) and preserves the provider and model default.  Simple accepts the union of current Responses API effort values because each model supports a different subset, so the provider rejects a value that the selected model does not support.
 
@@ -46,7 +46,7 @@ Hosted web search is available by default.  The provider request uses the curren
 
 The [prompt-authoring guide](../docs/prompt-authoring.md) lists the prompt catalog, conventional paths, and replacement tokens.  A complete prompt directory supplies every catalog file.  A repeated `--prompt-file` option supplies selected files by catalog ID.
 
-OpenAI executes the [hosted Responses web-search tool](https://developers.openai.com/api/docs/guides/tools-web-search) under the configured OpenAI account.  OpenRouter accepts the same `web_search` declaration through its [hosted web-search interface](https://openrouter.ai/docs/guides/routing/model-variants/online).  The endpoint's existing credential authorizes the model and search request, and provider search charges apply to that account.
+OpenAI executes the [hosted Responses web-search tool](https://developers.openai.com/api/docs/guides/tools-web-search) under the configured OpenAI account.  OpenRouter executes its [`openrouter:web_search` server tool](https://openrouter.ai/docs/guides/features/server-tools/web-search), which supports the Responses API and can run beside a user-defined function tool.  The endpoint's existing credential authorizes the model and search request, and provider search charges apply to that account.
 
 ## Documents and Requests
 

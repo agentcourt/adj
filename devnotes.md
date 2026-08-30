@@ -18,6 +18,57 @@ Long-running case commands derive their execution context from interrupt signals
 
 The [core process interface](docs/service-interface.md) defines the executable, private HTTP, and durable-record behavior consumed by `adjservices`.  An interface edit requires corresponding test and documentation edits in both repositories.  The paired interface tests use explicit core binaries and an explicit core checkout.
 
+## Unified ARB complaint isolation
+
+The unified ARB adapter writes its generated complaint to
+`inputs/arb/complaint.md`.  AAR treats every sibling of a complaint as an
+initial case file when the caller supplies no explicit `--file` option.
+The former `inputs/arb-complaint.md` path therefore caused the unified
+command's `adjudicate-request.json`, `resolved-settings.json`, and
+`documents.json` control records to enter the case evidence when the
+matter contained no imported document.  The dedicated directory
+preserves AAR's automatic case-file behavior and contains no common
+control record.  Imported documents continue through explicit case-file
+paths.
+
+## Unified ARB terminal cleanup
+
+A complete ARB case can end while automatic lawyers still wait for another MCP
+opportunity and after council containers have exited and removed themselves.
+The local runner cancels those remaining clients after the core publishes its
+result.  Participant finalization now skips terminal-usage parsing when the
+runner canceled the participant, because the forced stop can leave an
+incomplete OpenClaw JSON stream.  Cleanup, participant-record, and process-record
+errors still return to the caller.  The council cleanup path accepts a missing
+container ID for a runtime client that had already exited, while retaining the
+missing-ID error when cleanup must kill a live client whose container ownership
+was never recorded.
+
+## OpenRouter Simple web search
+
+OpenRouter's current [web-search server-tool
+documentation](https://openrouter.ai/docs/guides/features/server-tools/web-search)
+requires `{"type":"openrouter:web_search"}` for Responses requests.  It lists
+GPT-4.1 among the models with native search and permits the server tool beside a
+user-defined function tool.  The common Responses client previously sent
+OpenAI's `{"type":"web_search"}` declaration to both endpoints, which
+OpenRouter rejected with `400 invalid_prompt`.  Tool conversion now selects the
+endpoint's documented declaration.  OpenAI requests retain the standard
+`include` field for search-action sources; OpenRouter requests omit that
+OpenAI-specific field and obtain citations through OpenRouter's response
+annotations.
+
+An isolated Reconometrics run exercised the rebuilt unified and procedure
+binaries.  ARB completed a full automatic proceeding with six demonstrated
+votes, seven observed council requests, a closed Lean-replay record, and no
+terminal-cleanup error.  Simple completed an OpenRouter GPT-4.1 Responses
+request with hosted search enabled and returned `ok/demonstrated`.  The
+complete `common/openai` and `internal/lawyer` test packages passed, as did the
+focused ARB adapter and container-lifecycle tests and vet for all changed Go
+packages.  The restricted sandbox prevented the complete
+`runtime/localrun/arb` package from opening its `httptest` listener; the live
+run exercised that listener and the changed cleanup path.
+
 ## AAR Proof Strengthening
 
 The `aar-proof-strengthening` branch established the AAR authority, custody, replay, and record-integrity model and then applied it to AARD.  AAR binds every state-changing action to the exact current opportunity and proves record integrity, evidence-catalog preservation, and filing-time offer chronology as implications of the Lean certificate checker.  AARD now carries the corresponding authority, catalog, lineage, chronology, runtime transaction, and certificate facts while retaining its numeric answer model.  The remaining formal agenda includes ADC adaptation, constructive terminal-run existence, outcome stability, council symmetry, broader certificate consequences, and independent count-rule properties.  The [AAR record-integrity and runtime update](arb/docs/update.md) records the completed AAR and AARD designs and the pending ADC decisions.

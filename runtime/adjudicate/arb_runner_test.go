@@ -61,12 +61,20 @@ func TestARBRunnerBuildsCanonicalCaseAndMapsResult(t *testing.T) {
 	if !json.Valid(outcome.ProcedureResult) {
 		t.Fatalf("procedure result = %q", outcome.ProcedureResult)
 	}
-	complaint, err := os.ReadFile(filepath.Join(recordDir, "inputs", "arb-complaint.md"))
+	complaintPath := filepath.Join(recordDir, "inputs", "arb", "complaint.md")
+	complaint, err := os.ReadFile(complaintPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(complaint) != "# Proposition\n\nThe proposition\n" {
 		t.Fatalf("complaint = %q", complaint)
+	}
+	entries, err := os.ReadDir(filepath.Dir(complaintPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "complaint.md" {
+		t.Fatalf("complaint directory entries = %#v", entries)
 	}
 	if !reflect.DeepEqual(options.CaseFiles, []string{documentPath}) {
 		t.Fatalf("case files = %#v", options.CaseFiles)

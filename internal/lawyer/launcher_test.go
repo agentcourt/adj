@@ -778,11 +778,16 @@ func TestCancellationDoesNotMarkInvocationSuccessful(t *testing.T) {
 	supervisor := newTestSupervisor(t, dir, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	marked := false
+	usageInspected := false
 	process, err := supervisor.startProcess(ctx, "agent", "test", "sleep", []string{"60"}, "", processStartOptions{
 		roleID:         "plaintiff",
 		verifyExit:     func(context.Context, string, string) error { return nil },
 		cleanup:        noCleanup,
 		markSuccessful: func() error { marked = true; return nil },
+		readUsage: func(string) (*runstate.TokenUsage, error) {
+			usageInspected = true
+			return nil, errors.New("terminal output is incomplete")
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -801,6 +806,9 @@ func TestCancellationDoesNotMarkInvocationSuccessful(t *testing.T) {
 	}
 	if marked {
 		t.Fatal("canceled invocation was marked successful")
+	}
+	if usageInspected {
+		t.Fatal("canceled invocation output was inspected for terminal usage")
 	}
 }
 

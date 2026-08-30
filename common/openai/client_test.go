@@ -335,7 +335,7 @@ func TestConvertTools(t *testing.T) {
 	tools, err := convertTools([]map[string]any{
 		{"type": "function", "name": "issue_order", "description": "Issue the selected order.", "parameters": map[string]any{"type": "object"}, "strict": true},
 		{"type": "function", "name": "read_record", "parameters": map[string]any{"type": "object"}},
-	}, true)
+	}, true, false)
 	if err != nil {
 		t.Fatalf("convertTools error = %v", err)
 	}
@@ -363,7 +363,7 @@ func TestConvertTools(t *testing.T) {
 		t.Fatalf("response params omit web search sources\n%s", params)
 	}
 
-	explicit, err := convertTools([]map[string]any{{"type": "web_search"}}, false)
+	explicit, err := convertTools([]map[string]any{{"type": "web_search"}}, false, false)
 	if err != nil {
 		t.Fatalf("convertTools explicit web_search error = %v", err)
 	}
@@ -371,7 +371,22 @@ func TestConvertTools(t *testing.T) {
 		t.Fatalf("len(explicit) = %d, want 1", len(explicit))
 	}
 
-	if _, err := convertTools([]map[string]any{{"type": "unsupported"}}, false); err == nil {
+	openRouter, err := convertTools([]map[string]any{
+		{"type": "function", "name": "issue_order", "parameters": map[string]any{"type": "object"}},
+		{"type": "web_search"},
+	}, false, true)
+	if err != nil {
+		t.Fatalf("convertTools OpenRouter error = %v", err)
+	}
+	openRouterWire, err := json.Marshal(responseParams("openai/gpt-4.1", nil, openRouter, "", nil, nil, nil, nil))
+	if err != nil {
+		t.Fatalf("marshal OpenRouter response params: %v", err)
+	}
+	if !strings.Contains(string(openRouterWire), `"type":"openrouter:web_search"`) || strings.Contains(string(openRouterWire), `"include"`) {
+		t.Fatalf("OpenRouter response params use the wrong web-search form\n%s", openRouterWire)
+	}
+
+	if _, err := convertTools([]map[string]any{{"type": "unsupported"}}, false, false); err == nil {
 		t.Fatalf("convertTools unsupported type error = nil")
 	}
 }
