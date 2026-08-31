@@ -675,7 +675,11 @@ func TestValidateLawyerProfileAuthentication(t *testing.T) {
 	}, opts, []string{"HOME=" + home, "SELECTED_PI_KEY=selected"}); err != nil {
 		t.Fatalf("Pi profile: %v", err)
 	}
-	if err := validateLawyerProfile(LawyerProfile{Runner: LawyerPi}, opts, []string{"HOME=" + home, "OPENROUTER_API_KEY=present"}); err == nil || !strings.Contains(err.Error(), "explicit API-key") {
+	if err := validateLawyerProfile(LawyerProfile{
+		Runner:   LawyerPi,
+		Model:    "openrouter/anthropic/claude-sonnet-4",
+		AuthMode: headless.AuthAPIKey,
+	}, opts, []string{"HOME=" + home, "OPENROUTER_API_KEY=present"}); err == nil || !strings.Contains(err.Error(), "explicit source environment-variable name") {
 		t.Fatalf("implicit Pi authentication error = %v", err)
 	}
 }

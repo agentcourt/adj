@@ -425,4 +425,4 @@ The default access set contains the case record.  `--include-work-notes` adds wo
 - [x] Test Simple, Quick, ARB, ARBD, and ADC record extraction.
 - [x] Run focused tests, vet, build, and retained Simple and Quick examples.
 - [x] Document accepted layouts, selection rules, JSON fields, timestamp sources, and unavailable-session behavior.
-- [ ] Resolve the existing ADC and ARB Pi-authentication test mismatch before the complete Go test command can pass.
+- [x] Align the ADC and ARB Pi authentication fixtures with the shared validator.
