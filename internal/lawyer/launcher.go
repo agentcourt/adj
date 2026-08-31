@@ -1011,7 +1011,7 @@ func (s *Supervisor) startProcess(ctx context.Context, name, kind, command strin
 			stateBytes        *int64
 			participantObsErr error
 		)
-		if options.readUsage != nil {
+		if options.readUsage != nil && ctx.Err() == nil {
 			var usageErr error
 			usage, usageErr = options.readUsage(stdoutPath)
 			if usageErr != nil {

@@ -66,7 +66,7 @@ func (r ARBRunner) Run(ctx context.Context, request ProcedureRequest) (Procedure
 		timeoutSeconds = int(seconds)
 	}
 
-	complaintPath := filepath.Join(request.RecordDir, "inputs", "arb-complaint.md")
+	complaintPath := filepath.Join(request.RecordDir, "inputs", "arb", "complaint.md")
 	if err := writeARBComplaint(complaintPath, request.Request.Proposition); err != nil {
 		return ProcedureOutcome{}, err
 	}
@@ -144,6 +144,9 @@ func resolvedAARLawyerProfile(settings ResolvedSettings, name string) (localrun.
 }
 
 func writeARBComplaint(path, proposition string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("create arb complaint directory: %w", err)
+	}
 	content := "# Proposition\n\n" + strings.TrimSpace(proposition) + "\n"
 	return writeAtomic(path, 0o644, func(file *os.File) error {
 		written, err := io.WriteString(file, content)

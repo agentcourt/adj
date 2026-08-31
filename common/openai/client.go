@@ -305,7 +305,7 @@ func (c *Client) createResponse(
 	if err != nil {
 		return Response{}, err
 	}
-	convertedTools, err := convertTools(tools, c.online)
+	convertedTools, err := convertTools(tools, c.online, isOpenRouterBaseURL(c.baseURL))
 	if err != nil {
 		return Response{}, err
 	}
@@ -705,7 +705,7 @@ func convertContentItems(raw any) (responses.ResponseInputMessageContentListPara
 	return content, nil
 }
 
-func convertTools(tools []map[string]any, online bool) ([]responses.ToolUnionParam, error) {
+func convertTools(tools []map[string]any, online bool, openRouter bool) ([]responses.ToolUnionParam, error) {
 	out := make([]responses.ToolUnionParam, 0, len(tools)+1)
 	hasWebSearch := false
 	for _, t := range tools {
@@ -728,20 +728,28 @@ func convertTools(tools []map[string]any, online bool) ([]responses.ToolUnionPar
 			out = append(out, tool)
 		case "web_search":
 			hasWebSearch = true
-			out = append(out, responses.ToolParamOfWebSearch(responses.WebSearchToolTypeWebSearch))
+			out = append(out, webSearchTool(openRouter))
 		default:
 			return nil, fmt.Errorf("unsupported tool type: %s", typ)
 		}
 	}
 	if online && !hasWebSearch {
-		out = append(out, responses.ToolParamOfWebSearch(responses.WebSearchToolTypeWebSearch))
+		out = append(out, webSearchTool(openRouter))
 	}
 	return out, nil
 }
 
+func webSearchTool(openRouter bool) responses.ToolUnionParam {
+	tool := responses.ToolParamOfWebSearch(responses.WebSearchToolTypeWebSearch)
+	if openRouter {
+		tool.OfWebSearch.SetExtraFields(map[string]any{"type": "openrouter:web_search"})
+	}
+	return tool
+}
+
 func hasWebSearchTool(tools []responses.ToolUnionParam) bool {
 	for _, tool := range tools {
-		if tool.OfWebSearch != nil {
+		if tool.OfWebSearch != nil && tool.OfWebSearch.ExtraFields()["type"] != "openrouter:web_search" {
 			return true
 		}
 	}
@@ -800,7 +808,11 @@ func (c *Client) isOpenRouterInvalidPrompt(apiErr *openai.Error) bool {
 		!strings.HasSuffix(strings.TrimRight(apiErr.Request.URL.Path, "/"), "/responses") {
 		return false
 	}
-	baseURL, err := url.Parse(strings.TrimSpace(c.baseURL))
+	return isOpenRouterBaseURL(c.baseURL)
+}
+
+func isOpenRouterBaseURL(raw string) bool {
+	baseURL, err := url.Parse(strings.TrimSpace(raw))
 	return err == nil && strings.EqualFold(baseURL.Hostname(), "openrouter.ai")
 }
 
