@@ -402,6 +402,111 @@ The run output directory contains common request and management records beside t
 
 The native `arbd`, `arb`, and `adc` records retain their state, certificate, evidence, transcript, digest, and work-note files beneath `core/`.  Simple writes its imported documents, request, raw and normalized response, decision, state, transcript, digest, events, and run result there.  Quick writes its imported documents, runtime record, ordered events, private lawyer notes, arguments, council votes, and run result there.  Participant standard streams under `logs/` preserve each runner's emitted search events, while relied-on source URLs and retrieval dates belong in Quick work notes and arguments.  A result is terminal after `adjudicate` reconciles the native record and writes the common `run.json` atomically.
 
+## Case Record Index
+
+`adjudicate case-record` reads a retained case and writes one JSON index.  The input directory must contain exactly one case manifest in a supported location:
+
+| Record layout | Manifest path below `RUN_DIR` |
+| --- | --- |
+| Direct procedure output | `case-manifest.json` |
+| Unified `adjudicate` output | `core/case-manifest.json` |
+| `aar-run` output | `aar-output/case-manifest.json` |
+| `aard-run` output | `aard-output/case-manifest.json` |
+| `adc-run` output | `adc-output/case-manifest.json` |
+
+```text
+.bin/adjudicate case-record --dir RUN_DIR
+.bin/adjudicate case-record --dir RUN_DIR --output ../case-record.json
+.bin/adjudicate case-record --dir RUN_DIR --include-work-notes
+.bin/adjudicate case-record --dir RUN_DIR --include-sessions
+```
+
+The default command writes JSON to standard output.  `--output` creates a new file outside the case directory.  Its parent directory must exist, and the destination path must be unused.
+
+| Selection | Added material |
+| --- | --- |
+| Default | Artifacts classified as `case_record` and their logical docket entries. |
+| `--include-work-notes` | Procedure work-note files and one `work_note` docket entry for each note.  The entry references the source line; the note text remains in the work-note file. |
+| `--include-sessions` | Process logs, formal-launcher participant state under `agents/`, and retained participant state directories listed in the unified `run.json`. |
+| Both flags | Work notes, process logs, and retained participant sessions. |
+| Outside index scope | Participant work directories, exported work product, and ADC strategy files. |
+
+The two inclusion flags are independent.
+
+The top-level object uses schema `adj.case-record.v1` and contains the following fields:
+
+| Field | Contents |
+| --- | --- |
+| `schema_version` | `adj.case-record.v1`. |
+| `generated_at` | UTC time when the command read the case. |
+| `procedure`, `case_id`, `run_id` | Identity from the core case manifest. |
+| `sources` | The case directory and each requested retained session root, with availability and role information. |
+| `docket` | Logical case documents in chronological order. |
+| `artifacts` | Regular files in chronological order. |
+
+Each source contains these fields:
+
+| Field | Contents |
+| --- | --- |
+| `id` | `record` for the case directory or `session-N` for an external retained-session root. |
+| `kind` | `record` or `session`. |
+| `path` | Absolute source-root path. |
+| `role` | Participant role for a retained session, when recorded. |
+| `available` | Whether the source root was available when the command read it. |
+| `error` | `not found` or `not a regular directory` for an unavailable requested session root. |
+
+The command records a missing or unusable external session root in `sources` and continues indexing the available record.  Other filesystem errors and malformed required records fail the command.
+
+Each docket item contains these fields:
+
+| Field | Contents |
+| --- | --- |
+| `id` | Stable identifier within the case index. |
+| `sequence` | One-based position after chronological sorting. |
+| `timestamp`, `timestamp_source` | UTC chronological time and its source. |
+| `phase`, `actor` | Procedure phase and participant when recorded. |
+| `kind`, `title` | Entry type and concise label. |
+| `description` | Procedure description when recorded. |
+| `access` | `case_record` or `work_notes`. |
+| `source` | Source location for the logical entry. |
+| `artifact_refs` | Physical files represented by the entry, when available. |
+
+Common entries cover complaints, input documents, and evidence.  The procedure-specific entries are:
+
+| Procedure | Additional docket entries |
+| --- | --- |
+| Simple | Decision. |
+| Quick | Arguments, council votes, council failures, and decision. |
+| ARB | Filings, technical reports, evidence offers, submitted evidence, council votes, and decision. |
+| ARBD | Filings, technical reports, evidence offers, submitted evidence, council answers, and degree decision. |
+| ADC | Entries from the ADC case docket. |
+
+A source location contains `source_id` and a path relative to that source root.  It also contains `json_pointer` for an entry inside a JSON document or `line` for an NDJSON entry when applicable.
+
+All timestamps use RFC 3339 UTC form.  `timestamp_source` has one of four values:
+
+| Value | Meaning |
+| --- | --- |
+| `case_manifest` | Case start time from `case-manifest.json`. |
+| `record` | Time stored with the item in a procedure record. |
+| `event` | Time stored on the corresponding procedure event. |
+| `file_modification` | Modification time of the source file. |
+
+Initial complaints and documents use the case start time.  Recorded item and event times supply later entries when present.  File modification time supplies a logical entry whose record has no item time.  The case start time supplies the final fallback when the corresponding file metadata is unavailable.
+
+Each artifact contains these fields:
+
+| Field | Contents |
+| --- | --- |
+| `source_id`, `path` | Source root and path relative to that root. |
+| `media_type`, `size_bytes` | Media type from the filename or an existing manifest, and file size. |
+| `category` | `case_manifest`, `complaint`, `state`, `certificate`, `transcript`, `digest`, `event_log`, `decision`, `model_request`, `model_response`, `run_record`, `council_record`, `evidence_manifest`, `case_input`, `configuration`, `evidence`, `work_notes`, `process_log`, `participant_session`, or `unclassified`. |
+| `access` | `case_record`, `work_notes`, or `sessions`. |
+| `timestamp`, `timestamp_source` | File modification time and `file_modification`. |
+| `recorded_sha256` | Hash copied from an existing document or evidence manifest, when present. |
+
+Go's portable file information supplies modification time rather than creation time.  The artifact walk catalogs regular files and skips symbolic links.
+
 ## Process Behavior
 
 After constructing a complete request, the command writes one JSON result to standard output and diagnostics to standard error.  Exit status zero means that `run.json` contains a complete terminal procedure record, including a recorded procedural failure.  A nonzero exit status reports configuration, input, startup, provider, storage, supervision, or reconciliation failure; engine construction and dispatch failures still produce the common result on standard output.

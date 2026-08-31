@@ -408,3 +408,18 @@ Pi profiles keep the public OpenAI provider and `openai/gpt-5.6-sol` model names
 - [x] Add ARBD headless and Pi launcher prompts with compiled fallbacks.
 - [x] Test Pi subscription, role credential separation, settings resolution, command flags, and launcher prompt resolution.
 - [x] Run the focused Go tests, vet checks, and `aard-run` build.
+
+## Case record index
+
+The cross-procedure case-record reader derives its docket from each procedure's retained files.  It accepts direct core records and the documented unified and formal-launcher directory layouts.  One JSON object contains a chronological logical docket and a catalog of regular files.  Sources identify the case root and retained participant state roots listed in the unified management result.
+
+Procedure events supply ARB, ARBD, and ADC action times.  Quick arguments, Quick votes, Simple decisions, evidence metadata, and work notes carry their own times.  The case manifest supplies the initial filing time.  File modification time supplies the remaining timestamps because the portable Go file API does not expose file creation time.  Every item records the source of its timestamp.
+
+The default access set contains the case record.  `--include-work-notes` adds work-note records.  `--include-sessions` adds process logs, formal-launcher state under `agents/`, and participant state directories recorded by the unified command.  The index excludes participant work directories, exported work product, and ADC strategy files under both options.  The reader skips symbolic links and copies hash metadata from existing document and evidence manifests.
+
+- [x] Add the common case-record reader and JSON schema.
+- [x] Add the `adjudicate case-record` command and external output-file handling.
+- [x] Test Simple, Quick, ARB, ARBD, and ADC record extraction.
+- [x] Run focused tests, vet, build, and retained Simple and Quick examples.
+- [x] Document accepted layouts, selection rules, JSON fields, timestamp sources, and unavailable-session behavior.
+- [ ] Resolve the existing ADC and ARB Pi-authentication test mismatch before the complete Go test command can pass.

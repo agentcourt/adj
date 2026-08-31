@@ -36,6 +36,9 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 }
 
 func runWithDependencies(ctx context.Context, args []string, stdout, stderr io.Writer, dependencies commandDependencies) error {
+	if len(args) > 0 && args[0] == "case-record" {
+		return runCaseRecord(args[1:], stdout, stderr)
+	}
 	fs := flag.NewFlagSet("adjudicate", flag.ContinueOnError)
 	flagOutput := cliio.NewErrorWriter(stderr)
 	fs.SetOutput(flagOutput)
@@ -47,7 +50,7 @@ func runWithDependencies(ctx context.Context, args []string, stdout, stderr io.W
 	runID := fs.String("run-id", "", "Run identifier. Default: generated")
 	outDir := fs.String("out-dir", "", "Optional output directory")
 	fs.Usage = func() {
-		fmt.Fprintf(flagOutput, "Usage: adjudicate --proc PROCEDURE --proposition TEXT --settings FILE [options]\n\n")
+		fmt.Fprintf(flagOutput, "Usage: adjudicate --proc PROCEDURE --proposition TEXT --settings FILE [options]\n       adjudicate case-record --dir RUN_DIR [options]\n\n")
 		fs.PrintDefaults()
 	}
 	help, err := cliio.Parse(fs, args, flagOutput)
