@@ -4,6 +4,11 @@ import "time"
 
 const SchemaVersion = "adj.case-record.v1"
 
+const (
+	SourcePathBaseAbsolute = "absolute"
+	SourcePathBaseIndex    = "index"
+)
+
 type Options struct {
 	Dir              string
 	IncludeWorkNotes bool
@@ -25,6 +30,7 @@ type Source struct {
 	ID        string `json:"id"`
 	Kind      string `json:"kind"`
 	Path      string `json:"path"`
+	PathBase  string `json:"path_base"`
 	Role      string `json:"role,omitempty"`
 	Available bool   `json:"available"`
 	Error     string `json:"error,omitempty"`

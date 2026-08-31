@@ -417,8 +417,11 @@ Procedure events supply ARB, ARBD, and ADC action times.  Quick arguments, Quick
 
 The default access set contains the case record.  `--include-work-notes` adds work-note records.  `--include-sessions` adds process logs, formal-launcher state under `agents/`, and participant state directories recorded by the unified command.  The index excludes participant work directories, exported work product, and ADC strategy files under both options.  The reader skips symbolic links and copies hash metadata from existing document and evidence manifests.
 
+`--publish-dir` creates a new portable directory, copies every selected artifact under `files/SOURCE_ID/`, and writes `case-record.json` after the copies complete.  Published source paths are relative to the index.  Direct indexes retain absolute source paths.  `path_base` distinguishes the two forms.  The publication target must remain outside every source root.  Copy errors leave the incomplete directory without a completed index.
+
 - [x] Add the common case-record reader and JSON schema.
 - [x] Add the `adjudicate case-record` command and external output-file handling.
+- [x] Add portable publication with explicit source-path bases.
 - [x] Test Simple, Quick, ARB, ARBD, and ADC record extraction.
 - [x] Run focused tests, vet, build, and retained Simple and Quick examples.
 - [x] Document accepted layouts, selection rules, JSON fields, timestamp sources, and unavailable-session behavior.

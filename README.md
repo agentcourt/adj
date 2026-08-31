@@ -92,7 +92,7 @@ ADC, ARB, AARD, and quick can expose live participant opportunities through case
 
 Every procedure writes `case-manifest.json`, `run.json`, and an event record in its output directory.  ADC, ARB, and AARD add engine state, replay certificates, evidence custody records, transcripts, digests, and procedure-specific files.  Simple records its imported documents, model request and response, parsed decision, state, transcript, and digest, while quick records its imported documents, private lawyer notes, two arguments, selected council, votes, and provider accounting.  Keep each procedure's files together because inspection and verification use the output directory as one case record.
 
-`adjudicate case-record --dir RUN_DIR` reads any of these records and writes a chronological JSON docket with a physical artifact catalog.  Optional flags add work notes or retained participant sessions and process logs.  The [unified command reference](adjudication-cli.md#case-record-index) defines the command and JSON fields.
+`adjudicate case-record --dir RUN_DIR` reads any of these records and writes a chronological JSON docket with a physical artifact catalog.  Optional flags add work notes or retained participant sessions and process logs.  `--publish-dir TARGET` copies the selected artifacts and a portable index into a new directory.  The [unified command reference](adjudication-cli.md#case-record-index) defines the command, publication layout, and JSON fields.
 
 ## Documentation
 

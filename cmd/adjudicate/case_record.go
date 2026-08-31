@@ -19,6 +19,7 @@ func runCaseRecord(args []string, stdout, stderr io.Writer) error {
 	fs.SetOutput(flagOutput)
 	dir := fs.String("dir", "", "Case record directory")
 	output := fs.String("output", "", "External JSON output file. Default: standard output")
+	publishDir := fs.String("publish-dir", "", "New directory for a portable case record and selected artifacts")
 	includeWorkNotes := fs.Bool("include-work-notes", false, "Include participant work notes")
 	includeSessions := fs.Bool("include-sessions", false, "Include retained participant sessions and process logs")
 	fs.Usage = func() {
@@ -39,6 +40,11 @@ func runCaseRecord(args []string, stdout, stderr io.Writer) error {
 	if dirValue == "" {
 		return fmt.Errorf("--dir is required")
 	}
+	outputValue := strings.TrimSpace(*output)
+	publishValue := strings.TrimSpace(*publishDir)
+	if outputValue != "" && publishValue != "" {
+		return fmt.Errorf("--output and --publish-dir cannot be used together")
+	}
 	record, err := caserecord.Build(caserecord.Options{
 		Dir:              dirValue,
 		IncludeWorkNotes: *includeWorkNotes,
@@ -47,7 +53,9 @@ func runCaseRecord(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	outputValue := strings.TrimSpace(*output)
+	if publishValue != "" {
+		return caserecord.Publish(record, publishValue)
+	}
 	if outputValue == "" {
 		return caserecord.WriteJSON(stdout, record)
 	}

@@ -417,11 +417,26 @@ The native `arbd`, `arb`, and `adc` records retain their state, certificate, evi
 ```text
 .bin/adjudicate case-record --dir RUN_DIR
 .bin/adjudicate case-record --dir RUN_DIR --output ../case-record.json
+.bin/adjudicate case-record --dir RUN_DIR --publish-dir ../published-case
 .bin/adjudicate case-record --dir RUN_DIR --include-work-notes
 .bin/adjudicate case-record --dir RUN_DIR --include-sessions
 ```
 
-The default command writes JSON to standard output.  `--output` creates a new file outside the case directory.  Its parent directory must exist, and the destination path must be unused.
+The default command writes JSON to standard output.  `--output` creates a new file outside the case directory.  Its parent directory must exist, and the destination path must be unused.  `--publish-dir` creates a portable directory containing the index and every selected artifact:
+
+```text
+published-case/
+  case-record.json
+  files/
+    record/
+      ...
+    session-1/
+      ...
+```
+
+The publication parent must exist.  The target must be unused and outside every source root.  `--output` and `--publish-dir` are mutually exclusive.  Publication writes no JSON to standard output.
+
+The command writes `case-record.json` after it copies every artifact.  A copy error leaves the incomplete target directory without a completed index.  The caller can inspect or remove that directory before choosing another target.
 
 | Selection | Added material |
 | --- | --- |
@@ -450,12 +465,15 @@ Each source contains these fields:
 | --- | --- |
 | `id` | `record` for the case directory or `session-N` for an external retained-session root. |
 | `kind` | `record` or `session`. |
-| `path` | Absolute source-root path. |
+| `path` | Source-root path. |
+| `path_base` | `absolute` when the source path is absolute or `index` when the path is relative to `case-record.json`. |
 | `role` | Participant role for a retained session, when recorded. |
 | `available` | Whether the source root was available when the command read it. |
 | `error` | `not found` or `not a regular directory` for an unavailable requested session root. |
 
-The command records a missing or unusable external session root in `sources` and continues indexing the available record.  Other filesystem errors and malformed required records fail the command.
+Direct standard-output and `--output` indexes use absolute source paths.  Published indexes use `files/record` and `files/session-N`, relative to `case-record.json`.
+
+The command records a missing or unusable external session root in `sources` and continues indexing the available record.  Other filesystem errors and malformed required records fail the command.  A published index preserves an unavailable source entry, although its `files/session-N` directory will be absent.
 
 Each docket item contains these fields:
 
@@ -506,6 +524,8 @@ Each artifact contains these fields:
 | `recorded_sha256` | Hash copied from an existing document or evidence manifest, when present. |
 
 Go's portable file information supplies modification time rather than creation time.  The artifact walk catalogs regular files and skips symbolic links.
+
+The publication contains the access classes selected by the command flags.  Work notes contain private participant analysis.  Session material can contain provider credentials when participant cleanup did not complete.  A server exposing either class needs access controls suitable for those records.
 
 ## Process Behavior
 

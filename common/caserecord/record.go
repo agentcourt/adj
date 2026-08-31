@@ -47,6 +47,7 @@ func Build(options Options) (Record, error) {
 				ID:        "record",
 				Kind:      "record",
 				Path:      layout.recordRoot,
+				PathBase:  SourcePathBaseAbsolute,
 				Available: true,
 			}},
 		},
@@ -187,10 +188,11 @@ func (b *builder) catalogSessions() error {
 		}
 		seen[abs] = true
 		source := Source{
-			ID:   fmt.Sprintf("session-%d", len(b.record.Sources)),
-			Kind: "session",
-			Path: abs,
-			Role: strings.TrimSpace(participant.Role),
+			ID:       fmt.Sprintf("session-%d", len(b.record.Sources)),
+			Kind:     "session",
+			Path:     abs,
+			PathBase: SourcePathBaseAbsolute,
+			Role:     strings.TrimSpace(participant.Role),
 		}
 		info, statErr := os.Lstat(abs)
 		if statErr != nil {
