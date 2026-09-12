@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/agentcourt/adj/common/modelgateway"
 	lawyerlaunch "github.com/agentcourt/adj/internal/lawyer"
 	headless "github.com/agentcourt/adj/runtime/agent"
 )
@@ -152,6 +153,6 @@ func participantEnvironmentFor(base []string, settings ResolvedSettings, profile
 }
 
 func credentialFreeEnvironment(base []string, settings ResolvedSettings) []string {
-	remove := append([]string{"OPENAI_API_KEY", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY"}, credentialEnvironmentNames(settings)...)
+	remove := append(modelgateway.CredentialEnvironmentNames(), credentialEnvironmentNames(settings)...)
 	return removeEnvironment(base, remove...)
 }

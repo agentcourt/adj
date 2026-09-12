@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/agentcourt/adj/common/modelapi"
 	"github.com/agentcourt/adj/common/modelrequest"
 
 	openai "github.com/openai/openai-go/v3"
@@ -22,103 +23,23 @@ import (
 	"github.com/openai/openai-go/v3/shared"
 )
 
-type ToolCall struct {
-	CallID         string
-	Name           string
-	Arguments      map[string]any
-	RawArguments   string
-	ArgumentsError string
-}
-
-type WebSearchCall struct {
-	ID      string            `json:"id"`
-	Status  string            `json:"status"`
-	Action  string            `json:"action"`
-	Queries []string          `json:"queries,omitempty"`
-	URL     string            `json:"url,omitempty"`
-	Pattern string            `json:"pattern,omitempty"`
-	Sources []WebSearchSource `json:"sources,omitempty"`
-}
-
-type WebSearchSource struct {
-	Type string `json:"type"`
-	URL  string `json:"url"`
-}
-
-type URLCitation struct {
-	URL        string `json:"url"`
-	Title      string `json:"title"`
-	StartIndex int64  `json:"start_index"`
-	EndIndex   int64  `json:"end_index"`
-}
-
-type Response struct {
-	Text                      string
-	ToolCalls                 []ToolCall
-	WebSearchCalls            []WebSearchCall
-	URLCitations              []URLCitation
-	ResponseID                string
-	RawJSON                   string
-	Usage                     Usage
-	UsageKnown                bool
-	OpenRouterMetadata        map[string]any
-	OpenRouterGeneration      map[string]any
-	OpenRouterGenerationError string
-	OpenRouterCostUSD         float64
-	OpenRouterCostKnown       bool
-}
-
-type Usage struct {
-	InputTokens       int64 `json:"input_tokens"`
-	CachedInputTokens int64 `json:"cached_input_tokens,omitempty"`
-	OutputTokens      int64 `json:"output_tokens"`
-	ReasoningTokens   int64 `json:"reasoning_tokens,omitempty"`
-	TotalTokens       int64 `json:"total_tokens"`
-}
-
-func (r Response) CostUSD() *float64 {
-	if !r.OpenRouterCostKnown {
-		return nil
-	}
-	cost := r.OpenRouterCostUSD
-	return &cost
-}
-
-func (r Response) TokenUsage() *Usage {
-	if !r.UsageKnown {
-		return nil
-	}
-	usage := r.Usage
-	return &usage
-}
-
-type ProviderErrorClass string
+type ToolCall = modelapi.ToolCall
+type WebSearchCall = modelapi.WebSearchCall
+type WebSearchSource = modelapi.WebSearchSource
+type URLCitation = modelapi.URLCitation
+type Response = modelapi.Response
+type Usage = modelapi.Usage
+type ProviderErrorClass = modelapi.ProviderErrorClass
+type ProviderError = modelapi.ProviderError
 
 const (
-	ProviderErrorTransient      ProviderErrorClass = "provider_transient"
-	ProviderErrorAuthentication ProviderErrorClass = "provider_authentication"
-	ProviderErrorRequest        ProviderErrorClass = "provider_request"
-	ProviderErrorProtocol       ProviderErrorClass = "provider_protocol"
+	ProviderErrorTransient      = modelapi.ProviderErrorTransient
+	ProviderErrorAuthentication = modelapi.ProviderErrorAuthentication
+	ProviderErrorRequest        = modelapi.ProviderErrorRequest
+	ProviderErrorProtocol       = modelapi.ProviderErrorProtocol
 )
 
-type ProviderError struct {
-	Class ProviderErrorClass
-	Err   error
-}
-
-func (e *ProviderError) Error() string { return e.Err.Error() }
-func (e *ProviderError) Unwrap() error { return e.Err }
-
-func ErrorClass(err error) ProviderErrorClass {
-	if errors.Is(err, context.Canceled) {
-		return ""
-	}
-	var providerErr *ProviderError
-	if errors.As(err, &providerErr) {
-		return providerErr.Class
-	}
-	return ""
-}
+func ErrorClass(err error) ProviderErrorClass { return modelapi.ErrorClass(err) }
 
 func IsOpenRouterConfigurationError(err error) bool {
 	var apiErr *openai.Error
@@ -149,6 +70,7 @@ var defaultRetryDelays = []time.Duration{0, 5 * time.Second, 30 * time.Second}
 
 type Client struct {
 	client             openai.Client
+	apiKey             string
 	baseURL            string
 	online             bool
 	defaultTemperature *float64
@@ -192,6 +114,7 @@ func New(apiKey string, baseURL string, online bool, timeout time.Duration) (*Cl
 	}
 	return &Client{
 		client:             openai.NewClient(opts...),
+		apiKey:             apiKey,
 		baseURL:            baseURL,
 		online:             online,
 		defaultTemperature: defaultTemperature,
@@ -442,7 +365,7 @@ func (c *Client) attachOpenRouterGeneration(ctx context.Context, resp *Response)
 	if resp.OpenRouterCostKnown {
 		return
 	}
-	apiKey := strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY"))
+	apiKey := c.apiKey
 	if apiKey == "" {
 		return
 	}
@@ -513,10 +436,11 @@ func parseResponse(res *responses.Response) (Response, error) {
 		return Response{}, fmt.Errorf("responses: nil response")
 	}
 	out := Response{
-		ResponseID: res.ID,
-		Text:       res.OutputText(),
-		RawJSON:    res.RawJSON(),
-		UsageKnown: res.JSON.Usage.Valid(),
+		ResponseID:    res.ID,
+		ReturnedModel: string(res.Model),
+		Text:          res.OutputText(),
+		RawJSON:       res.RawJSON(),
+		UsageKnown:    res.JSON.Usage.Valid(),
 		Usage: Usage{
 			InputTokens:       res.Usage.InputTokens,
 			CachedInputTokens: res.Usage.InputTokensDetails.CachedTokens,

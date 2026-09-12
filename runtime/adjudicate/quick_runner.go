@@ -102,7 +102,7 @@ func (r QuickRunner) Run(ctx context.Context, request ProcedureRequest) (out Pro
 		ctx = context.Background()
 	}
 	baseEnvironment := os.Environ()
-	env, err := coreProviderEnvironmentFor(request.Settings, baseEnvironment, "openrouter")
+	env, err := coreProviderEnvironmentFor(request.Settings, baseEnvironment, configuredProviderNames(request.Settings.Common.ProviderCredentials)...)
 	if err != nil {
 		return ProcedureOutcome{}, err
 	}
@@ -189,6 +189,12 @@ func (r QuickRunner) Run(ctx context.Context, request ProcedureRequest) (out Pro
 		"--max-documents-total-bytes", strconv.FormatInt(request.Settings.Common.DocumentLimits.Total, 10),
 		"--lawyer-web-search=" + strconv.FormatBool(settings.WebSearch),
 		"--allow-api-key",
+	}
+	for _, endpoint := range request.Settings.Common.CouncilAllowedEndpoints {
+		args = append(args, "--council-endpoint", endpoint)
+	}
+	if minimum := request.Settings.Common.CouncilMinEndpoints; minimum > 0 {
+		args = append(args, "--minimum-distinct-council-endpoints", strconv.Itoa(minimum))
 	}
 	args = appendCorePromptArgs(args, settings.PromptDir, PromptFilePaths(corePromptFiles))
 	if settings.Timeout != 0 {

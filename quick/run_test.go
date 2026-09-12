@@ -13,12 +13,15 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/agentcourt/adj/common/councilsample"
 	"github.com/agentcourt/adj/common/documents"
+	"github.com/agentcourt/adj/common/modelgateway"
 	"github.com/agentcourt/adj/common/modelrequest"
 	openaiapi "github.com/agentcourt/adj/common/openai"
 )
@@ -1262,44 +1265,6 @@ func TestConfigureRequiresExplicitProcedureInputs(t *testing.T) {
 	}
 }
 
-func TestLoadCouncilSamplesDistinctMembers(t *testing.T) {
-	root := t.TempDir()
-	poolPath := writeCouncilPool(t, root, 4)
-	indexes := []int{2, 0, 1}
-	call := 0
-	council, err := loadCouncilWithRandomIndex(poolPath, 3, func(upperBound int) (int, error) {
-		if call >= len(indexes) {
-			return 0, fmt.Errorf("unexpected random-index call")
-		}
-		index := indexes[call]
-		call++
-		if index >= upperBound {
-			return 0, fmt.Errorf("test index %d exceeds upper bound %d", index, upperBound)
-		}
-		return index, nil
-	})
-	if err != nil {
-		t.Fatalf("load council: %v", err)
-	}
-	if call != 3 {
-		t.Fatalf("random-index calls = %d, want 3", call)
-	}
-	wantModels := []string{"openrouter://model-3", "openrouter://model-1", "openrouter://model-4"}
-	seen := make(map[string]struct{}, len(council))
-	for index, member := range council {
-		if member.MemberID != fmt.Sprintf("C%d", index+1) {
-			t.Errorf("member %d ID = %q", index, member.MemberID)
-		}
-		if member.Model != wantModels[index] {
-			t.Errorf("member %d model = %q, want %q", index, member.Model, wantModels[index])
-		}
-		if _, duplicate := seen[member.Model]; duplicate {
-			t.Errorf("duplicate selected model %q", member.Model)
-		}
-		seen[member.Model] = struct{}{}
-	}
-}
-
 func TestLoadCouncilExcludesRecordsWithoutToolSupport(t *testing.T) {
 	root := t.TempDir()
 	for _, name := range []string{"unsupported.txt", "first.txt", "second.txt"} {
@@ -1317,15 +1282,14 @@ func TestLoadCouncilExcludesRecordsWithoutToolSupport(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	council, err := loadCouncilWithRandomIndex(poolPath, 2, func(int) (int, error) { return 0, nil })
+	council, err := loadCouncilWithOptions(poolPath, councilsample.Options{Count: 3})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if council[0].Model != "openrouter://first" || council[1].Model != "openrouter://second" {
-		t.Fatalf("council models = %q, %q", council[0].Model, council[1].Model)
-	}
-	if _, err := loadCouncilWithRandomIndex(poolPath, 3, func(int) (int, error) { return 0, nil }); err == nil || !strings.Contains(err.Error(), "council size 3 exceeds compatible pool 2") {
-		t.Fatalf("incompatible pool error = %v", err)
+	for _, member := range council {
+		if member.Model == "openrouter://unsupported" {
+			t.Fatalf("selected incompatible or unexpected model %q", member.Model)
+		}
 	}
 }
 
@@ -1395,7 +1359,7 @@ func TestSelectAvailableCouncilReplacesRejectedCandidate(t *testing.T) {
 		{Model: "openrouter://second", PersonaFile: "second.txt"},
 	}
 	checked := make([]string, 0, len(candidates))
-	council, rejections, err := selectAvailableCouncil(context.Background(), candidates, 2, func(_ context.Context, member CouncilMember) error {
+	council, rejections, err := selectAvailableCouncil(context.Background(), candidates, 3, func(_ context.Context, member CouncilMember) error {
 		checked = append(checked, member.MemberID+":"+member.Model)
 		if member.Model == "openrouter://unavailable" {
 			return &openaiapi.ProviderError{Class: openaiapi.ProviderErrorRequest, Err: errors.New("endpoint unavailable")}
@@ -1405,16 +1369,28 @@ func TestSelectAvailableCouncilReplacesRejectedCandidate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(checked, []string{"C1:openrouter://unavailable", "C1:openrouter://first", "C2:openrouter://second"}) {
-		t.Fatalf("checked candidates = %#v", checked)
+	checkedModels := make(map[string]int)
+	for _, value := range checked {
+		_, model, _ := strings.Cut(value, ":")
+		checkedModels[model]++
 	}
-	if len(council) != 2 || council[0].MemberID != "C1" || council[0].Model != "openrouter://first" || council[1].MemberID != "C2" || council[1].Model != "openrouter://second" {
+	for _, model := range []string{"openrouter://unavailable", "openrouter://first", "openrouter://second"} {
+		if checkedModels[model] != 1 {
+			t.Fatalf("checked candidates = %#v", checked)
+		}
+	}
+	if len(council) != 3 {
 		t.Fatalf("selected council = %#v", council)
 	}
-	if len(rejections) != 1 || rejections[0].MemberID != "C1" || rejections[0].Replacement == nil || rejections[0].Replacement.Model != "openrouter://first" || rejections[0].ErrorClass != string(openaiapi.ProviderErrorRequest) {
+	for index, member := range council {
+		if member.MemberID != fmt.Sprintf("C%d", index+1) || member.Model == "openrouter://unavailable" {
+			t.Fatalf("selected council = %#v", council)
+		}
+	}
+	if len(rejections) != 1 || rejections[0].Replacement == nil || rejections[0].ErrorClass != string(openaiapi.ProviderErrorRequest) {
 		t.Fatalf("rejections = %#v", rejections)
 	}
-	if rejections[0].Unavailable.EndpointVariantID != "unavailable-variant" || rejections[0].Replacement.EndpointVariantID != "first-variant" {
+	if rejections[0].Unavailable.EndpointVariantID != "unavailable-variant" {
 		t.Fatalf("rejection variants = %#v", rejections[0])
 	}
 }
@@ -1426,12 +1402,12 @@ func TestSelectAvailableCouncilContinuesAfterEndpointCredentialInitializationFai
 		{Model: "openrouter://second"},
 		{Model: "openai://third"},
 	}
-	council, rejections, err := selectAvailableCouncil(context.Background(), candidates, 1, func(_ context.Context, member CouncilMember) error {
+	council, rejections, err := selectAvailableCouncil(context.Background(), candidates, 2, func(_ context.Context, member CouncilMember) error {
 		checked = append(checked, member.Model)
 		if councilMemberEndpoint(member) == "openrouter" {
-			return &endpointCredentialError{
-				endpoint: "openrouter",
-				err:      &openaiapi.ProviderError{Class: openaiapi.ProviderErrorAuthentication, Err: errors.New("missing credential")},
+			return &modelgateway.EndpointCredentialError{
+				Endpoint: "openrouter",
+				Err:      &openaiapi.ProviderError{Class: openaiapi.ProviderErrorAuthentication, Err: errors.New("missing credential")},
 			}
 		}
 		return nil
@@ -1439,13 +1415,13 @@ func TestSelectAvailableCouncilContinuesAfterEndpointCredentialInitializationFai
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(checked, []string{"openrouter://first", "openai://third"}) {
+	if len(checked) != 2 || !slices.Contains(checked, "openai://third") || (!slices.Contains(checked, "openrouter://first") && !slices.Contains(checked, "openrouter://second")) {
 		t.Fatalf("checked candidates = %#v", checked)
 	}
-	if len(council) != 1 || council[0].Model != "openai://third" || council[0].MemberID != "C1" {
+	if len(council) != 2 || council[0].Model != "openai://third" || council[1].Model != "openai://third" {
 		t.Fatalf("selected council = %#v", council)
 	}
-	if len(rejections) != 2 {
+	if len(rejections) != 1 {
 		t.Fatalf("rejections = %#v", rejections)
 	}
 	for _, rejection := range rejections {
@@ -1459,15 +1435,15 @@ func TestSelectAvailableCouncilReturnsEndpointCredentialFailureWhenPoolExhausted
 	calls := 0
 	council, rejections, err := selectAvailableCouncil(context.Background(), []CouncilMember{{Model: "openrouter://first"}, {Model: "openrouter://second"}}, 1, func(context.Context, CouncilMember) error {
 		calls++
-		return &endpointCredentialError{
-			endpoint: "openrouter",
-			err:      &openaiapi.ProviderError{Class: openaiapi.ProviderErrorAuthentication, Err: errors.New("missing credential")},
+		return &modelgateway.EndpointCredentialError{
+			Endpoint: "openrouter",
+			Err:      &openaiapi.ProviderError{Class: openaiapi.ProviderErrorAuthentication, Err: errors.New("missing credential")},
 		}
 	})
 	if err == nil || openaiapi.ErrorClass(err) != openaiapi.ProviderErrorAuthentication {
 		t.Fatalf("authentication error = %v", err)
 	}
-	if calls != 1 || len(council) != 0 || len(rejections) != 2 {
+	if calls != 1 || len(council) != 0 || len(rejections) != 1 {
 		t.Fatalf("calls = %d, council = %#v, rejections = %#v", calls, council, rejections)
 	}
 }
@@ -1478,7 +1454,7 @@ func TestSelectAvailableCouncilRetriesAuthenticationFailureWithDifferentRequestH
 		{Model: "openrouter://second", RequestSpec: &modelrequest.Spec{Endpoint: "openrouter", Headers: map[string]string{"Authorization": "good"}}},
 	}
 	calls := 0
-	council, rejections, err := selectAvailableCouncil(context.Background(), candidates, 1, func(_ context.Context, member CouncilMember) error {
+	council, rejections, err := selectAvailableCouncil(context.Background(), candidates, 2, func(_ context.Context, member CouncilMember) error {
 		calls++
 		if member.Model == "openrouter://first" {
 			return &openaiapi.ProviderError{Class: openaiapi.ProviderErrorAuthentication, Err: errors.New("request credential rejected")}
@@ -1488,7 +1464,7 @@ func TestSelectAvailableCouncilRetriesAuthenticationFailureWithDifferentRequestH
 	if err != nil {
 		t.Fatal(err)
 	}
-	if calls != 2 || len(council) != 1 || council[0].Model != "openrouter://second" || len(rejections) != 1 {
+	if calls != 2 || len(council) != 2 || council[0].Model != "openrouter://second" || council[1].Model != "openrouter://second" || len(rejections) != 1 {
 		t.Fatalf("calls = %d, council = %#v, rejections = %#v", calls, council, rejections)
 	}
 }
@@ -1548,12 +1524,10 @@ func TestCouncilCandidateRejectionEventIncludesRouteIdentity(t *testing.T) {
 	}
 }
 
-func TestLoadCouncilFullPoolSelectsEveryMember(t *testing.T) {
+func TestLoadCouncilWithOptionsUsesEveryConfigurationBeforeRepeating(t *testing.T) {
 	root := t.TempDir()
 	poolPath := writeCouncilPool(t, root, 4)
-	council, err := loadCouncilWithRandomIndex(poolPath, 4, func(upperBound int) (int, error) {
-		return upperBound - 1, nil
-	})
+	council, err := loadCouncilWithOptions(poolPath, councilsample.Options{Count: 4})
 	if err != nil {
 		t.Fatalf("load full council: %v", err)
 	}
@@ -1569,18 +1543,6 @@ func TestLoadCouncilFullPoolSelectsEveryMember(t *testing.T) {
 		if _, ok := seen[model]; !ok {
 			t.Errorf("full-pool selection omitted %s", model)
 		}
-	}
-}
-
-func TestLoadCouncilReturnsRandomSourceError(t *testing.T) {
-	root := t.TempDir()
-	poolPath := writeCouncilPool(t, root, 2)
-	wantErr := fmt.Errorf("entropy unavailable")
-	_, err := loadCouncilWithRandomIndex(poolPath, 1, func(int) (int, error) {
-		return 0, wantErr
-	})
-	if !errors.Is(err, wantErr) {
-		t.Fatalf("load council error = %v, want %v", err, wantErr)
 	}
 }
 
@@ -1704,7 +1666,7 @@ func TestDirectClientIdentifiesEndpointCredentialInitializationFailure(t *testin
 		nil,
 		"",
 	)
-	if endpoint, ok := endpointCredentialFailure(err); !ok || endpoint != "openrouter" {
+	if endpoint, ok := modelgateway.CredentialFailureEndpoint(err); !ok || endpoint != "openrouter" {
 		t.Fatalf("endpoint credential failure = %q, %t; error = %v", endpoint, ok, err)
 	}
 	if got := openaiapi.ErrorClass(err); got != openaiapi.ProviderErrorAuthentication {
@@ -1761,6 +1723,7 @@ func TestCouncilVotePreservesExplicitOutputLimitAcrossRepair(t *testing.T) {
 		ResponseID: "malformed-response",
 		RawJSON:    `{}`,
 		ToolCalls: []openaiapi.ToolCall{{
+			CallID:         "call-malformed",
 			Name:           "submit_council_vote",
 			ArgumentsError: "malformed arguments",
 		}},
@@ -1988,16 +1951,9 @@ func TestLoadCouncilRejectsUnsupportedRecordBeforeSampling(t *testing.T) {
 	if err := os.WriteFile(poolPath, []byte(pool), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	chooseCalled := false
-	_, err := loadCouncilWithRandomIndex(poolPath, 1, func(int) (int, error) {
-		chooseCalled = true
-		return 0, nil
-	})
+	_, _, err := loadEligibleCouncilCandidates(poolPath)
 	if err == nil || !strings.Contains(err.Error(), "record 2") {
 		t.Fatalf("loadCouncil error = %v", err)
-	}
-	if chooseCalled {
-		t.Fatal("council sampling began before pool validation")
 	}
 }
 
@@ -2077,10 +2033,13 @@ func TestCouncilVoteRepairsMalformedArguments(t *testing.T) {
 	if requests[1].PreviousResponseID != "malformed-response" {
 		t.Fatalf("repair previous response = %q, want malformed-response", requests[1].PreviousResponseID)
 	}
-	if len(requests[1].Input) != 3 {
+	if len(requests[1].Input) != 4 {
 		t.Fatalf("repair input = %#v", requests[1].Input)
 	}
-	repair, _ := requests[1].Input[2]["content"].(string)
+	if requests[1].Input[2]["type"] != "function_call_output" || requests[1].Input[2]["call_id"] != "call-malformed" {
+		t.Fatalf("repair tool output = %#v", requests[1].Input[2])
+	}
+	repair, _ := requests[1].Input[3]["content"].(string)
 	if !strings.Contains(repair, "invalid character 's' after object key:value pair") || !strings.Contains(repair, "Call submit_council_vote exactly once") {
 		t.Fatalf("repair prompt = %q", repair)
 	}
@@ -2092,6 +2051,7 @@ func TestCouncilVoteExhaustsInvalidAttemptLimit(t *testing.T) {
 			ResponseID: id,
 			RawJSON:    `{}`,
 			ToolCalls: []openaiapi.ToolCall{{
+				CallID:         "call-" + id,
 				Name:           "submit_council_vote",
 				ArgumentsError: "malformed arguments " + id,
 			}},
@@ -2160,37 +2120,6 @@ func TestCouncilVoteRecordsProviderManagementData(t *testing.T) {
 	}
 	if vote.ProviderCostUSD == nil || *vote.ProviderCostUSD != 0.0002 {
 		t.Fatalf("cost = %v, want 0.0002", vote.ProviderCostUSD)
-	}
-}
-
-func TestDirectClientAggregatesProviderManagementData(t *testing.T) {
-	client := newDirectClient(time.Second, 1)
-	first := openaiapi.Response{
-		Usage:               openaiapi.Usage{InputTokens: 100, CachedInputTokens: 20, OutputTokens: 30, ReasoningTokens: 10, TotalTokens: 130},
-		UsageKnown:          true,
-		OpenRouterCostUSD:   0.25,
-		OpenRouterCostKnown: true,
-	}
-	second := openaiapi.Response{
-		Usage:               openaiapi.Usage{InputTokens: 50, OutputTokens: 25, TotalTokens: 75},
-		UsageKnown:          true,
-		OpenRouterCostUSD:   0.5,
-		OpenRouterCostKnown: true,
-	}
-	client.recordResponse(first)
-	client.recordResponse(second)
-	accounting := client.Accounting()
-	wantUsage := openaiapi.Usage{InputTokens: 150, CachedInputTokens: 20, OutputTokens: 55, ReasoningTokens: 10, TotalTokens: 205}
-	if accounting.RequestCount != 2 || accounting.UsageObservedCount != 2 || accounting.Usage == nil || *accounting.Usage != wantUsage {
-		t.Fatalf("accounting = %#v, want usage %+v", accounting, wantUsage)
-	}
-	if accounting.CostObservedCount != 2 || accounting.CostUSD == nil || *accounting.CostUSD != 0.75 {
-		t.Fatalf("accounting = %#v, want cost 0.75", accounting)
-	}
-	client.recordResponse(openaiapi.Response{})
-	accounting = client.Accounting()
-	if accounting.RequestCount != 3 || accounting.UsageObservedCount != 2 || accounting.CostObservedCount != 2 || accounting.Usage == nil || *accounting.Usage != wantUsage || accounting.CostUSD == nil || *accounting.CostUSD != 0.75 {
-		t.Fatalf("partial accounting = %#v", accounting)
 	}
 }
 

@@ -93,6 +93,9 @@ func TestARBRunnerBuildsCanonicalCaseAndMapsResult(t *testing.T) {
 	if options.CouncilPoolPath != "/council.jsonl" || options.CouncilSize != 3 || options.RequiredVotes != 2 || options.EvidenceStandard != "preponderance_of_the_evidence" {
 		t.Fatalf("common procedure options = %#v", options)
 	}
+	if !reflect.DeepEqual(options.CouncilAllowedEndpoints, []string{"openrouter"}) || options.CouncilMinEndpoints != 1 {
+		t.Fatalf("council endpoint options = %#v", options)
+	}
 	if options.LauncherPromptDir != "/launcher/arb" || options.LauncherPromptFiles["participant.pi"] != "/launcher/pi.md" {
 		t.Fatalf("launcher prompt options = %#v", options)
 	}
@@ -175,10 +178,12 @@ func arbProcedureRequest(recordDir string) ProcedureRequest {
 		Request: Request{CaseID: "case-1", RunID: "run-1", Proposition: "The proposition"},
 		Settings: ResolvedSettings{
 			Common: CommonSettings{
-				EvidenceStandard: "preponderance_of_the_evidence",
-				CouncilPool:      "/council.jsonl",
-				CouncilSize:      3,
-				RequiredVotes:    2,
+				EvidenceStandard:        "preponderance_of_the_evidence",
+				CouncilPool:             "/council.jsonl",
+				CouncilAllowedEndpoints: []string{"openrouter"},
+				CouncilMinEndpoints:     1,
+				CouncilSize:             3,
+				RequiredVotes:           2,
 				ProviderCredentials: map[string]CredentialMetadata{
 					"openrouter": {Source: AuthAPIKey, EnvironmentVariable: "ARB_OPENROUTER_KEY"},
 				},

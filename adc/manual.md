@@ -140,7 +140,7 @@ Jury policy consists of jury size, unanimity, and minimum concurrence.  `adc cas
 
 The engine accepts 6 through 12 jurors.  The minimum concurrence must lie between 6 and the configured jury size.  A deliberating-juror failure removes that juror from the effective concurrence calculation while preserving the nominal policy in the case record.
 
-Juror request specifications come from the JSONL file named by `--juror-personas`.  Each record can select the endpoint, model, provider constraints, request settings, and persona for a juror.  The direct runtime applies those request specifications through the shared model client.
+Juror request specifications come from the JSONL file named by `--juror-personas`.  Each record can select the endpoint, model, provider constraints, request settings, and persona for a juror.  The runtime balances assignments across eligible endpoints and configurations, and one configuration may serve more than one candidate.  Repeated `--council-endpoint` flags restrict the eligible endpoints.  `--minimum-distinct-council-endpoints` requires the pool to contain that many eligible endpoint names and controls the initial candidate assignments.  Voir dire may remove candidates, so the setting does not impose a minimum on the final jury.  The [model-endpoint guide](../docs/model-endpoints.md) defines the supported endpoints, credentials, request mappings, and local Pi execution.
 
 ## `adc case`
 
@@ -168,6 +168,8 @@ Juror request specifications come from the JSONL file named by `--juror-personas
 | `--temperature` | Default runtime temperature override. |
 | `--non-juror-temperature`, `--juror-temperature` | Role-class temperature overrides. |
 | `--juror-personas` | JSONL juror request-specification file. |
+| `--council-endpoint` | Allowed juror-model endpoint.  May repeat. |
+| `--minimum-distinct-council-endpoints` | Minimum endpoint names assigned across automatically selected candidate jurors. |
 | `--trial-mode` | `auto`, `jury`, or `bench`.  Proposition `auto` selects `jury`. |
 | `--skip-voir-dire` | Empanel randomly after trial setup. |
 | `--juror-count` | Jury size from 6 through 12. |

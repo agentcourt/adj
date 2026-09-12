@@ -40,7 +40,7 @@ func TestLoadJurorPersonaPoolAndSample(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadJurorPersonaPool error = %v", err)
 	}
-	if len(pool.pairs) != 2 || len(pool.remaining) != 2 {
+	if len(pool.pairs) != 2 || pool.selector == nil {
 		t.Fatalf("pool = %+v", pool)
 	}
 	for _, pair := range pool.pairs {
@@ -63,8 +63,12 @@ func TestLoadJurorPersonaPoolAndSample(t *testing.T) {
 	if first.PersonaFile == second.PersonaFile {
 		t.Fatalf("samplePair repeated persona file: %q", first.PersonaFile)
 	}
-	if _, err := pool.samplePair(); err == nil {
-		t.Fatalf("samplePair exhaustion error = nil")
+	third, err := pool.samplePair()
+	if err != nil {
+		t.Fatalf("samplePair third error = %v", err)
+	}
+	if third.PersonaFile != first.PersonaFile && third.PersonaFile != second.PersonaFile {
+		t.Fatalf("third pair = %+v", third)
 	}
 }
 
@@ -76,7 +80,6 @@ func TestApplyJurorPersonaDefaultsAndOpportunityContext(t *testing.T) {
 			{Model: "openrouter://openai/gpt-5", PersonaText: "skeptical of screenshots", PersonaFile: "personas/persons/j1.txt", RequestSpec: &modelrequest.Spec{Endpoint: "openrouter", Model: "openai/gpt-5"}},
 			{Model: "openrouter://anthropic/claude-3.7-sonnet", PersonaText: "insists on corroboration", PersonaFile: "personas/persons/j2.txt", RequestSpec: &modelrequest.Spec{Endpoint: "openrouter", Model: "anthropic/claude-3.7-sonnet"}},
 		},
-		remaining: []int{0, 1},
 	}
 	r := &Runner{
 		jurorPersonaPool:        pool,

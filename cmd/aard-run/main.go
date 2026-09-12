@@ -86,6 +86,7 @@ func runLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 	var caseFiles explicitFileList
 	var promptFiles cliio.Assignments
 	var launcherPromptFiles cliio.Assignments
+	var councilEndpoints cliio.StringList
 	var plaintiffLawyerResume optionalBoolFlag
 	var defendantLawyerResume optionalBoolFlag
 	coreCommand := fs.String("aard-bin", localrun.DefaultCoreCommand, "Core aard executable")
@@ -104,6 +105,8 @@ func runLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 	fs.Var(&launcherPromptFiles, "launcher-prompt-file", "Launcher prompt override as ID=PATH; repeat for a partial set")
 	commonRoot := fs.String("common-root", "", "Optional common directory passed to the core case")
 	councilPool := fs.String("council-pool", "", "Council JSONL request-spec pool file")
+	fs.Var(&councilEndpoints, "council-endpoint", "Allowed council endpoint; repeat as needed")
+	minimumDistinctCouncilEndpoints := fs.Int("minimum-distinct-council-endpoints", 0, "Minimum distinct endpoints represented in the council")
 	caseAPIAddr := fs.String("caseapi-addr", "127.0.0.1:0", "Private case API listen address")
 	mcpListenAddr := fs.String("mcp-listen", "0.0.0.0:0", "MCP listen address")
 	councilTimeoutSeconds := fs.Int("council-timeout-seconds", localrun.DefaultRunCouncilTimeoutSeconds, "Council turn timeout seconds")
@@ -193,33 +196,35 @@ func runLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 		*outDir = filepath.Join("out", strings.TrimSpace(*caseID))
 	}
 	opts := localrun.Options{
-		CoreCommand:           strings.TrimSpace(*coreCommand),
-		CoreWorkingDir:        strings.TrimSpace(*coreWorkingDir),
-		MCPCommand:            strings.TrimSpace(*mcpCommand),
-		MCPWorkingDir:         strings.TrimSpace(*mcpWorkingDir),
-		ComplaintPath:         *complaintPath,
-		CaseFiles:             caseFiles.values,
-		OutputDir:             *outDir,
-		PolicyPath:            *policyPath,
-		CouncilSize:           *councilSize,
-		JudgmentStandard:      *judgmentStandard,
-		PromptDir:             strings.TrimSpace(*promptDir),
-		PromptFiles:           promptFiles.Map(),
-		LauncherPromptDir:     strings.TrimSpace(*launcherPromptDir),
-		LauncherPromptFiles:   launcherPromptFiles.Map(),
-		CommonRoot:            *commonRoot,
-		CouncilPoolPath:       *councilPool,
-		CaseAPIAddr:           *caseAPIAddr,
-		MCPListenAddr:         *mcpListenAddr,
-		CouncilTimeoutSeconds: *councilTimeoutSeconds,
-		LawyerTimeoutSeconds:  *lawyerTimeoutSeconds,
-		MaxResponseBytes:      *maxResponseBytes,
-		InvalidAttemptLimit:   *invalidAttemptLimit,
-		EnginePath:            *enginePath,
-		RunID:                 *runID,
-		CaseID:                *caseID,
-		AutoLawyers:           *autoLawyers,
-		LawyerWebSearch:       lawyerWebSearch,
+		CoreCommand:             strings.TrimSpace(*coreCommand),
+		CoreWorkingDir:          strings.TrimSpace(*coreWorkingDir),
+		MCPCommand:              strings.TrimSpace(*mcpCommand),
+		MCPWorkingDir:           strings.TrimSpace(*mcpWorkingDir),
+		ComplaintPath:           *complaintPath,
+		CaseFiles:               caseFiles.values,
+		OutputDir:               *outDir,
+		PolicyPath:              *policyPath,
+		CouncilSize:             *councilSize,
+		JudgmentStandard:        *judgmentStandard,
+		PromptDir:               strings.TrimSpace(*promptDir),
+		PromptFiles:             promptFiles.Map(),
+		LauncherPromptDir:       strings.TrimSpace(*launcherPromptDir),
+		LauncherPromptFiles:     launcherPromptFiles.Map(),
+		CommonRoot:              *commonRoot,
+		CouncilPoolPath:         *councilPool,
+		CouncilAllowedEndpoints: councilEndpoints.Values(),
+		CouncilMinEndpoints:     *minimumDistinctCouncilEndpoints,
+		CaseAPIAddr:             *caseAPIAddr,
+		MCPListenAddr:           *mcpListenAddr,
+		CouncilTimeoutSeconds:   *councilTimeoutSeconds,
+		LawyerTimeoutSeconds:    *lawyerTimeoutSeconds,
+		MaxResponseBytes:        *maxResponseBytes,
+		InvalidAttemptLimit:     *invalidAttemptLimit,
+		EnginePath:              *enginePath,
+		RunID:                   *runID,
+		CaseID:                  *caseID,
+		AutoLawyers:             *autoLawyers,
+		LawyerWebSearch:         lawyerWebSearch,
 		PlaintiffLawyer: localrun.LawyerProfile{
 			Runner:          localrun.LawyerRunner(strings.TrimSpace(*plaintiffLawyer)),
 			Provider:        headless.Provider(strings.TrimSpace(*plaintiffLawyerProvider)),

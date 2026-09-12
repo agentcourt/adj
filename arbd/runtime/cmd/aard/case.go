@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/agentcourt/adj/arbd/runtime/proceeding"
+	"github.com/agentcourt/adj/common/cliio"
 	"github.com/agentcourt/adj/common/promptfile"
 )
 
@@ -35,6 +36,9 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	fs.Var(&promptFiles, "prompt-file", "Prompt file override as ID=PATH. May be repeated")
 	commonRoot := fs.String("common-root", proceeding.DefaultCommonRoot(), "Path to the sibling shared common directory")
 	councilPool := fs.String("council-pool", "", "Council JSONL request-spec pool file. Default: ./pool.jsonl when present, else <common-root>/data/personas/pool.jsonl")
+	var councilEndpoints cliio.StringList
+	fs.Var(&councilEndpoints, "council-endpoint", "Allowed council endpoint. May be repeated")
+	minimumDistinctCouncilEndpoints := fs.Int("minimum-distinct-council-endpoints", 0, "Minimum distinct endpoints represented in the council")
 	caseAPIAddr := fs.String("caseapi-addr", proceeding.DefaultCaseAPIAddr, "Private case API listen address")
 	councilBackend := fs.String("council-backend", proceeding.DefaultCouncilBackend, "Council backend: direct or councilapi")
 	timeoutSeconds := fs.Int("timeout-seconds", 0, "Override runtime council LLM timeout in seconds")
@@ -73,6 +77,8 @@ func runCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 		PromptFiles:              promptFiles.Values(),
 		CommonRoot:               strings.TrimSpace(*commonRoot),
 		CouncilPoolPath:          *councilPool,
+		CouncilAllowedEndpoints:  councilEndpoints.Values(),
+		CouncilMinEndpoints:      *minimumDistinctCouncilEndpoints,
 		CaseAPIAddr:              *caseAPIAddr,
 		CouncilBackend:           *councilBackend,
 		CouncilTimeoutSeconds:    *timeoutSeconds,

@@ -18,6 +18,7 @@ import (
 	"github.com/agentcourt/adj/adc/runtime/runner"
 	"github.com/agentcourt/adj/adc/runtime/store"
 	"github.com/agentcourt/adj/common/documents"
+	"github.com/agentcourt/adj/common/modelgateway"
 	"github.com/agentcourt/adj/common/openai"
 )
 
@@ -50,6 +51,8 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	nonJurorTemperature := fs.String("non-juror-temperature", "", "Override runtime temperature for judge, lawyers, and clerk")
 	jurorTemperature := fs.String("juror-temperature", "", "Override runtime temperature for jurors only")
 	jurorPersonas := fs.String("juror-personas", defaultPersonaRecordsPath(), "Path to juror model/persona pairs file")
+	var councilEndpoints stringListFlag
+	minimumDistinctCouncilEndpoints := fs.Int("minimum-distinct-council-endpoints", 0, "Minimum distinct endpoints assigned across juror candidates")
 	trialMode := fs.String("trial-mode", "auto", "Trial mode override: auto, jury, or bench")
 	skipVoirDire := fs.Bool("skip-voir-dire", false, "Skip questionnaires and voir dire, then empanel randomly from the candidate panel")
 	jurorCount := fs.Int("juror-count", 0, "Jury size for jury trials, 6 through 12. Omit to use the scenario or court default")
@@ -67,6 +70,7 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	engineCommand := fs.String("engine", defaultEngineCommand(), "Engine command string")
 	jsonSummary := fs.Bool("json-summary", true, "Emit JSON summary to stdout")
 	fs.Var(&externalRoles, "external-role", "Role to serve through the role API during opportunity turns; repeat as needed")
+	fs.Var(&councilEndpoints, "council-endpoint", "Allowed juror endpoint; repeat as needed")
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	help, parseErr := parseFlagSet(fs, args)
 	if parseErr != nil {
@@ -105,13 +109,13 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	resolvedReportModel := resolveDefault(*reportModel, casegen.DefaultRuntimeModel())
 	timeout := time.Duration(*timeoutSeconds) * time.Second
 	var client *openai.Client
-	var jurorClient *openai.Client
+	var jurorClient runner.ResponseClient
 	client, err = openai.NewFromEnv(*online, timeout)
 	if err != nil {
 		return err
 	}
 	if strings.TrimSpace(*jurorPersonas) != "" {
-		jurorClient, err = openai.NewFromEnv(*online, timeout)
+		jurorClient, err = modelgateway.New(timeout, 4)
 		if err != nil {
 			return err
 		}
@@ -234,21 +238,23 @@ func RunCase(ctx context.Context, args []string, stdout io.Writer, stderr io.Wri
 	engine := lean.New(strings.Fields(strings.TrimSpace(*engineCommand)))
 
 	r, err := runner.New(st, engine, client, jurorClient, runner.Config{
-		ScenarioPath:      scenarioPath,
-		OutputPath:        outputPath,
-		EventsPath:        eventsPath,
-		RunID:             effectiveRunID,
-		CaseID:            resolveDefault(*caseID, effectiveRunID),
-		CaseAPIAddr:       strings.TrimSpace(*caseAPIAddr),
-		ExternalRoles:     []string(externalRoles),
-		Model:             setup.RuntimeModel,
-		Temperature:       tempPtr,
-		JurorTemperature:  jurorTempPtr,
-		JurorPersonasPath: strings.TrimSpace(*jurorPersonas),
-		Runtime:           runtimeLimits,
-		PolicyOverrides:   policyOverrides,
-		PromptDir:         resolvedPromptDir,
-		PromptFiles:       resolvedPromptFiles,
+		ScenarioPath:            scenarioPath,
+		OutputPath:              outputPath,
+		EventsPath:              eventsPath,
+		RunID:                   effectiveRunID,
+		CaseID:                  resolveDefault(*caseID, effectiveRunID),
+		CaseAPIAddr:             strings.TrimSpace(*caseAPIAddr),
+		ExternalRoles:           []string(externalRoles),
+		Model:                   setup.RuntimeModel,
+		Temperature:             tempPtr,
+		JurorTemperature:        jurorTempPtr,
+		JurorPersonasPath:       strings.TrimSpace(*jurorPersonas),
+		CouncilAllowedEndpoints: []string(councilEndpoints),
+		CouncilMinEndpoints:     *minimumDistinctCouncilEndpoints,
+		Runtime:                 runtimeLimits,
+		PolicyOverrides:         policyOverrides,
+		PromptDir:               resolvedPromptDir,
+		PromptFiles:             resolvedPromptFiles,
 	})
 	if err != nil {
 		return err

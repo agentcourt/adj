@@ -26,7 +26,7 @@ func (r ARBRunner) Run(ctx context.Context, request ProcedureRequest) (Procedure
 		return ProcedureOutcome{}, fmt.Errorf("resolved arb settings are absent")
 	}
 	baseEnvironment := os.Environ()
-	coreEnvironment, err := coreProviderEnvironmentFor(request.Settings, baseEnvironment, "openrouter")
+	coreEnvironment, err := coreProviderEnvironmentFor(request.Settings, baseEnvironment, configuredProviderNames(request.Settings.Common.ProviderCredentials)...)
 	if err != nil {
 		return ProcedureOutcome{}, err
 	}
@@ -79,37 +79,39 @@ func (r ARBRunner) Run(ctx context.Context, request ProcedureRequest) (Procedure
 		run = localrun.Run
 	}
 	opts := localrun.Options{
-		CoreCommand:            settings.CoreCommand,
-		CoreWorkingDir:         settings.CoreWorkingDir,
-		MCPCommand:             settings.MCPCommand,
-		MCPWorkingDir:          settings.MCPWorkingDir,
-		MCPListenAddr:          settings.MCPListenAddr,
-		MCPPublicBaseURL:       settings.MCPPublicBaseURL,
-		ComplaintPath:          complaintPath,
-		CaseFiles:              caseFiles,
-		OutputDir:              request.RecordDir,
-		CoreOutputDir:          request.CoreDir,
-		LogsDir:                request.LogsDir,
-		CouncilSize:            request.Settings.Common.CouncilSize,
-		RequiredVotes:          request.Settings.Common.RequiredVotes,
-		EvidenceStandard:       request.Settings.Common.EvidenceStandard,
-		PromptDir:              settings.PromptDir,
-		PromptFiles:            map[string]string(settings.PromptFiles),
-		LauncherPromptDir:      settings.LauncherPromptDir,
-		LauncherPromptFiles:    map[string]string(settings.LauncherPromptFiles),
-		CouncilPoolPath:        request.Settings.Common.CouncilPool,
-		CouncilTimeoutSeconds:  timeoutSeconds,
-		LawyerTimeoutSeconds:   timeoutSeconds,
-		RunID:                  request.Request.RunID,
-		CaseID:                 request.Request.CaseID,
-		LawyerWebSearch:        settings.WebSearch,
-		AutoLawyers:            settings.AutoLawyers,
-		PlaintiffLawyer:        plaintiff,
-		DefendantLawyer:        defendant,
-		CoreEnvironment:        coreEnvironment,
-		MCPEnvironment:         mcpEnvironment,
-		ParticipantEnvironment: participantEnvironment,
-		ProcessObserver:        request.Observer,
+		CoreCommand:             settings.CoreCommand,
+		CoreWorkingDir:          settings.CoreWorkingDir,
+		MCPCommand:              settings.MCPCommand,
+		MCPWorkingDir:           settings.MCPWorkingDir,
+		MCPListenAddr:           settings.MCPListenAddr,
+		MCPPublicBaseURL:        settings.MCPPublicBaseURL,
+		ComplaintPath:           complaintPath,
+		CaseFiles:               caseFiles,
+		OutputDir:               request.RecordDir,
+		CoreOutputDir:           request.CoreDir,
+		LogsDir:                 request.LogsDir,
+		CouncilSize:             request.Settings.Common.CouncilSize,
+		RequiredVotes:           request.Settings.Common.RequiredVotes,
+		EvidenceStandard:        request.Settings.Common.EvidenceStandard,
+		PromptDir:               settings.PromptDir,
+		PromptFiles:             map[string]string(settings.PromptFiles),
+		LauncherPromptDir:       settings.LauncherPromptDir,
+		LauncherPromptFiles:     map[string]string(settings.LauncherPromptFiles),
+		CouncilPoolPath:         request.Settings.Common.CouncilPool,
+		CouncilAllowedEndpoints: append([]string(nil), request.Settings.Common.CouncilAllowedEndpoints...),
+		CouncilMinEndpoints:     request.Settings.Common.CouncilMinEndpoints,
+		CouncilTimeoutSeconds:   timeoutSeconds,
+		LawyerTimeoutSeconds:    timeoutSeconds,
+		RunID:                   request.Request.RunID,
+		CaseID:                  request.Request.CaseID,
+		LawyerWebSearch:         settings.WebSearch,
+		AutoLawyers:             settings.AutoLawyers,
+		PlaintiffLawyer:         plaintiff,
+		DefendantLawyer:         defendant,
+		CoreEnvironment:         coreEnvironment,
+		MCPEnvironment:          mcpEnvironment,
+		ParticipantEnvironment:  participantEnvironment,
+		ProcessObserver:         request.Observer,
 	}
 	result, runErr := run(ctx, opts)
 	return mapARBResult(result, runErr)

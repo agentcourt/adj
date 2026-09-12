@@ -14,6 +14,7 @@ import (
 	"github.com/agentcourt/adj/adc/runtime/report"
 	"github.com/agentcourt/adj/adc/runtime/runner"
 	"github.com/agentcourt/adj/adc/runtime/store"
+	"github.com/agentcourt/adj/common/modelgateway"
 	"github.com/agentcourt/adj/common/openai"
 )
 
@@ -32,6 +33,8 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 	temperature := fs.String("temperature", "", "Override the scenario default temperature for roles without their own temperature")
 	jurorTemperature := fs.String("juror-temperature", "", "Override runtime temperature for jurors only")
 	jurorPersonas := fs.String("juror-personas", defaultPersonaRecordsPath(), "Path to juror model/persona pairs file")
+	var councilEndpoints stringListFlag
+	minimumDistinctCouncilEndpoints := fs.Int("minimum-distinct-council-endpoints", 0, "Minimum distinct endpoints assigned across juror candidates")
 	jurorCount := fs.Int("juror-count", 0, "Jury size for jury trials, 6 through 12. Omit to use the scenario or court default")
 	minimumConcurring := fs.Int("minimum-concurring", 0, "Minimum concurring jurors needed for a verdict. Omit to use the scenario or court default")
 	unanimousRequired := fs.String("unanimous-required", "", "Whether the jury verdict must be unanimous: true or false. Omit to use the scenario or court default")
@@ -54,6 +57,7 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 	var promptFiles promptFileFlag
 	allowAssertionFailures := fs.Bool("allow-assertion-failures", false, "Return success after recording failed scenario assertions")
 	fs.Var(&externalRoles, "external-role", "Role to serve through the role API during opportunity turns; repeat as needed")
+	fs.Var(&councilEndpoints, "council-endpoint", "Allowed juror endpoint; repeat as needed")
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	help, parseErr := parseFlagSet(fs, args)
 	if parseErr != nil {
@@ -100,7 +104,7 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 
 	engine := lean.New(strings.Fields(strings.TrimSpace(*engineCommand)))
 	var client *openai.Client
-	var jurorClient *openai.Client
+	var jurorClient runner.ResponseClient
 	resolvedModel := strings.TrimSpace(*model)
 	if !*offline {
 		client, err = openai.NewFromEnv(*online, time.Duration(*timeoutSeconds)*time.Second)
@@ -108,7 +112,7 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 			return err
 		}
 		if strings.TrimSpace(*jurorPersonas) != "" {
-			jurorClient, err = openai.NewFromEnv(*online, time.Duration(*timeoutSeconds)*time.Second)
+			jurorClient, err = modelgateway.New(time.Duration(*timeoutSeconds)*time.Second, 4)
 			if err != nil {
 				return err
 			}
@@ -142,22 +146,24 @@ func RunScenarioCase(ctx context.Context, args []string, stdout io.Writer, stder
 	}
 
 	r, err := runner.New(st, engine, client, jurorClient, runner.Config{
-		ScenarioPath:      *scenarioPath,
-		OutputPath:        *outputPath,
-		EventsPath:        *eventsPath,
-		RunID:             effectiveRunID,
-		CaseID:            resolveDefault(*caseID, effectiveRunID),
-		CaseAPIAddr:       strings.TrimSpace(*caseAPIAddr),
-		ExternalRoles:     []string(externalRoles),
-		Model:             resolvedModel,
-		Temperature:       tempPtr,
-		JurorTemperature:  jurorTempPtr,
-		JurorPersonasPath: strings.TrimSpace(*jurorPersonas),
-		Runtime:           runtimeLimits,
-		Offline:           *offline,
-		PolicyOverrides:   policyOverrides,
-		PromptDir:         resolvedPromptDir,
-		PromptFiles:       resolvedPromptFiles,
+		ScenarioPath:            *scenarioPath,
+		OutputPath:              *outputPath,
+		EventsPath:              *eventsPath,
+		RunID:                   effectiveRunID,
+		CaseID:                  resolveDefault(*caseID, effectiveRunID),
+		CaseAPIAddr:             strings.TrimSpace(*caseAPIAddr),
+		ExternalRoles:           []string(externalRoles),
+		Model:                   resolvedModel,
+		Temperature:             tempPtr,
+		JurorTemperature:        jurorTempPtr,
+		JurorPersonasPath:       strings.TrimSpace(*jurorPersonas),
+		CouncilAllowedEndpoints: []string(councilEndpoints),
+		CouncilMinEndpoints:     *minimumDistinctCouncilEndpoints,
+		Runtime:                 runtimeLimits,
+		Offline:                 *offline,
+		PolicyOverrides:         policyOverrides,
+		PromptDir:               resolvedPromptDir,
+		PromptFiles:             resolvedPromptFiles,
 	})
 	if err != nil {
 		return err

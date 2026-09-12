@@ -31,7 +31,7 @@ func TestPrepareSubscriptionDefaults(t *testing.T) {
 		if invocation.Command != "codex" {
 			t.Fatalf("Command = %q, want codex", invocation.Command)
 		}
-		if want := []string{"--strict-config", "exec", "--json", assignment.Prompt}; !reflect.DeepEqual(invocation.Args, want) {
+		if want := []string{"--strict-config", "exec", "--json", "--skip-git-repo-check", assignment.Prompt}; !reflect.DeepEqual(invocation.Args, want) {
 			t.Fatalf("Args = %#v, want %#v", invocation.Args, want)
 		}
 		if invocation.Dir != assignment.WorkDir {
@@ -862,7 +862,7 @@ func TestCodexResumesOnlyAfterMarkedSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"--strict-config", "exec", "resume", "--json", "--last", "--all", assignment.Prompt}
+	want := []string{"--strict-config", "exec", "resume", "--json", "--skip-git-repo-check", "--last", "--all", assignment.Prompt}
 	if !reflect.DeepEqual(second.Args, want) {
 		t.Fatalf("Args = %#v, want %#v", second.Args, want)
 	}
@@ -980,7 +980,7 @@ func TestResumeCanBeDisabled(t *testing.T) {
 	if second.Resumed {
 		t.Fatal("invocation resumed with Resume set to false")
 	}
-	want := []string{"--strict-config", "exec", "--json", assignment.Prompt}
+	want := []string{"--strict-config", "exec", "--json", "--skip-git-repo-check", assignment.Prompt}
 	if !reflect.DeepEqual(second.Args, want) {
 		t.Fatalf("Args = %#v, want %#v", second.Args, want)
 	}

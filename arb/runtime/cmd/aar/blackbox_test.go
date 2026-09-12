@@ -26,7 +26,7 @@ func TestBlackBoxLawyerAttemptFailureDirectCase(t *testing.T) {
 
 	caseID := "bb-lawyer-direct"
 	outDir := filepath.Join(fx.dir, "case-out")
-	proc := fx.startAAR(t, ctx, "case",
+	proc := fx.startAARCase(ctx,
 		"--case-id", caseID,
 		"--run-id", "run-"+caseID,
 		"--complaint", fx.complaintPath,
@@ -40,9 +40,8 @@ func TestBlackBoxLawyerAttemptFailureDirectCase(t *testing.T) {
 		"--lawyer-timeout-seconds", "30",
 		"--timeout-seconds", "10",
 	)
-	defer proc.kill(t)
 
-	caseBase := proc.waitForStderrPrefix(ctx, t, "caseapi listening on ")
+	caseBase := proc.waitForCaseAPI(ctx, t, outDir)
 	lawyerBase := caseBase + "/lawyerapi/v1"
 	ready := waitLawyerReady(ctx, t, lawyerBase, caseID, "plaintiff")
 	postLawyerTool(ctx, t, lawyerBase, map[string]any{
@@ -78,7 +77,7 @@ func TestBlackBoxLawyerDeadlineFailureDirectCase(t *testing.T) {
 
 	caseID := "bb-lawyer-deadline"
 	outDir := filepath.Join(fx.dir, "case-deadline-out")
-	proc := fx.startAAR(t, ctx, "case",
+	proc := fx.startAARCase(ctx,
 		"--case-id", caseID,
 		"--run-id", "run-"+caseID,
 		"--complaint", fx.complaintPath,
@@ -92,9 +91,8 @@ func TestBlackBoxLawyerDeadlineFailureDirectCase(t *testing.T) {
 		"--lawyer-timeout-seconds", "1",
 		"--timeout-seconds", "10",
 	)
-	defer proc.kill(t)
 
-	caseBase := proc.waitForStderrPrefix(ctx, t, "caseapi listening on ")
+	caseBase := proc.waitForCaseAPI(ctx, t, outDir)
 	lawyerBase := caseBase + "/lawyerapi/v1"
 	waitLawyerReady(ctx, t, lawyerBase, caseID, "plaintiff")
 
@@ -161,12 +159,20 @@ func newBlackBoxFixture(t *testing.T) *blackBoxFixture {
 		t.Skipf("%s is required; run make build in arb first", enginePath)
 	}
 	provider := newFakeResponsesServer(t)
+	providerURL, err := url.Parse(provider.URL)
+	if err != nil {
+		t.Fatalf("parse fake provider URL: %v", err)
+	}
+	previousTransport := http.DefaultTransport
+	http.DefaultTransport = &openAIRedirectTransport{base: previousTransport, target: providerURL}
+	t.Setenv("OPENAI_API_KEY", "blackbox-key")
 	dir, err := os.MkdirTemp("", "aar-blackbox-"+safeTestName(t.Name())+"-")
 	if err != nil {
 		t.Fatalf("create black-box fixture dir: %v", err)
 	}
 	t.Logf("black-box fixture directory: %s", dir)
 	t.Cleanup(func() {
+		http.DefaultTransport = previousTransport
 		provider.Close()
 		if t.Failed() {
 			t.Logf("retained black-box fixture directory: %s", dir)
@@ -211,6 +217,24 @@ func newBlackBoxFixture(t *testing.T) *blackBoxFixture {
 		councilPoolPath: councilPoolPath,
 		provider:        provider,
 	}
+}
+
+type openAIRedirectTransport struct {
+	base   http.RoundTripper
+	target *url.URL
+}
+
+func (t *openAIRedirectTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	if request.URL.Host != "api.openai.com" {
+		return t.base.RoundTrip(request)
+	}
+	clone := request.Clone(request.Context())
+	redirected := *request.URL
+	redirected.Scheme = t.target.Scheme
+	redirected.Host = t.target.Host
+	clone.URL = &redirected
+	clone.Host = ""
+	return t.base.RoundTrip(clone)
 }
 
 func newFakeResponsesServer(t *testing.T) *httptest.Server {
@@ -263,11 +287,74 @@ func (fx *blackBoxFixture) startAAR(t *testing.T, ctx context.Context, args ...s
 	cmd := exec.CommandContext(ctx, fx.aarBin, args...)
 	cmd.Dir = fx.arbRoot
 	cmd.Env = mergedEnv(map[string]string{
-		"OPENAI_API_KEY":  "blackbox-key",
-		"OPENAI_BASE_URL": fx.provider.URL + "/v1",
+		"OPENAI_API_KEY": "blackbox-key",
 	})
 	return startTestProcess(t, cmd, filepath.Join(fx.dir, "stdout.log"), filepath.Join(fx.dir, "stderr.log"))
 }
+
+type testCaseCall struct {
+	stdout lockedBuffer
+	stderr lockedBuffer
+	done   chan struct{}
+	mu     sync.Mutex
+	err    error
+}
+
+func (fx *blackBoxFixture) startAARCase(ctx context.Context, args ...string) *testCaseCall {
+	call := &testCaseCall{done: make(chan struct{})}
+	go func() {
+		err := runCase(ctx, args, &call.stdout, &call.stderr)
+		call.mu.Lock()
+		call.err = err
+		call.mu.Unlock()
+		close(call.done)
+	}()
+	return call
+}
+
+func (c *testCaseCall) waitForCaseAPI(ctx context.Context, t *testing.T, outDir string) string {
+	t.Helper()
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	manifestPath := filepath.Join(outDir, "case-manifest.json")
+	for {
+		raw, err := os.ReadFile(manifestPath)
+		if err == nil {
+			var manifest struct {
+				CaseAPIBase string `json:"case_api_base"`
+			}
+			if err := json.Unmarshal(raw, &manifest); err != nil {
+				t.Fatalf("decode case manifest: %v", err)
+			}
+			if strings.TrimSpace(manifest.CaseAPIBase) != "" {
+				return manifest.CaseAPIBase
+			}
+		} else if !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("read case manifest: %v", err)
+		}
+		select {
+		case <-c.done:
+			t.Fatalf("case returned before publishing its API address: %v\nstderr:\n%s\nstdout:\n%s", c.result(), c.stderrString(), c.stdoutString())
+		case <-ctx.Done():
+			t.Fatalf("timeout waiting for case API address\nstderr:\n%s\nstdout:\n%s", c.stderrString(), c.stdoutString())
+		case <-ticker.C:
+		}
+	}
+}
+
+func (c *testCaseCall) wait() error {
+	<-c.done
+	return c.result()
+}
+
+func (c *testCaseCall) result() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.err
+}
+
+func (c *testCaseCall) stdoutString() string { return c.stdout.String() }
+func (c *testCaseCall) stderrString() string { return c.stderr.String() }
 
 type testProcess struct {
 	cmd    *exec.Cmd

@@ -35,6 +35,7 @@ func runLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 	fs.SetOutput(flagOutput)
 	var promptFiles cliio.Assignments
 	var launcherPromptFiles cliio.Assignments
+	var councilEndpoints cliio.StringList
 	coreCommand := fs.String("adc-bin", localrun.DefaultCoreCommand, "Core adc executable")
 	coreWorkingDir := fs.String("adc-working-dir", "", "Optional working directory for the core adc process")
 	mcpCommand := fs.String("mcp-bin", localrun.DefaultMCPCommand, "ADC MCP executable")
@@ -59,6 +60,8 @@ func runLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 	nonJurorTemperature := fs.String("non-juror-temperature", "", "Override non-juror complaint-preparation temperature")
 	jurorTemperature := fs.String("juror-temperature", "", "Override runtime temperature for direct jurors")
 	jurorPersonas := fs.String("juror-personas", "", "Explicit juror JSONL request-spec pool passed to the core case")
+	fs.Var(&councilEndpoints, "council-endpoint", "Allowed juror endpoint; repeat as needed")
+	minimumDistinctCouncilEndpoints := fs.Int("minimum-distinct-council-endpoints", 0, "Minimum distinct endpoints assigned across juror candidates")
 	trialMode := fs.String("trial-mode", "auto", "Trial mode for complaint preparation: auto, jury, or bench")
 	skipVoirDire := fs.Bool("skip-voir-dire", false, "Skip questionnaires and voir dire during complaint preparation")
 	jurorCount := fs.Int("juror-count", 0, "Jury size, 6 through 12")
@@ -154,6 +157,8 @@ func runLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 		NonJurorTemperature:       strings.TrimSpace(*nonJurorTemperature),
 		JurorTemperature:          strings.TrimSpace(*jurorTemperature),
 		JurorPersonasPath:         strings.TrimSpace(*jurorPersonas),
+		CouncilAllowedEndpoints:   councilEndpoints.Values(),
+		CouncilMinEndpoints:       *minimumDistinctCouncilEndpoints,
 		TrialMode:                 strings.TrimSpace(*trialMode),
 		SkipVoirDire:              *skipVoirDire,
 		JurorCount:                *jurorCount,

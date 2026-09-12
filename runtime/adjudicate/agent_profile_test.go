@@ -44,6 +44,7 @@ func TestCoreAndParticipantCredentialsRemainSeparate(t *testing.T) {
 		"DIRECT_OPENAI_KEY=other-core-key",
 		"OPENROUTER_API_KEY=participant-key",
 		"OPENAI_API_KEY=unselected-key",
+		"GEMINI_API_KEY=undeclared-key",
 		"OTHER_ROLE_KEY=other-role-key",
 	}
 	settings := ResolvedSettings{
@@ -88,7 +89,7 @@ func TestCoreAndParticipantCredentialsRemainSeparate(t *testing.T) {
 	if value, ok := environmentValue(participants, "OPENROUTER_API_KEY"); !ok || value != "participant-key" {
 		t.Fatalf("participant OPENROUTER_API_KEY = %q, present = %t", value, ok)
 	}
-	for _, name := range []string{"DIRECT_OPENROUTER_KEY", "DIRECT_OPENAI_KEY", "OPENAI_API_KEY", "OTHER_ROLE_KEY"} {
+	for _, name := range []string{"DIRECT_OPENROUTER_KEY", "DIRECT_OPENAI_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "OTHER_ROLE_KEY"} {
 		if _, ok := environmentValue(participants, name); ok {
 			t.Fatalf("participant environment contains %s", name)
 		}

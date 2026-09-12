@@ -23,6 +23,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/agentcourt/adj/common/modelgateway"
+	"github.com/agentcourt/adj/common/modelrequest"
 	"github.com/agentcourt/adj/internal/launcherprompt"
 	lawyerlaunch "github.com/agentcourt/adj/internal/lawyer"
 	"github.com/agentcourt/adj/internal/mcpcap"
@@ -30,7 +32,6 @@ import (
 	"github.com/agentcourt/adj/internal/pimodel"
 	headless "github.com/agentcourt/adj/runtime/agent"
 	"github.com/agentcourt/adj/runtime/corehealth"
-	"github.com/agentcourt/adj/runtime/modelrequest"
 	"github.com/agentcourt/adj/runtime/runstate"
 )
 
@@ -111,6 +112,8 @@ type Options struct {
 	PromptFiles               map[string]string
 	CommonRoot                string
 	CouncilPoolPath           string
+	CouncilAllowedEndpoints   []string
+	CouncilMinEndpoints       int
 	CaseAPIAddr               string
 	MCPListenAddr             string
 	CouncilTimeoutSeconds     int
@@ -307,6 +310,7 @@ type runState struct {
 	councilStarts   map[string]bool
 	councilHomes    map[string]ownedPiHome
 	councilModels   map[string]string
+	modelServer     *modelgateway.Server
 	agentErrs       chan error
 
 	mu               sync.Mutex
@@ -376,8 +380,9 @@ func Run(ctx context.Context, opts Options) (result Result, err error) {
 		completionErr := completions.shutdown(cancel)
 		lawyerErr := state.lawyers.Stop()
 		agentErr := state.stopAgents()
+		modelServerErr := state.closeModelServer()
 		secretErr := state.cleanupSecrets()
-		err = errors.Join(err, completionErr, lawyerErr, agentErr, secretErr)
+		err = errors.Join(err, completionErr, lawyerErr, agentErr, modelServerErr, secretErr)
 	}()
 
 	caseAPIAddr, err := resolveListenAddr(opts.CaseAPIAddr, "127.0.0.1")
@@ -456,6 +461,10 @@ func Run(ctx context.Context, opts Options) (result Result, err error) {
 			cancel()
 			return Result{}, err
 		}
+	}
+	if err := state.startModelServer(roster); err != nil {
+		cancel()
+		return Result{}, err
 	}
 
 	for _, role := range manualLawyerRoles(opts.AutoLawyers) {
@@ -539,6 +548,43 @@ func Run(ctx context.Context, opts Options) (result Result, err error) {
 			return Result{}, ctx.Err()
 		}
 	}
+}
+
+func (s *runState) startModelServer(roster []councilRosterEntry) error {
+	executor, err := modelgateway.NewWithEnvironment(time.Duration(s.opts.CouncilTimeoutSeconds)*time.Second, 4, s.opts.CoreEnvironment)
+	if err != nil {
+		return fmt.Errorf("create council model executor: %w", err)
+	}
+	for _, entry := range roster {
+		spec, _, err := validatedPiRequest(entry)
+		if err != nil {
+			return err
+		}
+		if err := executor.CheckEndpoint(spec.Endpoint); err != nil {
+			return fmt.Errorf("validate council model for %s: %w", entry.MemberID, err)
+		}
+	}
+	server, err := modelgateway.NewServer(executor)
+	if err != nil {
+		return fmt.Errorf("create council model server: %w", err)
+	}
+	if err := server.Start(modelgateway.ServerOptions{
+		ListenAddress: "127.0.0.1:0",
+		RecordPath:    filepath.Join(s.logDir, "council-model-requests.jsonl"),
+	}); err != nil {
+		return fmt.Errorf("start council model server: %w", err)
+	}
+	s.modelServer = server
+	return nil
+}
+
+func (s *runState) closeModelServer() error {
+	if s.modelServer == nil {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return s.modelServer.Close(ctx)
 }
 
 func waitForCaseOutcome(caseDone <-chan caseOutcome, wait time.Duration) (caseOutcome, bool) {
@@ -693,6 +739,10 @@ func coreCaseArgs(opts Options, caseAPIAddr string) []string {
 	}
 	addString("--common-root", opts.CommonRoot)
 	addString("--council-pool", opts.CouncilPoolPath)
+	for _, endpoint := range opts.CouncilAllowedEndpoints {
+		addString("--council-endpoint", endpoint)
+	}
+	addInt("--minimum-distinct-council-endpoints", opts.CouncilMinEndpoints)
 	addInt("--timeout-seconds", opts.CouncilTimeoutSeconds)
 	addInt("--lawyer-timeout-seconds", opts.LawyerTimeoutSeconds)
 	addInt("--max-response-bytes", opts.MaxResponseBytes)
@@ -864,7 +914,6 @@ func lawyerWebSearchEnabled(configured *bool) bool {
 }
 
 func validateOptions(opts Options) error {
-	coreEnvironment := opts.CoreEnvironment
 	participantEnvironment := opts.ParticipantEnvironment
 	if strings.TrimSpace(opts.ComplaintPath) == "" {
 		return fmt.Errorf("complaint path is required")
@@ -886,9 +935,6 @@ func validateOptions(opts Options) error {
 	}
 	if opts.OpenClawNetwork != "" && opts.OpenClawNetwork != "host" {
 		return fmt.Errorf("invalid OpenClaw network %q; expected host or empty", opts.OpenClawNetwork)
-	}
-	if value, ok := environmentValue(coreEnvironment, "OPENROUTER_API_KEY"); !ok || strings.TrimSpace(value) == "" {
-		return fmt.Errorf("OPENROUTER_API_KEY is required for Pi council")
 	}
 	if _, err := autoLawyerRoles(opts.AutoLawyers); err != nil {
 		return err
@@ -1128,6 +1174,12 @@ func removeEnvironmentNames(environment []string, names []string) []string {
 		filtered = append(filtered, entry)
 	}
 	return filtered
+}
+
+func councilModelEnvironment(environment []string, token string) []string {
+	names := append(modelgateway.CredentialEnvironmentNames(), "ADJ_MODEL_API_KEY")
+	filtered := removeEnvironmentNames(environment, names)
+	return append(filtered, "ADJ_MODEL_API_KEY="+token)
 }
 
 func lawyerWorkDir(profile LawyerProfile, opts Options, role string) (string, error) {
@@ -1881,14 +1933,30 @@ func (s *runState) startPiCouncil(ctx context.Context, entry councilRosterEntry,
 	if err := s.stopPriorCouncilProcesses(entry.MemberID, opportunityID); err != nil {
 		return err
 	}
-	home, model, err := s.prepareCouncilHome(entry, server, mcpURL, capability)
+	if _, err := s.councilHome(entry.MemberID); err != nil {
+		return fmt.Errorf("prepare Pi home: %w", err)
+	}
+	if s.modelServer == nil {
+		return fmt.Errorf("council model server is not running")
+	}
+	spec, _, err := validatedPiRequest(entry)
+	if err != nil {
+		return err
+	}
+	spec = spec.WithFallbackMaxOutputTokens(DefaultCouncilMaxOutputTokens)
+	binding, err := s.modelServer.Bind(entry.MemberID+":"+opportunityID, spec)
+	if err != nil {
+		return fmt.Errorf("authorize council model for %s: %w", entry.MemberID, err)
+	}
+	home, model, err := s.prepareCouncilHome(entry, spec, binding, server, mcpURL, capability)
 	if err != nil {
 		return fmt.Errorf("prepare Pi home: %w", err)
 	}
 	processName := councilProcessName(entry.MemberID, opportunityID)
 	name := piContainerName(s.opts.CaseID, entry.MemberID, opportunityID)
 	args := piRunArgs(s.opts, name, home, model, instructions)
-	proc, err := s.startProcess(ctx, processName, "podman", s.opts.PodmanCommand, args, name, &councilProcessTarget{
+	environment := councilModelEnvironment(s.opts.CoreEnvironment, binding.Token)
+	proc, err := s.startProcess(ctx, processName, "podman", s.opts.PodmanCommand, args, environment, name, &councilProcessTarget{
 		memberID:      entry.MemberID,
 		opportunityID: opportunityID,
 	})
@@ -1929,7 +1997,7 @@ func (s *runState) councilHome(memberID string) (string, error) {
 	return home, nil
 }
 
-func (s *runState) prepareCouncilHome(entry councilRosterEntry, server string, mcpURL string, capability string) (string, string, error) {
+func (s *runState) prepareCouncilHome(entry councilRosterEntry, spec modelrequest.Spec, binding modelgateway.Binding, server string, mcpURL string, capability string) (string, string, error) {
 	s.councilConfigMu.Lock()
 	defer s.councilConfigMu.Unlock()
 	home, err := s.councilHome(entry.MemberID)
@@ -1939,23 +2007,19 @@ func (s *runState) prepareCouncilHome(entry councilRosterEntry, server string, m
 	if s.councilModels == nil {
 		s.councilModels = map[string]string{}
 	}
-	_, model, err := validatedPiRequest(entry)
-	if err != nil {
-		return "", "", err
-	}
+	model := spec.RuntimeModel()
 	if configuredModel := s.councilModels[entry.MemberID]; configuredModel != "" {
 		if configuredModel != model {
 			return "", "", fmt.Errorf("Pi council model for %s changed from %s to %s", entry.MemberID, configuredModel, model)
 		}
-		return home, configuredModel, nil
 	}
 	s.trackSecretFile(filepath.Join(home, ".mcp.json"))
 	s.trackSecretFile(filepath.Join(home, ".pi", "agent", "auth.json"))
-	configuredModel, err := writePiConfig(home, entry, server, mcpURL, capability)
+	configuredModel, err := writePiConfig(home, entry, spec, s.modelServer.URL()+"/v1", binding, server, mcpURL, capability)
 	if err != nil {
 		return "", "", err
 	}
-	s.councilModels[entry.MemberID] = configuredModel
+	s.councilModels[entry.MemberID] = model
 	return home, configuredModel, nil
 }
 
@@ -1977,12 +2041,12 @@ func piRunArgs(opts Options, name string, home string, model string, instruction
 		"-e", "HOME=/home/user",
 		"-e", "TMPDIR=/home/user",
 		"-e", "PI_CODING_AGENT_DIR=/home/user/.pi/agent",
-		"-e", "OPENROUTER_API_KEY",
+		"-e", "ADJ_MODEL_API_KEY",
 		"-e", "NODE_OPTIONS",
 		"-v", home + ":/home/user",
 		"-w", "/home/user",
 		opts.PiImage,
-		"--provider", "openrouter",
+		"--provider", "adj",
 		"--model", model,
 		"-e", opts.PiMCPAdapter,
 		"--mode", "json",
@@ -2067,17 +2131,14 @@ func instructionValues(data instructionData) map[string]string {
 	}
 }
 
-func writePiConfig(home string, entry councilRosterEntry, server string, mcpURL string, capability string) (string, error) {
-	spec, model, err := validatedPiRequest(entry)
-	if err != nil {
-		return "", err
-	}
+func writePiConfig(home string, entry councilRosterEntry, spec modelrequest.Spec, modelBaseURL string, binding modelgateway.Binding, server string, mcpURL string, capability string) (string, error) {
+	model := binding.Model
 	settingsDir := filepath.Join(home, ".pi", "agent")
 	if err := os.MkdirAll(settingsDir, 0o755); err != nil {
 		return "", fmt.Errorf("create Pi settings dir: %w", err)
 	}
 	settings := map[string]any{
-		"defaultProvider": "openrouter",
+		"defaultProvider": "adj",
 		"defaultModel":    model,
 		"quietStartup":    true,
 	}
@@ -2088,7 +2149,6 @@ func writePiConfig(home string, entry councilRosterEntry, server string, mcpURL 
 		"id":   model,
 		"name": "AAR " + entry.MemberID + " " + model,
 	}
-	spec = spec.WithFallbackMaxOutputTokens(DefaultCouncilMaxOutputTokens)
 	if maxTokens := spec.MaxOutputTokens(); maxTokens != nil {
 		modelEntry["maxTokens"] = *maxTokens
 	}
@@ -2109,17 +2169,14 @@ func writePiConfig(home string, entry councilRosterEntry, server string, mcpURL 
 		modelEntry["compat"] = compat
 	}
 	providerEntry := map[string]any{
-		"baseUrl": "https://openrouter.ai/api/v1",
-		"apiKey":  "$OPENROUTER_API_KEY",
+		"baseUrl": modelBaseURL,
+		"apiKey":  "$ADJ_MODEL_API_KEY",
 		"api":     "openai-completions",
 		"models":  []map[string]any{modelEntry},
 	}
-	if len(spec.Headers) > 0 {
-		providerEntry["headers"] = spec.Headers
-	}
 	models := map[string]any{
 		"providers": map[string]any{
-			"openrouter": providerEntry,
+			"adj": providerEntry,
 		},
 	}
 	if err := writeJSONFile(filepath.Join(settingsDir, "models.json"), models); err != nil {
@@ -2145,9 +2202,6 @@ func validatedPiRequest(entry councilRosterEntry) (modelrequest.Spec, string, er
 	spec, err := piRequestSpec(entry)
 	if err != nil {
 		return modelrequest.Spec{}, "", err
-	}
-	if spec.Endpoint != "openrouter" {
-		return modelrequest.Spec{}, "", fmt.Errorf("Pi council requires openrouter endpoint for %s; got %s", entry.MemberID, spec.Endpoint)
 	}
 	model := spec.UpstreamModel()
 	return spec, model, nil
@@ -2179,7 +2233,7 @@ func writeJSONFileMode(path string, value any, mode os.FileMode) error {
 	return nil
 }
 
-func (s *runState) startProcess(ctx context.Context, name string, kind string, command string, args []string, container string, councilTarget *councilProcessTarget) (*processRecord, error) {
+func (s *runState) startProcess(ctx context.Context, name string, kind string, command string, args []string, environment []string, container string, councilTarget *councilProcessTarget) (*processRecord, error) {
 	stdoutPath := filepath.Join(s.logDir, name+".stdout")
 	stderrPath := filepath.Join(s.logDir, name+".stderr")
 	stdout, err := os.Create(stdoutPath)
@@ -2222,7 +2276,7 @@ func (s *runState) startProcess(ctx context.Context, name string, kind string, c
 	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Stdout = stdoutWriter
 	cmd.Stderr = stderr
-	cmd.Env = append([]string(nil), s.opts.CoreEnvironment...)
+	cmd.Env = append([]string(nil), environment...)
 	if err := cmd.Start(); err != nil {
 		return nil, errors.Join(fmt.Errorf("start %s: %w", name, err), cleanupContainerIDPath(containerIDPath, containerIDDir), closeStdout(), stderr.Close())
 	}

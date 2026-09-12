@@ -17,9 +17,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/agentcourt/adj/common/modelgateway"
+	"github.com/agentcourt/adj/common/modelrequest"
 	"github.com/agentcourt/adj/internal/launcherprompt"
 	headless "github.com/agentcourt/adj/runtime/agent"
-	"github.com/agentcourt/adj/runtime/modelrequest"
 )
 
 var pairedCoreBinDir = flag.String("core-bin-dir", "", "Directory containing paired core executables")
@@ -77,15 +78,17 @@ func TestCoreCaseArgsUseProcessInterface(t *testing.T) {
 			"attorney.arguments": "/case/arguments.md",
 			"attorney.rebuttals": "/case/rebuttals.md",
 		},
-		CommonRoot:            "/common",
-		CouncilPoolPath:       "/case/pool.jsonl",
-		CouncilTimeoutSeconds: 90,
-		LawyerTimeoutSeconds:  60,
-		MaxResponseBytes:      4096,
-		InvalidAttemptLimit:   2,
-		EnginePath:            "/bin/aardengine",
-		RunID:                 "run-1",
-		CaseID:                "case-1",
+		CommonRoot:              "/common",
+		CouncilPoolPath:         "/case/pool.jsonl",
+		CouncilAllowedEndpoints: []string{"openai", "anthropic"},
+		CouncilMinEndpoints:     2,
+		CouncilTimeoutSeconds:   90,
+		LawyerTimeoutSeconds:    60,
+		MaxResponseBytes:        4096,
+		InvalidAttemptLimit:     2,
+		EnginePath:              "/bin/aardengine",
+		RunID:                   "run-1",
+		CaseID:                  "case-1",
 	}, "127.0.0.1:9001")
 	joined := strings.Join(args, "\x00")
 	for _, want := range []string{
@@ -93,6 +96,8 @@ func TestCoreCaseArgsUseProcessInterface(t *testing.T) {
 		"--file\x00/case/source-2", "--out-dir\x00/out/aard-output", "--case-id\x00case-1",
 		"--run-id\x00run-1", "--caseapi-addr\x00127.0.0.1:9001",
 		"--council-backend\x00councilapi", "--policy\x00/case/policy.json",
+		"--council-endpoint\x00openai", "--council-endpoint\x00anthropic",
+		"--minimum-distinct-council-endpoints\x002",
 		"--judgment-standard\x00score from 0 through 100", "--engine\x00/bin/aardengine",
 	} {
 		if !strings.Contains(joined, want) {
@@ -303,38 +308,42 @@ func TestWritePiConfigFromRosterEntry(t *testing.T) {
 	topP := 0.8
 	allowFallbacks := false
 	home := t.TempDir()
-	model, err := writePiConfig(home, councilRosterEntry{
-		MemberID: "C1",
-		RequestSpec: &modelrequest.Spec{
-			Endpoint: "openrouter",
-			Model:    "anthropic/claude-sonnet-4",
-			Provider: &modelrequest.ProviderConstraints{
-				Only:           []string{"anthropic"},
-				AllowFallbacks: &allowFallbacks,
-				Quantizations:  []string{"bf16"},
-			},
-			Request: modelrequest.RequestParameters{
-				Temperature:     &temperature,
-				TopP:            &topP,
-				MaxOutputTokens: &maxTokens,
-			},
-			Headers: map[string]string{"X-Test-Request": "arbd"},
+	spec := modelrequest.Spec{
+		Endpoint: "openrouter",
+		Model:    "anthropic/claude-sonnet-4",
+		Provider: &modelrequest.ProviderConstraints{
+			Only:           []string{"anthropic"},
+			AllowFallbacks: &allowFallbacks,
+			Quantizations:  []string{"bf16"},
 		},
-	}, "aard-case-C1", "http://127.0.0.1:19780/mcp", "adjmcp1.test.signature")
+		Request: modelrequest.RequestParameters{
+			Temperature:     &temperature,
+			TopP:            &topP,
+			MaxOutputTokens: &maxTokens,
+		},
+		Headers: map[string]string{"X-Test-Request": "arbd"},
+	}
+	model, err := writePiConfig(home, councilRosterEntry{
+		MemberID:    "C1",
+		RequestSpec: &spec,
+	}, spec, "http://127.0.0.1:18888/v1", modelgateway.Binding{Token: "local-token", Model: "adj-model-1"}, "aard-case-C1", "http://127.0.0.1:19780/mcp", "adjmcp1.test.signature")
 	if err != nil {
 		t.Fatalf("write Pi config: %v", err)
 	}
-	if model != "anthropic/claude-sonnet-4" {
+	if model != "adj-model-1" {
 		t.Fatalf("model = %q", model)
 	}
 	settings := readJSONMap(t, filepath.Join(home, ".pi", "agent", "settings.json"))
-	if settings["defaultProvider"] != "openrouter" || settings["defaultModel"] != "anthropic/claude-sonnet-4" {
+	if settings["defaultProvider"] != "adj" || settings["defaultModel"] != "adj-model-1" {
 		t.Fatalf("settings = %#v", settings)
 	}
 	models := readJSONMap(t, filepath.Join(home, ".pi", "agent", "models.json"))
 	providers := models["providers"].(map[string]any)
-	openrouter := providers["openrouter"].(map[string]any)
-	modelList := openrouter["models"].([]any)
+	provider := providers["adj"].(map[string]any)
+	if provider["baseUrl"] != "http://127.0.0.1:18888/v1" || provider["apiKey"] != "$ADJ_MODEL_API_KEY" {
+		t.Fatalf("provider = %#v", provider)
+	}
+	modelList := provider["models"].([]any)
 	modelEntry := modelList[0].(map[string]any)
 	if modelEntry["maxTokens"] != float64(maxTokens) {
 		t.Fatalf("model entry maxTokens = %#v", modelEntry["maxTokens"])
@@ -352,9 +361,8 @@ func TestWritePiConfigFromRosterEntry(t *testing.T) {
 	if len(quantizations) != 1 || quantizations[0] != "bf16" {
 		t.Fatalf("routing quantizations = %#v", routing["quantizations"])
 	}
-	requestHeaders := openrouter["headers"].(map[string]any)
-	if requestHeaders["X-Test-Request"] != "arbd" {
-		t.Fatalf("provider headers = %#v", requestHeaders)
+	if _, ok := provider["headers"]; ok {
+		t.Fatalf("provider contains upstream headers: %#v", provider)
 	}
 	mcpPath := filepath.Join(home, ".mcp.json")
 	mcpConfig := readJSONMap(t, mcpPath)
@@ -378,20 +386,21 @@ func TestWritePiConfigFromRosterEntry(t *testing.T) {
 
 func TestWritePiConfigAddsDefaultMaxTokens(t *testing.T) {
 	home := t.TempDir()
+	spec := modelrequest.Spec{
+		Endpoint: "openrouter",
+		Model:    "anthropic/claude-opus-4.6-fast",
+	}.WithFallbackMaxOutputTokens(DefaultCouncilMaxOutputTokens)
 	_, err := writePiConfig(home, councilRosterEntry{
-		MemberID: "C1",
-		RequestSpec: &modelrequest.Spec{
-			Endpoint: "openrouter",
-			Model:    "anthropic/claude-opus-4.6-fast",
-		},
-	}, "aard-case-C1", "http://127.0.0.1:19780/mcp", "adjmcp1.test.signature")
+		MemberID:    "C1",
+		RequestSpec: &spec,
+	}, spec, "http://127.0.0.1:18888/v1", modelgateway.Binding{Token: "local-token", Model: "adj-model-1"}, "aard-case-C1", "http://127.0.0.1:19780/mcp", "adjmcp1.test.signature")
 	if err != nil {
 		t.Fatalf("write Pi config: %v", err)
 	}
 	models := readJSONMap(t, filepath.Join(home, ".pi", "agent", "models.json"))
 	providers := models["providers"].(map[string]any)
-	openrouter := providers["openrouter"].(map[string]any)
-	modelList := openrouter["models"].([]any)
+	provider := providers["adj"].(map[string]any)
+	modelList := provider["models"].([]any)
 	modelEntry := modelList[0].(map[string]any)
 	want := float64(DefaultCouncilMaxOutputTokens)
 	if modelEntry["maxTokens"] != want {
@@ -399,11 +408,11 @@ func TestWritePiConfigAddsDefaultMaxTokens(t *testing.T) {
 	}
 }
 
-func TestWritePiConfigRejectsMissingRequestSpec(t *testing.T) {
-	_, err := writePiConfig(t.TempDir(), councilRosterEntry{
+func TestValidatedPiRequestRejectsMissingRequestSpec(t *testing.T) {
+	_, _, err := validatedPiRequest(councilRosterEntry{
 		MemberID: "C1",
 		Model:    "openrouter://anthropic/claude-sonnet-4",
-	}, "server", "http://example/mcp", "token")
+	})
 	if err == nil || !strings.Contains(err.Error(), "request_spec") {
 		t.Fatalf("error = %v", err)
 	}
@@ -641,6 +650,22 @@ func TestValidateOptionsRejectsInvalidOpenClawNetwork(t *testing.T) {
 		OpenClawNetwork:         "bridge",
 	}))
 	if err == nil || !strings.Contains(err.Error(), "invalid OpenClaw network") {
+		t.Fatalf("validateOptions error = %v", err)
+	}
+}
+
+func TestValidateOptionsAllowsCouncilWithoutOpenRouterKey(t *testing.T) {
+	dir := t.TempDir()
+	err := validateOptions(applyDefaults(Options{
+		ComplaintPath:          "complaint.md",
+		OutputDir:              dir,
+		CaseID:                 "case",
+		AutoLawyers:            "none",
+		CoreEnvironment:        []string{},
+		MCPEnvironment:         []string{},
+		ParticipantEnvironment: []string{},
+	}))
+	if err != nil {
 		t.Fatalf("validateOptions error = %v", err)
 	}
 }

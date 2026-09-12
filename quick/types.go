@@ -22,59 +22,63 @@ const (
 )
 
 type Options struct {
-	Proposition            string
-	DocumentsDir           string
-	OutputDir              string
-	CommonRoot             string
-	CouncilPoolPath        string
-	CouncilSize            int
-	RequiredVotes          int
-	EvidenceStandard       string
-	PromptDir              string
-	PromptFiles            map[string]string
-	LawyerWebSearch        *bool
-	CaseAPIAddr            string
-	LawyerAPIBearerToken   string
-	CaseID                 string
-	RunID                  string
-	LawyerTimeout          time.Duration
-	CouncilTimeout         time.Duration
-	MaxResponseBytes       int
-	MaxArgumentChars       int
-	InvalidAttemptLimit    int
-	MaxDocumentFiles       int
-	MaxDocumentFileBytes   int64
-	MaxDocumentsTotal      int64
-	CouncilRequestAttempts int
-	ParallelCouncil        bool
-	AllowAPIKey            bool
+	Proposition             string
+	DocumentsDir            string
+	OutputDir               string
+	CommonRoot              string
+	CouncilPoolPath         string
+	CouncilAllowedEndpoints []string
+	CouncilMinEndpoints     int
+	CouncilSize             int
+	RequiredVotes           int
+	EvidenceStandard        string
+	PromptDir               string
+	PromptFiles             map[string]string
+	LawyerWebSearch         *bool
+	CaseAPIAddr             string
+	LawyerAPIBearerToken    string
+	CaseID                  string
+	RunID                   string
+	LawyerTimeout           time.Duration
+	CouncilTimeout          time.Duration
+	MaxResponseBytes        int
+	MaxArgumentChars        int
+	InvalidAttemptLimit     int
+	MaxDocumentFiles        int
+	MaxDocumentFileBytes    int64
+	MaxDocumentsTotal       int64
+	CouncilRequestAttempts  int
+	ParallelCouncil         bool
+	AllowAPIKey             bool
 }
 
 type Config struct {
-	Proposition            string
-	DocumentsDir           string
-	OutputDir              string
-	CouncilPoolPath        string
-	CouncilSize            int
-	RequiredVotes          int
-	EvidenceStandard       string
-	PromptDir              string
-	PromptFiles            map[string]string
-	LawyerWebSearchEnabled bool
-	CaseAPIAddr            string
-	LawyerAPIBearerToken   string
-	CaseID                 string
-	RunID                  string
-	LawyerTimeout          time.Duration
-	CouncilTimeout         time.Duration
-	MaxResponseBytes       int
-	MaxArgumentChars       int
-	InvalidAttemptLimit    int
-	DocumentLimits         documents.Limits
-	CouncilRequestAttempts int
-	ParallelCouncil        bool
-	AllowAPIKey            bool
-	prompts                quickPromptSet
+	Proposition             string
+	DocumentsDir            string
+	OutputDir               string
+	CouncilPoolPath         string
+	CouncilAllowedEndpoints []string
+	CouncilMinEndpoints     int
+	CouncilSize             int
+	RequiredVotes           int
+	EvidenceStandard        string
+	PromptDir               string
+	PromptFiles             map[string]string
+	LawyerWebSearchEnabled  bool
+	CaseAPIAddr             string
+	LawyerAPIBearerToken    string
+	CaseID                  string
+	RunID                   string
+	LawyerTimeout           time.Duration
+	CouncilTimeout          time.Duration
+	MaxResponseBytes        int
+	MaxArgumentChars        int
+	InvalidAttemptLimit     int
+	DocumentLimits          documents.Limits
+	CouncilRequestAttempts  int
+	ParallelCouncil         bool
+	AllowAPIKey             bool
+	prompts                 quickPromptSet
 }
 
 type Argument struct {
@@ -170,27 +174,29 @@ type Result struct {
 }
 
 type inputRecord struct {
-	SchemaVersion          string           `json:"schema_version"`
-	Procedure              string           `json:"procedure"`
-	Proposition            string           `json:"proposition"`
-	CaseID                 string           `json:"case_id"`
-	RunID                  string           `json:"run_id"`
-	DocumentsSource        string           `json:"documents_source,omitempty"`
-	CouncilPoolPath        string           `json:"council_pool_path"`
-	CouncilSize            int              `json:"council_size"`
-	RequiredVotes          int              `json:"required_votes"`
-	EvidenceStandard       string           `json:"evidence_standard"`
-	LawyerWebSearchEnabled bool             `json:"lawyer_web_search_enabled"`
-	CaseAPIAddr            string           `json:"case_api_addr"`
-	LawyerTimeout          string           `json:"lawyer_timeout"`
-	CouncilTimeout         string           `json:"council_timeout"`
-	MaxResponseBytes       int              `json:"max_response_bytes"`
-	MaxArgumentChars       int              `json:"max_argument_chars"`
-	InvalidAttemptLimit    int              `json:"invalid_attempt_limit"`
-	DocumentLimits         documents.Limits `json:"document_limits"`
-	CouncilRequestAttempts int              `json:"council_request_attempts"`
-	ParallelCouncil        bool             `json:"parallel_council"`
-	DirectAPIKeyAuthorized bool             `json:"direct_api_key_authorized"`
+	SchemaVersion           string           `json:"schema_version"`
+	Procedure               string           `json:"procedure"`
+	Proposition             string           `json:"proposition"`
+	CaseID                  string           `json:"case_id"`
+	RunID                   string           `json:"run_id"`
+	DocumentsSource         string           `json:"documents_source,omitempty"`
+	CouncilPoolPath         string           `json:"council_pool_path"`
+	CouncilAllowedEndpoints []string         `json:"council_allowed_endpoints,omitempty"`
+	CouncilMinEndpoints     int              `json:"minimum_distinct_council_endpoints,omitempty"`
+	CouncilSize             int              `json:"council_size"`
+	RequiredVotes           int              `json:"required_votes"`
+	EvidenceStandard        string           `json:"evidence_standard"`
+	LawyerWebSearchEnabled  bool             `json:"lawyer_web_search_enabled"`
+	CaseAPIAddr             string           `json:"case_api_addr"`
+	LawyerTimeout           string           `json:"lawyer_timeout"`
+	CouncilTimeout          string           `json:"council_timeout"`
+	MaxResponseBytes        int              `json:"max_response_bytes"`
+	MaxArgumentChars        int              `json:"max_argument_chars"`
+	InvalidAttemptLimit     int              `json:"invalid_attempt_limit"`
+	DocumentLimits          documents.Limits `json:"document_limits"`
+	CouncilRequestAttempts  int              `json:"council_request_attempts"`
+	ParallelCouncil         bool             `json:"parallel_council"`
+	DirectAPIKeyAuthorized  bool             `json:"direct_api_key_authorized"`
 }
 
 type runtimeRecord struct {

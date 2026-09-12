@@ -53,10 +53,12 @@ func TestARBDRunnerBuildsAARDCaseAndMapsTerminalResults(t *testing.T) {
 		Request: Request{CaseID: "case-1", RunID: "run-1", Proposition: "How strong is the evidence?"},
 		Settings: ResolvedSettings{
 			Common: CommonSettings{
-				EvidenceStandard: "clear_and_convincing",
-				CouncilPool:      "/council.jsonl",
-				CouncilSize:      2,
-				RequiredVotes:    2,
+				EvidenceStandard:        "clear_and_convincing",
+				CouncilPool:             "/council.jsonl",
+				CouncilAllowedEndpoints: []string{"openrouter"},
+				CouncilMinEndpoints:     1,
+				CouncilSize:             2,
+				RequiredVotes:           2,
 				ProviderCredentials: map[string]CredentialMetadata{
 					"openrouter": {Source: AuthAPIKey, EnvironmentVariable: "ARBD_OPENROUTER_KEY"},
 				},
@@ -139,6 +141,9 @@ func TestARBDRunnerBuildsAARDCaseAndMapsTerminalResults(t *testing.T) {
 	}
 	if options.CouncilPoolPath != "/council.jsonl" || options.CouncilSize != 2 || options.JudgmentStandard != "score from 0 through 100" {
 		t.Fatalf("procedure options = %#v", options)
+	}
+	if !reflect.DeepEqual(options.CouncilAllowedEndpoints, []string{"openrouter"}) || options.CouncilMinEndpoints != 1 {
+		t.Fatalf("council endpoint options = %#v", options)
 	}
 	if options.LauncherPromptDir != "/launcher/arbd" || options.LauncherPromptFiles["skill.openclaw"] != "/launcher/skill.md" {
 		t.Fatalf("launcher prompt options = %#v", options)

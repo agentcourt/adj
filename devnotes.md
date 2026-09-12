@@ -477,3 +477,103 @@ The default access set contains the case record.  `--include-work-notes` adds wo
 - [x] Run focused tests, vet, build, and retained Simple and Quick examples.
 - [x] Document accepted layouts, selection rules, JSON fields, timestamp sources, and unavailable-session behavior.
 - [x] Align the ADC and ARB Pi authentication fixtures with the shared validator.
+
+## Provider-neutral council and jury execution
+
+The current change adds one provider-neutral model executor for council members and jurors.  Quick calls the executor in its process.  ARB, ARBD, and ADC use the same executor for direct model calls and expose each selected configuration to a Pi council member through a loopback OpenAI Chat Completions server.  The upstream provider credential remains in the core or local-run process.  Pi receives a per-member bearer token, a random model alias, and the loopback address.
+
+The approved endpoint set is `anthropic`, `deepseek`, `google`, `huggingface`, `openai`, `openrouter`, and `xai`.  Direct Anthropic requests use the Messages API.  Direct Google requests use GenerateContent.  Direct DeepSeek requests use Chat Completions.  Hugging Face, OpenAI, OpenRouter, and xAI use OpenAI Responses-compatible endpoints.  The fixed base URLs and credentials are:
+
+| Endpoint | Base URL | Credential |
+| --- | --- | --- |
+| `anthropic` | `https://api.anthropic.com/v1/messages` | `ANTHROPIC_API_KEY` |
+| `deepseek` | `https://api.deepseek.com/chat/completions` or `/beta/chat/completions` for strict tools | `DEEPSEEK_API_KEY` |
+| `google` | `https://generativelanguage.googleapis.com/v1beta/models/MODEL:generateContent` | `GEMINI_API_KEY` |
+| `huggingface` | `https://router.huggingface.co/v1` | `HF_TOKEN` |
+| `openai` | `https://api.openai.com/v1` | `OPENAI_API_KEY` |
+| `openrouter` | `https://openrouter.ai/api/v1` | `OPENROUTER_API_KEY` |
+| `xai` | `https://api.x.ai/v1` | `XAI_API_KEY` |
+
+Provider routing constraints apply only to OpenRouter.  Native Anthropic, Google, and DeepSeek adapters reject request headers and `max_tool_calls`, which those adapters do not implement.  Every endpoint rejects request-spec attempts to replace its authorization or host headers.  No endpoint falls back to OpenRouter.
+
+The pool selector permits the same request specification to occupy more than one seat.  It selects among the least-used eligible endpoints, then among the least-used configurations for that endpoint, using cryptographic random selection for ties.  A failed configuration leaves the pool.  A missing endpoint credential removes all configurations for that endpoint.  The endpoint allowlist and minimum endpoint count apply to the selected council.  ADC applies them to the candidate panel because voir dire can remove candidates before the final jury forms.
+
+`common/modelapi` contains the provider-neutral response, tool-call, usage, accounting, and provider-error types.  `common/openai` aliases those types and retains the OpenAI-compatible request implementation.  `common/modelgateway` contains the executor, native provider adapters, bounded raw HTTP client, content conversion, Pi loopback server, and focused protocol tests.  `common/councilsample` contains the reusable selector.
+
+The Anthropic adapter preserves returned thinking blocks when continuing a tool exchange, groups consecutive tool results into one user message, uses adaptive thinking with `output_config.effort`, and counts cache-created, cache-read, and thinking tokens.  The Google adapter preserves `thoughtSignature`, groups consecutive function responses, maps reasoning levels to the uppercase REST values `MINIMAL`, `LOW`, `MEDIUM`, and `HIGH`, and preserves usage metadata.  The DeepSeek adapter preserves `reasoning_content`, uses the documented `thinking` toggle and `reasoning_effort` field, maps `medium` and `xhigh` to `high`, and uses the beta endpoint when a tool requires strict schema enforcement.
+
+The Pi server accepts `POST /v1/chat/completions`, supports streamed and non-streamed replies, converts Pi's OpenAI-format messages and tools into the provider-neutral request form, and enforces append-only conversation history.  The implementation matches Pi 0.72.1 behavior in `/home/somebody/.npm-global/lib/node_modules/@mariozechner/pi-coding-agent/node_modules/@mariozechner/pi-ai/dist/providers/openai-completions.js`, including assistant `content: null` when a tool-call response has no text.  It writes one JSONL request record with timestamps, endpoint, model, returned model, response ID, usage, and provider failure data.  Handler write failures are returned from server shutdown.
+
+Quick, ARB, and ARBD accept repeatable `--council-endpoint` and `--minimum-distinct-council-endpoints`.  ADC accepts the same flags for juror candidates.  Unified settings add `common.council_allowed_endpoints` and `common.council_minimum_distinct_endpoints`.  The unified runners and formal local-run commands pass both settings to their cores.
+
+ARB, ARBD, and ADC local runs start the loopback model server when Pi council members or jurors need it.  Each Pi process receives a fresh token and alias.  Provider credentials are removed from the Pi environment.  The request records are `logs/council-model-requests.jsonl` for ARB and ARBD and `logs/juror-model-requests.jsonl` for ADC.  These Pi-path request records contain usage, but the current formal core provider-accounting object does not incorporate that usage.  Existing Pi council calls also occurred outside the formal core accounting.  This limitation requires documentation or a separately approved accounting design.
+
+Simple continues to support its existing `openai://` and `openrouter://` direct models.  The current change concerns councils and juries.  `runtime/adjudicate/simple_runner.go` uses the shared credential-name registry only for credential lookup and participant-environment filtering.
+
+The changed production areas are Quick council execution; ARB and ARBD council selection and preflight; ADC juror assignment and response clients; the three formal local-run packages; the unified settings and runners; the shared OpenAI response types; and the three new shared packages.  The checkout has about 1,477 added and 1,182 deleted tracked lines before this journal entry.  No commit contains this work.
+
+Focused protocol tests cover Anthropic thinking-block replay and grouped tool results, Google thought-signature replay and grouped function responses, DeepSeek reasoning and tool parsing, request-spec restrictions, Pi continuation history, and endpoint-balanced duplicate selection.  The following command passed for every listed package except Quick's listener-dependent tests:
+
+```bash
+env GOCACHE=/tmp/adj-go-cache go test \
+  ./common/modelapi ./common/modelgateway ./common/councilsample \
+  ./common/openai ./quick ./arb/runtime/proceeding \
+  ./arbd/runtime/proceeding ./adc/runtime/runner ./adc/runtime/cli
+```
+
+`common/modelgateway`, `common/councilsample`, `common/openai`, both arbitration proceeding packages, `adc/runtime/runner`, and `adc/runtime/cli` passed.  Four Quick tests failed because the restricted test process could not open a loopback listener.  Three timed out waiting for `runtime.json`; one reported `listen tcp 127.0.0.1:0: socket: operation not permitted`.  Earlier focused local-run argument tests and unified settings and runner tests passed.  `gofmt` has run over every changed Go path.  The complete suite, build, vet, and diff checks remain to run after the live tests and documentation edits.
+
+The configured environment contains OpenAI, Anthropic, Google, xAI, and OpenRouter credential variables.  It lacks `DEEPSEEK_API_KEY` and `HF_TOKEN`.  Live model discovery found `gpt-5.6-sol`, `gpt-5.6-terra`, and `gpt-5.6-luna` on OpenAI; `claude-opus-5`, `claude-sonnet-5`, `claude-fable-5-1`, `claude-opus-4-8`, and other current models on Anthropic; and `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-3.1-pro-preview`, `gemini-3.5-flash`, and other current models on Google.  The xAI model-list request returned HTTP 401 with `{"code":"unauthenticated:bad-credentials","error":"Bad credentials."}`.  The xAI adapter has protocol tests but lacks a successful live test with the current credential.
+
+The first live Quick command failed while creating its output under the checkout because `/dev/sdd1` had no available blocks.  The second run wrote its record to `/tmp/adj-gateway-quick-out`.  Its one-member pool used `openai://gpt-5.6-luna`, low reasoning, the generic persona, and the production `submit_council_vote` preflight.  The preflight succeeded with 157 input tokens, 44 output tokens, 14 reasoning tokens, and 201 total tokens.  The core then opened `http://127.0.0.1:38451` and waited for the plaintiff.  No lawyer submission was sent, so the case ended after the configured two-minute lawyer timeout.  This proves the direct OpenAI executor and Quick preflight path reached a valid tool response.  It does not complete the Quick case test.
+
+Ignored live-test inputs are under `tmp/live-gateway/`.  `pool.jsonl` currently names `openai://gpt-5.6-luna`, and `token` contains the local Quick API token with mode 0600.  The finished live record is `/tmp/adj-gateway-quick-out`.  The provider model-list responses are `/tmp/adj-openai-models.json`, `/tmp/adj-anthropic-models.json`, and `/tmp/adj-google-models.json`; the xAI error is `/tmp/adj-xai-models-error.json`.  None contains an API key.
+
+The reusable approval for `quick/.bin/quick case` permits further live Quick runs with loopback and provider access.  Individual model-list `curl` commands received exact approvals.  Further testing should use the procedure executables so one reusable command approval covers their provider requests.
+
+The first live Quick command exposed a full home filesystem.  Inspection attributed most new use to Go build caches and unrelated Lean builds rather than this checkout.  The user freed the disk before testing resumed.  Live case records remained under `/tmp` so generated procedure output did not enter the working tree.
+
+The [model-endpoint guide](docs/model-endpoints.md) records endpoint credentials and protocols, duplicate configurations, selection order, endpoint controls, Pi loopback execution, request records, native request restrictions, and the ADC candidate-panel limitation.  The Quick, ARB, ARBD, ADC, unified-command, AARD council, and AAR local-run guides now use the same behavior.
+
+Complete Quick cases passed through direct OpenAI, Anthropic, and Google requests.  The OpenAI run used `gpt-5.6-luna` with low reasoning and returned `not_demonstrated`; its availability and vote requests reported 620 input, 160 output, 37 reasoning, and 780 total tokens.  The Anthropic run used `claude-sonnet-5` with low reasoning and returned `not_demonstrated`; its requests reported 1,855 input, 372 output, and 2,227 total tokens.  The Google run used `gemini-3.5-flash` with low reasoning and returned `not_demonstrated`; its requests reported 669 input, 131 output, 522 reasoning, and 1,322 total tokens.
+
+The first Anthropic Quick request exposed an invalid repair exchange: the continued request omitted a tool result for rejected tool calls.  Quick, ARB, and ARBD now add one `function_call_output` for every rejected call and preserve the previous response identifier before repairing an oversized response.  Focused tests cover the correction input.  The first Google availability request exposed that GenerateContent's `parameters` field rejected the complete submission schema; the adapter now uses the documented `parametersJsonSchema` field.
+
+A complete ARB local run exercised the Pi path with one `anthropic://claude-sonnet-5` council member, two Codex subscription lawyers at `xhigh`, live lawyer search, the real Lean engine, the AAR MCP adapter, the Pi container, and the loopback model server.  The case closed `not_demonstrated` after 18 minutes and 30 seconds.  Pi called `aar_wait_for_opportunity`, then `aar_submit_council_vote`.  The two successful upstream Anthropic calls reported 4,484 input and 89 output tokens, then 22,048 input and 320 output tokens.  Pi began one post-tool continuation after the accepted vote; core closure canceled it, and the request log retained the resulting `context canceled` row.  The case's Pi container was absent after launcher cleanup.
+
+The formal run found two launcher defects.  ARB and ARBD local option validation still required `OPENROUTER_API_KEY` for Pi councils even when the selected pool used another endpoint; that obsolete requirement was removed.  Codex rejected its assigned `/tmp` work directory because it was outside a Git repository; new and resumed Codex invocations now pass `--skip-git-repo-check`.  The focused local-run and agent tests cover both corrections.
+
+The fixed OpenAI service URL invalidated two existing AAR black-box tests that had redirected production execution with `OPENAI_BASE_URL`.  Those tests now call the current `runCase` path in the test process and install a scoped HTTP transport that redirects only `api.openai.com` requests to their fake Responses server.  They retain the real Lean engine, provider request construction, Case API, command result, and durable record.  The separate runtime-failure test still executes the built `aar` binary and checks its nonzero exit.
+
+The final credential review found that unified participant environments removed only three canonical provider variables unless a settings entry named another source.  They now remove every canonical provider credential registered by the shared executor before adding the selected lawyer profile's credential.  The environment-separation test includes an undeclared ambient Google credential.
+
+The shared settings validator originally limited `council_minimum_distinct_endpoints` to `council_size` for every procedure.  That bound applies to Quick, ARB, and ARBD because they enforce the minimum across a completed council.  ADC enforces the minimum across candidate assignments before voir dire, so an ADC-only settings file may specify a minimum greater than the final jury size.  A focused settings test covers that case.
+
+The documentation review corrected AARD Council API behavior.  Direct AARD councils receive availability requests before seating.  Council API mode selects the roster without a provider request because external clients own model execution, while the complete local runner checks the selected endpoint credentials before it starts Pi.  AARD direct calls use the shared executor, but the current AARD result schema has no provider-accounting field.  Adding that field requires a separate schema decision.
+
+Quick's current selection path no longer uses its former random loader or a preliminary shuffle.  The shared selector supplies random tie-breaking after balancing endpoints and configurations.  The obsolete loader, shuffle, and their tests were removed.
+
+One attempted formal run started two Claude subscription lawyers concurrently.  One authenticated while the other failed because its staged OAuth session could not refresh.  The evidence indicates concurrent refresh-token use across staged credential copies.  This limitation remains unresolved.  It does not affect the completed Codex-lawyer test.
+
+The endpoint implementation follows the official [Anthropic Messages](https://platform.claude.com/docs/en/api/messages/create), [Anthropic tool-use](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview), [Google GenerateContent](https://ai.google.dev/api/generate-content), [DeepSeek Chat Completions](https://api-docs.deepseek.com/api/create-chat-completion/), [DeepSeek thinking-mode](https://api-docs.deepseek.com/guides/thinking_mode/), [Hugging Face Responses](https://huggingface.co/docs/inference-providers/en/guides/responses-api), [OpenRouter Responses](https://openrouter.ai/docs/api/api-reference/responses/create-responses), [OpenAI Responses](https://developers.openai.com/api/reference/cli/resources/responses/methods/create), and [xAI tool](https://docs.x.ai/developers/tools/overview) documentation.
+
+The final protocol review aligned DeepSeek thinking requests with its documented `thinking` object and `reasoning_effort` field, added Anthropic's reported thinking tokens to normalized accounting, and replaced the obsolete xAI documentation link with its Responses reference.  The complete Go test suite, `go vet -p=1 ./...`, `go build -p=1 ./...`, the scoped Markdown and JSON check for every changed guide, and `git diff --check` passed.  The repository-wide Markdown checker also inspected retained participant workspaces under `data/examples`; third-party skill files there and existing example and prompt placeholders produce unrelated failures.
+
+The current xAI credential still returns HTTP 401.  `DEEPSEEK_API_KEY` and `HF_TOKEN` remain unavailable.  Those three adapters have focused protocol tests but no successful live provider test.  A permanent direct-lab pool has not been selected; its composition requires separate approval.
+
+One unresolved protocol question is Pi's optional `tool_choice` field.  The loopback server parses it but does not forward it.  Pi omits the field in the current council path unless its caller supplies an option.  Confirm the production call behavior before deciding whether to reject or translate a supplied value.
+
+- [x] Add the provider-neutral response and accounting types.
+- [x] Add the shared executor and native Anthropic, Google, and DeepSeek adapters.
+- [x] Add the authenticated loopback Pi model server.
+- [x] Permit duplicate configurations and balance selection across endpoints.
+- [x] Pass endpoint controls through the core commands, local runs, and unified settings.
+- [x] Pass focused protocol, selection, procedure, and settings tests.
+- [x] Complete a live OpenAI Quick preflight through the production path.
+- [x] Complete live Quick cases through OpenAI, Anthropic, and Google.
+- [x] Complete one Pi council case through a formal procedure.
+- [ ] Correct or replace the xAI credential and test xAI.
+- [ ] Obtain credentials before testing DeepSeek and Hugging Face.
+- [ ] Review the tested direct configurations and confirm a permanent lab pool.
+- [x] Correct and re-read the affected manuals.
+- [x] Run the complete tests, build, vet, and diff checks.

@@ -24,10 +24,7 @@ func (r ADCRunner) Run(ctx context.Context, request ProcedureRequest) (Procedure
 	if settings == nil {
 		return ProcedureOutcome{}, fmt.Errorf("resolved adc settings are absent")
 	}
-	providers := []string{"openai"}
-	if settings.TrialMode != "bench" {
-		providers = append(providers, "openrouter")
-	}
+	providers := configuredProviderNames(request.Settings.Common.ProviderCredentials)
 	baseEnvironment := os.Environ()
 	coreEnvironment, err := coreProviderEnvironmentFor(request.Settings, baseEnvironment, providers...)
 	if err != nil {
@@ -69,39 +66,41 @@ func (r ADCRunner) Run(ctx context.Context, request ProcedureRequest) (Procedure
 		timeoutSeconds = int(seconds)
 	}
 	opts := localrun.Options{
-		CoreCommand:            settings.CoreCommand,
-		CoreWorkingDir:         settings.CoreWorkingDir,
-		MCPCommand:             settings.MCPCommand,
-		MCPWorkingDir:          settings.MCPWorkingDir,
-		MCPListenAddr:          settings.MCPListenAddr,
-		MCPPublicBaseURL:       settings.MCPPublicBaseURL,
-		Proposition:            request.Request.Proposition,
-		DocumentsDir:           filepath.Join(request.RecordDir, "inputs", "documents"),
-		EvidenceStandard:       request.Settings.Common.EvidenceStandard,
-		PromptDir:              settings.PromptDir,
-		PromptFiles:            map[string]string(settings.PromptFiles),
-		LauncherPromptDir:      settings.LauncherPromptDir,
-		LauncherPromptFiles:    map[string]string(settings.LauncherPromptFiles),
-		MaxDocumentFiles:       request.Settings.Common.DocumentLimits.Count,
-		MaxDocumentFileBytes:   request.Settings.Common.DocumentLimits.PerFile,
-		MaxDocumentsTotalBytes: request.Settings.Common.DocumentLimits.Total,
-		OutputDir:              request.RecordDir,
-		CoreOutputDir:          request.CoreDir,
-		LogsDir:                request.LogsDir,
-		TrialMode:              settings.TrialMode,
-		JurorTimeoutSeconds:    timeoutSeconds,
-		LawyerTimeoutSeconds:   timeoutSeconds,
-		TimeoutSeconds:         timeoutSeconds,
-		RunID:                  request.Request.RunID,
-		CaseID:                 request.Request.CaseID,
-		LawyerWebSearch:        settings.WebSearch,
-		AutoLawyers:            settings.AutoLawyers,
-		PlaintiffLawyer:        plaintiff,
-		DefendantLawyer:        defendant,
-		CoreEnvironment:        coreEnvironment,
-		MCPEnvironment:         mcpEnvironment,
-		ParticipantEnvironment: participantEnvironment,
-		ProcessObserver:        request.Observer,
+		CoreCommand:             settings.CoreCommand,
+		CoreWorkingDir:          settings.CoreWorkingDir,
+		MCPCommand:              settings.MCPCommand,
+		MCPWorkingDir:           settings.MCPWorkingDir,
+		MCPListenAddr:           settings.MCPListenAddr,
+		MCPPublicBaseURL:        settings.MCPPublicBaseURL,
+		Proposition:             request.Request.Proposition,
+		DocumentsDir:            filepath.Join(request.RecordDir, "inputs", "documents"),
+		EvidenceStandard:        request.Settings.Common.EvidenceStandard,
+		PromptDir:               settings.PromptDir,
+		PromptFiles:             map[string]string(settings.PromptFiles),
+		LauncherPromptDir:       settings.LauncherPromptDir,
+		LauncherPromptFiles:     map[string]string(settings.LauncherPromptFiles),
+		MaxDocumentFiles:        request.Settings.Common.DocumentLimits.Count,
+		MaxDocumentFileBytes:    request.Settings.Common.DocumentLimits.PerFile,
+		MaxDocumentsTotalBytes:  request.Settings.Common.DocumentLimits.Total,
+		OutputDir:               request.RecordDir,
+		CoreOutputDir:           request.CoreDir,
+		LogsDir:                 request.LogsDir,
+		TrialMode:               settings.TrialMode,
+		JurorTimeoutSeconds:     timeoutSeconds,
+		CouncilAllowedEndpoints: append([]string(nil), request.Settings.Common.CouncilAllowedEndpoints...),
+		CouncilMinEndpoints:     request.Settings.Common.CouncilMinEndpoints,
+		LawyerTimeoutSeconds:    timeoutSeconds,
+		TimeoutSeconds:          timeoutSeconds,
+		RunID:                   request.Request.RunID,
+		CaseID:                  request.Request.CaseID,
+		LawyerWebSearch:         settings.WebSearch,
+		AutoLawyers:             settings.AutoLawyers,
+		PlaintiffLawyer:         plaintiff,
+		DefendantLawyer:         defendant,
+		CoreEnvironment:         coreEnvironment,
+		MCPEnvironment:          mcpEnvironment,
+		ParticipantEnvironment:  participantEnvironment,
+		ProcessObserver:         request.Observer,
 	}
 	if settings.TrialMode != "bench" {
 		opts.JurorPersonasPath = request.Settings.Common.CouncilPool

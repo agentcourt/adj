@@ -31,6 +31,9 @@ func runCase(ctx context.Context, args []string, stdout, stderr io.Writer) error
 	outDir := fs.String("out-dir", "", "Empty output directory")
 	commonRoot := fs.String("common-root", quick.DefaultCommonRoot(), "Path to the shared common directory")
 	councilPool := fs.String("council-pool", "", "Council JSONL request-spec pool. Default: ./pool.jsonl when present, else <common-root>/data/personas/pool.jsonl")
+	var councilEndpoints cliio.StringList
+	fs.Var(&councilEndpoints, "council-endpoint", "Allowed council endpoint. May be repeated")
+	minimumDistinctCouncilEndpoints := fs.Int("minimum-distinct-council-endpoints", 0, "Minimum distinct endpoints represented in the council")
 	councilSize := fs.Int("council-size", 0, "Council member count")
 	requiredVotes := fs.Int("required-votes", 0, "Votes required for a decision")
 	evidenceStandard := fs.String("evidence-standard", "", "Standard the council applies to the proposition")
@@ -89,32 +92,34 @@ func runCase(ctx context.Context, args []string, stdout, stderr io.Writer) error
 		return reportCaseError(stdout, earlyResult(*proposition, *caseID, *runID, *councilSize, *requiredVotes, *evidenceStandard, startedAt), err)
 	}
 	result, runErr := runProcedure(ctx, quick.Options{
-		Proposition:            *proposition,
-		DocumentsDir:           *documentsDir,
-		OutputDir:              *outDir,
-		CommonRoot:             *commonRoot,
-		CouncilPoolPath:        *councilPool,
-		CouncilSize:            *councilSize,
-		RequiredVotes:          *requiredVotes,
-		EvidenceStandard:       *evidenceStandard,
-		PromptDir:              *promptDir,
-		PromptFiles:            promptFiles.Values(),
-		LawyerWebSearch:        lawyerWebSearch,
-		CaseAPIAddr:            *caseAPIAddr,
-		LawyerAPIBearerToken:   lawyerAPIBearerToken,
-		CaseID:                 *caseID,
-		RunID:                  *runID,
-		LawyerTimeout:          *lawyerTimeout,
-		CouncilTimeout:         *councilTimeout,
-		MaxResponseBytes:       *maxResponseBytes,
-		MaxArgumentChars:       *maxArgumentChars,
-		InvalidAttemptLimit:    *invalidAttemptLimit,
-		MaxDocumentFiles:       *maxDocumentFiles,
-		MaxDocumentFileBytes:   *maxDocumentFileBytes,
-		MaxDocumentsTotal:      *maxDocumentsTotalBytes,
-		CouncilRequestAttempts: *councilRequestAttempts,
-		ParallelCouncil:        *parallelCouncil,
-		AllowAPIKey:            *allowAPIKey,
+		Proposition:             *proposition,
+		DocumentsDir:            *documentsDir,
+		OutputDir:               *outDir,
+		CommonRoot:              *commonRoot,
+		CouncilPoolPath:         *councilPool,
+		CouncilAllowedEndpoints: councilEndpoints.Values(),
+		CouncilMinEndpoints:     *minimumDistinctCouncilEndpoints,
+		CouncilSize:             *councilSize,
+		RequiredVotes:           *requiredVotes,
+		EvidenceStandard:        *evidenceStandard,
+		PromptDir:               *promptDir,
+		PromptFiles:             promptFiles.Values(),
+		LawyerWebSearch:         lawyerWebSearch,
+		CaseAPIAddr:             *caseAPIAddr,
+		LawyerAPIBearerToken:    lawyerAPIBearerToken,
+		CaseID:                  *caseID,
+		RunID:                   *runID,
+		LawyerTimeout:           *lawyerTimeout,
+		CouncilTimeout:          *councilTimeout,
+		MaxResponseBytes:        *maxResponseBytes,
+		MaxArgumentChars:        *maxArgumentChars,
+		InvalidAttemptLimit:     *invalidAttemptLimit,
+		MaxDocumentFiles:        *maxDocumentFiles,
+		MaxDocumentFileBytes:    *maxDocumentFileBytes,
+		MaxDocumentsTotal:       *maxDocumentsTotalBytes,
+		CouncilRequestAttempts:  *councilRequestAttempts,
+		ParallelCouncil:         *parallelCouncil,
+		AllowAPIKey:             *allowAPIKey,
 	})
 	if result.SchemaVersion == "" {
 		if runErr == nil {

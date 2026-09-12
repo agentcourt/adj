@@ -16,27 +16,30 @@ import (
 	"github.com/agentcourt/adj/adc/runtime/spec"
 	"github.com/agentcourt/adj/adc/runtime/store"
 	"github.com/agentcourt/adj/common/casemanifest"
+	"github.com/agentcourt/adj/common/councilsample"
 	"github.com/agentcourt/adj/common/openai"
 )
 
 type Config struct {
-	ScenarioPath      string
-	ScenarioBaseDir   string
-	OutputPath        string
-	EventsPath        string
-	RunID             string
-	CaseID            string
-	CaseAPIAddr       string
-	ExternalRoles     []string
-	Model             string
-	Temperature       *float64
-	JurorTemperature  *float64
-	JurorPersonasPath string
-	Offline           bool
-	Runtime           RuntimeLimits
-	PolicyOverrides   map[string]any
-	PromptDir         string
-	PromptFiles       map[string]string
+	ScenarioPath            string
+	ScenarioBaseDir         string
+	OutputPath              string
+	EventsPath              string
+	RunID                   string
+	CaseID                  string
+	CaseAPIAddr             string
+	ExternalRoles           []string
+	Model                   string
+	Temperature             *float64
+	JurorTemperature        *float64
+	JurorPersonasPath       string
+	CouncilAllowedEndpoints []string
+	CouncilMinEndpoints     int
+	Offline                 bool
+	Runtime                 RuntimeLimits
+	PolicyOverrides         map[string]any
+	PromptDir               string
+	PromptFiles             map[string]string
 }
 
 type TurnLog struct {
@@ -103,7 +106,7 @@ func (r *Runner) RequiresLLMTurns() bool {
 	return false
 }
 
-func New(st *store.Store, le lean.Engine, client *openai.Client, jurorClient *openai.Client, cfg Config) (*Runner, error) {
+func New(st *store.Store, le lean.Engine, client ResponseClient, jurorClient ResponseClient, cfg Config) (*Runner, error) {
 	if st == nil {
 		return nil, fmt.Errorf("runner store is nil")
 	}
@@ -119,19 +122,11 @@ func New(st *store.Store, le lean.Engine, client *openai.Client, jurorClient *op
 	if err != nil {
 		return nil, err
 	}
-	var responseClient ResponseClient
-	if client != nil {
-		responseClient = client
-	}
-	var jurorResponseClient ResponseClient
-	if jurorClient != nil {
-		jurorResponseClient = jurorClient
-	}
 	r, err := newRunnerCore(
 		st,
 		le,
-		responseClient,
-		jurorResponseClient,
+		client,
+		jurorClient,
 		client != nil && client == jurorClient,
 		cfg,
 		scenario.Roles,
@@ -143,7 +138,10 @@ func New(st *store.Store, le lean.Engine, client *openai.Client, jurorClient *op
 	}
 	r.scenario = scenario
 	if strings.TrimSpace(cfg.JurorPersonasPath) != "" {
-		pool, err := loadJurorPersonaPool(cfg.JurorPersonasPath, cfg.ScenarioBaseDir)
+		pool, err := loadJurorPersonaPoolWithOptions(cfg.JurorPersonasPath, cfg.ScenarioBaseDir, councilsample.Options{
+			AllowedEndpoints:         cfg.CouncilAllowedEndpoints,
+			MinimumDistinctEndpoints: cfg.CouncilMinEndpoints,
+		})
 		if err != nil {
 			return nil, err
 		}

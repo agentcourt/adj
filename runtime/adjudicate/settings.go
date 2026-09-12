@@ -8,8 +8,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
+
+	"github.com/agentcourt/adj/common/modelgateway"
 )
 
 type SettingsFile struct {
@@ -20,16 +23,18 @@ type SettingsFile struct {
 }
 
 type CommonSettings struct {
-	OutputRoot          string                        `json:"output_root,omitempty"`
-	AgentStateRoot      string                        `json:"agent_state_root,omitempty"`
-	LawyerProfile       string                        `json:"lawyer_profile,omitempty"`
-	EvidenceStandard    string                        `json:"evidence_standard"`
-	CouncilPool         string                        `json:"council_pool,omitempty"`
-	CouncilSize         int                           `json:"council_size,omitempty"`
-	RequiredVotes       int                           `json:"required_votes,omitempty"`
-	DocumentLimits      DocumentLimits                `json:"document_limits,omitempty"`
-	AllowAPIKey         *bool                         `json:"allow_api_key"`
-	ProviderCredentials map[string]CredentialMetadata `json:"provider_credentials"`
+	OutputRoot              string                        `json:"output_root,omitempty"`
+	AgentStateRoot          string                        `json:"agent_state_root,omitempty"`
+	LawyerProfile           string                        `json:"lawyer_profile,omitempty"`
+	EvidenceStandard        string                        `json:"evidence_standard"`
+	CouncilPool             string                        `json:"council_pool,omitempty"`
+	CouncilAllowedEndpoints []string                      `json:"council_allowed_endpoints,omitempty"`
+	CouncilMinEndpoints     int                           `json:"council_minimum_distinct_endpoints,omitempty"`
+	CouncilSize             int                           `json:"council_size,omitempty"`
+	RequiredVotes           int                           `json:"required_votes,omitempty"`
+	DocumentLimits          DocumentLimits                `json:"document_limits,omitempty"`
+	AllowAPIKey             *bool                         `json:"allow_api_key"`
+	ProviderCredentials     map[string]CredentialMetadata `json:"provider_credentials"`
 }
 
 type DocumentLimits struct {
@@ -397,6 +402,14 @@ func resolveCommonAdjudicationSettings(common *CommonSettings, procedures Proced
 	if common.CouncilSize <= 0 {
 		return fmt.Errorf("common council_size must be positive")
 	}
+	common.CouncilAllowedEndpoints = normalizeEndpointList(common.CouncilAllowedEndpoints)
+	if common.CouncilMinEndpoints < 0 {
+		return fmt.Errorf("common council_minimum_distinct_endpoints must be between 0 and council_size")
+	}
+	completedCouncilMinimum := procedures.ARBD != nil || procedures.ARB != nil || procedures.Quick != nil
+	if completedCouncilMinimum && common.CouncilMinEndpoints > common.CouncilSize {
+		return fmt.Errorf("common council_minimum_distinct_endpoints must be between 0 and council_size")
+	}
 	if votesRequired && (common.RequiredVotes <= common.CouncilSize/2 || common.RequiredVotes > common.CouncilSize) {
 		return fmt.Errorf("common required_votes must be a majority between %d and council_size", common.CouncilSize/2+1)
 	}
@@ -411,6 +424,23 @@ func resolveCommonAdjudicationSettings(common *CommonSettings, procedures Proced
 	return nil
 }
 
+func normalizeEndpointList(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	result := make([]string, 0, len(values))
+	for _, raw := range values {
+		value := strings.ToLower(strings.TrimSpace(raw))
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
+}
+
 func validateCommonProviderCredentials(common CommonSettings) error {
 	if common.AllowAPIKey == nil {
 		return fmt.Errorf("common allow_api_key is required")
@@ -423,7 +453,7 @@ func validateCommonProviderCredentials(common CommonSettings) error {
 	}
 	for name, credential := range common.ProviderCredentials {
 		provider := strings.ToLower(strings.TrimSpace(name))
-		if provider != name || (provider != "openai" && provider != "openrouter") {
+		if _, ok := modelgateway.CredentialEnvironmentName(provider); provider != name || !ok {
 			return fmt.Errorf("common provider_credentials contains unsupported provider %q", name)
 		}
 		if credential.Source != AuthAPIKey {
@@ -443,30 +473,9 @@ func requireProcedureProviderCredentials(procedures ProcedureSettings, credentia
 		}
 		return nil
 	}
-	if procedures.ARB != nil {
-		if err := require("arb", "openrouter"); err != nil {
-			return err
-		}
-	}
-	if procedures.ARBD != nil {
-		if err := require("arbd", "openrouter"); err != nil {
-			return err
-		}
-	}
-	if procedures.Quick != nil {
-		if err := require("quick", "openrouter"); err != nil {
-			return err
-		}
-	}
 	if procedures.ADC != nil {
 		if err := require("adc", "openai"); err != nil {
 			return err
-		}
-		trialMode := strings.ToLower(strings.TrimSpace(procedures.ADC.TrialMode))
-		if trialMode != "bench" {
-			if err := require("adc", "openrouter"); err != nil {
-				return err
-			}
 		}
 	}
 	if procedures.Simple != nil {
@@ -478,6 +487,15 @@ func requireProcedureProviderCredentials(procedures ProcedureSettings, credentia
 		}
 	}
 	return nil
+}
+
+func configuredProviderNames(credentials map[string]CredentialMetadata) []string {
+	names := make([]string, 0, len(credentials))
+	for name := range credentials {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func validEnvironmentVariableName(value string) bool {

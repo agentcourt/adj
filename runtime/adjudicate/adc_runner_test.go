@@ -50,6 +50,9 @@ func TestADCRunnerBuildsJuryRequest(t *testing.T) {
 	if received.JurorPersonasPath != "/settings/council.jsonl" || received.JurorCount != 7 || received.MinimumConcurring != 6 || received.UnanimousRequired != "false" {
 		t.Fatalf("jury options = %#v", received)
 	}
+	if len(received.CouncilAllowedEndpoints) != 2 || received.CouncilAllowedEndpoints[0] != "openai" || received.CouncilAllowedEndpoints[1] != "openrouter" || received.CouncilMinEndpoints != 2 {
+		t.Fatalf("jury endpoint options = %#v", received)
+	}
 	if received.TrialMode != "jury" || received.LawyerTimeoutSeconds != 30 || received.JurorTimeoutSeconds != 30 || received.TimeoutSeconds != 30 {
 		t.Fatalf("runtime options = %#v", received)
 	}
@@ -187,11 +190,13 @@ func adcTestRequest() ProcedureRequest {
 		},
 		Settings: ResolvedSettings{
 			Common: CommonSettings{
-				EvidenceStandard: "clear_and_convincing",
-				CouncilPool:      "/settings/council.jsonl",
-				CouncilSize:      7,
-				RequiredVotes:    6,
-				DocumentLimits:   DocumentLimits{Count: 12, PerFile: 2048, Total: 8192},
+				EvidenceStandard:        "clear_and_convincing",
+				CouncilPool:             "/settings/council.jsonl",
+				CouncilAllowedEndpoints: []string{"openai", "openrouter"},
+				CouncilMinEndpoints:     2,
+				CouncilSize:             7,
+				RequiredVotes:           6,
+				DocumentLimits:          DocumentLimits{Count: 12, PerFile: 2048, Total: 8192},
 				ProviderCredentials: map[string]CredentialMetadata{
 					"openai":     {Source: AuthAPIKey, EnvironmentVariable: "DIRECT_OPENAI"},
 					"openrouter": {Source: AuthAPIKey, EnvironmentVariable: "DIRECT_OPENROUTER"},

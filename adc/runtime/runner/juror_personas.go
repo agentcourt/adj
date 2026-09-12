@@ -1,15 +1,14 @@
 package runner
 
 import (
-	"crypto/rand"
 	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/agentcourt/adj/common/councilsample"
 	"github.com/agentcourt/adj/common/modelrequest"
 	"github.com/agentcourt/adj/common/persona"
 )
@@ -22,8 +21,8 @@ type jurorPersonaPair struct {
 }
 
 type jurorPersonaPool struct {
-	pairs     []jurorPersonaPair
-	remaining []int
+	pairs    []jurorPersonaPair
+	selector *councilsample.Selector
 }
 
 func (p *jurorPersonaPool) findPair(model string, personaFile string) (jurorPersonaPair, bool) {
@@ -41,6 +40,10 @@ func (p *jurorPersonaPool) findPair(model string, personaFile string) (jurorPers
 }
 
 func loadJurorPersonaPool(path string, scenarioBaseDir string) (*jurorPersonaPool, error) {
+	return loadJurorPersonaPoolWithOptions(path, scenarioBaseDir, councilsample.Options{})
+}
+
+func loadJurorPersonaPoolWithOptions(path string, scenarioBaseDir string, opts councilsample.Options) (*jurorPersonaPool, error) {
 	resolvedPairsPath := resolveScenarioRelativePath(path, scenarioBaseDir)
 	raw, err := os.ReadFile(resolvedPairsPath)
 	if err != nil {
@@ -74,27 +77,48 @@ func loadJurorPersonaPool(path string, scenarioBaseDir string) (*jurorPersonaPoo
 	if len(pairs) == 0 {
 		return nil, fmt.Errorf("juror personas file contains no usable pairs: %s", path)
 	}
-	remaining := make([]int, len(pairs))
-	for i := range pairs {
-		remaining[i] = i
+	endpoints := make([]string, len(pairs))
+	for index, pair := range pairs {
+		endpoints[index] = pair.RequestSpec.Endpoint
 	}
-	return &jurorPersonaPool{pairs: pairs, remaining: remaining}, nil
+	selector, err := councilsample.New(endpoints, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &jurorPersonaPool{pairs: pairs, selector: selector}, nil
 }
 
 func (p *jurorPersonaPool) samplePair() (jurorPersonaPair, error) {
 	if p == nil || len(p.pairs) == 0 {
 		return jurorPersonaPair{}, fmt.Errorf("juror persona pool is empty")
 	}
-	if len(p.remaining) == 0 {
-		return jurorPersonaPair{}, fmt.Errorf("juror persona pool exhausted; add more records")
+	if p.selector == nil {
+		endpoints := make([]string, len(p.pairs))
+		for index, pair := range p.pairs {
+			if pair.RequestSpec != nil {
+				endpoints[index] = pair.RequestSpec.Endpoint
+			}
+			if strings.TrimSpace(endpoints[index]) == "" {
+				model, err := modelrequest.ParseModelRef(pair.Model)
+				if err != nil {
+					return jurorPersonaPair{}, fmt.Errorf("juror persona pair %d: %w", index+1, err)
+				}
+				endpoints[index] = model.Endpoint
+			}
+		}
+		selector, err := councilsample.New(endpoints, councilsample.Options{})
+		if err != nil {
+			return jurorPersonaPair{}, err
+		}
+		p.selector = selector
 	}
-	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(p.remaining))))
+	pairIndex, err := p.selector.Draw()
 	if err != nil {
 		return jurorPersonaPair{}, fmt.Errorf("sample juror persona pair: %w", err)
 	}
-	remainingIndex := int(n.Int64())
-	pairIndex := p.remaining[remainingIndex]
-	p.remaining = append(p.remaining[:remainingIndex], p.remaining[remainingIndex+1:]...)
+	if err := p.selector.Accept(pairIndex); err != nil {
+		return jurorPersonaPair{}, err
+	}
 	return p.pairs[pairIndex], nil
 }
 

@@ -23,6 +23,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/agentcourt/adj/common/modelgateway"
+	"github.com/agentcourt/adj/common/modelrequest"
 	"github.com/agentcourt/adj/internal/launcherprompt"
 	lawyerlaunch "github.com/agentcourt/adj/internal/lawyer"
 	"github.com/agentcourt/adj/internal/mcpcap"
@@ -30,7 +32,6 @@ import (
 	"github.com/agentcourt/adj/internal/pimodel"
 	headless "github.com/agentcourt/adj/runtime/agent"
 	"github.com/agentcourt/adj/runtime/corehealth"
-	"github.com/agentcourt/adj/runtime/modelrequest"
 	"github.com/agentcourt/adj/runtime/runstate"
 )
 
@@ -129,6 +130,8 @@ type Options struct {
 	NonJurorTemperature       string
 	JurorTemperature          string
 	JurorPersonasPath         string
+	CouncilAllowedEndpoints   []string
+	CouncilMinEndpoints       int
 	TrialMode                 string
 	SkipVoirDire              bool
 	JurorCount                int
@@ -302,6 +305,7 @@ type runState struct {
 	secretFiles      []string
 	jurorProcesses   map[string]*processRecord
 	failedJurorTurns map[string]bool
+	modelServer      *modelgateway.Server
 	agentErrs        chan error
 
 	mu sync.Mutex
@@ -420,8 +424,9 @@ func Run(ctx context.Context, opts Options) (result Result, err error) {
 		completionErr := completions.shutdown(cancel)
 		lawyerErr := state.lawyers.Stop()
 		agentErr := state.stopAgents()
+		modelServerErr := state.closeModelServer()
 		secretErr := state.cleanupSecrets()
-		err = errors.Join(err, completionErr, lawyerErr, agentErr, secretErr)
+		err = errors.Join(err, completionErr, lawyerErr, agentErr, modelServerErr, secretErr)
 	}()
 
 	caseAPIAddr, err := resolveListenAddr(opts.CaseAPIAddr, "127.0.0.1")
@@ -489,6 +494,12 @@ func Run(ctx context.Context, opts Options) (result Result, err error) {
 	if err := state.waitForMCP(runCtx, &completions); err != nil {
 		cancel()
 		return Result{}, err
+	}
+	if piJurorsEnabled(opts) {
+		if err := state.startModelServer(); err != nil {
+			cancel()
+			return Result{}, err
+		}
 	}
 
 	for _, role := range manualLawyerRoles(opts.AutoLawyers) {
@@ -592,6 +603,34 @@ func Run(ctx context.Context, opts Options) (result Result, err error) {
 			return Result{}, ctx.Err()
 		}
 	}
+}
+
+func (s *runState) startModelServer() error {
+	executor, err := modelgateway.NewWithEnvironment(time.Duration(s.opts.JurorTimeoutSeconds)*time.Second, 4, s.opts.CoreEnvironment)
+	if err != nil {
+		return fmt.Errorf("create juror model executor: %w", err)
+	}
+	server, err := modelgateway.NewServer(executor)
+	if err != nil {
+		return fmt.Errorf("create juror model server: %w", err)
+	}
+	if err := server.Start(modelgateway.ServerOptions{
+		ListenAddress: "127.0.0.1:0",
+		RecordPath:    filepath.Join(s.logDir, "juror-model-requests.jsonl"),
+	}); err != nil {
+		return fmt.Errorf("start juror model server: %w", err)
+	}
+	s.modelServer = server
+	return nil
+}
+
+func (s *runState) closeModelServer() error {
+	if s.modelServer == nil {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return s.modelServer.Close(ctx)
 }
 
 func startCoreCase(ctx context.Context, opts Options, caseAPIAddr string, logDir string) (<-chan caseOutcome, error) {
@@ -769,6 +808,10 @@ func appendCoreCommonArgs(args []string, opts Options) []string {
 	args = addCoreString(args, "--temperature", opts.Temperature)
 	args = addCoreString(args, "--juror-temperature", opts.JurorTemperature)
 	args = addCoreString(args, "--juror-personas", opts.JurorPersonasPath)
+	for _, endpoint := range opts.CouncilAllowedEndpoints {
+		args = addCoreString(args, "--council-endpoint", endpoint)
+	}
+	args = addCoreInt(args, "--minimum-distinct-council-endpoints", opts.CouncilMinEndpoints)
 	args = addCoreString(args, "--engine", opts.EnginePath)
 	args = addCoreInt(args, "--timeout-seconds", opts.TimeoutSeconds)
 	args = addCoreInt(args, "--roleapi-timeout-seconds", max(opts.LawyerTimeoutSeconds, opts.JurorTimeoutSeconds))
@@ -1012,7 +1055,6 @@ func lawyerWebSearchEnabled(configured *bool) bool {
 }
 
 func validateOptions(opts Options) error {
-	coreEnvironment := opts.CoreEnvironment
 	participantEnvironment := opts.ParticipantEnvironment
 	hasComplaint := strings.TrimSpace(opts.ComplaintPath) != ""
 	hasProposition := strings.TrimSpace(opts.Proposition) != ""
@@ -1060,11 +1102,6 @@ func validateOptions(opts Options) error {
 	if trialMode != "" && trialMode != "auto" && trialMode != "jury" && trialMode != "bench" {
 		return fmt.Errorf("invalid trial mode %q; expected auto, jury, or bench", opts.TrialMode)
 	}
-	if hasScenario || (hasComplaint || hasProposition) && (trialMode == "" || trialMode == "auto" || trialMode == "jury") {
-		if value, ok := environmentValue(coreEnvironment, "OPENROUTER_API_KEY"); !ok || strings.TrimSpace(value) == "" {
-			return fmt.Errorf("OPENROUTER_API_KEY is required for Pi jurors")
-		}
-	}
 	if _, err := autoLawyerRoles(opts.AutoLawyers); err != nil {
 		return err
 	}
@@ -1088,6 +1125,14 @@ func validateOptions(opts Options) error {
 		}
 	}
 	return nil
+}
+
+func piJurorsEnabled(opts Options) bool {
+	if strings.TrimSpace(opts.ScenarioPath) != "" {
+		return true
+	}
+	trialMode := strings.ToLower(strings.TrimSpace(opts.TrialMode))
+	return trialMode == "" || trialMode == "auto" || trialMode == "jury"
 }
 
 func validateOutputLayout(outputDir string, coreOutputDir string, logsDir string) error {
@@ -1322,6 +1367,12 @@ func removeEnvironmentNames(environment []string, names []string) []string {
 		filtered = append(filtered, entry)
 	}
 	return filtered
+}
+
+func jurorModelEnvironment(environment []string, token string) []string {
+	names := append(modelgateway.CredentialEnvironmentNames(), "ADJ_MODEL_API_KEY")
+	filtered := removeEnvironmentNames(environment, names)
+	return append(filtered, "ADJ_MODEL_API_KEY="+token)
 }
 
 func lawyerWorkDir(profile LawyerProfile, opts Options, role string) (string, error) {
@@ -2081,15 +2132,27 @@ func (s *runState) startPiJuror(ctx context.Context, active activeJurorOpportuni
 	if err != nil {
 		return fmt.Errorf("create Pi home: %w", err)
 	}
+	if active.requestSpec == nil {
+		return fmt.Errorf("juror %s has no request_spec; JSONL juror pool records are required", active.principalID)
+	}
+	if s.modelServer == nil {
+		return fmt.Errorf("juror model server is not running")
+	}
+	spec := active.requestSpec.WithFallbackMaxOutputTokens(DefaultJurorMaxOutputTokens)
+	binding, err := s.modelServer.Bind(active.principalID+":"+active.opportunityID, spec)
+	if err != nil {
+		return fmt.Errorf("authorize juror model for %s: %w", active.principalID, err)
+	}
 	s.trackSecretFile(filepath.Join(home, ".mcp.json"))
 	s.trackSecretFile(filepath.Join(home, ".pi", "agent", "auth.json"))
-	model, err := writePiConfig(home, active, server, url, capability)
+	model, err := writePiConfig(home, active, spec, s.modelServer.URL()+"/v1", binding, server, url, capability)
 	if err != nil {
 		return err
 	}
 	container := piContainerName(s.opts.CaseID, active)
 	args := piRunArgs(s.opts, container, home, model, instructions)
-	proc, err := s.startProcess(ctx, processName, "podman", s.opts.PodmanCommand, args, container, &jurorProcessTarget{
+	environment := jurorModelEnvironment(s.opts.CoreEnvironment, binding.Token)
+	proc, err := s.startProcess(ctx, processName, "podman", s.opts.PodmanCommand, args, environment, container, &jurorProcessTarget{
 		principalID:   active.principalID,
 		opportunityID: active.opportunityID,
 	})
@@ -2116,12 +2179,12 @@ func piRunArgs(opts Options, name string, home string, model string, instruction
 		"-e", "HOME=/home/user",
 		"-e", "TMPDIR=/home/user",
 		"-e", "PI_CODING_AGENT_DIR=/home/user/.pi/agent",
-		"-e", "OPENROUTER_API_KEY",
+		"-e", "ADJ_MODEL_API_KEY",
 		"-e", "NODE_OPTIONS",
 		"-v", home + ":/home/user",
 		"-w", "/home/user",
 		opts.PiImage,
-		"--provider", "openrouter",
+		"--provider", "adj",
 		"--model", model,
 		"-e", opts.PiMCPAdapter,
 		"--mode", "json",
@@ -2223,21 +2286,14 @@ func instructionValues(data instructionData) map[string]string {
 	}
 }
 
-func writePiConfig(home string, active activeJurorOpportunity, server string, mcpURL string, capability string) (string, error) {
-	if active.requestSpec == nil {
-		return "", fmt.Errorf("juror %s has no request_spec; JSONL juror pool records are required", active.principalID)
-	}
-	spec := *active.requestSpec
-	if spec.Endpoint != "openrouter" {
-		return "", fmt.Errorf("Pi juror requires openrouter endpoint for %s; got %s", active.principalID, spec.Endpoint)
-	}
-	model := spec.UpstreamModel()
+func writePiConfig(home string, active activeJurorOpportunity, spec modelrequest.Spec, modelBaseURL string, binding modelgateway.Binding, server string, mcpURL string, capability string) (string, error) {
+	model := binding.Model
 	settingsDir := filepath.Join(home, ".pi", "agent")
 	if err := os.MkdirAll(settingsDir, 0o755); err != nil {
 		return "", fmt.Errorf("create Pi settings dir: %w", err)
 	}
 	if err := writeJSONFile(filepath.Join(settingsDir, "settings.json"), map[string]any{
-		"defaultProvider": "openrouter",
+		"defaultProvider": "adj",
 		"defaultModel":    model,
 		"quietStartup":    true,
 	}); err != nil {
@@ -2247,7 +2303,6 @@ func writePiConfig(home string, active activeJurorOpportunity, server string, mc
 		"id":   model,
 		"name": "ADC " + active.principalID + " " + model,
 	}
-	spec = spec.WithFallbackMaxOutputTokens(DefaultJurorMaxOutputTokens)
 	if maxTokens := spec.MaxOutputTokens(); maxTokens != nil {
 		modelEntry["maxTokens"] = *maxTokens
 	}
@@ -2268,17 +2323,14 @@ func writePiConfig(home string, active activeJurorOpportunity, server string, mc
 		modelEntry["compat"] = compat
 	}
 	providerEntry := map[string]any{
-		"baseUrl": "https://openrouter.ai/api/v1",
-		"apiKey":  "$OPENROUTER_API_KEY",
+		"baseUrl": modelBaseURL,
+		"apiKey":  "$ADJ_MODEL_API_KEY",
 		"api":     "openai-completions",
 		"models":  []map[string]any{modelEntry},
 	}
-	if len(spec.Headers) > 0 {
-		providerEntry["headers"] = spec.Headers
-	}
 	if err := writeJSONFile(filepath.Join(settingsDir, "models.json"), map[string]any{
 		"providers": map[string]any{
-			"openrouter": providerEntry,
+			"adj": providerEntry,
 		},
 	}); err != nil {
 		return "", err
@@ -2317,7 +2369,7 @@ func writeJSONFileMode(path string, value any, mode os.FileMode) error {
 	return nil
 }
 
-func (s *runState) startProcess(ctx context.Context, name string, kind string, command string, args []string, container string, jurorTarget *jurorProcessTarget) (*processRecord, error) {
+func (s *runState) startProcess(ctx context.Context, name string, kind string, command string, args []string, environment []string, container string, jurorTarget *jurorProcessTarget) (*processRecord, error) {
 	stdoutPath := filepath.Join(s.logDir, name+".stdout")
 	stderrPath := filepath.Join(s.logDir, name+".stderr")
 	stdout, err := os.Create(stdoutPath)
@@ -2356,7 +2408,7 @@ func (s *runState) startProcess(ctx context.Context, name string, kind string, c
 	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Stdout = stdoutCounter
 	cmd.Stderr = stderr
-	cmd.Env = append([]string(nil), s.opts.CoreEnvironment...)
+	cmd.Env = append([]string(nil), environment...)
 	if err := cmd.Start(); err != nil {
 		return nil, errors.Join(fmt.Errorf("start %s: %w", name, err), cleanupContainerIDPath(containerIDPath, containerIDDir), closeStdout(), stderr.Close())
 	}

@@ -4,7 +4,7 @@
 
 Agent Arbitration Degree, or AARD, runs an arbitration about one question and returns degree answers.  A complaint states the question, two lawyers build and argue the record, and each council member answers with an integer from 0 through 100 under the configured judgment standard.  The runtime enforces the procedure, stores the record, and writes a packet for later inspection.
 
-`aard case` runs one case and exposes HTTP APIs for lawyer and observer clients.  With the `councilapi` backend, the same listener also exposes the Council API for external council clients.  With the `direct` backend, the executable calls council models itself.  External processes provide the lawyers in both modes.
+`aard case` runs one case and exposes HTTP APIs for lawyer and observer clients.  With the `councilapi` backend, the same listener also exposes the Council API for external council clients.  With the `direct` backend, the executable calls council models.  External processes provide the lawyers in both modes.
 
 The other commands prepare complaints and deterministic case packets or verify a completed case.  They share the complaint parser and proceeding implementation used by `aard case`.  Commands in this manual assume the working directory is `arbd/` unless stated otherwise.
 
@@ -12,7 +12,7 @@ The other commands prepare complaints and deterministic case packets or verify a
 
 A case process owns the arbitration, including phase, turn order, deadlines, attempt budgets, evidence, work notes, council roster, and final output.  Lawyer and observer clients read the case and act through its HTTP APIs.  Council clients use those APIs only under the `councilapi` backend, while the direct backend calls council models from the case process.  Clients do not need access to the case output directory.  The case process writes every accepted procedural action to the durable record.
 
-The case command samples and checks the council before it starts the HTTP listener.  With the default `direct` council backend, the process calls each selected council model when deliberation begins.  With the `councilapi` backend, external clients read deliberation opportunities and submit answers through the same case process.
+The case command selects the council before it starts the HTTP listener.  With the default `direct` council backend, it checks each selected model and calls that model when deliberation begins.  With the `councilapi` backend, external clients own model execution, read deliberation opportunities, and submit answers through the case process.
 
 ## Choosing A Command
 
@@ -67,7 +67,7 @@ cd engine
 lake build Proofs
 ```
 
-Direct council calls require the credential named by each selected request specification.  Current OpenAI and OpenRouter endpoints use `OPENAI_API_KEY` and `OPENROUTER_API_KEY`, respectively.  The default pool path is a local `pool.jsonl` when present, followed by `<common-root>/data/personas/pool.jsonl`.  Persona paths resolve from the pool directory and then from the shared common tree.
+Direct council calls support the registered Anthropic, DeepSeek, Google, Hugging Face, OpenAI, OpenRouter, and xAI endpoints.  Each selected endpoint requires its canonical credential.  The default pool path is a local `pool.jsonl` when present, followed by `<common-root>/data/personas/pool.jsonl`.  Persona paths resolve from the pool directory and then from the shared common tree.  The [model-endpoint guide](../docs/model-endpoints.md) defines credentials, pool records, request support, and endpoint-balanced selection.
 
 ## Complaint Files
 
@@ -92,7 +92,7 @@ When `aard case` starts without `--file`, it scans the complaint directory for i
 
 The repeatable `--file` flag selects explicit initial evidence.  Supplying any `--file` value replaces automatic directory scanning.  Every file required in the initial record must therefore appear in the explicit selection.
 
-For each input, the runtime checks that the path and opened descriptor identify the same regular file.  It reads and hashes that one descriptor, rewinds it for publication, and rejects replacement, size drift, or digest drift.  The runtime publishes the verified bytes into `evidence-store/` and builds the Lean initial catalog before council sampling or initialization.
+For each input, the runtime checks that the path and opened descriptor identify the same regular file.  It reads and hashes that one descriptor, rewinds it for publication, and rejects replacement, size drift, or digest drift.  The runtime publishes the verified bytes into `evidence-store/` and builds the Lean initial catalog before council selection or initialization.
 
 ```bash
 .bin/aard case --complaint work/my-case/complaint.md --file work/my-case/source-a.pdf --file 'work/my-case/captures/*.png' --out-dir out/my-case
@@ -181,6 +181,8 @@ Successful verification prints a JSON object containing `status: "ok"`, the case
 | `--prompt-dir` | Complete prompt directory.  Every non-overridden catalog file is required. |
 | `--common-root` | Shared `common/` tree for council pool and personas. |
 | `--council-pool` | Council JSONL request-spec pool. |
+| `--council-endpoint` | Allowed council endpoint.  May repeat. |
+| `--minimum-distinct-council-endpoints` | Minimum endpoint names represented in the completed council. |
 | `--caseapi-addr` | Private Case API listen address.  Default: `127.0.0.1:0`. |
 | `--council-backend` | `direct` or `councilapi`. |
 | `--timeout-seconds` | Council opportunity timeout override for either backend. |
@@ -417,7 +419,7 @@ export OPENROUTER_API_KEY=REPLACE_WITH_KEY
 
 ### External Council
 
-The `councilapi` backend uses external clients for final answers.  It exposes the Council API on the same address as the Lawyer API.  The case still samples and validates the configured roster before opening its listener.
+The `councilapi` backend uses external clients for final answers.  It exposes the Council API on the same address as the Lawyer API.  The case selects and validates the configured roster before opening its listener without making provider requests.
 
 ```bash
 .bin/aard case --complaint examples/ex1/complaint.md --council-backend councilapi --council-pool ../common/data/personas/pool.jsonl --out-dir out/ex1-councilapi

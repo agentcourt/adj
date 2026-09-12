@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/agentcourt/adj/common/modelgateway"
 )
 
 type coreProcessFunc func(context.Context, coreProcessRequest) ([]byte, error)
@@ -181,7 +183,7 @@ func directProviderEnvironmentRemoving(sources map[string]CredentialMetadata, ba
 	sort.Strings(providers)
 
 	values := make(map[string]string, len(providers))
-	remove = append([]string{"OPENAI_API_KEY", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY"}, remove...)
+	remove = append(modelgateway.CredentialEnvironmentNames(), remove...)
 	for _, provider := range providers {
 		canonical := canonicalProviderEnvironment(provider)
 		if canonical == "" {
@@ -231,14 +233,8 @@ func credentialEnvironmentNames(settings ResolvedSettings) []string {
 }
 
 func canonicalProviderEnvironment(provider string) string {
-	switch provider {
-	case "openai":
-		return "OPENAI_API_KEY"
-	case "openrouter":
-		return "OPENROUTER_API_KEY"
-	default:
-		return ""
-	}
+	name, _ := modelgateway.CredentialEnvironmentName(provider)
+	return name
 }
 
 func wholeSeconds(duration Duration) (int64, error) {

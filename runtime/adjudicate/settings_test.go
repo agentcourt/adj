@@ -123,6 +123,8 @@ func TestLoadSettingsResolvesPathsAndCommonLawyerProfile(t *testing.T) {
     "lawyer_profile":"lawyer",
 	"evidence_standard":"preponderance_of_the_evidence",
 	"council_pool":"pools/council.jsonl",
+	"council_allowed_endpoints":[" OpenAI ","anthropic","openai"],
+	"council_minimum_distinct_endpoints":2,
 	"council_size":3,
 	"required_votes":2,
 	"allow_api_key":true,
@@ -193,6 +195,12 @@ func TestLoadSettingsResolvesPathsAndCommonLawyerProfile(t *testing.T) {
 	}
 	if settings.Common.CouncilPool != filepath.Join(settingsDir, "pools", "council.jsonl") {
 		t.Fatalf("council pool = %q", settings.Common.CouncilPool)
+	}
+	if got := settings.Common.CouncilAllowedEndpoints; len(got) != 2 || got[0] != "openai" || got[1] != "anthropic" {
+		t.Fatalf("council allowed endpoints = %v", got)
+	}
+	if settings.Common.CouncilMinEndpoints != 2 {
+		t.Fatalf("minimum distinct council endpoints = %d", settings.Common.CouncilMinEndpoints)
 	}
 	if quick.CoreCommand != filepath.Join(root, "bin", "quick") {
 		t.Fatalf("core command = %q", quick.CoreCommand)
@@ -540,6 +548,23 @@ func TestResolveCommonAdjudicationSettings(t *testing.T) {
 			common:     CommonSettings{EvidenceStandard: "preponderance_of_the_evidence", CouncilPool: "pool.jsonl", CouncilSize: 5, RequiredVotes: 2},
 			procedures: ProcedureSettings{Quick: &QuickSettings{}},
 			wantError:  "common required_votes must be a majority between 3 and council_size",
+		},
+		{
+			name:       "negative minimum endpoints",
+			common:     CommonSettings{EvidenceStandard: "preponderance_of_the_evidence", CouncilPool: "pool.jsonl", CouncilSize: 5, RequiredVotes: 3, CouncilMinEndpoints: -1},
+			procedures: ProcedureSettings{Quick: &QuickSettings{}},
+			wantError:  "common council_minimum_distinct_endpoints must be between 0 and council_size",
+		},
+		{
+			name:       "minimum endpoints above council size",
+			common:     CommonSettings{EvidenceStandard: "preponderance_of_the_evidence", CouncilPool: "pool.jsonl", CouncilSize: 5, RequiredVotes: 3, CouncilMinEndpoints: 6},
+			procedures: ProcedureSettings{Quick: &QuickSettings{}},
+			wantError:  "common council_minimum_distinct_endpoints must be between 0 and council_size",
+		},
+		{
+			name:       "ADC minimum endpoints may exceed jury size",
+			common:     CommonSettings{EvidenceStandard: "preponderance_of_the_evidence", CouncilPool: "pool.jsonl", CouncilSize: 6, RequiredVotes: 6, CouncilMinEndpoints: 7},
+			procedures: ProcedureSettings{ADC: &ADCSettings{TrialMode: "jury"}},
 		},
 		{
 			name:       "threshold above council size",
@@ -1016,7 +1041,7 @@ func TestCommonProviderCredentialsRequireExplicitPermissionAndMetadata(t *testin
 		},
 		{
 			name:      "unsupported provider",
-			common:    `{"evidence_standard":"preponderance_of_the_evidence","allow_api_key":true,"provider_credentials":{"anthropic":{"source":"api_key","environment_variable":"ANTHROPIC_API_KEY"}},"document_limits":{"count":1,"per_file_bytes":1,"total_bytes":1}}`,
+			common:    `{"evidence_standard":"preponderance_of_the_evidence","allow_api_key":true,"provider_credentials":{"unknown":{"source":"api_key","environment_variable":"UNKNOWN_API_KEY"}},"document_limits":{"count":1,"per_file_bytes":1,"total_bytes":1}}`,
 			procedure: `{"model":"openai://model"}`,
 			wantError: "unsupported provider",
 		},

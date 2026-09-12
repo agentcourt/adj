@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 
+	"github.com/agentcourt/adj/common/modelgateway"
 	"github.com/agentcourt/adj/common/modelrequest"
 	"github.com/agentcourt/adj/common/openai"
 )
@@ -28,3 +29,4 @@ type ResponseClient interface {
 }
 
 var _ ResponseClient = (*openai.Client)(nil)
+var _ ResponseClient = (*modelgateway.Executor)(nil)

@@ -70,6 +70,11 @@ func (r *runner) requestVote(ctx context.Context, member CouncilMember) (Vote, e
 		if renderErr != nil {
 			return Vote{}, renderErr
 		}
+		callOutputs, outputErr := modelinput.RejectedToolCallOutputs(response.ToolCalls, err.Error())
+		if outputErr != nil {
+			return Vote{}, outputErr
+		}
+		input = append(input, callOutputs...)
 		input = append(input, map[string]any{
 			"role":    "user",
 			"content": repair,

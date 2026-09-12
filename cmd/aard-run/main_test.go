@@ -17,7 +17,7 @@ func TestCommandHelpAndArguments(t *testing.T) {
 	if !strings.Contains(stderr.String(), "Usage: aard-run") {
 		t.Fatalf("help output = %q", stderr.String())
 	}
-	for _, flagName := range []string{"-plaintiff-lawyer", "-defendant-lawyer", "-launcher-prompt-dir", "-launcher-prompt-file", "-plaintiff-lawyer-api-key-env", "-defendant-lawyer-resume"} {
+	for _, flagName := range []string{"-plaintiff-lawyer", "-defendant-lawyer", "-launcher-prompt-dir", "-launcher-prompt-file", "-plaintiff-lawyer-api-key-env", "-defendant-lawyer-resume", "-council-endpoint", "-minimum-distinct-council-endpoints"} {
 		if !strings.Contains(stderr.String(), flagName) {
 			t.Fatalf("help output lacks %s: %q", flagName, stderr.String())
 		}

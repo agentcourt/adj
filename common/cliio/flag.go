@@ -13,6 +13,25 @@ type Assignments struct {
 	values map[string]string
 }
 
+type StringList []string
+
+func (values *StringList) Set(value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fmt.Errorf("value must not be empty")
+	}
+	*values = append(*values, value)
+	return nil
+}
+
+func (values *StringList) String() string {
+	return strings.Join(*values, ",")
+}
+
+func (values *StringList) Values() []string {
+	return append([]string(nil), *values...)
+}
+
 func (a *Assignments) Set(value string) error {
 	key, path, ok := strings.Cut(value, "=")
 	key = strings.TrimSpace(key)

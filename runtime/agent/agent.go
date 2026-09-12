@@ -580,13 +580,13 @@ func prepareCodex(invocation *Invocation, profile Profile, assignment Assignment
 
 	invocation.Env = env
 	if invocation.Resumed {
-		invocation.Args = []string{"--strict-config", "exec", "resume", "--json"}
+		invocation.Args = []string{"--strict-config", "exec", "resume", "--json", "--skip-git-repo-check"}
 		if model := strings.TrimSpace(profile.Model); model != "" {
 			invocation.Args = append(invocation.Args, "--model", model)
 		}
 		invocation.Args = append(invocation.Args, "--last", "--all", assignment.Prompt)
 	} else {
-		invocation.Args = []string{"--strict-config", "exec", "--json"}
+		invocation.Args = []string{"--strict-config", "exec", "--json", "--skip-git-repo-check"}
 		if model := strings.TrimSpace(profile.Model); model != "" {
 			invocation.Args = append(invocation.Args, "--model", model)
 		}

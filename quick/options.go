@@ -27,27 +27,29 @@ func configure(opts Options) (Config, error) {
 		councilPoolPath = defaultCouncilPoolPath(commonRoot)
 	}
 	cfg := Config{
-		Proposition:            strings.TrimSpace(opts.Proposition),
-		DocumentsDir:           strings.TrimSpace(opts.DocumentsDir),
-		OutputDir:              strings.TrimSpace(opts.OutputDir),
-		CouncilPoolPath:        councilPoolPath,
-		CouncilSize:            opts.CouncilSize,
-		RequiredVotes:          opts.RequiredVotes,
-		EvidenceStandard:       strings.TrimSpace(opts.EvidenceStandard),
-		PromptDir:              strings.TrimSpace(opts.PromptDir),
-		LawyerWebSearchEnabled: lawyerWebSearch,
-		CaseAPIAddr:            strings.TrimSpace(opts.CaseAPIAddr),
-		LawyerAPIBearerToken:   strings.TrimSpace(opts.LawyerAPIBearerToken),
-		CaseID:                 strings.TrimSpace(opts.CaseID),
-		RunID:                  strings.TrimSpace(opts.RunID),
-		LawyerTimeout:          opts.LawyerTimeout,
-		CouncilTimeout:         opts.CouncilTimeout,
-		MaxResponseBytes:       opts.MaxResponseBytes,
-		MaxArgumentChars:       opts.MaxArgumentChars,
-		InvalidAttemptLimit:    opts.InvalidAttemptLimit,
-		CouncilRequestAttempts: opts.CouncilRequestAttempts,
-		ParallelCouncil:        opts.ParallelCouncil,
-		AllowAPIKey:            opts.AllowAPIKey,
+		Proposition:             strings.TrimSpace(opts.Proposition),
+		DocumentsDir:            strings.TrimSpace(opts.DocumentsDir),
+		OutputDir:               strings.TrimSpace(opts.OutputDir),
+		CouncilPoolPath:         councilPoolPath,
+		CouncilAllowedEndpoints: normalizeCouncilEndpoints(opts.CouncilAllowedEndpoints),
+		CouncilMinEndpoints:     opts.CouncilMinEndpoints,
+		CouncilSize:             opts.CouncilSize,
+		RequiredVotes:           opts.RequiredVotes,
+		EvidenceStandard:        strings.TrimSpace(opts.EvidenceStandard),
+		PromptDir:               strings.TrimSpace(opts.PromptDir),
+		LawyerWebSearchEnabled:  lawyerWebSearch,
+		CaseAPIAddr:             strings.TrimSpace(opts.CaseAPIAddr),
+		LawyerAPIBearerToken:    strings.TrimSpace(opts.LawyerAPIBearerToken),
+		CaseID:                  strings.TrimSpace(opts.CaseID),
+		RunID:                   strings.TrimSpace(opts.RunID),
+		LawyerTimeout:           opts.LawyerTimeout,
+		CouncilTimeout:          opts.CouncilTimeout,
+		MaxResponseBytes:        opts.MaxResponseBytes,
+		MaxArgumentChars:        opts.MaxArgumentChars,
+		InvalidAttemptLimit:     opts.InvalidAttemptLimit,
+		CouncilRequestAttempts:  opts.CouncilRequestAttempts,
+		ParallelCouncil:         opts.ParallelCouncil,
+		AllowAPIKey:             opts.AllowAPIKey,
 	}
 	if cfg.Proposition == "" {
 		return Config{}, fmt.Errorf("proposition is required")
@@ -57,6 +59,9 @@ func configure(opts Options) (Config, error) {
 	}
 	if cfg.CouncilSize <= 0 {
 		return Config{}, fmt.Errorf("council size must be positive")
+	}
+	if cfg.CouncilMinEndpoints < 0 || cfg.CouncilMinEndpoints > cfg.CouncilSize {
+		return Config{}, fmt.Errorf("minimum distinct council endpoints must be between 0 and council size")
 	}
 	if cfg.RequiredVotes <= cfg.CouncilSize/2 || cfg.RequiredVotes > cfg.CouncilSize {
 		return Config{}, fmt.Errorf("required votes must be a majority between %d and %d", cfg.CouncilSize/2+1, cfg.CouncilSize)
@@ -167,6 +172,23 @@ func configure(opts Options) (Config, error) {
 	}
 	cfg.PromptFiles = promptOverrides
 	return cfg, nil
+}
+
+func normalizeCouncilEndpoints(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	result := make([]string, 0, len(values))
+	for _, raw := range values {
+		value := strings.ToLower(strings.TrimSpace(raw))
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
 }
 
 func DefaultCommonRoot() string {

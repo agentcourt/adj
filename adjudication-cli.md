@@ -88,6 +88,10 @@ One settings file contains common defaults and a separate object for each config
       "openrouter": {
         "source": "api_key",
         "environment_variable": "OPENROUTER_API_KEY"
+      },
+      "anthropic": {
+        "source": "api_key",
+        "environment_variable": "ANTHROPIC_API_KEY"
       }
     }
   },
@@ -192,10 +196,12 @@ Settings identify models, providers, agent profiles, timeouts, byte limits, and 
 | `lawyer_profile` | Optional fallback for an omitted plaintiff or defendant profile name. |
 | `evidence_standard` | Required when `simple`, `quick`, `arb`, or `adc` is configured.  Accepts `preponderance_of_the_evidence` or `clear_and_convincing`. |
 | `council_pool`, `council_size` | Required when any configured `arbd`, `arb`, `quick`, jury ADC, or automatic ADC object needs a council. |
+| `council_allowed_endpoints` | Optional endpoint allowlist for council and juror selection.  An empty list permits every endpoint in the pool. |
+| `council_minimum_distinct_endpoints` | Optional minimum endpoint count for a completed Quick, ARB, or ARBD council, and for the initial ADC candidate assignments. |
 | `required_votes` | Required for `arb`, `quick`, jury ADC, and automatic ADC.  `arbd` does not consume it. |
 | `document_limits` | Required positive count, per-file byte, and total-byte limits. |
 | `allow_api_key` | Required and true because the implemented procedures use direct provider requests. |
-| `provider_credentials` | Required metadata for each direct provider used by any configured procedure object. |
+| `provider_credentials` | Required metadata for each direct provider used by any configured procedure object.  Supported names are `anthropic`, `deepseek`, `google`, `huggingface`, `openai`, `openrouter`, and `xai`. |
 
 | Procedure object | Fields and defaults |
 | --- | --- |
@@ -211,7 +217,7 @@ For Quick, AAR, AARD, and ADC, `auto_lawyers` accepts `both`, `plaintiff`, `defe
 
 A caller using a manual lawyer should supply `--out-dir` because `adjudicate` writes its JSON result only after the run finishes.  After the MCP adapter becomes ready, the launcher creates `<OUT>/openclaw-plaintiff-lawyer-skill.md` or `<OUT>/openclaw-defendant-lawyer-skill.md` with mode `0600`, and the run waits for the manual participant to complete its assigned opportunities.  Each skill contains a role-bound bearer capability, remains usable while that run's MCP adapter is active, and is removed when `adjudicate` returns after success, failure, or cancellation.
 
-The five `web_search` settings resolve independently.  Omitting the field or setting it to `true` enables search for the Simple model or the lawyers used by Quick, AAR, AARD, or ADC.  An explicit `false` disables local lawyer search and tells an externally supplied MCP lawyer to avoid web search.  Council members and jurors remain offline.
+The five `web_search` settings resolve independently.  Omitting the field or setting it to `true` enables search for the Simple model or the lawyers used by Quick, AAR, AARD, or ADC.  An explicit `false` disables local lawyer search and tells an externally supplied MCP lawyer to avoid web search.  Council members and jurors remain offline.  The [model-endpoint guide](docs/model-endpoints.md) defines their provider endpoints, pool selection, and credentials.
 
 Durations use Go duration strings such as `90s` or `15m`.  A configured timeout must be positive, and procedure adapters that pass integer-second flags require a whole number of seconds.  ADC accepts `auto`, `jury`, or `bench`.  `auto` uses the proposition procedure's jury recommendation.
 
@@ -249,7 +255,7 @@ The `arbd` adapter writes a `# Question` complaint, passes each staged document 
 
 ### `adc`
 
-The `adc` adapter passes the proposition to ADC's Proposition Tribunal, which creates a declaratory claim between `Proponent` and `Opponent`.  It supplies the staged document directory, explicit document limits, common evidence standard, selected lawyer profiles, lawyer search policy, and trial mode.  Jury and automatic modes use the common council pool as ADC's juror pool, while bench mode omits the juror pool and its OpenRouter credential.
+The `adc` adapter passes the proposition to ADC's Proposition Tribunal, which creates a declaratory claim between `Proponent` and `Opponent`.  It supplies the staged document directory, explicit document limits, common evidence standard, selected lawyer profiles, lawyer search policy, and trial mode.  Jury and automatic modes use the common council pool as ADC's juror pool, while bench mode omits juror-pool execution.
 
 ### `simple`
 
@@ -263,7 +269,7 @@ The native request record contains the effective search setting, tool declaratio
 
 ### `quick`
 
-The `quick` adapter starts a core case with two sequential lawyer opportunities.  The plaintiff files one argument, the defendant receives that argument and files one response, and neither lawyer receives another turn.  The core samples the configured council pool without replacement, then requests offline votes sequentially by default or concurrently when `parallel_council` is true.
+The `quick` adapter starts a core case with two sequential lawyer opportunities.  The plaintiff files one argument, the defendant receives that argument and files one response, and neither lawyer receives another turn.  The core balances council seats across eligible endpoints and configurations, permitting repeated configurations, then requests offline votes sequentially by default or concurrently when `parallel_council` is true.
 
 The lawyer HTTP paths and MCP tools match the lawyer subset of `arb`, allowing all four supported agent runners to use the same case-operation pattern.  The core verifies each staged document before a lawyer or council member reads it and checks the selected council endpoints for local credential configuration before opening the first lawyer turn.  Council requests present UTF-8 documents as text, images as image data URLs, and PDFs as file content items; another binary media type fails before the first lawyer turn.  The terminal record contains both arguments, every vote and rationale, the selected council metadata, recovered provider cost, and the resulting majority decision.
 
@@ -382,7 +388,7 @@ The lawyer search labels are `native` with `providers: ["openai"]` for Codex, `n
 
 Codex usage comes from `turn.completed` events, Claude usage comes from the terminal `result` event, and Pi usage comes from assistant `message_end` events.  A resumed Codex event contains a cumulative session counter, so the controller stores the preceding counter in retained state and records its componentwise delta for the current run.  Cache fields preserve each runner's schema, and `total_tokens` follows that schema.  Codex cached input is a subset of input, while Claude and Pi report cache categories separately.  OpenClaw retains its workspace but does not expose structured participant usage through this launcher.
 
-The `provider` object counts logical procedure-provider requests and the subset that supplied usage or cost.  Each reported sum covers only the observed subset.  An absent usage or cost value means that no request supplied it, while a numeric zero means that the provider reported zero.  Participant usage and procedure-provider accounting describe separate model calls and remain separate in the record.
+The `provider` object counts logical procedure-provider requests and the subset that supplied usage or cost.  Each reported sum covers only the observed subset.  An absent usage or cost value means that no request supplied it, while a numeric zero means that the provider reported zero.  Participant usage and procedure-provider accounting describe separate model calls and remain separate in the record.  ARB and ARBD local runs write Pi council-provider calls to `logs/council-model-requests.jsonl`; ADC local runs use `logs/juror-model-requests.jsonl`.  Those rows contain observed usage but do not contribute to the formal core's provider totals.
 
 ## Durable Record
 
@@ -400,7 +406,7 @@ The run output directory contains common request and management records beside t
 | `logs/` | Captured core and participant standard streams. |
 | `work/ROLE/` | Per-run participant working directories. |
 
-The native `arbd`, `arb`, and `adc` records retain their state, certificate, evidence, transcript, digest, and work-note files beneath `core/`.  Simple writes its imported documents, request, raw and normalized response, decision, state, transcript, digest, events, and run result there.  Quick writes its imported documents, runtime record, ordered events, private lawyer notes, arguments, council votes, and run result there.  Participant standard streams under `logs/` preserve each runner's emitted search events, while relied-on source URLs and retrieval dates belong in Quick work notes and arguments.  A result is terminal after `adjudicate` reconciles the native record and writes the common `run.json` atomically.
+The native `arbd`, `arb`, and `adc` records retain their state, certificate, evidence, transcript, digest, and work-note files beneath `core/`.  Simple writes its imported documents, request, raw and normalized response, decision, state, transcript, digest, events, and run result there.  Quick writes its imported documents, runtime record, ordered events, private lawyer notes, arguments, council votes, and run result there.  Participant standard streams under `logs/` preserve each runner's emitted search events.  Formal Pi council and juror provider calls use the request logs named above.  Relied-on source URLs and retrieval dates belong in Quick work notes and arguments.  A result is terminal after `adjudicate` reconciles the native record and writes the common `run.json` atomically.
 
 ## Case Record Index
 

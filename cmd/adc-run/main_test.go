@@ -15,7 +15,7 @@ func TestCommandHelpAndArguments(t *testing.T) {
 	if !strings.Contains(stderr.String(), "Usage: adc-run") {
 		t.Fatalf("help output = %q", stderr.String())
 	}
-	for _, flagName := range []string{"-launcher-prompt-dir", "-launcher-prompt-file"} {
+	for _, flagName := range []string{"-launcher-prompt-dir", "-launcher-prompt-file", "-council-endpoint", "-minimum-distinct-council-endpoints"} {
 		if !strings.Contains(stderr.String(), flagName) {
 			t.Fatalf("help output lacks %s: %q", flagName, stderr.String())
 		}

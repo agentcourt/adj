@@ -69,6 +69,7 @@ func writeQuickTestJSON(t *testing.T, w http.ResponseWriter, value any) {
 
 func TestQuickRunnerStartsLawyersSequentiallyAndMapsResult(t *testing.T) {
 	t.Setenv("QUICK_OPENROUTER_KEY", "openrouter-secret")
+	t.Setenv("QUICK_OPENAI_KEY", "openai-secret")
 	t.Setenv("OPENAI_API_KEY", "unselected-openai-secret")
 	recordDir := t.TempDir()
 	for _, name := range []string{"core", "logs", filepath.Join("inputs", "documents")} {
@@ -187,11 +188,13 @@ func TestQuickRunnerStartsLawyersSequentiallyAndMapsResult(t *testing.T) {
 	}
 	settings := ResolvedSettings{
 		Common: CommonSettings{
-			EvidenceStandard: "preponderance_of_the_evidence",
-			CouncilPool:      "/pool.jsonl",
-			CouncilSize:      3,
-			RequiredVotes:    2,
-			DocumentLimits:   DocumentLimits{Count: 2, PerFile: 1024, Total: 2048},
+			EvidenceStandard:        "preponderance_of_the_evidence",
+			CouncilPool:             "/pool.jsonl",
+			CouncilAllowedEndpoints: []string{"openai", "openrouter"},
+			CouncilMinEndpoints:     2,
+			CouncilSize:             3,
+			RequiredVotes:           2,
+			DocumentLimits:          DocumentLimits{Count: 2, PerFile: 1024, Total: 2048},
 			ProviderCredentials: map[string]CredentialMetadata{
 				"openai":     {Source: AuthAPIKey, EnvironmentVariable: "QUICK_OPENAI_KEY"},
 				"openrouter": {Source: AuthAPIKey, EnvironmentVariable: "QUICK_OPENROUTER_KEY"},
@@ -335,6 +338,12 @@ func TestQuickRunnerStartsLawyersSequentiallyAndMapsResult(t *testing.T) {
 			t.Fatalf("%s = %q, present = %t, want %q", flag, got, ok, want)
 		}
 	}
+	if got, ok := argumentValue(coreRequest.Args, "--minimum-distinct-council-endpoints"); !ok || got != "2" {
+		t.Fatalf("minimum distinct council endpoints = %q, present = %t", got, ok)
+	}
+	if got := argumentValues(coreRequest.Args, "--council-endpoint"); !slices.Equal(got, []string{"openai", "openrouter"}) {
+		t.Fatalf("council endpoints = %v", got)
+	}
 	for _, value := range []string{
 		"council.system=/prompts/council.md",
 		"lawyer.common=/prompts/common.md",
@@ -372,7 +381,7 @@ func TestQuickRunnerStartsLawyersSequentiallyAndMapsResult(t *testing.T) {
 			t.Fatalf("core bearer token was exposed to %s lawyer", assignment.RoleID)
 		}
 	}
-	for _, name := range []string{"QUICK_OPENROUTER_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY"} {
+	for _, name := range []string{"QUICK_OPENAI_KEY", "QUICK_OPENROUTER_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY"} {
 		if _, ok := environmentValue(mcpRequest.Environment, name); ok {
 			t.Fatalf("MCP environment contains provider credential %s", name)
 		}
@@ -382,13 +391,18 @@ func TestQuickRunnerStartsLawyersSequentiallyAndMapsResult(t *testing.T) {
 			t.Fatalf("ephemeral MCP file %q remains: %v", path, err)
 		}
 	}
-	if value, ok := environmentValue(coreRequest.Env, "OPENAI_API_KEY"); ok {
-		t.Fatalf("unselected OPENAI_API_KEY remains in the environment with value %q", value)
+	if value, ok := environmentValue(coreRequest.Env, "OPENAI_API_KEY"); !ok || value != "openai-secret" {
+		t.Fatalf("OPENAI_API_KEY was not selected")
 	}
 	if value, ok := environmentValue(coreRequest.Env, "OPENROUTER_API_KEY"); !ok || value != "openrouter-secret" {
 		t.Fatalf("OPENROUTER_API_KEY was not selected")
 	}
-	for _, name := range []string{"QUICK_OPENROUTER_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY"} {
+	for _, name := range []string{"QUICK_OPENAI_KEY", "QUICK_OPENROUTER_KEY"} {
+		if _, ok := environmentValue(coreRequest.Env, name); ok {
+			t.Fatalf("core environment contains source credential name %s", name)
+		}
+	}
+	for _, name := range []string{"QUICK_OPENAI_KEY", "QUICK_OPENROUTER_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY"} {
 		if _, ok := environmentValue(supervisorRuntime.BaseEnvironment, name); ok {
 			t.Fatalf("participant environment contains provider credential %s", name)
 		}
@@ -402,6 +416,16 @@ func argumentValue(arguments []string, flag string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func argumentValues(arguments []string, flag string) []string {
+	values := make([]string, 0)
+	for index := 0; index+1 < len(arguments); index++ {
+		if arguments[index] == flag {
+			values = append(values, arguments[index+1])
+		}
+	}
+	return values
 }
 
 func TestMapQuickCoreOutcomePreservesProviderClass(t *testing.T) {

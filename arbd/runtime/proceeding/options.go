@@ -96,22 +96,44 @@ func Run(ctx context.Context, opts Options) (Result, error) {
 		enginePath = DefaultEnginePath()
 	}
 	cfg := Config{
-		CaseID:          strings.TrimSpace(opts.CaseID),
-		RunID:           effectiveRunID,
-		ComplaintPath:   opts.ComplaintPath,
-		CaseFilePaths:   explicitCaseFiles,
-		OutputDir:       opts.OutputDir,
-		CommonRoot:      commonRootResolved,
-		CouncilPoolPath: councilPoolPath,
-		PromptDir:       resolvedPromptDir,
-		PromptFiles:     resolvedPromptFiles,
-		CaseAPIAddr:     strings.TrimSpace(opts.CaseAPIAddr),
-		Policy:          policy,
-		Runtime:         runtimeLimits,
-		CouncilBackend:  NormalizeCouncilBackend(opts.CouncilBackend),
-		Engine:          lean.New([]string{enginePath}),
+		CaseID:                  strings.TrimSpace(opts.CaseID),
+		RunID:                   effectiveRunID,
+		ComplaintPath:           opts.ComplaintPath,
+		CaseFilePaths:           explicitCaseFiles,
+		OutputDir:               opts.OutputDir,
+		CommonRoot:              commonRootResolved,
+		CouncilPoolPath:         councilPoolPath,
+		CouncilAllowedEndpoints: normalizeCouncilEndpoints(opts.CouncilAllowedEndpoints),
+		CouncilMinEndpoints:     opts.CouncilMinEndpoints,
+		PromptDir:               resolvedPromptDir,
+		PromptFiles:             resolvedPromptFiles,
+		CaseAPIAddr:             strings.TrimSpace(opts.CaseAPIAddr),
+		Policy:                  policy,
+		Runtime:                 runtimeLimits,
+		CouncilBackend:          NormalizeCouncilBackend(opts.CouncilBackend),
+		Engine:                  lean.New([]string{enginePath}),
+	}
+	if cfg.CouncilMinEndpoints < 0 || cfg.CouncilMinEndpoints > cfg.Policy.CouncilSize {
+		return Result{}, fmt.Errorf("minimum distinct council endpoints must be between 0 and council size")
 	}
 	return runConfigured(ctx, cfg, complaint)
+}
+
+func normalizeCouncilEndpoints(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	result := make([]string, 0, len(values))
+	for _, raw := range values {
+		value := strings.ToLower(strings.TrimSpace(raw))
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	return result
 }
 
 func DefaultEnginePath() string {

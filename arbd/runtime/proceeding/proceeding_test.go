@@ -643,7 +643,7 @@ func TestPreflightCouncilCandidatesReplacesUnavailableSeat(t *testing.T) {
 		{Model: "good-b", PersonaFile: "good-b.md", PersonaText: "good b"},
 	}
 	checked := []string{}
-	seated, replacements, err := preflightCouncilCandidates(context.Background(), candidates, 2, func(_ context.Context, seat CouncilSeat) error {
+	seated, replacements, err := preflightCouncilCandidates(context.Background(), candidates, 3, func(_ context.Context, seat CouncilSeat) error {
 		checked = append(checked, seat.MemberID+":"+seat.Model)
 		if seat.Model == "bad-model" {
 			return fmt.Errorf("404 model unavailable")
@@ -653,24 +653,29 @@ func TestPreflightCouncilCandidatesReplacesUnavailableSeat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("preflightCouncilCandidates returned error: %v", err)
 	}
-	wantChecked := []string{"C1:bad-model", "C1:good-a", "C2:good-b"}
-	if !slices.Equal(checked, wantChecked) {
-		t.Fatalf("checked = %#v, want %#v", checked, wantChecked)
+	checkedModels := make(map[string]int)
+	for _, value := range checked {
+		_, model, _ := strings.Cut(value, ":")
+		checkedModels[model]++
 	}
-	if len(seated) != 2 {
-		t.Fatalf("seated %d council members, want 2", len(seated))
+	for _, model := range []string{"bad-model", "good-a", "good-b"} {
+		if checkedModels[model] != 1 {
+			t.Fatalf("checked = %#v", checked)
+		}
 	}
-	if seated[0].MemberID != "C1" || seated[0].Model != "good-a" {
-		t.Fatalf("first seated member = %#v, want C1 good-a", seated[0])
+	if len(seated) != 3 {
+		t.Fatalf("seated %d council members, want 3", len(seated))
 	}
-	if seated[1].MemberID != "C2" || seated[1].Model != "good-b" {
-		t.Fatalf("second seated member = %#v, want C2 good-b", seated[1])
+	for index, seat := range seated {
+		if seat.MemberID != fmt.Sprintf("C%d", index+1) || seat.Model == "bad-model" {
+			t.Fatalf("seated council = %#v", seated)
+		}
 	}
 	if len(replacements) != 1 {
 		t.Fatalf("replacements = %#v, want one replacement", replacements)
 	}
 	replacement := replacements[0]
-	if replacement.MemberID != "C1" || replacement.UnavailableModel != "bad-model" || replacement.ReplacementModel != "good-a" || !strings.Contains(replacement.Cause, "404") {
+	if replacement.UnavailableModel != "bad-model" || replacement.ReplacementModel == "bad-model" || !strings.Contains(replacement.Cause, "404") {
 		t.Fatalf("replacement = %#v", replacement)
 	}
 }

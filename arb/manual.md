@@ -12,7 +12,7 @@ The remaining commands prepare complaints and case packets or verify a completed
 
 A case process owns the arbitration.  It owns the current phase, turn order, deadlines, attempt budgets, evidence registry, work-note log, council roster, and final output packet.  Lawyer, observer, and council clients read the case and act through its HTTP APIs.
 
-The case command samples and checks the council before it starts the HTTP listener.  With the default `direct` council backend, the process calls each selected council model when deliberation begins.  With the `councilapi` backend, external clients read deliberation opportunities and submit votes through the same case process.
+The case command selects and checks the council before it starts the HTTP listener.  With the default `direct` council backend, the process calls each selected council model when deliberation begins.  With the `councilapi` backend, external clients read deliberation opportunities and submit votes through the same case process.
 
 ## Choosing A Command
 
@@ -74,9 +74,9 @@ The Go runtime tests do not build the Lean proof tree.  The real-engine cases re
 go test -count=1 ./runtime/...
 ```
 
-The council pool is a JSONL file containing request specifications and persona paths.  A local `pool.jsonl` takes precedence when `--council-pool` is omitted, followed by `<common-root>/data/personas/pool.jsonl`.  Relative persona paths resolve from the pool's base directory, and the output packet records the sampled council roster.
+The council pool is a JSONL file containing request specifications and persona paths.  A local `pool.jsonl` takes precedence when `--council-pool` is omitted, followed by `<common-root>/data/personas/pool.jsonl`.  Relative persona paths resolve from the pool's base directory, and the output packet records the selected council roster.
 
-Direct council calls support `openai` and `openrouter` request-spec endpoints.  OpenAI entries require `OPENAI_API_KEY` and may use `OPENAI_BASE_URL`; OpenRouter entries require `OPENROUTER_API_KEY`.  The case command checks sampled council members before it opens the case API listener, including when external clients will submit the final votes.  Provider failures carry one of four machine-readable classes: `provider_transient`, `provider_authentication`, `provider_request`, or `provider_protocol`.  Each provider-failure removal event records its class, and the terminal result records the last class.
+Direct council calls support the registered Anthropic, DeepSeek, Google, Hugging Face, OpenAI, OpenRouter, and xAI endpoints.  The case command checks selected council members before it opens the case API listener, including when external clients will submit the final votes.  Provider failures carry one of four machine-readable classes: `provider_transient`, `provider_authentication`, `provider_request`, or `provider_protocol`.  Each provider-failure removal event records its class, and the terminal result records the last class.  The [model-endpoint guide](../docs/model-endpoints.md) defines credentials, pool records, request support, and endpoint-balanced selection.
 
 ## Complaint Files
 
@@ -168,6 +168,8 @@ Important flags:
 | `--prompt-dir` | Complete prompt directory.  Every non-overridden catalog file is required. |
 | `--common-root` | Shared `common/` tree for council pool and personas. |
 | `--council-pool` | Council JSONL request-spec pool.  Use an absolute path unless the pool lives under the common root. |
+| `--council-endpoint` | Allowed council endpoint.  May repeat. |
+| `--minimum-distinct-council-endpoints` | Minimum endpoint names represented in the completed council. |
 | `--caseapi-addr` | Private Case API listen address.  Default: `127.0.0.1:0`. |
 | `--council-backend` | `direct` or `councilapi`. |
 | `--timeout-seconds` | Council LLM timeout override for direct council. |
@@ -180,7 +182,7 @@ Important flags:
 | `--run-id` | Run id override. |
 | `--case-id` | Case id override.  Default: `arb-1` for direct `aar case`. |
 
-The default council backend is `direct`.  In direct mode, the case runner samples council members and calls their configured model endpoints.  In `councilapi` mode, the case runner exposes `/councilapi/v1` and waits for external council agents to connect, read the record, and submit votes.
+The default council backend is `direct`.  In direct mode, the case runner selects council members and calls their configured model endpoints.  In `councilapi` mode, the case runner exposes `/councilapi/v1` and waits for external council agents to connect, read the record, and submit votes.
 
 The private Case API has a health endpoint at `/health`.  It returns HTTP `200` with JSON containing `ok`, `case_id`, and `run_id` after the case process has bound the listener.  The listener address appears on stderr when it becomes available.
 
@@ -422,7 +424,7 @@ export OPENROUTER_API_KEY=REPLACE_WITH_KEY
   --out-dir out/ex01-direct
 ```
 
-The `councilapi` backend uses external clients for the final votes.  It exposes the Council API on the same address as the Lawyer API.  The command still samples and checks the configured council before starting the listener.
+The `councilapi` backend uses external clients for the final votes.  It exposes the Council API on the same address as the Lawyer API.  The command still selects and checks the configured council before starting the listener.
 
 ```bash
 .bin/aar case \
@@ -443,7 +445,7 @@ Case-packet construction can run without starting a case or calling a model.  It
 
 ## Troubleshooting
 
-If `aar case` fails before reporting its listener address, inspect the JSON error summary and stderr diagnostic.  Common causes are an invalid complaint or policy, an unreadable pool or persona, missing `OPENAI_API_KEY` or `OPENROUTER_API_KEY`, a failed council availability check, and an unavailable Lean engine.  The process creates or accepts an empty output directory and writes the initial case manifest before council sampling, so a later initialization failure may leave a partial directory.
+If `aar case` fails before reporting its listener address, inspect the JSON error summary and stderr diagnostic.  Common causes are an invalid complaint or policy, an unreadable pool or persona, a missing credential for a selected endpoint, a failed council availability check, and an unavailable Lean engine.  The process creates or accepts an empty output directory and writes the initial case manifest before council selection, so a later initialization failure may leave a partial directory.
 
 If the case remains on one lawyer phase, query `/lawyerapi/v1/status` and `/lawyerapi/v1/get` for each lawyer role.  The response identifies the active role, opportunity, deadline, and remaining attempts.  A case waits until the assigned client makes a final filing or the lawyer deadline expires.
 

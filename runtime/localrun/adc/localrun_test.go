@@ -17,9 +17,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/agentcourt/adj/common/modelgateway"
+	"github.com/agentcourt/adj/common/modelrequest"
 	"github.com/agentcourt/adj/internal/launcherprompt"
 	headless "github.com/agentcourt/adj/runtime/agent"
-	"github.com/agentcourt/adj/runtime/modelrequest"
 )
 
 var pairedCoreBinDir = flag.String("core-bin-dir", "", "Directory containing paired core executables")
@@ -141,20 +142,22 @@ func (failedLocalRunWriter) Write([]byte) (int, error) {
 
 func TestCoreCaseArgsUseProcessInterface(t *testing.T) {
 	propositionArgs := coreCaseArgs(Options{
-		Proposition:            "The sky is blue.",
-		DocumentsDir:           "/case/documents",
-		EvidenceStandard:       "clear_and_convincing",
-		MaxDocumentFiles:       12,
-		MaxDocumentFileBytes:   2048,
-		MaxDocumentsTotalBytes: 8192,
-		OutputDir:              "/out",
-		CoreOutputDir:          "/out/adc-output",
-		JurorPersonasPath:      "/case/jurors.jsonl",
-		TrialMode:              "bench",
-		JurorCount:             5,
-		MinimumConcurring:      3,
-		RunID:                  "run-proposition",
-		CaseID:                 "case-proposition",
+		Proposition:             "The sky is blue.",
+		DocumentsDir:            "/case/documents",
+		EvidenceStandard:        "clear_and_convincing",
+		MaxDocumentFiles:        12,
+		MaxDocumentFileBytes:    2048,
+		MaxDocumentsTotalBytes:  8192,
+		OutputDir:               "/out",
+		CoreOutputDir:           "/out/adc-output",
+		JurorPersonasPath:       "/case/jurors.jsonl",
+		CouncilAllowedEndpoints: []string{"openai", "anthropic"},
+		CouncilMinEndpoints:     2,
+		TrialMode:               "bench",
+		JurorCount:              5,
+		MinimumConcurring:       3,
+		RunID:                   "run-proposition",
+		CaseID:                  "case-proposition",
 	}, "127.0.0.1:9000")
 	joined := strings.Join(propositionArgs, "\x00")
 	for _, want := range []string{
@@ -164,6 +167,8 @@ func TestCoreCaseArgsUseProcessInterface(t *testing.T) {
 		"--caseapi-addr\x00127.0.0.1:9000", "--max-document-files\x0012",
 		"--max-document-file-bytes\x002048", "--max-documents-total-bytes\x008192",
 		"--juror-personas\x00/case/jurors.jsonl", "--trial-mode\x00bench",
+		"--council-endpoint\x00openai", "--council-endpoint\x00anthropic",
+		"--minimum-distinct-council-endpoints\x002",
 		"--juror-count\x005", "--minimum-concurring\x003",
 	} {
 		if !strings.Contains(joined, want) {
@@ -709,10 +714,6 @@ func TestValidatePropositionOptions(t *testing.T) {
 	}
 	jury := base
 	jury.TrialMode = "jury"
-	if err := validateOptions(jury); err == nil || !strings.Contains(err.Error(), "OPENROUTER_API_KEY") {
-		t.Fatalf("missing jury credential error = %v", err)
-	}
-	jury.CoreEnvironment = append(jury.CoreEnvironment, "OPENROUTER_API_KEY=selected")
 	if err := validateOptions(jury); err != nil {
 		t.Fatalf("valid jury proposition: %v", err)
 	}
@@ -849,7 +850,7 @@ func TestIsConnectionRefused(t *testing.T) {
 	}
 }
 
-func TestWritePiConfigUsesFullOpenRouterSpec(t *testing.T) {
+func TestWritePiConfigUsesBoundGatewayModel(t *testing.T) {
 	t.Parallel()
 
 	spec, err := modelrequest.ParseJSON([]byte(`{
@@ -864,20 +865,24 @@ func TestWritePiConfigUsesFullOpenRouterSpec(t *testing.T) {
 		t.Fatalf("parse request spec: %v", err)
 	}
 	home := t.TempDir()
+	spec = spec.WithFallbackMaxOutputTokens(DefaultJurorMaxOutputTokens)
 	model, err := writePiConfig(home, activeJurorOpportunity{
 		principalID: "J1",
 		requestSpec: &spec,
-	}, "adc", "http://host/mcp", "adjmcp1.test.signature")
+	}, spec, "http://127.0.0.1:18888/v1", modelgateway.Binding{Token: "local-token", Model: "adj-model-1"}, "adc", "http://host/mcp", "adjmcp1.test.signature")
 	if err != nil {
 		t.Fatalf("writePiConfig: %v", err)
 	}
-	if model != "anthropic/claude-3.5-sonnet" {
+	if model != "adj-model-1" {
 		t.Fatalf("model = %q", model)
 	}
 
 	models := readJSONMap(t, filepath.Join(home, ".pi", "agent", "models.json"))
-	openrouter := models["providers"].(map[string]any)["openrouter"].(map[string]any)
-	entries := openrouter["models"].([]any)
+	provider := models["providers"].(map[string]any)["adj"].(map[string]any)
+	if provider["baseUrl"] != "http://127.0.0.1:18888/v1" || provider["apiKey"] != "$ADJ_MODEL_API_KEY" {
+		t.Fatalf("provider = %#v", provider)
+	}
+	entries := provider["models"].([]any)
 	entry := entries[0].(map[string]any)
 	if entry["maxTokens"].(float64) != float64(DefaultJurorMaxOutputTokens) {
 		t.Fatalf("maxTokens = %#v", entry["maxTokens"])
@@ -899,9 +904,8 @@ func TestWritePiConfigUsesFullOpenRouterSpec(t *testing.T) {
 	if routing["quantizations"].([]any)[0].(string) != "bf16" {
 		t.Fatalf("provider.quantizations = %#v", routing["quantizations"])
 	}
-	requestHeaders := openrouter["headers"].(map[string]any)
-	if requestHeaders["X-Test-Request"] != "adc" || requestHeaders["X-OpenRouter-Experimental-Metadata"] != "enabled" {
-		t.Fatalf("provider headers = %#v", requestHeaders)
+	if _, ok := provider["headers"]; ok {
+		t.Fatalf("provider contains upstream headers: %#v", provider)
 	}
 
 	mcpPath := filepath.Join(home, ".mcp.json")

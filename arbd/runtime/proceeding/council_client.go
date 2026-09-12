@@ -2,25 +2,21 @@ package proceeding
 
 import (
 	"context"
-	"strings"
-	"sync"
 	"time"
 
+	"github.com/agentcourt/adj/common/modelgateway"
 	"github.com/agentcourt/adj/common/modelrequest"
 	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
 type directCouncilClient struct {
-	timeout time.Duration
-	mu      sync.Mutex
-	clients map[string]*openaiapi.Client
+	executor *modelgateway.Executor
+	initErr  error
 }
 
 func newDirectCouncilClient(timeout time.Duration) *directCouncilClient {
-	return &directCouncilClient{
-		timeout: timeout,
-		clients: map[string]*openaiapi.Client{},
-	}
+	executor, err := modelgateway.New(timeout, 4)
+	return &directCouncilClient{executor: executor, initErr: err}
 }
 
 func (c *directCouncilClient) CreateResponseWithRequestSpec(
@@ -30,24 +26,8 @@ func (c *directCouncilClient) CreateResponseWithRequestSpec(
 	tools []map[string]any,
 	previousResponseID string,
 ) (openaiapi.Response, error) {
-	client, err := c.clientForEndpoint(spec.Endpoint)
-	if err != nil {
-		return openaiapi.Response{}, err
+	if c.initErr != nil {
+		return openaiapi.Response{}, c.initErr
 	}
-	return client.CreateResponseWithRequestSpec(ctx, spec, inputItems, tools, previousResponseID)
-}
-
-func (c *directCouncilClient) clientForEndpoint(endpoint string) (*openaiapi.Client, error) {
-	endpoint = strings.ToLower(strings.TrimSpace(endpoint))
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if client, ok := c.clients[endpoint]; ok {
-		return client, nil
-	}
-	client, err := openaiapi.NewForEndpoint(endpoint, false, c.timeout)
-	if err != nil {
-		return nil, err
-	}
-	c.clients[endpoint] = client
-	return client, nil
+	return c.executor.CreateResponseWithRequestSpec(ctx, spec, inputItems, tools, previousResponseID)
 }

@@ -63,6 +63,8 @@ type Options struct {
 	PromptFiles              map[string]string
 	CommonRoot               string
 	CouncilPoolPath          string
+	CouncilAllowedEndpoints  []string
+	CouncilMinEndpoints      int
 	CaseAPIAddr              string
 	CouncilBackend           string
 	CouncilTimeoutSeconds    int
@@ -77,23 +79,25 @@ type Options struct {
 }
 
 type Config struct {
-	CaseID           string
-	RunID            string
-	ComplaintPath    string
-	CaseFilePaths    []string
-	OutputDir        string
-	CommonRoot       string
-	CouncilPoolPath  string
-	PromptDir        string
-	PromptFiles      map[string]string
-	CaseAPIAddr      string
-	Policy           Policy
-	Runtime          RuntimeLimits
-	CouncilBackend   string
-	Engine           lean.Engine
-	promptSources    map[string]string
-	toolDescriptions map[string]string
-	observerPrompt   string
+	CaseID                  string
+	RunID                   string
+	ComplaintPath           string
+	CaseFilePaths           []string
+	OutputDir               string
+	CommonRoot              string
+	CouncilPoolPath         string
+	CouncilAllowedEndpoints []string
+	CouncilMinEndpoints     int
+	PromptDir               string
+	PromptFiles             map[string]string
+	CaseAPIAddr             string
+	Policy                  Policy
+	Runtime                 RuntimeLimits
+	CouncilBackend          string
+	Engine                  lean.Engine
+	promptSources           map[string]string
+	toolDescriptions        map[string]string
+	observerPrompt          string
 }
 
 type Result struct {

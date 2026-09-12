@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/agentcourt/adj/common/modelinput"
 	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
@@ -71,6 +72,15 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 	prevID := ""
 	invalidAttempts := 0
 	invalidAttemptReasons := make([]string, 0)
+	appendRepair := func(resp openaiapi.Response, reason, repair string) error {
+		outputs, err := modelinput.RejectedToolCallOutputs(resp.ToolCalls, reason)
+		if err != nil {
+			return err
+		}
+		inputItems = append(inputItems, outputs...)
+		inputItems = append(inputItems, map[string]any{"role": "user", "content": repair})
+		return nil
+	}
 	recordInvalidAttempt := func(reason string) {
 		invalidAttempts++
 		invalidAttemptReasons = append(invalidAttemptReasons, strings.TrimSpace(reason))
@@ -102,44 +112,44 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 			}
 			return err
 		}
+		prevID = resp.ResponseID
 		if size, err := jsonPayloadSize(resp); err != nil {
 			return err
 		} else if size > rc.cfg.Runtime.MaxResponseBytes {
-			recordInvalidAttempt(councilResponseOversizeReason(size, rc.cfg.Runtime.MaxResponseBytes))
+			reason := councilResponseOversizeReason(size, rc.cfg.Runtime.MaxResponseBytes)
+			recordInvalidAttempt(reason)
 			repair, err := rc.councilDirectRepairPrompt(seat, opportunity, "response_too_large", "", size, rc.cfg.Runtime.MaxResponseBytes)
 			if err != nil {
 				return err
 			}
-			inputItems = append(inputItems, map[string]any{
-				"role":    "user",
-				"content": repair,
-			})
+			if err := appendRepair(resp, reason, repair); err != nil {
+				return err
+			}
 			continue
 		}
-		prevID = resp.ResponseID
 		if len(resp.ToolCalls) != 1 {
-			recordInvalidAttempt("Call submit_council_vote exactly once.")
+			reason := "Call submit_council_vote exactly once."
+			recordInvalidAttempt(reason)
 			repair, err := rc.councilDirectRepairPrompt(seat, opportunity, "tool_call_count", "", 0, 0)
 			if err != nil {
 				return err
 			}
-			inputItems = append(inputItems, map[string]any{
-				"role":    "user",
-				"content": repair,
-			})
+			if err := appendRepair(resp, reason, repair); err != nil {
+				return err
+			}
 			continue
 		}
 		call := resp.ToolCalls[0]
 		if call.Name != "submit_council_vote" {
-			recordInvalidAttempt("The only allowed tool is submit_council_vote.")
+			reason := "The only allowed tool is submit_council_vote."
+			recordInvalidAttempt(reason)
 			repair, err := rc.councilDirectRepairPrompt(seat, opportunity, "wrong_tool", "", 0, 0)
 			if err != nil {
 				return err
 			}
-			inputItems = append(inputItems, map[string]any{
-				"role":    "user",
-				"content": repair,
-			})
+			if err := appendRepair(resp, reason, repair); err != nil {
+				return err
+			}
 			continue
 		}
 		payload := cloneMap(call.Arguments)
@@ -150,10 +160,9 @@ func (rc *runContext) executeCouncilOpportunity(ctx context.Context, client coun
 			if renderErr != nil {
 				return renderErr
 			}
-			inputItems = append(inputItems, map[string]any{
-				"role":    "user",
-				"content": repair,
-			})
+			if err := appendRepair(resp, reason, repair); err != nil {
+				return err
+			}
 			continue
 		}
 		payload["member_id"] = memberID

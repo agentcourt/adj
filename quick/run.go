@@ -2,10 +2,8 @@ package quick
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +11,9 @@ import (
 	"time"
 
 	"github.com/agentcourt/adj/common/casemanifest"
+	"github.com/agentcourt/adj/common/councilsample"
 	"github.com/agentcourt/adj/common/documents"
+	"github.com/agentcourt/adj/common/modelgateway"
 	"github.com/agentcourt/adj/common/modelrequest"
 	openaiapi "github.com/agentcourt/adj/common/openai"
 	"github.com/agentcourt/adj/common/persona"
@@ -246,8 +246,6 @@ func (r *runner) initializeFiles() error {
 	return nil
 }
 
-type randomIndex func(upperBound int) (int, error)
-
 type councilCandidate struct {
 	spec  persona.Spec
 	model modelrequest.ModelRef
@@ -260,40 +258,6 @@ type councilCandidateRejection struct {
 	Cause       string
 	ErrorClass  string
 	err         error
-}
-
-func loadCouncil(path string, size int) ([]CouncilMember, error) {
-	return loadCouncilWithRandomIndex(path, size, cryptoRandomIndex)
-}
-
-func loadCouncilWithRandomIndex(path string, size int, choose randomIndex) ([]CouncilMember, error) {
-	candidates, incompatible, err := loadEligibleCouncilCandidates(path)
-	if err != nil {
-		return nil, err
-	}
-	if choose == nil {
-		return nil, fmt.Errorf("council random-index source is required")
-	}
-	if size <= 0 {
-		return nil, fmt.Errorf("council size must be positive")
-	}
-	if len(candidates) < size {
-		return nil, fmt.Errorf("council size %d exceeds compatible pool %d; %d record(s) omit required parameter tools", size, len(candidates), incompatible)
-	}
-	council := make([]CouncilMember, 0, size)
-	for index := 0; index < size; index++ {
-		candidateIndex, err := choose(len(candidates))
-		if err != nil {
-			return nil, fmt.Errorf("sample council member %d: %w", index+1, err)
-		}
-		if candidateIndex < 0 || candidateIndex >= len(candidates) {
-			return nil, fmt.Errorf("sample council member %d: random index %d outside [0,%d)", index+1, candidateIndex, len(candidates))
-		}
-		candidate := candidates[candidateIndex]
-		candidates = append(candidates[:candidateIndex], candidates[candidateIndex+1:]...)
-		council = append(council, councilMemberFromCandidate(candidate, fmt.Sprintf("C%d", index+1)))
-	}
-	return council, nil
 }
 
 func loadEligibleCouncilCandidates(path string) ([]councilCandidate, int, error) {
@@ -320,19 +284,13 @@ func loadEligibleCouncilCandidates(path string) ([]councilCandidate, int, error)
 	return candidates, incompatible, nil
 }
 
-func shuffledCouncilCandidates(path string) ([]CouncilMember, error) {
+func councilCandidates(path string) ([]CouncilMember, error) {
 	candidates, _, err := loadEligibleCouncilCandidates(path)
 	if err != nil {
 		return nil, err
 	}
 	council := make([]CouncilMember, 0, len(candidates))
-	for len(candidates) > 0 {
-		candidateIndex, err := cryptoRandomIndex(len(candidates))
-		if err != nil {
-			return nil, fmt.Errorf("shuffle council candidates: %w", err)
-		}
-		candidate := candidates[candidateIndex]
-		candidates = append(candidates[:candidateIndex], candidates[candidateIndex+1:]...)
+	for _, candidate := range candidates {
 		council = append(council, councilMemberFromCandidate(candidate, ""))
 	}
 	return council, nil
@@ -376,14 +334,18 @@ func requestSpecMetadataString(spec modelrequest.Spec, key string) string {
 func (r *runner) constituteCouncil(ctx context.Context) error {
 	preflighter, ok := r.client.(councilCandidatePreflighter)
 	if !ok {
-		council, err := loadCouncil(r.cfg.CouncilPoolPath, r.cfg.CouncilSize)
+		council, err := loadCouncilWithOptions(r.cfg.CouncilPoolPath, councilsample.Options{
+			Count:                    r.cfg.CouncilSize,
+			AllowedEndpoints:         r.cfg.CouncilAllowedEndpoints,
+			MinimumDistinctEndpoints: r.cfg.CouncilMinEndpoints,
+		})
 		if err != nil {
 			return err
 		}
 		r.council = council
 		return nil
 	}
-	candidates, err := shuffledCouncilCandidates(r.cfg.CouncilPoolPath)
+	candidates, err := councilCandidates(r.cfg.CouncilPoolPath)
 	if err != nil {
 		return err
 	}
@@ -413,7 +375,11 @@ func (r *runner) constituteCouncil(ctx context.Context) error {
 		}
 		return nil
 	}
-	council, rejections, err := selectAvailableCouncil(ctx, candidates, r.cfg.CouncilSize, check)
+	council, rejections, err := selectAvailableCouncilWithOptions(ctx, candidates, councilsample.Options{
+		Count:                    r.cfg.CouncilSize,
+		AllowedEndpoints:         r.cfg.CouncilAllowedEndpoints,
+		MinimumDistinctEndpoints: r.cfg.CouncilMinEndpoints,
+	}, check)
 	r.council = council
 	for _, rejection := range rejections {
 		if recordErr := r.recordEvent("council_candidate_rejected", "system", councilCandidateRejectionPayload(rejection)); recordErr != nil {
@@ -421,6 +387,39 @@ func (r *runner) constituteCouncil(ctx context.Context) error {
 		}
 	}
 	return err
+}
+
+func loadCouncilWithOptions(path string, opts councilsample.Options) ([]CouncilMember, error) {
+	candidates, incompatible, err := loadEligibleCouncilCandidates(path)
+	if err != nil {
+		return nil, err
+	}
+	endpoints := make([]string, len(candidates))
+	for index, candidate := range candidates {
+		endpoints[index] = candidate.model.Endpoint
+	}
+	selector, err := councilsample.New(endpoints, opts)
+	if err != nil {
+		if len(candidates) == 0 && incompatible > 0 {
+			return nil, fmt.Errorf("council pool has no compatible records; %d record(s) omit required parameter tools", incompatible)
+		}
+		return nil, err
+	}
+	council := make([]CouncilMember, 0, opts.Count)
+	for seat := 1; seat <= opts.Count; seat++ {
+		candidateIndex, err := selector.Draw()
+		if err != nil {
+			return nil, err
+		}
+		if err := selector.Accept(candidateIndex); err != nil {
+			return nil, err
+		}
+		council = append(council, councilMemberFromCandidate(candidates[candidateIndex], fmt.Sprintf("C%d", seat)))
+	}
+	if err := selector.Validate(); err != nil {
+		return nil, err
+	}
+	return council, nil
 }
 
 func councilCandidateRejectionPayload(rejection councilCandidateRejection) map[string]any {
@@ -478,39 +477,58 @@ func selectAvailableCouncil(
 	size int,
 	check func(context.Context, CouncilMember) error,
 ) ([]CouncilMember, []councilCandidateRejection, error) {
-	if size <= 0 {
-		return nil, nil, fmt.Errorf("council size must be positive")
-	}
-	if size > len(candidates) {
-		return nil, nil, fmt.Errorf("council size %d exceeds compatible pool %d", size, len(candidates))
-	}
+	return selectAvailableCouncilWithOptions(ctx, candidates, councilsample.Options{Count: size}, check)
+}
+
+func selectAvailableCouncilWithOptions(
+	ctx context.Context,
+	candidates []CouncilMember,
+	opts councilsample.Options,
+	check func(context.Context, CouncilMember) error,
+) ([]CouncilMember, []councilCandidateRejection, error) {
 	if check == nil {
 		return nil, nil, fmt.Errorf("council candidate check is required")
 	}
-	candidates = append([]CouncilMember(nil), candidates...)
-	seated := make([]CouncilMember, 0, size)
+	endpoints := make([]string, len(candidates))
+	for index, candidate := range candidates {
+		endpoints[index] = councilMemberEndpoint(candidate)
+	}
+	selector, err := councilsample.New(endpoints, opts)
+	if err != nil {
+		return nil, nil, err
+	}
+	seated := make([]CouncilMember, 0, opts.Count)
 	rejections := make([]councilCandidateRejection, 0)
-	authenticationFailures := make(map[string]error)
-	for seat := 1; seat <= size; seat++ {
+	available := make(map[int]bool)
+	for seat := 1; seat <= opts.Count; seat++ {
 		if err := ctx.Err(); err != nil {
 			return seated, rejections, err
 		}
 		memberID := fmt.Sprintf("C%d", seat)
 		firstRejection := len(rejections)
-		for len(candidates) > 0 {
-			candidate := candidates[0]
-			candidates = candidates[1:]
-			candidate.MemberID = memberID
-			endpoint := councilMemberEndpoint(candidate)
-			candidateErr := authenticationFailures[endpoint]
-			if candidateErr != nil {
-				candidateErr = fmt.Errorf("authentication unavailable for council endpoint %s: %w", endpoint, candidateErr)
-			} else {
-				candidateErr = check(ctx, candidate)
-				if failedEndpoint, ok := endpointCredentialFailure(candidateErr); ok {
-					authenticationFailures[failedEndpoint] = candidateErr
+		for {
+			candidateIndex, drawErr := selector.Draw()
+			if drawErr != nil {
+				if len(rejections) == firstRejection {
+					return seated, rejections, fmt.Errorf("council preflight could not seat %s: %w", memberID, drawErr)
 				}
+				last := rejections[len(rejections)-1]
+				return seated, rejections, fmt.Errorf("council preflight could not seat %s after %d rejected candidate(s): %w", memberID, len(rejections)-firstRejection, last.err)
 			}
+			candidate := candidates[candidateIndex]
+			candidate.MemberID = memberID
+			if available[candidateIndex] {
+				if err := selector.Accept(candidateIndex); err != nil {
+					return seated, rejections, err
+				}
+				seated = append(seated, candidate)
+				replacement := candidate
+				for index := firstRejection; index < len(rejections); index++ {
+					rejections[index].Replacement = &replacement
+				}
+				break
+			}
+			candidateErr := check(ctx, candidate)
 			if candidateErr != nil {
 				err := sanitizeError(candidateErr)
 				rejections = append(rejections, councilCandidateRejection{
@@ -523,7 +541,18 @@ func selectAvailableCouncil(
 				if ctxErr := ctx.Err(); ctxErr != nil {
 					return seated, rejections, ctxErr
 				}
+				if failedEndpoint, ok := modelgateway.CredentialFailureEndpoint(candidateErr); ok {
+					if err := selector.RejectEndpoint(failedEndpoint); err != nil {
+						return seated, rejections, err
+					}
+				} else if err := selector.Reject(candidateIndex); err != nil {
+					return seated, rejections, err
+				}
 				continue
+			}
+			available[candidateIndex] = true
+			if err := selector.Accept(candidateIndex); err != nil {
+				return seated, rejections, err
 			}
 			seated = append(seated, candidate)
 			replacement := candidate
@@ -532,27 +561,11 @@ func selectAvailableCouncil(
 			}
 			break
 		}
-		if len(seated) != seat {
-			if len(rejections) == firstRejection {
-				return seated, rejections, fmt.Errorf("council preflight could not seat %s: no candidates remained", memberID)
-			}
-			last := rejections[len(rejections)-1]
-			return seated, rejections, fmt.Errorf("council preflight could not seat %s after %d rejected candidate(s): %w", memberID, len(rejections)-firstRejection, last.err)
-		}
+	}
+	if err := selector.Validate(); err != nil {
+		return seated, rejections, err
 	}
 	return seated, rejections, nil
-}
-
-func endpointCredentialFailure(err error) (string, bool) {
-	if err == nil {
-		return "", false
-	}
-	var endpointErr *endpointCredentialError
-	if !errors.As(err, &endpointErr) {
-		return "", false
-	}
-	endpoint := strings.ToLower(strings.TrimSpace(endpointErr.endpoint))
-	return endpoint, endpoint != ""
 }
 
 func councilMemberEndpoint(member CouncilMember) string {
@@ -574,17 +587,6 @@ func councilPreflightTimeout(councilTimeout time.Duration) time.Duration {
 		return maximum
 	}
 	return councilTimeout
-}
-
-func cryptoRandomIndex(upperBound int) (int, error) {
-	if upperBound <= 0 {
-		return 0, fmt.Errorf("random index upper bound must be positive")
-	}
-	value, err := rand.Int(rand.Reader, big.NewInt(int64(upperBound)))
-	if err != nil {
-		return 0, fmt.Errorf("read cryptographic randomness: %w", err)
-	}
-	return int(value.Int64()), nil
 }
 
 func (r *runner) execute(ctx context.Context) error {
