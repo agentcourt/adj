@@ -159,10 +159,10 @@ func preflightCouncilCandidatesWithOptions(
 				})
 				if failedEndpoint, ok := modelgateway.CredentialFailureEndpoint(err); ok {
 					if rejectErr := selector.RejectEndpoint(failedEndpoint); rejectErr != nil {
-						return nil, nil, rejectErr
+						return nil, nil, errors.Join(err, rejectErr)
 					}
 				} else if rejectErr := selector.Reject(candidateIndex); rejectErr != nil {
-					return nil, nil, rejectErr
+					return nil, nil, errors.Join(err, rejectErr)
 				}
 				continue
 			}

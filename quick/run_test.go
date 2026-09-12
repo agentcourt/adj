@@ -1448,6 +1448,18 @@ func TestSelectAvailableCouncilReturnsEndpointCredentialFailureWhenPoolExhausted
 	}
 }
 
+func TestSelectAvailableCouncilPreservesFailureWhenEndpointMinimumBecomesImpossible(t *testing.T) {
+	candidates := []CouncilMember{{Model: "openai://first"}, {Model: "anthropic://second"}}
+	_, _, err := selectAvailableCouncilWithOptions(context.Background(), candidates, councilsample.Options{
+		Count: 2, MinimumDistinctEndpoints: 2,
+	}, func(context.Context, CouncilMember) error {
+		return &openaiapi.ProviderError{Class: openaiapi.ProviderErrorRequest, Err: errors.New("candidate unavailable")}
+	})
+	if err == nil || !strings.Contains(err.Error(), "candidate unavailable") || !strings.Contains(err.Error(), "remaining endpoint count 1") {
+		t.Fatalf("selection error = %v", err)
+	}
+}
+
 func TestSelectAvailableCouncilRetriesAuthenticationFailureWithDifferentRequestHeaders(t *testing.T) {
 	candidates := []CouncilMember{
 		{Model: "openrouter://first", RequestSpec: &modelrequest.Spec{Endpoint: "openrouter", Headers: map[string]string{"Authorization": "bad"}}},

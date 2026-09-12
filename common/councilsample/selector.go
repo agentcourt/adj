@@ -150,7 +150,7 @@ func (s *Selector) Reject(index int) error {
 	}
 	s.eligible[index] = false
 	s.currentPending = false
-	return nil
+	return s.validateAvailableEndpoints()
 }
 
 func (s *Selector) RejectEndpoint(endpoint string) error {
@@ -167,7 +167,7 @@ func (s *Selector) RejectEndpoint(endpoint string) error {
 		}
 	}
 	s.currentPending = false
-	return nil
+	return s.validateAvailableEndpoints()
 }
 
 func (s *Selector) Validate() error {
@@ -201,6 +201,24 @@ func (s *Selector) checkCurrent(index int) error {
 	}
 	if index != s.current {
 		return fmt.Errorf("council candidate %d is pending, not %d", s.current, index)
+	}
+	return nil
+}
+
+func (s *Selector) validateAvailableEndpoints() error {
+	available := map[string]struct{}{}
+	for endpoint, count := range s.seats {
+		if count > 0 {
+			available[endpoint] = struct{}{}
+		}
+	}
+	for index, eligible := range s.eligible {
+		if eligible {
+			available[s.endpoints[index]] = struct{}{}
+		}
+	}
+	if len(available) < s.minimum {
+		return fmt.Errorf("minimum distinct council endpoints %d exceeds remaining endpoint count %d", s.minimum, len(available))
 	}
 	return nil
 }

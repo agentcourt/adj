@@ -542,11 +542,11 @@ func selectAvailableCouncilWithOptions(
 					return seated, rejections, ctxErr
 				}
 				if failedEndpoint, ok := modelgateway.CredentialFailureEndpoint(candidateErr); ok {
-					if err := selector.RejectEndpoint(failedEndpoint); err != nil {
-						return seated, rejections, err
+					if rejectErr := selector.RejectEndpoint(failedEndpoint); rejectErr != nil {
+						return seated, rejections, errors.Join(candidateErr, rejectErr)
 					}
-				} else if err := selector.Reject(candidateIndex); err != nil {
-					return seated, rejections, err
+				} else if rejectErr := selector.Reject(candidateIndex); rejectErr != nil {
+					return seated, rejections, errors.Join(candidateErr, rejectErr)
 				}
 				continue
 			}

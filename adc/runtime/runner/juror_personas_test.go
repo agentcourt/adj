@@ -1,11 +1,14 @@
 package runner
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/agentcourt/adj/common/councilsample"
 	"github.com/agentcourt/adj/common/modelrequest"
 	"github.com/agentcourt/adj/common/openai"
 )
@@ -69,6 +72,53 @@ func TestLoadJurorPersonaPoolAndSample(t *testing.T) {
 	}
 	if third.PersonaFile != first.PersonaFile && third.PersonaFile != second.PersonaFile {
 		t.Fatalf("third pair = %+v", third)
+	}
+}
+
+func TestJurorPreflightRejectsUnavailableConfiguration(t *testing.T) {
+	selector, err := councilsample.New([]string{"openai", "anthropic"}, councilsample.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool := &jurorPersonaPool{
+		pairs: []jurorPersonaPair{
+			{Model: "openai://model-a", PersonaText: "persona a", PersonaFile: "a.md", RequestSpec: &modelrequest.Spec{Endpoint: "openai", Model: "model-a"}},
+			{Model: "anthropic://model-b", PersonaText: "persona b", PersonaFile: "b.md", RequestSpec: &modelrequest.Spec{Endpoint: "anthropic", Model: "model-b"}},
+		},
+		selector:  selector,
+		available: map[int]bool{},
+	}
+	client := &opportunityTestClient{
+		errors: []error{errors.New("provider unavailable")},
+		responses: []openai.Response{
+			{},
+			{ResponseID: "response-2", ToolCalls: []openai.ToolCall{{
+				CallID: "call-2", Name: "submit_juror_vote", Arguments: map[string]any{
+					"juror_id": "J0", "vote": "plaintiff", "damages": 0, "confidence": "low", "explanation": "service check",
+				},
+			}}},
+		},
+	}
+	renderer, err := NewPromptRenderer(PromptRendererOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := &Runner{
+		jurorClient:             client,
+		jurorPersonaPool:        pool,
+		jurorPersonaAssignments: map[string]jurorPersonaPair{},
+		prompts:                 testPromptCatalog(t),
+		promptRenderer:          renderer,
+	}
+	payload, err := r.applyJurorPersonaDefaultsContext(context.Background(), map[string]any{"juror_id": "J1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(stringOrDefault(payload["model"], "")) == "" {
+		t.Fatalf("payload = %#v", payload)
+	}
+	if len(client.requests) != 2 {
+		t.Fatalf("preflight requests = %d, want 2", len(client.requests))
 	}
 }
 

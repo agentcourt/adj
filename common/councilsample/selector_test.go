@@ -1,6 +1,9 @@
 package councilsample
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestSelectorRepeatsSuccessfulConfiguration(t *testing.T) {
 	selector, err := New([]string{"openai"}, Options{Count: 3, MinimumDistinctEndpoints: 1})
@@ -99,5 +102,42 @@ func TestSelectorAppliesAllowedEndpoints(t *testing.T) {
 	}
 	if err := selector.Validate(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSelectorRejectsRemovalBelowMinimum(t *testing.T) {
+	selector, err := New([]string{"openai", "anthropic"}, Options{Count: 2, MinimumDistinctEndpoints: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	index, err := selector.Draw()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := selector.Reject(index); err == nil || !strings.Contains(err.Error(), "remaining endpoint count 1") {
+		t.Fatalf("Reject error = %v", err)
+	}
+}
+
+func TestSelectorCountsAcceptedEndpointAfterRejection(t *testing.T) {
+	selector, err := New([]string{"openai", "anthropic"}, Options{Count: 3, MinimumDistinctEndpoints: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		index, err := selector.Draw()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := selector.Accept(index); err != nil {
+			t.Fatal(err)
+		}
+	}
+	index, err := selector.Draw()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := selector.Reject(index); err != nil {
+		t.Fatalf("Reject error = %v", err)
 	}
 }

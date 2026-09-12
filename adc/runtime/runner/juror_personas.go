@@ -1,6 +1,8 @@
 package runner
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,7 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
 	"github.com/agentcourt/adj/common/councilsample"
+	"github.com/agentcourt/adj/common/modelgateway"
 	"github.com/agentcourt/adj/common/modelrequest"
 	"github.com/agentcourt/adj/common/persona"
 )
@@ -21,8 +25,9 @@ type jurorPersonaPair struct {
 }
 
 type jurorPersonaPool struct {
-	pairs    []jurorPersonaPair
-	selector *councilsample.Selector
+	pairs     []jurorPersonaPair
+	selector  *councilsample.Selector
+	available map[int]bool
 }
 
 func (p *jurorPersonaPool) findPair(model string, personaFile string) (jurorPersonaPair, bool) {
@@ -85,10 +90,14 @@ func loadJurorPersonaPoolWithOptions(path string, scenarioBaseDir string, opts c
 	if err != nil {
 		return nil, err
 	}
-	return &jurorPersonaPool{pairs: pairs, selector: selector}, nil
+	return &jurorPersonaPool{pairs: pairs, selector: selector, available: map[int]bool{}}, nil
 }
 
 func (p *jurorPersonaPool) samplePair() (jurorPersonaPair, error) {
+	return p.sampleAvailablePair(context.Background(), nil)
+}
+
+func (p *jurorPersonaPool) sampleAvailablePair(ctx context.Context, check func(context.Context, jurorPersonaPair) error) (jurorPersonaPair, error) {
 	if p == nil || len(p.pairs) == 0 {
 		return jurorPersonaPair{}, fmt.Errorf("juror persona pool is empty")
 	}
@@ -112,24 +121,58 @@ func (p *jurorPersonaPool) samplePair() (jurorPersonaPair, error) {
 		}
 		p.selector = selector
 	}
-	pairIndex, err := p.selector.Draw()
-	if err != nil {
-		return jurorPersonaPair{}, fmt.Errorf("sample juror persona pair: %w", err)
+	if p.available == nil {
+		p.available = map[int]bool{}
 	}
-	if err := p.selector.Accept(pairIndex); err != nil {
-		return jurorPersonaPair{}, err
+	var lastErr error
+	for {
+		pairIndex, err := p.selector.Draw()
+		if err != nil {
+			if lastErr != nil {
+				return jurorPersonaPair{}, fmt.Errorf("sample available juror persona pair: %w", errors.Join(lastErr, err))
+			}
+			return jurorPersonaPair{}, fmt.Errorf("sample juror persona pair: %w", err)
+		}
+		pair := p.pairs[pairIndex]
+		if check != nil && !p.available[pairIndex] {
+			if err := check(ctx, pair); err != nil {
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return jurorPersonaPair{}, ctxErr
+				}
+				if errors.Is(err, context.Canceled) {
+					return jurorPersonaPair{}, err
+				}
+				lastErr = err
+				if endpoint, ok := modelgateway.CredentialFailureEndpoint(err); ok {
+					if rejectErr := p.selector.RejectEndpoint(endpoint); rejectErr != nil {
+						return jurorPersonaPair{}, errors.Join(lastErr, rejectErr)
+					}
+				} else if rejectErr := p.selector.Reject(pairIndex); rejectErr != nil {
+					return jurorPersonaPair{}, errors.Join(lastErr, rejectErr)
+				}
+				continue
+			}
+			p.available[pairIndex] = true
+		}
+		if err := p.selector.Accept(pairIndex); err != nil {
+			return jurorPersonaPair{}, err
+		}
+		return pair, nil
 	}
-	return p.pairs[pairIndex], nil
 }
 
-func (r *Runner) prepareActionPayload(actionType string, payload map[string]any) (map[string]any, error) {
+func (r *Runner) prepareActionPayload(ctx context.Context, actionType string, payload map[string]any) (map[string]any, error) {
 	if actionType != "add_juror" {
 		return payload, nil
 	}
-	return r.applyJurorPersonaDefaults(payload)
+	return r.applyJurorPersonaDefaultsContext(ctx, payload)
 }
 
 func (r *Runner) applyJurorPersonaDefaults(payload map[string]any) (map[string]any, error) {
+	return r.applyJurorPersonaDefaultsContext(context.Background(), payload)
+}
+
+func (r *Runner) applyJurorPersonaDefaultsContext(ctx context.Context, payload map[string]any) (map[string]any, error) {
 	cloned := clonePayload(payload)
 	jurorID := strings.TrimSpace(stringOrDefault(cloned["juror_id"], ""))
 	if jurorID == "" {
@@ -155,7 +198,11 @@ func (r *Runner) applyJurorPersonaDefaults(payload map[string]any) (map[string]a
 		}
 		return cloned, nil
 	}
-	pair, err := r.jurorPersonaPool.samplePair()
+	var check func(context.Context, jurorPersonaPair) error
+	if r.jurorClient != nil {
+		check = r.preflightJurorPair
+	}
+	pair, err := r.jurorPersonaPool.sampleAvailablePair(ctx, check)
 	if err != nil {
 		return nil, err
 	}
@@ -163,6 +210,55 @@ func (r *Runner) applyJurorPersonaDefaults(payload map[string]any) (map[string]a
 	cloned["persona_filename"] = pair.PersonaFile
 	r.jurorPersonaAssignments[jurorID] = pair
 	return cloned, nil
+}
+
+const jurorPreflightMaxOutputTokens int64 = 1024
+
+func (r *Runner) preflightJurorPair(ctx context.Context, pair jurorPersonaPair) error {
+	if pair.RequestSpec == nil {
+		return fmt.Errorf("juror persona pair has no request specification")
+	}
+	identity, err := r.promptRenderer.RenderJurorProbeIdentity(pair.PersonaText)
+	if err != nil {
+		return err
+	}
+	toolCheck, err := r.promptRenderer.JurorProbeToolCheck()
+	if err != nil {
+		return err
+	}
+	request, err := r.prompts.Text(adcprompts.ProbeJurorPreflightID)
+	if err != nil {
+		return err
+	}
+	tools, err := r.promptRenderer.BuildTools([]string{"submit_juror_vote"})
+	if err != nil {
+		return err
+	}
+	spec := pair.RequestSpec.WithFallbackMaxOutputTokens(jurorPreflightMaxOutputTokens)
+	response, err := r.jurorClient.CreateResponseWithRequestSpec(ctx, spec, []map[string]any{
+		{"role": "system", "content": identity},
+		{"role": "system", "content": toolCheck},
+		{"role": "user", "content": request},
+	}, tools, "")
+	if err != nil {
+		return err
+	}
+	if len(response.ToolCalls) != 1 {
+		return fmt.Errorf("juror preflight returned %d tool calls; expected one", len(response.ToolCalls))
+	}
+	call := response.ToolCalls[0]
+	if call.Name != "submit_juror_vote" {
+		return fmt.Errorf("juror preflight called %q; expected submit_juror_vote", call.Name)
+	}
+	if call.ArgumentsError != "" {
+		return fmt.Errorf("juror preflight returned malformed tool arguments: %s", call.ArgumentsError)
+	}
+	for _, field := range []string{"juror_id", "vote", "damages", "confidence", "explanation"} {
+		if _, ok := call.Arguments[field]; !ok {
+			return fmt.Errorf("juror preflight omitted %s", field)
+		}
+	}
+	return nil
 }
 
 var jurorIDPattern = regexp.MustCompile(`\bJ(\d+)\b`)

@@ -158,27 +158,27 @@ func writeARBDComplaint(path, proposition string) error {
 func mapARBDResult(caseID, runID string, result localrun.Result, runErr error) (ProcedureOutcome, error) {
 	raw, marshalErr := json.Marshal(result)
 	if marshalErr != nil {
-		return ProcedureOutcome{}, &CoreRunError{Err: errors.Join(runErr, fmt.Errorf("encode arbd core result: %w", marshalErr))}
+		return ProcedureOutcome{}, &CoreRunError{Err: errors.Join(runErr, fmt.Errorf("encode arbd core result: %w", marshalErr)), Provider: result.Provider}
 	}
 	if result.CaseID != caseID || result.RunID != runID {
-		return ProcedureOutcome{}, &CoreRunError{Err: errors.Join(runErr, fmt.Errorf("arbd core returned case/run identity %q/%q, want %q/%q", result.CaseID, result.RunID, caseID, runID))}
+		return ProcedureOutcome{}, &CoreRunError{Err: errors.Join(runErr, fmt.Errorf("arbd core returned case/run identity %q/%q, want %q/%q", result.CaseID, result.RunID, caseID, runID)), Provider: result.Provider}
 	}
 	phase := strings.TrimSpace(result.Phase)
 	if phase == "" {
-		return ProcedureOutcome{}, &CoreRunError{Err: errors.Join(runErr, fmt.Errorf("arbd core returned an empty phase"))}
+		return ProcedureOutcome{}, &CoreRunError{Err: errors.Join(runErr, fmt.Errorf("arbd core returned an empty phase")), Provider: result.Provider}
 	}
 	if runErr != nil {
 		message := strings.TrimSpace(result.Error)
 		if message == "" {
 			message = "arbd runner failed"
 		}
-		return ProcedureOutcome{}, &CoreRunError{Err: errors.Join(errors.New(message), runErr)}
+		return ProcedureOutcome{}, &CoreRunError{Err: errors.Join(errors.New(message), runErr), Provider: result.Provider}
 	}
 
 	switch strings.TrimSpace(result.Status) {
 	case "ok":
 		if phase != "closed" {
-			return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("arbd core returned successful status in phase %q", result.Phase)}
+			return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("arbd core returned successful status in phase %q", result.Phase), Provider: result.Provider}
 		}
 		answers := result.Answers
 		if answers == nil {
@@ -186,37 +186,39 @@ func mapARBDResult(caseID, runID string, result localrun.Result, runErr error) (
 		}
 		for member, score := range answers {
 			if strings.TrimSpace(member) == "" {
-				return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("arbd core returned an answer with an empty council member ID")}
+				return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("arbd core returned an answer with an empty council member ID"), Provider: result.Provider}
 			}
 			if score < 0 || score > 100 {
-				return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("arbd core returned score %d for %s outside 0 through 100", score, member)}
+				return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("arbd core returned score %d for %s outside 0 through 100", score, member), Provider: result.Provider}
 			}
 		}
 		value, err := json.Marshal(answers)
 		if err != nil {
-			return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("encode arbd council answers: %w", err)}
+			return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("encode arbd council answers: %w", err), Provider: result.Provider}
 		}
 		return ProcedureOutcome{
 			Status:          StatusOK,
 			Phase:           phase,
 			Decision:        &Decision{Kind: "council_answers", Value: string(value)},
 			ProcedureResult: raw,
+			Provider:        result.Provider,
 		}, nil
 	case "failed":
 		if len(result.Failure) == 0 {
-			return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("arbd core returned failed status without failure data")}
+			return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("arbd core returned failed status without failure data"), Provider: result.Provider}
 		}
 		failure, err := json.Marshal(result.Failure)
 		if err != nil {
-			return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("encode arbd failure: %w", err)}
+			return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("encode arbd failure: %w", err), Provider: result.Provider}
 		}
 		return ProcedureOutcome{
 			Status:          StatusFailed,
 			Phase:           phase,
 			ProcedureResult: raw,
 			Failure:         failure,
+			Provider:        result.Provider,
 		}, nil
 	default:
-		return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("arbd core returned invalid status %q", result.Status)}
+		return ProcedureOutcome{}, &CoreRunError{Err: fmt.Errorf("arbd core returned invalid status %q", result.Status), Provider: result.Provider}
 	}
 }

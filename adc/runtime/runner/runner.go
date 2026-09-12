@@ -464,7 +464,7 @@ func (r *Runner) executeAction(turnIndex, stepIndex int, actorRole, actionType s
 }
 
 func (r *Runner) executeActionContext(ctx context.Context, turnIndex, stepIndex int, actorRole, actionType string, payload map[string]any) (ActionExecution, error) {
-	preparedPayload, err := r.prepareActionPayload(actionType, payload)
+	preparedPayload, err := r.prepareActionPayload(ctx, actionType, payload)
 	if err != nil {
 		return ActionExecution{}, err
 	}

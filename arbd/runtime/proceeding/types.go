@@ -6,6 +6,7 @@ import (
 	"github.com/agentcourt/adj/arbd/runtime/lean"
 	"github.com/agentcourt/adj/arbd/runtime/spec"
 	"github.com/agentcourt/adj/common/modelrequest"
+	"github.com/agentcourt/adj/common/openai"
 )
 
 type Policy struct {
@@ -113,6 +114,7 @@ type Result struct {
 	Evidence          []EvidenceMeta          `json:"evidence,omitempty"`
 	Council           []CouncilSeat           `json:"council"`
 	Events            []Event                 `json:"events"`
+	Provider          openai.Accounting       `json:"provider"`
 	FinalState        map[string]any          `json:"final_state"`
 	FinalReason       string                  `json:"final_reason"`
 }

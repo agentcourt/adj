@@ -216,6 +216,7 @@ func runConfigured(ctx context.Context, cfg Config, complaint spec.Complaint) (r
 				Evidence:          rc.listVisibleEvidence(),
 				Council:           finalCouncil(council, finalState),
 				Events:            events,
+				Provider:          llmClient.Accounting(),
 				FinalState:        finalState,
 				FinalReason:       reason,
 			}

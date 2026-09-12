@@ -1,6 +1,6 @@
 # ADC Prompt Authoring
 
-ADC resolves every model-facing instruction through one prompt catalog.  The catalog covers complaint and case generation, proposition strategies, generated role instructions, direct and external-role turns, corrections, tool results and case-file attachments, reports, probes, tool descriptions, schema-property descriptions, and tool guidance.  Its 210 entries comprise 66 fixed definitions, 92 direct-tool descriptions, and 52 role-specific or shared tool cards.  Court and case data, scenario `RoleSpec` values, schema structure, enum values, validation errors, and record rendering remain runtime data rather than prompt source.
+ADC resolves every model-facing instruction through one prompt catalog.  The catalog covers complaint and case generation, proposition strategies, generated role instructions, direct and external-role turns, corrections, tool results and case-file attachments, reports, probes, tool descriptions, schema-property descriptions, and tool guidance.  Its 211 entries comprise 67 fixed definitions, 92 direct-tool descriptions, and 52 role-specific or shared tool cards.  Court and case data, scenario `RoleSpec` values, schema structure, enum values, validation errors, and record rendering remain runtime data rather than prompt source.
 
 ## Resolution and overrides
 
@@ -12,7 +12,7 @@ The manual runs commands from `adc/`, where the checked-in complete catalog is `
 
 The `adc eval` judge suites use this catalog for role instructions, runtime system and opportunity prompts, turn assembly, tool descriptions, and tool guidance.  Each eval command accepts `--prompt-dir` and repeated `--prompt-file ID=PATH` flags with the same precedence and validation.  A suite-local `--opportunity-prompt-file` changes the opportunity objective under test while the surrounding prompt remains selected by the production catalog.  The repository [prompt-authoring guide](../../docs/prompt-authoring.md#adc-eval-candidate-templates) lists the candidate-template tokens for all ten suites.
 
-The `adc juror` and `adc llm` probes use `probe.juror.identity` and `probe.juror.tool-check` for the identity wrapper and tool-call instruction.  Their `--prompt` or `--input-file` argument supplies the question or request, while `--prompt-dir` and `--prompt-file ID=PATH` select catalog text.  This separation keeps input data distinct from reusable model instructions.
+The `adc juror` and `adc llm` probes use `probe.juror.identity` and `probe.juror.tool-check` for the identity wrapper and tool-call instruction.  Their `--prompt` or `--input-file` argument supplies the question or request, while `--prompt-dir` and `--prompt-file ID=PATH` select catalog text.  ADC case execution also uses `probe.juror.preflight` to check a pool configuration before assigning it to an automatically generated candidate.  This separation keeps input data distinct from reusable model instructions.
 
 ```bash
 .bin/adc complain \
@@ -87,6 +87,7 @@ Paths in this table are relative to a `--prompt-dir` directory and to the conven
 | `runtime.external-role` | `runtime/external-role.md` | `{{SYSTEM_PROMPT}}`, `{{OPPORTUNITY_PROMPT}}`, `{{DEADLINE}}`, `{{TIMEOUT}}`, `{{DECISION_ATTEMPTS}}`, `{{SUPPORT_BUDGET}}`, `{{LEGAL_TOOLS}}`, `{{CONSTRAINTS}}`, `{{PASS_ACTION}}`, `{{LEGAL_TOOL_SCHEMAS}}`, `{{LEGAL_TOOL_GUIDANCE}}`, `{{SUPPORT_TOOLS}}` |
 | `probe.juror.identity` | `probes/juror/identity.md` | `{{PERSONA}}` |
 | `probe.juror.tool-check` | `probes/juror/tool-check.md` | — |
+| `probe.juror.preflight` | `probes/juror/preflight.md` | — |
 | `report.summary.system` | `report/summary/system.md` | — |
 | `report.summary.user` | `report/summary/user.md` | `{{COURTROOM_CONTEXT}}`, `{{EVIDENCE_CONTEXT}}`, `{{PLAINTIFF_TEXT}}`, `{{DEFENDANT_TEXT}}` |
 | `report.repair.system` | `report/repair/system.md` | — |

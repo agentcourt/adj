@@ -60,6 +60,7 @@ const (
 	RuntimeExternalRoleID          = "runtime.external-role"
 	ProbeJurorIdentityID           = "probe.juror.identity"
 	ProbeJurorToolCheckID          = "probe.juror.tool-check"
+	ProbeJurorPreflightID          = "probe.juror.preflight"
 	ReportSummarySystemID          = "report.summary.system"
 	ReportSummaryUserID            = "report.summary.user"
 	ReportRepairSystemID           = "report.repair.system"
@@ -150,6 +151,7 @@ var fixedDefinitions = []definition{
 	def(RuntimeExternalRoleID, "runtime/external-role.md", "{{SYSTEM_PROMPT}}\n\n{{OPPORTUNITY_PROMPT}}\n\nUse the ADC role API for this opportunity. Inspect the visible case and files when the facts affect the decision. Record work through send_work_notes. Submit one legal act through submit_decision, placing legal-tool arguments in payload.\nDeadline: submit this turn before {{DEADLINE}}. The turn started with {{TIMEOUT}}. The remaining_time_ms field in each response is live.\nDecision attempts: {{DECISION_ATTEMPTS}}.\nSupport tool calls: {{SUPPORT_BUDGET}} per turn.\nAllowed legal tools: {{LEGAL_TOOLS}}\nConstraints: {{CONSTRAINTS}}\nPass action: {{PASS_ACTION}}\n\nLegal tool payloads:\n{{LEGAL_TOOL_SCHEMAS}}\n\nLegal tool guidance:\n{{LEGAL_TOOL_GUIDANCE}}\n\nAvailable support tools:\n{{SUPPORT_TOOLS}}", []string{"{{SYSTEM_PROMPT}}", "{{OPPORTUNITY_PROMPT}}", "{{DEADLINE}}", "{{TIMEOUT}}", "{{DECISION_ATTEMPTS}}", "{{SUPPORT_BUDGET}}", "{{LEGAL_TOOLS}}", "{{CONSTRAINTS}}", "{{PASS_ACTION}}", "{{LEGAL_TOOL_SCHEMAS}}", "{{LEGAL_TOOL_GUIDANCE}}", "{{SUPPORT_TOOLS}}"}),
 	def(ProbeJurorIdentityID, "probes/juror/identity.md", "This juror identity is yours for this prompt.  Treat it as true of yourself, including any bias, skepticism, hardship, or limits it implies:\n\n{{PERSONA}}", []string{"{{PERSONA}}"}),
 	def(ProbeJurorToolCheckID, "probes/juror/tool-check.md", "When the prompt asks for a juror act, call submit_juror_vote exactly once.  Do not reply with plain text instead of the required tool call.", nil),
+	def(ProbeJurorPreflightID, "probes/juror/preflight.md", "For this service check, call submit_juror_vote with juror_id J0, vote plaintiff, damages 0, confidence low, and a short explanation.", nil),
 	def(ReportSummarySystemID, "report/summary/system.md", "Summarize each side's civil-trial arguments precisely from the supplied record.", nil),
 	def(ReportSummaryUserID, "report/summary/user.md", "Return strict JSON with plaintiff_summary and defendant_summary. Cite supplied docket titles in square brackets.\n\nCourtroom context:\n{{COURTROOM_CONTEXT}}\n\nEvidence context:\n{{EVIDENCE_CONTEXT}}\n\nPlaintiff text:\n{{PLAINTIFF_TEXT}}\n\nDefendant text:\n{{DEFENDANT_TEXT}}", []string{"{{COURTROOM_CONTEXT}}", "{{EVIDENCE_CONTEXT}}", "{{PLAINTIFF_TEXT}}", "{{DEFENDANT_TEXT}}"}),
 	def(ReportRepairSystemID, "report/repair/system.md", "Convert the supplied text to strict JSON with no outside prose.", nil),

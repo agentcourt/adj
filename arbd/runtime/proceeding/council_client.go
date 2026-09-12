@@ -31,3 +31,10 @@ func (c *directCouncilClient) CreateResponseWithRequestSpec(
 	}
 	return c.executor.CreateResponseWithRequestSpec(ctx, spec, inputItems, tools, previousResponseID)
 }
+
+func (c *directCouncilClient) Accounting() openaiapi.Accounting {
+	if c.executor == nil {
+		return openaiapi.Accounting{}
+	}
+	return c.executor.Accounting()
+}

@@ -26,7 +26,9 @@ Each nonblank pool line contains one request specification.  The `model` value o
 
 The pool may contain the same configuration more than once, and one configuration may occupy more than one seat.  For each seat, the selector chooses an eligible endpoint with the fewest assigned seats, then a configuration for that endpoint with the fewest assigned seats.  It uses cryptographic randomness to break ties.  This ordering balances endpoints before models while preserving variation among equivalent choices.
 
-Quick and ARB run a bounded availability request before accepting a configuration.  ARBD does the same in direct mode.  A failed configuration becomes ineligible.  A missing endpoint credential makes every configuration for that endpoint ineligible.  A configuration that passed an earlier availability request may occupy another seat without a repeated check.  The procedure fails before participant work begins when it cannot fill the requested council.
+The default `common/data/personas/pool.jsonl` contains the generated OpenRouter pool.  The optional `common/data/personas/direct-lab-pool.jsonl` contains `openai://gpt-5.6-luna`, `anthropic://claude-sonnet-5`, and `google://gemini-3.5-flash` configurations that completed Quick's availability and vote requests through the named lab services.  Select either file through the procedure's pool option.
+
+Quick and ARB run a bounded availability request before accepting a configuration.  ARBD does the same in direct mode.  ADC runs a `submit_juror_vote` request through the selected configuration before assigning an automatically generated candidate juror.  A failed configuration becomes ineligible.  A missing endpoint credential makes every configuration for that endpoint ineligible.  A configuration that passed an earlier availability request may occupy another seat without a repeated check.  A rejection ends selection when it leaves too few endpoints to meet the configured minimum.  Quick, ARB, and ARBD fail before participant work begins when they cannot fill the requested council.  ADC fails the candidate-assignment action when it cannot select an available configuration.
 
 ARBD's Council API mode selects the roster without making provider requests because the external council clients own those requests.  The complete local runner checks the credentials for the selected endpoints before it starts its Pi council agents.  It records each model request when deliberation begins.
 
@@ -38,7 +40,7 @@ The core commands and complete local-run commands accept these flags:
 | `--council-endpoint NAME` | Permit one endpoint.  Repeat the flag to permit several endpoints.  Omitting it permits every endpoint represented in the pool. |
 | `--minimum-distinct-council-endpoints N` | Require at least `N` endpoint names in a completed Quick, ARB, or ARBD council.  Zero imposes no minimum. |
 
-ADC uses the same endpoint and configuration balancing while it assigns automatically generated candidate jurors.  Its minimum setting rejects a pool with fewer than the requested number of eligible endpoints.  The first candidate assignments span the available endpoints before reusing one.  Voir dire may remove candidates, so this setting does not impose a minimum endpoint count on the final jury.
+ADC uses the same endpoint and configuration balancing while it assigns automatically generated candidate jurors.  Its minimum setting rejects a pool with fewer than the requested number of eligible endpoints.  The first candidate assignments span the available endpoints before reusing one.  The preflight result is cached by pool record, so later assignments of the same configuration do not repeat it.  Voir dire may remove candidates, so this setting does not impose a minimum endpoint count on the final jury.
 
 The unified settings names are `common.council_allowed_endpoints` and `common.council_minimum_distinct_endpoints`:
 
@@ -115,7 +117,7 @@ Council members and jurors receive no web-search tool.  Their inputs comprise th
 
 Quick calls the executor in the Quick process.  `aar case` and `aard case` call it in the core process when `--council-backend direct` is selected.  Direct ADC juror execution also calls the executor in the core process.
 
-The complete local runners `aar-run`, `aard-run`, and `adc-run`, including their use through `adjudicate`, start Pi agents for council or juror opportunities.  The local runner keeps the shared executor and exposes a loopback OpenAI Chat Completions interface that Pi can call.  Each opportunity receives a fresh random model alias and bearer token bound to one upstream request specification.  Pi receives neither the upstream model name nor its credential.  The server accepts streamed and non-streamed Pi requests and preserves append-only continuation history.
+The complete local runners `aar-run`, `aard-run`, and `adc-run`, including their use through `adjudicate`, start Pi agents for council or juror opportunities.  The local runner keeps the shared executor and exposes a loopback OpenAI Chat Completions interface that Pi can call.  Each opportunity receives a fresh random model alias and bearer token bound to one upstream request specification.  Pi receives neither the upstream model name nor its credential.  The server accepts streamed and non-streamed Pi requests, preserves append-only continuation history, and rejects a non-null `tool_choice` field because it cannot enforce that field through every upstream endpoint.  The local runner revokes the opportunity token when its Pi process exits.
 
 The local runner writes every Pi-to-provider request to JSONL:
 
@@ -127,4 +129,4 @@ The local runner writes every Pi-to-provider request to JSONL:
 
 Each row records start and finish times, endpoint, requested and returned model identifiers, response identifier, observed usage, and provider failure data.  A failed or canceled continuation also receives a row.
 
-Direct Quick, ARB, and ADC calls contribute to the core provider-accounting object.  AARD's result schema does not expose accounting for its direct council calls.  Pi council and juror calls record usage in the JSONL request log and do not contribute to the formal core's provider-accounting totals.  Participant-model usage and procedure-provider accounting remain separate in unified records.
+Direct Quick, ARB, AARD, and ADC calls contribute to the core provider-accounting object.  Pi council and juror calls record usage in the JSONL request log and do not contribute to the formal core's provider-accounting totals.  Participant-model usage and procedure-provider accounting remain separate in unified records.

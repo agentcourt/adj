@@ -151,13 +151,14 @@ type Options struct {
 }
 
 type Result struct {
-	CaseID  string         `json:"case_id"`
-	RunID   string         `json:"run_id"`
-	Status  string         `json:"status"`
-	Phase   string         `json:"phase"`
-	Answers map[string]int `json:"answers"`
-	Error   string         `json:"error,omitempty"`
-	Failure map[string]any `json:"failure,omitempty"`
+	CaseID   string                      `json:"case_id"`
+	RunID    string                      `json:"run_id"`
+	Status   string                      `json:"status"`
+	Phase    string                      `json:"phase"`
+	Answers  map[string]int              `json:"answers"`
+	Error    string                      `json:"error,omitempty"`
+	Failure  map[string]any              `json:"failure,omitempty"`
+	Provider runstate.ProviderAccounting `json:"provider"`
 
 	raw json.RawMessage
 }
@@ -224,6 +225,7 @@ func (e processExit) finalizationErr() error {
 type councilProcessTarget struct {
 	memberID      string
 	opportunityID string
+	modelToken    string
 }
 
 type councilRosterResponse struct {
@@ -1979,7 +1981,7 @@ func (s *runState) startPiCouncil(ctx context.Context, entry councilRosterEntry,
 	}
 	home, model, err := s.prepareCouncilHome(entry, spec, binding, server, mcpURL, capability)
 	if err != nil {
-		return fmt.Errorf("prepare Pi home: %w", err)
+		return errors.Join(fmt.Errorf("prepare Pi home: %w", err), s.modelServer.Unbind(binding.Token))
 	}
 	processName := councilProcessName(entry.MemberID, opportunityID)
 	container := piContainerName(s.opts.CaseID, entry.MemberID, opportunityID)
@@ -1988,9 +1990,10 @@ func (s *runState) startPiCouncil(ctx context.Context, entry councilRosterEntry,
 	proc, err := s.startProcess(ctx, processName, "podman", s.opts.PodmanCommand, args, environment, container, "", &councilProcessTarget{
 		memberID:      entry.MemberID,
 		opportunityID: opportunityID,
+		modelToken:    binding.Token,
 	})
 	if err != nil {
-		return err
+		return errors.Join(err, s.modelServer.Unbind(binding.Token))
 	}
 	s.mu.Lock()
 	s.processes = append(s.processes, proc)
@@ -2363,6 +2366,9 @@ func (s *runState) startProcess(ctx context.Context, name string, kind string, c
 			stderrErr: stderrErr,
 			canceled:  ctx.Err() != nil,
 		}
+		if record.councilTarget != nil {
+			exit.recordErr = s.modelServer.Unbind(record.councilTarget.modelToken)
+		}
 		processErr := exit.err()
 		state := runstate.Completed
 		if ctx.Err() != nil {
@@ -2375,12 +2381,12 @@ func (s *runState) startProcess(ctx context.Context, name string, kind string, c
 			value := cmd.ProcessState.ExitCode()
 			exitCode = &value
 		}
-		exit.recordErr = runstate.Finish(finishProcess, runstate.ProcessFinish{
+		exit.recordErr = errors.Join(exit.recordErr, runstate.Finish(finishProcess, runstate.ProcessFinish{
 			State:      state,
 			FinishedAt: time.Now().UTC(),
 			ExitCode:   exitCode,
 			Error:      runstate.ErrorText(processErr),
-		})
+		}))
 		processErr = exit.err()
 		record.markExited()
 		record.done <- exit

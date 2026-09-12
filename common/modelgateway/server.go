@@ -174,6 +174,23 @@ func (s *Server) Bind(name string, spec modelrequest.Spec) (Binding, error) {
 	return Binding{Token: token, Model: alias}, nil
 }
 
+func (s *Server) Unbind(token string) error {
+	if s == nil {
+		return fmt.Errorf("model server is nil")
+	}
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return fmt.Errorf("model binding token is required")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.bindings[token] == nil {
+		return fmt.Errorf("model binding token is unknown")
+	}
+	delete(s.bindings, token)
+	return nil
+}
+
 func (s *Server) URL() string {
 	if s == nil {
 		return ""
@@ -269,6 +286,9 @@ func (s *Server) executeChat(ctx context.Context, binding *chatBinding, chat cha
 	}
 	if len(chat.Messages) == 0 {
 		return modelapi.Response{}, &modelapi.ProviderError{Class: modelapi.ProviderErrorRequest, Err: fmt.Errorf("chat messages are required")}
+	}
+	if chat.ToolChoice != nil {
+		return modelapi.Response{}, &modelapi.ProviderError{Class: modelapi.ProviderErrorRequest, Err: fmt.Errorf("chat tool_choice is unsupported")}
 	}
 	if err := checkMessagePrefix(chat.Messages, binding.expectedMessages); err != nil {
 		return modelapi.Response{}, &modelapi.ProviderError{Class: modelapi.ProviderErrorRequest, Err: err}

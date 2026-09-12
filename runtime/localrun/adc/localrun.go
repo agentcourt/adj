@@ -251,6 +251,7 @@ func (e processExit) finalizationErr() error {
 type jurorProcessTarget struct {
 	principalID   string
 	opportunityID string
+	modelToken    string
 }
 
 type activeJurorOpportunity struct {
@@ -2147,7 +2148,7 @@ func (s *runState) startPiJuror(ctx context.Context, active activeJurorOpportuni
 	s.trackSecretFile(filepath.Join(home, ".pi", "agent", "auth.json"))
 	model, err := writePiConfig(home, active, spec, s.modelServer.URL()+"/v1", binding, server, url, capability)
 	if err != nil {
-		return err
+		return errors.Join(err, s.modelServer.Unbind(binding.Token))
 	}
 	container := piContainerName(s.opts.CaseID, active)
 	args := piRunArgs(s.opts, container, home, model, instructions)
@@ -2155,9 +2156,10 @@ func (s *runState) startPiJuror(ctx context.Context, active activeJurorOpportuni
 	proc, err := s.startProcess(ctx, processName, "podman", s.opts.PodmanCommand, args, environment, container, &jurorProcessTarget{
 		principalID:   active.principalID,
 		opportunityID: active.opportunityID,
+		modelToken:    binding.Token,
 	})
 	if err != nil {
-		return err
+		return errors.Join(err, s.modelServer.Unbind(binding.Token))
 	}
 	s.mu.Lock()
 	s.processes = append(s.processes, proc)
@@ -2465,6 +2467,9 @@ func (s *runState) startProcess(ctx context.Context, name string, kind string, c
 			stderrErr: stderr.Close(),
 		}
 		exit.canceled = ctx.Err() != nil
+		if record.jurorTarget != nil {
+			exit.recordErr = s.modelServer.Unbind(record.jurorTarget.modelToken)
+		}
 		processErr := exit.err()
 		state := runstate.Completed
 		if ctx.Err() != nil {
@@ -2477,12 +2482,12 @@ func (s *runState) startProcess(ctx context.Context, name string, kind string, c
 			value := cmd.ProcessState.ExitCode()
 			exitCode = &value
 		}
-		exit.recordErr = runstate.Finish(finishProcess, runstate.ProcessFinish{
+		exit.recordErr = errors.Join(exit.recordErr, runstate.Finish(finishProcess, runstate.ProcessFinish{
 			State:      state,
 			FinishedAt: time.Now().UTC(),
 			ExitCode:   exitCode,
 			Error:      runstate.ErrorText(processErr),
-		})
+		}))
 		processErr = exit.err()
 		record.markExited()
 		record.done <- exit

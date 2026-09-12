@@ -131,6 +131,47 @@ func TestChatServerRejectsChangedHistory(t *testing.T) {
 	}
 }
 
+func TestChatServerRejectsToolChoice(t *testing.T) {
+	executor := &fakeExecutor{responses: []modelapi.Response{{ResponseID: "response-1"}}}
+	server, err := NewServer(executor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding, err := server.Bind("juror-1", modelrequest.Spec{Endpoint: "openai", Model: "model-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := runChatRequest(t, server, binding, map[string]any{
+		"model": binding.Model, "messages": []map[string]any{{"role": "user", "content": "vote"}}, "tool_choice": "auto",
+	})
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "tool_choice is unsupported") {
+		t.Fatalf("response: %d %s", response.Code, response.Body.String())
+	}
+	if len(executor.calls) != 0 {
+		t.Fatalf("executor calls = %d", len(executor.calls))
+	}
+}
+
+func TestChatServerUnbindRevokesToken(t *testing.T) {
+	executor := &fakeExecutor{}
+	server, err := NewServer(executor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding, err := server.Bind("juror-1", modelrequest.Spec{Endpoint: "openai", Model: "model-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := server.Unbind(binding.Token); err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	request.Header.Set("Authorization", "Bearer "+binding.Token)
+	if _, err := server.bindingForRequest(request); err == nil || !strings.Contains(err.Error(), "invalid") {
+		t.Fatalf("bindingForRequest error = %v", err)
+	}
+}
+
 func runChatRequest(t *testing.T, server *Server, binding Binding, value map[string]any) *httptest.ResponseRecorder {
 	t.Helper()
 	raw, err := json.Marshal(value)

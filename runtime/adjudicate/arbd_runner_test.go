@@ -47,6 +47,11 @@ func TestARBDRunnerBuildsAARDCaseAndMapsTerminalResults(t *testing.T) {
 			Status:  "ok",
 			Phase:   "closed",
 			Answers: map[string]int{"C2": 81, "C1": 72},
+			Provider: runstate.ProviderAccounting{
+				RequestCount:       1,
+				UsageObservedCount: 1,
+				Usage:              &runstate.TokenUsage{InputTokens: 10, OutputTokens: 2, TotalTokens: 12},
+			},
 		}, nil
 	}}
 	request := ProcedureRequest{
@@ -115,6 +120,9 @@ func TestARBDRunnerBuildsAARDCaseAndMapsTerminalResults(t *testing.T) {
 	}
 	if outcome.Decision.Kind != "council_answers" || outcome.Decision.Value != `{"C1":72,"C2":81}` {
 		t.Fatalf("decision = %#v", outcome.Decision)
+	}
+	if outcome.Provider.RequestCount != 1 || outcome.Provider.Usage == nil || outcome.Provider.Usage.TotalTokens != 12 {
+		t.Fatalf("provider accounting = %#v", outcome.Provider)
 	}
 	var native localrun.Result
 	if err := json.Unmarshal(outcome.ProcedureResult, &native); err != nil {

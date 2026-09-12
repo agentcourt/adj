@@ -577,3 +577,26 @@ One unresolved protocol question is Pi's optional `tool_choice` field.  The loop
 - [ ] Review the tested direct configurations and confirm a permanent lab pool.
 - [x] Correct and re-read the affected manuals.
 - [x] Run the complete tests, build, vet, and diff checks.
+
+## Direct-lab follow-up
+
+The optional `common/data/personas/direct-lab-pool.jsonl` contains the three configurations that completed Quick availability and voting requests through OpenAI, Anthropic, and Google.  The generated OpenRouter pool remains the runtime default.
+
+The selector checks the configured minimum endpoint count after removing a configuration or endpoint.  Quick, ARB, AARD, and ADC retain the rejected provider error when that removal makes the minimum impossible.  ADC checks each previously untested pool record through the production `submit_juror_vote` schema before assigning it to an automatically generated candidate.  It caches successful checks, rejects a failed record, rejects an endpoint after a missing-credential error, and samples another eligible record.
+
+The Pi loopback server rejects a non-null `tool_choice` value.  Every ARB, AARD, and ADC Pi opportunity token is removed after its process exits, including a process canceled during case cleanup.  Preparation and process-start errors remove the token before returning.
+
+AARD now copies the shared executor accounting into its native result, local-run result, unified outcome, and unified core error.  Direct availability and answer requests contribute to that accounting.  Pi council calls remain in `logs/council-model-requests.jsonl` because they execute in the local runner rather than the formal core.
+
+Two AARD black-box tests had depended on `OPENAI_BASE_URL`, which the fixed OpenAI endpoint no longer reads.  The tests now execute the current `runCase` path with an HTTP transport that redirects only `api.openai.com` to the test server.  They continue to exercise the Lean engine, provider request construction, Case API, command result, and durable record.
+
+The complete Go test suite, vet, build, scoped Markdown-link check, JSONL parse, and diff check pass.  A focused rerun covers the corrected Quick endpoint-minimum failure path.
+
+- [x] Add the direct-lab pool.
+- [x] Reject unusable ADC candidate configurations before assignment.
+- [x] Enforce endpoint minima after candidate removal.
+- [x] Reject unsupported Pi `tool_choice` requests.
+- [x] Revoke Pi opportunity tokens after process exit.
+- [x] Add AARD direct-provider accounting.
+- [x] Run the complete tests, vet, build, and documentation checks.
+- [ ] Run live procedure tests.

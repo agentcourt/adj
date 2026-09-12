@@ -360,14 +360,14 @@ Every completed or procedurally failed case writes a terminal packet under that 
 | `evidence-store/` | Stored evidence bytes, present when at least one item is stored. |
 | `submitted-evidence/` | Copies created for accepted lawyer submissions. |
 
-`run.json` contains case and run identifiers, times, status, error and failure data, phase, complaint, judgment standard, council backend, and the member answer map.  It also contains attorney, case-file, submitted-evidence, evidence, council, and event data, followed by `final_state` and `final_reason`.  Generated packet files remain siblings in the output directory rather than entries in `run.json`.
+`run.json` contains case and run identifiers, times, status, error and failure data, phase, complaint, judgment standard, council backend, the member answer map, and direct-provider request accounting.  It also contains attorney, case-file, submitted-evidence, evidence, council, and event data, followed by `final_state` and `final_reason`.  The provider object counts direct availability and answer requests and sums usage or cost reported by those responses.  Generated packet files remain siblings in the output directory rather than entries in `run.json`.
 
 State schema `v1` retains compatibility through defaulted additions for `evidence_catalog` and submitted-evidence lineage.  The initial catalog remains fixed, while accepted submissions and filings extend the case record.  Final rendering clones state and related mutable records while holding the case mutex, then writes from that owned snapshot after releasing the mutex.
 
 ### Inspection
 
 ```bash
-jq '{status, phase, answers, final_reason, failure}' "$out/run.json"
+jq '{status, phase, answers, final_reason, failure, provider}' "$out/run.json"
 jq '.final_state.case.council_answers' "$out/run.json"
 jq '{case_id, run_id, actions:(.actions|length), claimed_final_state_sha256}' "$out/certificate.json"
 jq -r '[.timestamp,.role,.phase,.type] | @tsv' "$out/events.ndjson"

@@ -18,7 +18,7 @@ func TestCatalogResolutionAndValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load complete conventional catalog: %v", err)
 	}
-	if got, want := len(Entries()), 210; got != want {
+	if got, want := len(Entries()), 211; got != want {
 		t.Fatalf("catalog entry count = %d, want %d", got, want)
 	}
 	seenPaths := map[string]string{}
