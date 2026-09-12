@@ -44,7 +44,7 @@ Complaint drafting, complaint preparation, reports, and direct role turns use th
 
 `adc eval` runs controlled judge decisions through the Lean engine and ADC production opportunity executor.  The executor provides the production prompt catalog, tool schemas, reference tools, correction loop, decision validation, and final Lean action step.  The ten suites cover voir dire questions, for-cause challenges, and Rules 11, 12, 37, 51, 52, 56, 58, and 60.  Their fixtures, prompt candidates, plans, and analyses live under [`evals/adc/judge`](../evals/adc/judge/README.md).  Generated results live under the ignored `evals/out/adc/judge/` tree.
 
-Each suite accepts a fixture path, output directory, model, fixture limit, timeout, engine command, and court profile.  `--prompt-dir` and repeated `--prompt-file ID=PATH` flags select the production prompt catalog, while `--opportunity-prompt-file` selects one suite-local candidate objective template.  The Lean opportunities for Rules 11, 37, and 58 contain deterministic judge actions.  Their default eval mode executes the deterministic action without a provider request, matching an ADC case.  `--counterfactual-model` removes the deterministic action from the eval opportunity and requests a model decision, and the output records that execution mode.
+Each suite accepts a fixture path, output directory, model, fixture limit, timeout, engine command, and court profile.  `--prompt-dir` and repeated `--prompt-file ID=PATH` flags select the production prompt catalog, while `--opportunity-prompt-file` selects one suite-local candidate objective template.  Rules 11 and 37 use their production model-backed opportunities.  Rule 58 uses a deterministic judgment-entry action derived from the completed case state.  Its `--counterfactual-model` option removes that action and requests a model decision, and the output records that execution mode.
 
 ```bash
 .bin/adc eval judge-rule56 \
@@ -114,6 +114,8 @@ Proposition setup constructs those four files without an intake or strategy-plan
 ## Scenario Files
 
 A scenario JSON defines the court, initial case metadata, claims, roles, optional deterministic turns, optional loop policy, and assertions.  `adc validate` reports unknown roles, missing action types, unsupported actions, and whether the scenario requires model turns.  It returns an error when the scenario is invalid.
+
+The `autopilot_trial` loop obtains substantive filings and decisions from the assigned plaintiff, defendant, and judge.  Opportunity constraints supply state-derived identifiers and party assignments.  The engine generates deterministic actions for procedural administration, including phase changes, jury configuration, candidate creation, random empanelment when voir dire is skipped, judgment entry from a completed verdict, and other transitions whose values follow from case state or court policy.  Notices, discovery content, motions, rulings, settlements, and post-judgment requests remain actor decisions.
 
 `adc scenario` can override the default model, temperatures, jury policy, runtime limits, and identifiers.  It can expose selected roles through the Role API and can write a transcript or digest in addition to the required machine records.  `--allow-assertion-failures` preserves a successful process exit after recording failed scenario assertions.
 

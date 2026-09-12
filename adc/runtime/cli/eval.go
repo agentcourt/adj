@@ -521,7 +521,6 @@ func RunEvalJudgeRule37(ctx context.Context, args []string, stdout io.Writer, st
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
 	rescoreResults := fs.String("rescore-results", "", "Existing results JSONL to rescore without model calls")
-	counterfactualModel := fs.Bool("counterfactual-model", false, "Use a model instead of the production deterministic action")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
 	timeoutSeconds := fs.Int("timeout-seconds", defaultLLMTimeoutSeconds, "LLM and fixture timeout in seconds")
@@ -575,7 +574,6 @@ func RunEvalJudgeRule37(ctx context.Context, args []string, stdout io.Writer, st
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		CounterfactualModel:   *counterfactualModel,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
 		Temperature:           tempPtr,
@@ -607,7 +605,6 @@ func RunEvalJudgeRule11(ctx context.Context, args []string, stdout io.Writer, st
 	fs.Var(&promptFiles, "prompt-file", "ADC prompt override as ID=PATH; repeat as needed")
 	model := fs.String("model", "openrouter://openai/gpt-5", "Judge model in endpoint://model form")
 	rescoreResults := fs.String("rescore-results", "", "Existing results JSONL to rescore without model calls")
-	counterfactualModel := fs.Bool("counterfactual-model", false, "Use a model instead of the production deterministic action")
 	online := fs.Bool("online", false, "Enable online model tool conversion behavior")
 	limit := fs.Int("limit", 0, "Maximum number of fixtures to run; 0 means all")
 	timeoutSeconds := fs.Int("timeout-seconds", defaultLLMTimeoutSeconds, "LLM and fixture timeout in seconds")
@@ -661,7 +658,6 @@ func RunEvalJudgeRule11(ctx context.Context, args []string, stdout io.Writer, st
 		Engine:                lean.New(strings.Fields(strings.TrimSpace(*engineCommand))),
 		Model:                 strings.TrimSpace(*model),
 		Online:                *online,
-		CounterfactualModel:   *counterfactualModel,
 		Limit:                 *limit,
 		Timeout:               time.Duration(*timeoutSeconds) * time.Second,
 		Temperature:           tempPtr,

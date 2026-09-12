@@ -35,17 +35,16 @@ The fixture file contains sixteen rows across three difficulty tiers.  The rows 
 
 ## Scoring
 
-The scorer accepts exactly one `decide_rule11_motion` call and requires `motion_index` zero.  It validates `granted`, `sanction_type`, `sanction_amount`, `sanction_detail`, and `reasoning` before comparing the grant decision and sanction to the fixture label.  It then combines those comparisons with the acceptance fields to determine outcome correctness.  In deterministic production mode, a successful step sets both `step_accepted` and `lean_accepted`.  Counterfactual model mode obtains `lean_accepted` from `apply_decision`.
+The scorer accepts exactly one `decide_rule11_motion` call and requires `motion_index` zero.  It validates `granted`, `sanction_type`, `sanction_amount`, `sanction_detail`, and `reasoning` before comparing the grant decision and sanction to the fixture label.  It then combines those comparisons with the acceptance fields to determine outcome correctness.  `lean_accepted` records acceptance by `apply_decision`, while `step_accepted` records execution of the resulting action.
 
 Denied motions use an empty or omitted `sanction_type`, a zero or omitted `sanction_amount`, and an empty `sanction_detail`.  Granted motions require a recognized sanction type and nonempty detail, with a positive amount for `monetary_penalty` or `fee_shift` and a zero or omitted amount for `admonition` or `non_monetary_directive`.  The summary records aggregate rates and slices by reason tag, issue family, tier, movant, and expected sanction type.
 
 ## Execution and Prompt Selection
 
-The default command executes the deterministic action supplied by the judge opportunity.  The `--counterfactual-model` flag removes that action and obtains a decision from `--model`.  Candidate prompt execution uses counterfactual-model mode.  The evaluator records prompt source, prompt name, execution mode, per-fixture records, and aggregate metrics in `results.jsonl` and `summary.json`.
+The default command obtains a decision from `--model` through the production Rule 11 opportunity.  A candidate prompt replaces that opportunity's objective while retaining the production state, role view, constraints, tool schema, decision validation, and action execution.  The evaluator records prompt source, prompt name, execution mode, per-fixture records, and aggregate metrics in `results.jsonl` and `summary.json`.
 
 ```bash
 adc eval judge-rule11 \
-  --counterfactual-model \
   --opportunity-prompt-file evals/adc/judge/rules/rule11/sanctions/prompts/candidate-v2.md \
   --opportunity-prompt-name candidate-v2 \
   --out-dir evals/out/adc/judge/rule11-candidate-v2

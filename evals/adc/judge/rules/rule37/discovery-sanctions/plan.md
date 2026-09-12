@@ -39,15 +39,14 @@ The fixtures cover interrogatories, requests for production, initial disclosures
 
 The scorer accepts exactly one `decide_rule37_motion` call and requires `motion_index` zero.  It validates `granted`, `sanction_type`, `sanction_amount`, and `reasoning` before comparing the grant decision and sanction to the fixture label.  It uses `order_text` together with `reasoning` for deterministic explanation matching.
 
-A denied motion must use `sanction_type: none`, and a nonzero amount is invalid with that sanction type.  A fee award requires `sanction_type: fees` and a positive amount, while a granted motion may use `none` when fees would be unjust.  Outcome correctness also requires both acceptance fields, and the summary records aggregate rates and slices by reason tag, issue family, tier, movant, and expected sanction type.  In deterministic production mode, a successful step sets both `step_accepted` and `lean_accepted`.  Counterfactual model mode obtains `lean_accepted` from `apply_decision`.
+A denied motion must use `sanction_type: none`, and a nonzero amount is invalid with that sanction type.  A fee award requires `sanction_type: fees` and a positive amount, while a granted motion may use `none` when fees would be unjust.  Outcome correctness also requires both acceptance fields, and the summary records aggregate rates and slices by reason tag, issue family, tier, movant, and expected sanction type.  `lean_accepted` records acceptance by `apply_decision`, while `step_accepted` records execution of the resulting action.
 
 ## Execution and Prompt Selection
 
-The default command executes the deterministic action supplied by the judge opportunity.  The `--counterfactual-model` flag removes that action and obtains a decision from `--model`.  Candidate prompt execution uses counterfactual-model mode.  The evaluator records prompt source, prompt name, execution mode, per-fixture records, and aggregate metrics in `results.jsonl` and `summary.json`.
+The default command obtains a decision from `--model` through the production Rule 37 opportunity.  A candidate prompt replaces that opportunity's objective while retaining the production state, role view, constraints, tool schema, decision validation, and action execution.  The evaluator records prompt source, prompt name, execution mode, per-fixture records, and aggregate metrics in `results.jsonl` and `summary.json`.
 
 ```bash
 adc eval judge-rule37 \
-  --counterfactual-model \
   --opportunity-prompt-file evals/adc/judge/rules/rule37/discovery-sanctions/prompts/candidate-v2.md \
   --opportunity-prompt-name candidate-v2 \
   --out-dir evals/out/adc/judge/rule37-candidate-v2

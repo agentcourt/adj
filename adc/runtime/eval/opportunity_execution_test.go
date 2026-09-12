@@ -305,7 +305,7 @@ esac
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake engine: %v", err)
 	}
-	return lean.New([]string{path})
+	return lean.New([]string{"/bin/sh", path})
 }
 
 func writeEvalOpportunityEngineWithoutDeterministicAction(t *testing.T) lean.Engine {
@@ -325,5 +325,5 @@ esac
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake engine: %v", err)
 	}
-	return lean.New([]string{path})
+	return lean.New([]string{"/bin/sh", path})
 }

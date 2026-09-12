@@ -13,4 +13,4 @@ This suite evaluates `decide_rule37_motion`.  Its sixteen fixtures cover concret
 
 ## Runner
 
-Run the default suite from the repository root with `adc eval judge-rule37` or `go run ./adc/runtime/cmd/adc eval judge-rule37`.  The command reads this directory's fixture file and writes `results.jsonl` and `summary.json` under `evals/out/adc/judge/rule37-latest`.  The `--fixtures` and `--out-dir` options select alternate paths.  Model-backed prompt evaluation requires `--counterfactual-model` together with `--opportunity-prompt-file`.
+Run the default suite from the repository root with `adc eval judge-rule37` or `go run ./adc/runtime/cmd/adc eval judge-rule37`.  The command reads this directory's fixture file and writes `results.jsonl` and `summary.json` under `evals/out/adc/judge/rule37-latest`.  The `--fixtures` and `--out-dir` options select alternate paths, and `--opportunity-prompt-file` selects a candidate objective template.

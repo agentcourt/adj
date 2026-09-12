@@ -79,7 +79,8 @@ theorem filedCandidates_rule11_motion_requires_notice_and_no_correction :
     let facts : TurnFacts := { (default : TurnFacts) with hasRule11Notice := true, hasRule11Correction := false, hasRule11Motion := false }
     let req := reqWithRoles c [{ role := "defendant", allowed_tools := ["file_rule11_motion"] }]
     (filedCandidates req c facts 3).any
-      (fun t => t.role = "defendant" ∧ t.allowed_tools = ["file_rule11_motion"]) = true := by
+      (fun t => t.role = "defendant" ∧ t.allowed_tools = ["file_rule11_motion"] ∧
+        t.deterministic_action.isNone) = true := by
   native_decide
 
 theorem filedCandidates_rule11_motion_not_offered_after_correction :
@@ -103,5 +104,16 @@ theorem pretrialCandidates_offers_decide_rule37_when_motion_pending :
     let facts : TurnFacts := { (default : TurnFacts) with hasRule37Motion := true, hasRule37Order := false }
     let req := reqWithRoles c [{ role := "judge", allowed_tools := ["decide_rule37_motion"] }]
     (pretrialCandidates req c facts 3).any
-      (fun t => t.role = "judge" ∧ t.allowed_tools = ["decide_rule37_motion"]) = true := by
+      (fun t => t.role = "judge" ∧ t.allowed_tools = ["decide_rule37_motion"] ∧
+        t.deterministic_action.isNone) = true := by
+  native_decide
+
+theorem pretrialCandidates_does_not_repeat_rule37_after_pass :
+    let c := { pretrialCase with decision_traces := [
+      { action := "pass_rule37_motion", outcome := "plaintiff", citations := ["FRCP 37"] }
+    ] }
+    let facts : TurnFacts := { (default : TurnFacts) with hasRule37Motion := false }
+    let req := reqWithRoles c [{ role := "plaintiff", allowed_tools := ["file_rule37_motion"] }]
+    (pretrialCandidates req c facts 3).any
+      (fun t => t.role = "plaintiff" ∧ t.allowed_tools = ["file_rule37_motion"]) = false := by
   native_decide

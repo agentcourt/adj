@@ -600,3 +600,40 @@ The complete Go test suite, vet, build, scoped Markdown-link check, JSONL parse,
 - [x] Add AARD direct-provider accounting.
 - [x] Run the complete tests, vet, build, and documentation checks.
 - [ ] Run live procedure tests.
+
+## Direct-lab live procedure tests
+
+A complete Quick case selected five members from the direct-lab pool with all three endpoints represented.  The run completed `not_demonstrated` by five votes to zero.  Its eight availability and voting requests reported 4,745 input, 805 output, 280 reasoning, and 5,806 total tokens.
+
+A complete ARB case used the real Lean engine, eight external Lawyer API filings, and a five-member direct council containing all three endpoints.  The run completed `not_demonstrated` by five votes to zero.  Its eight provider requests reported 4,204 input, 458 output, 260 reasoning, and 4,922 total tokens.  Certificate replay passed with thirteen actions.
+
+A complete AARD case used the real Lean engine, eight external Lawyer API filings, and a five-member direct council containing all three endpoints.  The council returned 0, 30, 45, 0, and 10.  The new provider field recorded eight requests, 4,515 input, 631 output, 986 reasoning, and 6,037 total tokens.  Certificate replay passed with thirteen actions.
+
+The ADC proposition test stopped during pretrial before candidate-juror assignment.  `pretrialCandidates` in `adc/engine/Main.lean` emitted a required deterministic `import_case_file` action with `source_filename` set to `scenarios/assets/supply_chain_delay_notice.txt`.  That file does not exist in the repository.  The same engine function contains case-specific deterministic discovery about a disputed document, confidential package, transmission logs, written authorization, third-party disclosure, and damages, plus fixed monetary values.  Proposition-case generation added the generic Proposition Tribunal after this autopilot code and uses the same `autopilot_trial` loop.  The resulting generic case therefore received facts and actions from an unrelated example.
+
+The failed ADC run retained five completed non-juror model-response events but no terminal result or provider accounting.  The completed Quick, ARB, and AARD runs reported 24 requests and 16,765 tokens.  An earlier restricted-network ARB attempt recorded one failed request with no usage.
+
+## Domain-neutral ADC autopilot
+
+The generic `autopilot_trial` loop now reserves deterministic actions for values derived from case state or court policy.  Plaintiff, defendant, and judge models supply Rule 11 filings and rulings, discovery content and responses, Rule 37 motions and rulings, Rule 68 offers and acceptances, pretrial orders, settlements, partial judgments, and post-judgment filings and rulings.  Rule 68 cost-shift evaluation runs after judgment and compares the expired offer with the entered judgment amount.  Phase transitions, jury setup, skipped-voir-dire empanelment, and judgment entry remain deterministic.
+
+The docket now retains the substantive payloads for Rule 11 notices, corrections, and motions; Rule 37 motions; interrogatories and responses; production requests and responses; admission requests and responses; and Rules 59 and 60 motions.  The model tool schemas require those payloads.  Separate docket entries track each party's initial disclosures.
+
+The generic file-import opportunity was removed.  Proposition documents enter as complaint attachments before adjudication, and the internal actor had no source file from which to perform a later import.  A passed import opportunity otherwise returned after each state change because ordinary pass identifiers are transient.  Rule 37 passes now write a decision trace after discovery responses are complete, preventing repeated model calls on an unchanged discovery record.
+
+Rules 11 and 37 now expose model-backed production judge opportunities.  Their eval commands run those opportunities directly and accept candidate objective templates without a counterfactual flag.  Rule 58 retains its state-derived production judgment action and its counterfactual-model option.
+
+The report summary request no longer supplies a fixed temperature.  A live case using `gpt-5.6-luna` reached judgment but failed during digest generation because that model rejects the former `temperature: 0.2` parameter.  The report package test and rebuilt ADC command passed after removing the parameter.
+
+One-fixture Rule 11 and Rule 37 production evals completed through `gpt-5.6-luna`, `apply_decision`, and `step`, with correct fixture scores.  They reported two requests and 14,803 tokens.  The ADC engine, proof target, explicit `ApplyDecision` proof, and explicit pretrial-action proof passed through `leanrunner`.
+
+A complete proposition case at `/tmp/adj-direct-lab-e2e-20260912/adc-9` used the real Lean engine, web-enabled OpenAI litigation actors, six jurors selected from the direct OpenAI, Anthropic, and Google pool, and all three required candidate endpoints.  It reached `judgment_entered` after 65 turns and resolved the proposition as `not_demonstrated`.  The run recorded one Rule 37 opportunity, both initial disclosures, and the complete discovery payloads.  Certificate replay passed all 74 transitions.  The run reported 48 requests, 520,413 input tokens, 12,857 output tokens, 2,676 reasoning tokens, and 533,752 total tokens.  Completed procedure and eval records together report 74 requests and 565,320 tokens.  Several stopped ADC attempts contain successful requests that did not reach terminal provider accounting, so the experiment total exceeds the recorded total.  No completed record contains provider cost data.
+
+The complete Go test suite, `go vet -p=1 ./...`, `go build -p=1 ./...`, `gofmt`, and `git diff --check` passed.  `lake build Proofs adcengine` and the changed pretrial and post-judgment proof modules passed through `leanrunner`.  An exploratory build of every standalone file under `adc/engine/Proofs/` found older files outside the maintained `Proofs` target that refer to removed definitions.  Those files were not changed as part of the ADC autopilot work.
+
+- [x] Replace case-specific deterministic ADC actions with state-derived or model-backed opportunities.
+- [x] Preserve substantive filing and discovery payloads in the docket.
+- [x] Run live Rule 11 and Rule 37 production evals.
+- [x] Complete a six-juror, three-endpoint ADC proposition case.
+- [x] Verify the live certificate and inspect the resulting record.
+- [x] Complete repository-wide tests, vet, build, documentation checks, and final review.

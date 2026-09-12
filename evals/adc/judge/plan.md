@@ -10,9 +10,9 @@ The fixture and prompt assets live under `evals/adc/judge/rules/`, while the Go 
 
 For each fixture, the runner validates the row, constructs the ADC state and roles, applies the selected court profile, and asks the Lean engine for the current opportunity.  A model-backed turn renders the judge role, role view, objective, allowed tool, constraints, and tool schema.  It processes the model decision through correction requests, Lean `apply_decision`, and Lean `step`.  A deterministic production turn executes the action supplied by the opportunity through `step` without rendering a role view or calling a model, the correction loop, or `apply_decision`.
 
-Rules 11, 37, and 58 receive deterministic actions from their production opportunities.  Their default eval mode executes that action, while `--counterfactual-model` removes it from the eval opportunity and requests a model decision.  These commands accept an eval-local opportunity prompt only in counterfactual mode.
+Rules 11 and 37 receive model-backed production opportunities.  Rule 58 receives a deterministic judgment-entry action derived from the completed case state.  Its default eval mode executes that action, while `--counterfactual-model` removes it and requests a model decision.  The Rule 58 command accepts an eval-local opportunity prompt only in counterfactual mode.
 
-The other seven suites use the selected model in their default mode.  `--opportunity-prompt-file` replaces the opportunity objective with a validated suite template, and `--opportunity-prompt-name` records its name.  The objective override retains the production role view, allowed tool, constraints, tool schema, and direct-turn execution.
+The other nine suites use the selected model in their default mode.  `--opportunity-prompt-file` replaces the opportunity objective with a validated suite template, and `--opportunity-prompt-name` records its name.  The objective override retains the production role view, allowed tool, constraints, tool schema, and direct-turn execution.
 
 A procedural invalid-attempt or decision-budget failure produces an invalid result that the scorer can count.  Fixture validation, provider setup, prompt rendering, Lean process, and other execution errors abort the run.  Every result row contains `lean_accepted` and `step_accepted`.  On a deterministic production turn, a successful step also sets `lean_accepted` because that path has no `apply_decision` stage.
 
@@ -20,15 +20,15 @@ A procedural invalid-attempt or decision-budget failure produces an invalid resu
 
 Each `results.jsonl` row records fixture fields, constructed state, Lean opportunity, response, turn transcript, final state, provider accounting, extracted tool payload, score fields, and execution fields.  Model-backed rows also record the role view, rendered input, and every response exchange, including corrections.  Deterministic production rows have no role view, rendered input, or response exchanges, and encode the opportunity's action and payload in the response fields.
 
-Each `summary.json` records the suite, model, prompt source, file paths, row counts, accuracy, weighted accuracy, invalid rate, and suite-specific errors.  Summaries for deterministic-capable suites also record the execution mode.  The summaries divide results by fields such as tier, issue family, party, reason tag, or expected disposition when the suite defines that division.  A correct substantive label counts as a correct outcome only when the tool payload is valid and Lean accepts its execution.
+Each `summary.json` records the suite, model, prompt source, file paths, row counts, accuracy, weighted accuracy, invalid rate, and suite-specific errors.  The Rule 58 summary also records whether execution used the production action or a counterfactual model.  The summaries divide results by fields such as tier, issue family, party, reason tag, or expected disposition when the suite defines that division.  A correct substantive label counts as a correct outcome only when the tool payload is valid and Lean accepts its execution.
 
 ## Suites
 
 | Rule | Suite | CLI command | Judge tool | Fixtures | Prompt candidates | Default execution |
 | --- | --- | --- | --- | ---: | ---: | --- |
-| 11 | [Sanctions](rules/rule11/sanctions/README.md) | `judge-rule11` | `decide_rule11_motion` | 16 | 2 | Deterministic action |
+| 11 | [Sanctions](rules/rule11/sanctions/README.md) | `judge-rule11` | `decide_rule11_motion` | 16 | 2 | Model |
 | 12 | [Dismissal and Jurisdiction](rules/rule12/dismissal-jurisdiction/README.md) | `judge-rule12` | `decide_rule12_motion` | 18 | 2 | Model |
-| 37 | [Discovery Sanctions](rules/rule37/discovery-sanctions/README.md) | `judge-rule37` | `decide_rule37_motion` | 16 | 2 | Deterministic action |
+| 37 | [Discovery Sanctions](rules/rule37/discovery-sanctions/README.md) | `judge-rule37` | `decide_rule37_motion` | 16 | 2 | Model |
 | 47 | [Voir Dire Question Screening](rules/rule47/voir-dire-question/README.md) | `judge-voir-dire` | `decide_voir_dire_question` | 60 baseline, 30 hard | 3 | Model |
 | 47 | [For-Cause Challenges](rules/rule47/for-cause-challenge/README.md) | `judge-for-cause` | `decide_juror_for_cause_challenge` | 16 | 1 | Model |
 | 51 | [Jury Instructions](rules/rule51/jury-instructions/README.md) | `judge-rule51` | `settle_jury_instructions` | 16 | 1 | Model |

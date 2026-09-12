@@ -37,8 +37,8 @@ theorem postJudgmentCandidates_offers_rule60_default_judgment_track :
     (postJudgmentCandidates req c facts 3).any
       (fun t =>
         t.role = "defendant" ∧
-        t.objective = "For case 0, if relief from default judgment is sought, file Rule 60 motion with ground and a timely filed_at date." ∧
-        t.allowed_tools = ["file_rule60_motion"]) = true := by
+        t.allowed_tools = ["file_rule60_motion"] ∧
+        t.deterministic_action.isNone) = true := by
   native_decide
 
 theorem postJudgmentCandidates_offers_rule60_general_track :
@@ -48,13 +48,16 @@ theorem postJudgmentCandidates_offers_rule60_general_track :
     (postJudgmentCandidates req c facts 3).any
       (fun t =>
         t.role = "defendant" ∧
-        t.objective = "For case 0, if post-judgment relief is sought, file Rule 60 motion with ground and timely filed_at date." ∧
-        t.allowed_tools = ["file_rule60_motion"]) = true := by
+        t.allowed_tools = ["file_rule60_motion"] ∧
+        t.deterministic_action.isNone) = true := by
   native_decide
 
 theorem postJudgmentCandidates_offers_supersedeas_then_stay_then_lift :
     let c := judgmentCase
-    let req := reqWithRoles c [{ role := "judge", allowed_tools := ["post_supersedeas_bond", "order_discretionary_stay", "lift_stay"] }]
+    let req := reqWithRoles c [
+      { role := "defendant", allowed_tools := ["post_supersedeas_bond"] },
+      { role := "judge", allowed_tools := ["order_discretionary_stay", "lift_stay"] }
+    ]
     let a0 := postJudgmentCandidates req c ({ (default : TurnFacts) with hasSupersedeasBond := false }) 3
     let a1 := postJudgmentCandidates req c ({ (default : TurnFacts) with hasSupersedeasBond := true, hasDiscretionaryStay := false }) 3
     let a2 := postJudgmentCandidates req c ({ (default : TurnFacts) with hasSupersedeasBond := true, hasDiscretionaryStay := true, hasStayLift := false }) 3

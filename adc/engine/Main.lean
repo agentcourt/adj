@@ -815,7 +815,9 @@ def reopenRule56Windows (c : CaseState) : CaseState :=
   { c with rule56_window_closed_for := [] }
 
 def applyOpportunityPassToCase? (c : CaseState) (opportunity : OpportunitySpec) : Option CaseState :=
-  if opportunity.allowed_tools = ["file_rule56_motion"] then
+  if opportunity.allowed_tools = ["file_rule37_motion"] then
+    some (appendTrace c "pass_rule37_motion" (normalizePartyToken opportunity.role) ["FRCP 37"])
+  else if opportunity.allowed_tools = ["file_rule56_motion"] then
     some (closeRule56WindowFor c opportunity.role)
   else if opportunity.allowed_tools = ["record_voir_dire_question"] then
     match requiredPayloadString? opportunity.constraints "asked_by",
@@ -2346,51 +2348,36 @@ def filedCandidates (req : OpportunityRequest) (c : CaseState) (facts : TurnFact
   if c.auto_rule11 && facts.hasComplaint && !facts.hasRule11Notice &&
       roleAllowsAll req.roles "defendant" ["serve_rule11_safe_harbor_notice"] then
     actions := actions.concat
-      (mkTurn "defendant" "For case 0, if Rule 11 concerns exist, serve a safe-harbor notice on plaintiff." ["serve_rule11_safe_harbor_notice"] false 1
-        (some
-          (mkDeterministicSingleTool "serve_rule11_safe_harbor_notice"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("served_by", toJson "defendant"),
-              ("target_party", toJson "plaintiff")
-            ]))))
+      ({ (mkTurn "defendant" "For case 0, serve a Rule 11 safe-harbor notice only if the record identifies a concrete filing defect. Identify the challenged filing and grounds. Otherwise pass." ["serve_rule11_safe_harbor_notice"] false maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("served_by", toJson "defendant"),
+            ("target_party", toJson "plaintiff")
+          ]
+       })
   if c.auto_rule11 && facts.hasRule11Notice && !facts.hasRule11Correction &&
       roleAllowsAll req.roles "plaintiff" ["withdraw_or_correct_filing"] then
     actions := actions.concat
-      (mkTurn "plaintiff" "For case 0, if safe-harbor issues are curable, withdraw or correct the challenged filing on notice_index 0." ["withdraw_or_correct_filing"] false 1
-        (some
-          (mkDeterministicSingleTool "withdraw_or_correct_filing"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("notice_index", toJson (0 : Nat)),
-              ("by_party", toJson "plaintiff")
-            ]))))
+      ({ (mkTurn "plaintiff" "For case 0, withdraw or correct the filing identified by Rule 11 notice_index 0 if the notice identifies a valid curable defect. State the correction. Otherwise pass." ["withdraw_or_correct_filing"] false maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("notice_index", toJson (0 : Nat)),
+            ("by_party", toJson "plaintiff")
+          ]
+       })
   if c.auto_rule11 && facts.hasRule11Notice && !facts.hasRule11Correction && !facts.hasRule11Motion &&
       roleAllowsAll req.roles "defendant" ["file_rule11_motion"] then
     actions := actions.concat
-      (mkTurn "defendant" "For case 0, if safe-harbor was not cured, file Rule 11 motion_index 0." ["file_rule11_motion"] false 1
-        (some
-          (mkDeterministicSingleTool "file_rule11_motion"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("movant", toJson "defendant"),
-              ("notice_index", toJson (0 : Nat))
-            ]))))
+      ({ (mkTurn "defendant" "For case 0, file a Rule 11 motion based on notice_index 0 only if the safe-harbor requirements are satisfied and the identified filing defect remains uncorrected. State the requested relief. Otherwise pass." ["file_rule11_motion"] false maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("movant", toJson "defendant"),
+            ("notice_index", toJson (0 : Nat))
+          ]
+       })
   if c.auto_rule11 && facts.hasRule11Motion && !facts.hasRule11Order &&
       roleAllowsAll req.roles "judge" ["decide_rule11_motion"] then
     actions := actions.concat
-      (mkTurn "judge" "For case 0, decide Rule 11 motion_index 0 and state sanctions if granted." ["decide_rule11_motion"] false 1
-        (some
-          (mkDeterministicSingleTool "decide_rule11_motion"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("motion_index", toJson (0 : Nat)),
-              ("granted", toJson true),
-              ("sanction_type", toJson "admonition"),
-              ("sanction_amount", toJson (0 : Nat)),
-              ("sanction_detail", toJson "Pleadings must remain grounded in available evidence."),
-              ("reasoning", toJson "The challenged filing warranted a limited sanction because safe-harbor notice did not lead to correction and an admonition is proportionate.")
-            ]))))
+      ({ (mkTurn "judge" "For case 0, decide Rule 11 motion_index 0 from the filing, notice, correction history, motion, and opposition in the record. State the decisive reason and impose only a proportionate sanction if the motion is granted." ["decide_rule11_motion"] true maxSteps) with
+          constraints := fixedPayloadConstraints [("motion_index", toJson (0 : Nat))]
+       })
   if facts.hasComplaint && !facts.hasAnswer && !facts.hasDefaultEntered &&
       roleAllowsAll req.roles "judge" ["enter_default"] then
     actions := actions.concat
@@ -2402,29 +2389,18 @@ def filedCandidates (req : OpportunityRequest) (c : CaseState) (facts : TurnFact
   if facts.hasComplaint && facts.hasAnswer && !facts.hasRule68Offer &&
       roleAllowsAll req.roles "defendant" ["make_rule68_offer"] then
     actions := actions.concat
-      (mkTurn "defendant" "For case 0, make a Rule 68 offer of judgment to plaintiff." ["make_rule68_offer"] false 1
-        (some
-          (mkDeterministicSingleTool "make_rule68_offer"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("offer_id", toJson "offer-0001"),
-              ("offeree", toJson "plaintiff"),
-              ("amount", toJson (100000 : Nat)),
-              ("terms", toJson "inclusive of taxable costs"),
-              ("served_by", toJson "defendant"),
-              ("served_at", toJson c.filed_on)
-            ]))))
+      ({ (mkTurn "defendant" "For case 0, make a Rule 68 offer only if the record supports a concrete amount and terms. Otherwise pass." ["make_rule68_offer"] false maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("offeree", toJson "plaintiff"),
+            ("served_by", toJson "defendant")
+          ]
+       })
   if facts.hasPendingRule68Offer && !facts.hasAcceptedRule68Offer &&
       roleAllowsAll req.roles "plaintiff" ["accept_rule68_offer"] then
     actions := actions.concat
-      (mkTurn "plaintiff" "For case 0, accept the pending Rule 68 offer." ["accept_rule68_offer"] false 1
-        (some
-          (mkDeterministicSingleTool "accept_rule68_offer"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("offer_index", toJson (0 : Nat)),
-              ("accepted_at", toJson c.filed_on)
-            ]))))
+      ({ (mkTurn "plaintiff" "For case 0, decide whether to accept pending Rule 68 offer_index 0 based on its amount, terms, and the case record. Accept only if warranted. Otherwise pass." ["accept_rule68_offer"] false maxSteps) with
+          constraints := fixedPayloadConstraints [("offer_index", toJson (0 : Nat))]
+       })
   if facts.hasPendingRule68Offer && !facts.hasAcceptedRule68Offer &&
       roleAllowsAll req.roles "clerk" ["expire_rule68_offers"] then
     actions := actions.concat
@@ -2434,19 +2410,6 @@ def filedCandidates (req : OpportunityRequest) (c : CaseState) (facts : TurnFact
             (Json.mkObj [
               ("case_id", toJson c.case_id),
               ("as_of", toJson c.filed_on)
-            ]))))
-  if facts.hasExpiredRule68Offer && !facts.hasRule68CostShift &&
-      roleAllowsAll req.roles "judge" ["evaluate_rule68_cost_shift"] then
-    actions := actions.concat
-      (mkTurn "judge" "For case 0, evaluate Rule 68(d) cost-shift after offer expiry." ["evaluate_rule68_cost_shift"] false 1
-        (some
-          (mkDeterministicSingleTool "evaluate_rule68_cost_shift"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("offer_index", toJson (0 : Nat)),
-              ("awarded_to", toJson "plaintiff"),
-              ("amount", toJson (70000 : Nat)),
-              ("reason", toJson "final recovery did not exceed unaccepted offer")
             ]))))
   if facts.hasAnswer && !facts.hasPleadingService && roleAllowsAll req.roles "clerk" ["set_last_pleading_served_on"] then
     actions := actions.concat (mkTurn "clerk" "For case 0, set the last pleading service date." ["set_last_pleading_served_on"] true 1
@@ -2473,48 +2436,25 @@ def filedCandidates (req : OpportunityRequest) (c : CaseState) (facts : TurnFact
 def pretrialCandidates (req : OpportunityRequest) (c : CaseState) (facts : TurnFacts) (maxSteps : Nat) : List OpportunitySpec := Id.run do
   let mut actions : List OpportunitySpec := []
   if !facts.hasProtectiveOrderEver && roleAllowsAll req.roles "judge" ["enter_protective_order"] then
-    let payload := Json.mkObj [
-      ("case_id", toJson c.case_id),
-      ("order_id", toJson "po-0001"),
-      ("scope", toJson "category"),
-      ("target", toJson "discovery"),
-      ("allowed_roles", toJson ["plaintiff", "defendant", "judge"]),
-      ("note", toJson "Protective order for discovery materials.")
-    ]
     actions := actions.concat
-      (mkTurn "judge" "For case 0, optionally enter a narrowly tailored protective order for discovery with order_id po-0001." ["enter_protective_order"] false 1
-        (some (mkDeterministicSingleTool "enter_protective_order" payload)))
+      ({ (mkTurn "judge" "For case 0, enter a narrowly tailored protective order only if the record supports one. Define its scope, target, allowed roles, and reason. Otherwise pass." ["enter_protective_order"] false maxSteps) with
+          constraints := fixedPayloadConstraints [("order_id", toJson "po-0001")]
+       })
   if !facts.hasPartialJudgment && roleAllowsAll req.roles "judge" ["enter_partial_judgment"] then
     actions := actions.concat
-      (mkTurn "judge" "For case 0, if fewer than all claims or issues are fully resolved, enter a Rule 54(b) partial judgment with reasons." ["enter_partial_judgment"] false 1
-        (some
-          (mkDeterministicSingleTool "enter_partial_judgment"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("issues_resolved", toJson ["liability"]),
-              ("amount", toJson (50000 : Nat)),
-              ("basis", toJson "no genuine dispute of material fact on liability")
-            ]))))
-  if !hasDocketTitle c "Initial Disclosures" && roleAllowsAll req.roles "plaintiff" ["serve_initial_disclosures"] then
+      (mkTurn "judge" "For case 0, enter a Rule 54(b) partial judgment only if the record fully resolves fewer than all claims or issues and supports immediate entry. Identify the resolved issues, amount, and basis. Otherwise pass." ["enter_partial_judgment"] false maxSteps)
+  if countDocketTitleByPartyPrefix c "Initial Disclosures" "plaintiff" = 0 &&
+      roleAllowsAll req.roles "plaintiff" ["serve_initial_disclosures"] then
     actions := actions.concat
-      (mkTurn "plaintiff" "For case 0, serve initial disclosures." ["serve_initial_disclosures"] true 1
-        (some
-          (mkDeterministicSingleTool "serve_initial_disclosures"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("party", toJson "plaintiff"),
-              ("summary", toJson "initial disclosures served")
-            ]))))
-  if !hasDocketTitle c "Initial Disclosures" && roleAllowsAll req.roles "defendant" ["serve_initial_disclosures"] then
+      ({ (mkTurn "plaintiff" "For case 0, serve plaintiff's initial disclosures with a concise summary of the witnesses, documents, damages information, and other material disclosed." ["serve_initial_disclosures"] true maxSteps) with
+          constraints := partyScopedPayloadConstraints "plaintiff" []
+       })
+  if countDocketTitleByPartyPrefix c "Initial Disclosures" "defendant" = 0 &&
+      roleAllowsAll req.roles "defendant" ["serve_initial_disclosures"] then
     actions := actions.concat
-      (mkTurn "defendant" "For case 0, serve initial disclosures." ["serve_initial_disclosures"] true 1
-        (some
-          (mkDeterministicSingleTool "serve_initial_disclosures"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("party", toJson "defendant"),
-              ("summary", toJson "initial disclosures served")
-            ]))))
+      ({ (mkTurn "defendant" "For case 0, serve defendant's initial disclosures with a concise summary of the witnesses, documents, damages information, and other material disclosed." ["serve_initial_disclosures"] true maxSteps) with
+          constraints := partyScopedPayloadConstraints "defendant" []
+       })
   if !facts.hasTechnicalReportPlaintiff && roleAllowsAll req.roles "plaintiff" ["submit_technical_report"] then
     actions := actions.concat
       ({ (mkTurn "plaintiff" "For case 0, submit a plaintiff technical report with report_id TR-P1, title, summary, and concise limitations." ["submit_technical_report"] false maxSteps) with
@@ -2525,133 +2465,83 @@ def pretrialCandidates (req : OpportunityRequest) (c : CaseState) (facts : TurnF
       ({ (mkTurn "defendant" "For case 0, submit a defense technical report with report_id TR-D1, title, summary, and concise limitations." ["submit_technical_report"] false maxSteps) with
           constraints := partyScopedPayloadConstraints "defendant" [("report_id", toJson "TR-D1")]
        })
-  if !facts.hasAnyCaseFile && roleAllowsAll req.roles "defendant" ["import_case_file"] then
-    actions := actions.concat
-      (mkTurn "defendant" "For case 0, import a key case file that may be produced in discovery." ["import_case_file"] true 1
-        (some
-          (mkDeterministicSingleTool "import_case_file"
-            (Json.mkObj [
-              ("imported_by", toJson "defendant"),
-              ("source_filename", toJson "scenarios/assets/supply_chain_delay_notice.txt"),
-              ("label", toJson "Delay notice"),
-            ]))))
   if !hasDocketTitle c "Interrogatories Served" && roleAllowsAll req.roles "plaintiff" ["serve_interrogatories"] then
     actions := actions.concat
-      (mkTurn "plaintiff" "For case 0, serve a focused first interrogatory set with at most five questions. Use served_by=plaintiff and served_on=defendant. Use an in-case service date and do not backdate." ["serve_interrogatories"] true 1
-        (some
-          (mkDeterministicSingleTool "serve_interrogatories"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("served_by", toJson "plaintiff"),
-              ("served_on", toJson "defendant"),
-              ("questions", toJson ["Identify all recipients of the disputed document.", "State when the disclosure occurred.", "Describe safeguards in place.", "Identify all versions transmitted.", "State the basis for asserting no damages."])
-            ]))))
+      ({ (mkTurn "plaintiff" "For case 0, serve a focused first interrogatory set with at most five questions directed to facts relevant to the claim or defenses." ["serve_interrogatories"] true maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("served_by", toJson "plaintiff"),
+            ("served_on", toJson "defendant")
+          ]
+       })
   if hasDocketTitle c "Interrogatories Served" && !hasDocketTitle c "Interrogatory Responses" then
     if roleAllowsAll req.roles "defendant" ["respond_interrogatories"] then
       actions := actions.concat
-        (mkTurn "defendant" "For case 0, serve verified interrogatory responses for set_index 0." ["respond_interrogatories"] true 1
-          (some
-            (mkDeterministicSingleTool "respond_interrogatories"
-              (Json.mkObj [
-                ("case_id", toJson c.case_id),
-                ("set_index", toJson (0 : Nat)),
-                ("responding_party", toJson "defendant")
-              ]))))
+        ({ (mkTurn "defendant" "For case 0, answer each interrogatory in set_index 0 from the record, stating any specific justified objection." ["respond_interrogatories"] true maxSteps) with
+            constraints := fixedPayloadConstraints [
+              ("set_index", toJson (0 : Nat)),
+              ("responding_party", toJson "defendant")
+            ]
+         })
     else if roleAllowsAll req.roles "defendant" ["respond_interrogatory_item", "finalize_interrogatory_responses"] then
       actions := actions.concat (mkTurn "defendant" "For case 0, draft interrogatory responses one question at a time for set_index 0. Draft only missing question indices. If all questions are already drafted, call finalize_interrogatory_responses immediately with verified=true and do not include responded_at." ["respond_interrogatory_item", "finalize_interrogatory_responses"] false maxSteps)
   if !facts.hasRfpServed && roleAllowsAll req.roles "plaintiff" ["serve_request_for_production"] then
     actions := actions.concat
-      (mkTurn "plaintiff" "For case 0, serve first request for production set." ["serve_request_for_production"] true 1
-        (some
-          (mkDeterministicSingleTool "serve_request_for_production"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("served_by", toJson "plaintiff"),
-              ("requests", toJson ["Produce all versions of the disputed specification.", "Produce all transmission logs for the disputed file."])
-            ]))))
+      ({ (mkTurn "plaintiff" "For case 0, serve a focused first request-for-production set for documents relevant to the claim, defenses, authentication, or damages." ["serve_request_for_production"] true maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("served_by", toJson "plaintiff"),
+            ("served_on", toJson "defendant")
+          ]
+       })
   if facts.hasCaseFileImported && facts.hasRfpServed && !facts.hasCaseFileProduced &&
       roleAllowsAll req.roles "defendant" ["produce_case_file"] then
     actions := actions.concat
-      (mkTurn "defendant" "For case 0, produce imported file file-0001 to plaintiff as responsive production." ["produce_case_file"] true 1
-        (some
-          (mkDeterministicSingleTool "produce_case_file"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("file_id", toJson "file-0001"),
-              ("produced_by", toJson "defendant"),
-              ("produced_to", toJson "plaintiff"),
-              ("request_ref", toJson "RFP-0"),
-              ("produced_at", toJson c.filed_on)
-            ]))))
+      ({ (mkTurn "defendant" "For case 0, produce any imported case file responsive to request-for-production set_index 0. Select the file from the case record and identify the request. Otherwise pass." ["produce_case_file"] false maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("produced_by", toJson "defendant"),
+            ("produced_to", toJson "plaintiff")
+          ]
+       })
   if facts.hasRfpServed && !facts.hasRfpResponses && roleAllowsAll req.roles "defendant" ["respond_request_for_production"] then
     actions := actions.concat
-      (mkTurn "defendant" "For case 0, serve responses to request-for-production set_index 0." ["respond_request_for_production"] true 1
-        (some
-          (mkDeterministicSingleTool "respond_request_for_production"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("set_index", toJson (0 : Nat)),
-              ("responding_party", toJson "defendant")
-            ]))))
+      ({ (mkTurn "defendant" "For case 0, respond to each request in request-for-production set_index 0, identifying produced files and any specific justified objection." ["respond_request_for_production"] true maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("set_index", toJson (0 : Nat)),
+            ("responding_party", toJson "defendant")
+          ]
+       })
   if !facts.hasRfaServed && roleAllowsAll req.roles "plaintiff" ["serve_requests_for_admission"] then
     actions := actions.concat
-      (mkTurn "plaintiff" "For case 0, serve first requests-for-admission set." ["serve_requests_for_admission"] true 1
-        (some
-          (mkDeterministicSingleTool "serve_requests_for_admission"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("served_by", toJson "plaintiff"),
-              ("requests", toJson ["Admit receipt of the confidential package.", "Admit no written authorization existed.", "Admit transmission to at least one third party."])
-            ]))))
+      ({ (mkTurn "plaintiff" "For case 0, serve a focused first requests-for-admission set that narrows disputed facts, authenticity, or the application of law to fact." ["serve_requests_for_admission"] true maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("served_by", toJson "plaintiff"),
+            ("served_on", toJson "defendant")
+          ]
+       })
   if facts.hasRfaServed && !facts.hasRfaResponses && roleAllowsAll req.roles "defendant" ["respond_requests_for_admission"] then
     actions := actions.concat
-      (mkTurn "defendant" "For case 0, serve responses to requests-for-admission set_index 0." ["respond_requests_for_admission"] true 1
-        (some
-          (mkDeterministicSingleTool "respond_requests_for_admission"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("set_index", toJson (0 : Nat)),
-              ("responding_party", toJson "defendant")
-            ]))))
-  if !facts.hasRule37Motion && roleAllowsAll req.roles "plaintiff" ["file_rule37_motion"] then
+      ({ (mkTurn "defendant" "For case 0, admit, deny, or qualify each request in requests-for-admission set_index 0 from the record." ["respond_requests_for_admission"] true maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("set_index", toJson (0 : Nat)),
+            ("responding_party", toJson "defendant")
+          ]
+       })
+  if !facts.hasRule37Motion && !hasDecisionTraceAction c "pass_rule37_motion" &&
+      roleAllowsAll req.roles "plaintiff" ["file_rule37_motion"] then
     actions := actions.concat
-      (mkTurn "plaintiff" "For case 0, file Rule 37 motion to compel based on interrogatories set_index 0 with relief sought and summary." ["file_rule37_motion"] true 1
-        (some
-          (mkDeterministicSingleTool "file_rule37_motion"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("movant", toJson "plaintiff"),
-              ("target_party", toJson "defendant"),
-              ("discovery_type", toJson "interrogatories"),
-              ("set_index", toJson (0 : Nat)),
-              ("discovery_set_count", toJson (1 : Nat)),
-              ("relief_summary", toJson "order complete verified interrogatory responses")
-            ]))))
+      ({ (mkTurn "plaintiff" "For case 0, file a Rule 37 motion concerning interrogatories set_index 0 only if the record shows a concrete unresolved discovery failure. Identify the failure, requested relief, and supporting record. Otherwise pass." ["file_rule37_motion"] false maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("movant", toJson "plaintiff"),
+            ("target_party", toJson "defendant"),
+            ("discovery_type", toJson "interrogatories"),
+            ("set_index", toJson (0 : Nat)),
+            ("discovery_set_count", toJson (1 : Nat))
+          ]
+       })
   if facts.hasRule37Motion && !facts.hasRule37Order && roleAllowsAll req.roles "judge" ["decide_rule37_motion"] then
-    let grantRule37 := !facts.hasInterrogatoryResponses
-    let sanctionType := if grantRule37 then "fees" else "none"
-    let sanctionAmount : Nat := if grantRule37 then 750 else 0
-    let orderText :=
-      if grantRule37 then
-        "motion granted; compel complete interrogatory responses and award fees"
-      else
-        "motion denied"
     actions := actions.concat
-      (mkTurn "judge" "For case 0, decide Rule 37 motion_index 0 and include sanction decision." ["decide_rule37_motion"] true 1
-        (some
-          (mkDeterministicSingleTool "decide_rule37_motion"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("motion_index", toJson (0 : Nat)),
-              ("granted", toJson grantRule37),
-              ("sanction_type", toJson sanctionType),
-              ("sanction_amount", toJson sanctionAmount),
-              ("order_text", toJson orderText),
-              ("reasoning", toJson (if grantRule37 then
-                "The record shows the requested discovery response remains incomplete, so an order compelling responses and awarding fees is warranted."
-              else
-                "The record shows no unresolved discovery failure that warrants compulsion or sanctions."))
-            ]))))
+      ({ (mkTurn "judge" "For case 0, decide Rule 37 motion_index 0 from the discovery request, response, identified failure, motion, and opposition in the record. Grant only supported relief, decide fees separately, and state the decisive reason." ["decide_rule37_motion"] true maxSteps) with
+          constraints := fixedPayloadConstraints [("motion_index", toJson (0 : Nat))]
+       })
   if rule56WindowEligible c facts "defendant" && roleAllowsAll req.roles "defendant" ["file_rule56_motion"] then
     actions := actions.concat (mkTurn "defendant" "For case 0, optionally file Rule 56 motion if no genuine dispute of material fact." ["file_rule56_motion"] false maxSteps)
   if facts.hasRule56Motion && !facts.hasRule56Opposition && roleAllowsAll req.roles "plaintiff" ["oppose_rule56_motion"] then
@@ -2667,34 +2557,13 @@ def pretrialCandidates (req : OpportunityRequest) (c : CaseState) (facts : TurnF
       (mkTurn "judge" "For case 0, if confidentiality restrictions are no longer required, lift protective order po-0001." ["lift_protective_order"] false maxSteps)
   if facts.hasAnswer && !facts.hasRule41Dismissal && roleAllowsAll req.roles "plaintiff" ["dismiss_case_rule41"] then
     actions := actions.concat
-      (mkTurn "plaintiff" "For case 0, if the parties stipulate, dismiss the action under Rule 41." ["dismiss_case_rule41"] false 1
-        (some
-          (mkDeterministicSingleTool "dismiss_case_rule41"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("with_prejudice", toJson false),
-              ("reason", toJson "stipulated dismissal")
-            ]))))
+      (mkTurn "plaintiff" "For case 0, dismiss the action under Rule 41 only if the record supports voluntary dismissal or a stipulation. State whether dismissal is with prejudice and why. Otherwise pass." ["dismiss_case_rule41"] false maxSteps)
   if facts.hasAnswer && roleAllowsAll req.roles "judge" ["enter_settlement"] then
     actions := actions.concat
-      (mkTurn "judge" "For case 0, if parties have reached agreement, enter settlement with amount and consent_judgment." ["enter_settlement"] false 1
-        (some
-          (mkDeterministicSingleTool "enter_settlement"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("amount", toJson (185000 : Nat)),
-              ("consent_judgment", toJson true),
-              ("summary", toJson "Settlement entered after pleadings and motion practice.")
-            ]))))
+      (mkTurn "judge" "For case 0, enter a settlement only if the record shows an agreement. State its supported amount, whether it includes a consent judgment, and its terms. Otherwise pass." ["enter_settlement"] false maxSteps)
   if !facts.hasPretrialOrder && roleAllowsAll req.roles "judge" ["enter_pretrial_order"] then
     actions := actions.concat
-      (mkTurn "judge" "For case 0, enter a Rule 16(e) pretrial order defining claims and exhibits for trial control." ["enter_pretrial_order"] false 1
-        (some
-          (mkDeterministicSingleTool "enter_pretrial_order"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("text", toJson "pretrial_order: claim=claim-1 documentary exhibits preserved for trial")
-            ]))))
+      (mkTurn "judge" "For case 0, enter a Rule 16(e) pretrial order that identifies the claims, defenses, admitted facts, disputed issues, and exhibits shown by the record." ["enter_pretrial_order"] true maxSteps)
   if roleAllowsAll req.roles "judge" ["transition_case"] then
     actions := actions.concat (mkTurn "judge" "For case 0, transition case to trial only." ["transition_case"] true 1
       (some (mkDeterministicSingleTool "transition_case"
@@ -3151,90 +3020,70 @@ def trialCandidates (req : OpportunityRequest) (c : CaseState) (facts : TurnFact
 
 def postJudgmentCandidates (req : OpportunityRequest) (c : CaseState) (facts : TurnFacts) (maxSteps : Nat) : List OpportunitySpec := Id.run do
   let mut actions : List OpportunitySpec := []
+  if c.status = "judgment_entered" && facts.hasExpiredRule68Offer && !facts.hasRule68CostShift &&
+      roleAllowsAll req.roles "judge" ["evaluate_rule68_cost_shift"] then
+    actions := actions.concat
+      (mkTurn "judge" "For case 0, evaluate Rule 68(d) cost shifting for expired offer_index 0 using the entered judgment amount." ["evaluate_rule68_cost_shift"] true 1
+        (some
+          (mkDeterministicSingleTool "evaluate_rule68_cost_shift"
+            (Json.mkObj [
+              ("case_id", toJson c.case_id),
+              ("offer_index", toJson (0 : Nat)),
+              ("awarded_to", toJson "defendant"),
+              ("amount", toJson c.monetary_judgment),
+              ("reason", toJson "comparison of entered judgment with expired Rule 68 offer")
+            ]))))
   if c.status = "judgment_entered" && !facts.hasRule59Motion &&
       roleAllowsAll req.roles "defendant" ["file_rule59_motion"] then
-    let payload := Json.mkObj [
-      ("case_id", toJson c.case_id),
-      ("last_judgment_date", toJson c.filed_on),
-      ("filed_at", toJson c.filed_on)
-    ]
     actions := actions.concat
-      (mkTurn "defendant" "For case 0, if a new trial or alteration is sought, file a timely Rule 59 motion." ["file_rule59_motion"] false 1
-        (some (mkDeterministicSingleTool "file_rule59_motion" payload)))
+      ({ (mkTurn "defendant" "For case 0, file a Rule 59 motion only if the record supports a timely request for a new trial or alteration of the judgment. Identify the motion type and grounds. Otherwise pass." ["file_rule59_motion"] false maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("last_judgment_date", toJson c.filed_on),
+            ("filed_at", toJson c.filed_on)
+          ]
+       })
   if c.status = "judgment_entered" && facts.hasRule59Motion && !facts.hasRule59Order &&
       roleAllowsAll req.roles "judge" ["resolve_rule59_motion"] then
     actions := actions.concat
-      (mkTurn "judge" "For case 0, resolve Rule 59 motion_index 0 as granted or denied." ["resolve_rule59_motion"] true 1
-        (some
-          (mkDeterministicSingleTool "resolve_rule59_motion"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("motion_index", toJson (0 : Nat)),
-              ("granted", toJson false),
-              ("order_text", toJson "Rule 59 motion denied")
-            ]))))
+      ({ (mkTurn "judge" "For case 0, resolve Rule 59 motion_index 0 from the asserted grounds and case record. State whether relief is granted and explain the ruling." ["resolve_rule59_motion"] true maxSteps) with
+          constraints := fixedPayloadConstraints [("motion_index", toJson (0 : Nat))]
+       })
   if c.status = "judgment_entered" && facts.hasDefaultJudgment && !facts.hasRule60Motion &&
       roleAllowsAll req.roles "defendant" ["file_rule60_motion"] then
-    let payload := Json.mkObj [
-      ("case_id", toJson c.case_id),
-      ("ground", toJson "60b1_mistake"),
-      ("ground_description", toJson "service-routing error and prompt corrective appearance"),
-      ("last_judgment_date", toJson c.filed_on),
-      ("filed_at", toJson c.filed_on)
-    ]
     actions := actions.concat
-      (mkTurn "defendant" "For case 0, if relief from default judgment is sought, file Rule 60 motion with ground and a timely filed_at date." ["file_rule60_motion"] false 1
-        (some (mkDeterministicSingleTool "file_rule60_motion" payload)))
+      ({ (mkTurn "defendant" "For case 0, file a Rule 60 motion from the default judgment only if the record supports a recognized ground for timely relief. Identify the ground and supporting facts. Otherwise pass." ["file_rule60_motion"] false maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("last_judgment_date", toJson c.filed_on),
+            ("filed_at", toJson c.filed_on)
+          ]
+       })
   if c.status = "judgment_entered" && !facts.hasDefaultJudgment && !facts.hasRule60Motion &&
       roleAllowsAll req.roles "defendant" ["file_rule60_motion"] then
-    let payload := Json.mkObj [
-      ("case_id", toJson c.case_id),
-      ("ground", toJson "60b6_other"),
-      ("ground_description", toJson "post-judgment relief requested"),
-      ("last_judgment_date", toJson c.filed_on),
-      ("filed_at", toJson c.filed_on)
-    ]
     actions := actions.concat
-      (mkTurn "defendant" "For case 0, if post-judgment relief is sought, file Rule 60 motion with ground and timely filed_at date." ["file_rule60_motion"] false 1
-        (some (mkDeterministicSingleTool "file_rule60_motion" payload)))
+      ({ (mkTurn "defendant" "For case 0, file a Rule 60 motion only if the record supports a recognized ground for timely relief from the judgment. Identify the ground and supporting facts. Otherwise pass." ["file_rule60_motion"] false maxSteps) with
+          constraints := fixedPayloadConstraints [
+            ("last_judgment_date", toJson c.filed_on),
+            ("filed_at", toJson c.filed_on)
+          ]
+       })
   if c.status = "judgment_entered" && facts.hasRule60Motion && !facts.hasRule60Order &&
       roleAllowsAll req.roles "judge" ["resolve_rule60_motion"] then
     actions := actions.concat
       (mkTurn "judge" "For case 0, resolve Rule 60 motion_index 0 as granted or denied with a short relief summary." ["resolve_rule60_motion"] true maxSteps)
   if c.status = "judgment_entered" && !facts.hasSupersedeasBond &&
-      roleAllowsAll req.roles "judge" ["post_supersedeas_bond"] then
+      roleAllowsAll req.roles "defendant" ["post_supersedeas_bond"] then
     actions := actions.concat
-      (mkTurn "judge" "For case 0, post supersedeas bond to secure judgment pending further proceedings." ["post_supersedeas_bond"] false 1
-        (some
-          (mkDeterministicSingleTool "post_supersedeas_bond"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("effective_until", toJson c.filed_on),
-              ("note", toJson "bond posted")
-            ]))))
+      (mkTurn "defendant" "For case 0, post a supersedeas bond only if the record supports security pending further proceedings. State its effective period and terms. Otherwise pass." ["post_supersedeas_bond"] false maxSteps)
   if c.status = "judgment_entered" && facts.hasSupersedeasBond && !facts.hasDiscretionaryStay &&
       roleAllowsAll req.roles "judge" ["order_discretionary_stay"] then
     actions := actions.concat
-      (mkTurn "judge" "For case 0, order discretionary stay pending post-judgment motion resolution." ["order_discretionary_stay"] false 1
-        (some
-          (mkDeterministicSingleTool "order_discretionary_stay"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("start_on", toJson c.filed_on),
-              ("end_on", toJson c.filed_on),
-              ("reason", toJson "temporary stay")
-            ]))))
+      (mkTurn "judge" "For case 0, order a discretionary stay only if the bond, post-judgment posture, and record support one. State its dates and reason. Otherwise pass." ["order_discretionary_stay"] false maxSteps)
   if c.status = "judgment_entered" && facts.hasDiscretionaryStay && !facts.hasStayLift &&
       roleAllowsAll req.roles "judge" ["lift_stay"] then
     actions := actions.concat
-      (mkTurn "judge" "For case 0, lift discretionary stay when grounds no longer support continuation." ["lift_stay"] false 1
-        (some
-          (mkDeterministicSingleTool "lift_stay"
-            (Json.mkObj [
-              ("case_id", toJson c.case_id),
-              ("stay_index", toJson (0 : Nat)),
-              ("reason", toJson "stay lifted")
-            ]))))
+      ({ (mkTurn "judge" "For case 0, lift discretionary stay_index 0 only if the record no longer supports continuation. State the reason. Otherwise pass." ["lift_stay"] false maxSteps) with
+          constraints := fixedPayloadConstraints [("stay_index", toJson (0 : Nat))]
+       })
   actions
 
 def availableOpportunities (req : OpportunityRequest) : List OpportunitySpec := Id.run do
@@ -4237,7 +4086,13 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
         throw s!"invalid target_party: {targetPartyRaw}"
       if targetParty = servedBy then
         throw "rule 11 notice target must be the opposing party"
-      let c1 := appendTrace (appendDocket c "Rule 11 Safe Harbor Notice" "served")
+      let challengedFiling ← getString a.payload "challenged_filing"
+      let grounds ← getString a.payload "grounds"
+      let servedAt := match getStringOpt a.payload "served_at" with
+        | .ok (some s) => s
+        | _ => c.filed_on
+      let description := s!"served_by={servedBy} target_party={targetParty} challenged_filing={challengedFiling} grounds={grounds} served_at={servedAt}"
+      let c1 := appendTrace (appendDocket c "Rule 11 Safe Harbor Notice" description)
         "serve_rule11_safe_harbor_notice" "served" ["FRCP 11(c)(2)"]
       pure <| updateCase s c1
   | "withdraw_or_correct_filing" =>
@@ -4250,7 +4105,12 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       let noticeResolved ← getBoolD a.payload "notice_resolved" false
       if noticeResolved then
         throw "rule 11 notice already resolved"
-      let c1 := appendTrace (appendDocket c "Withdrawal or Correction" "resolved")
+      let resolutionSummary ← getString a.payload "resolution_summary"
+      let resolvedAt := match getStringOpt a.payload "resolved_at" with
+        | .ok (some value) => value
+        | _ => c.filed_on
+      let c1 := appendTrace (appendDocket c "Withdrawal or Correction"
+        s!"notice_index={noticeIndex} by_party={_byParty} resolution_summary={resolutionSummary} resolved_at={resolvedAt}")
         "withdraw_or_correct_filing" "resolved_safe_harbor" ["FRCP 11(c)(2)"]
       pure <| updateCase s c1
   | "file_rule11_motion" =>
@@ -4276,7 +4136,10 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
           if elapsed < 21 then
             throw "rule 11 safe harbor period has not elapsed"
       | _, _ => pure ()
-      let c1 := appendTrace (appendDocket c "Rule 11 Motion" "filed")
+      let summary ← getString a.payload "summary"
+      let filedAt := filedAtOpt.getD c.filed_on
+      let c1 := appendTrace (appendDocket c "Rule 11 Motion"
+        s!"movant={_movant} notice_index={noticeIndex} filed_at={filedAt} summary={summary}")
         "file_rule11_motion" "filed" ["FRCP 11(c)(2)"]
       pure <| updateCase s c1
   | "decide_rule11_motion" =>
@@ -4370,7 +4233,10 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
           throw "request-for-production set index out of range"
         else
           throw "request-for-admission set index out of range"
-      let c1 := appendTrace (appendDocket c "Rule 37 Motion" "filed")
+      let reliefSought ← getString a.payload "relief_sought"
+      let summary ← getString a.payload "summary"
+      let c1 := appendTrace (appendDocket c "Rule 37 Motion"
+        s!"movant={movant} target_party={targetParty} discovery_type={discoveryType} set_index={setIndex} relief_sought={reliefSought} summary={summary}")
         "file_rule37_motion" discoveryType ["FRCP 37(a)"]
       pure <| updateCase s c1
   | "decide_rule37_motion" =>
@@ -4641,7 +4507,11 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
         "interrogatory_count" questionsLen
       let usage1 := setLimitUsage c.limit_usage "discovery.interrogatory_sets_per_side" servedBy phase setAttempted
       let usage2 := setLimitUsage usage1 "discovery.interrogatories_per_set" servedBy phase questionsLen
-      let c1 := appendTrace (appendDocket { c with limit_usage := usage2 } "Interrogatories Served" s!"{servedBy}: served")
+      let questions := match a.payload.getObjVal? "questions" with
+        | .ok value => Json.compress value
+        | .error _ => "[]"
+      let c1 := appendTrace (appendDocket { c with limit_usage := usage2 } "Interrogatories Served"
+        s!"{servedBy}: questions={questions}")
         "serve_interrogatories" "served" ["FRCP 33"]
       pure <| updateCase s c1
   | "respond_interrogatories" =>
@@ -4667,7 +4537,14 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
               "discovery_response_days_elapsed" elapsed
             pure <| setLimitUsage usage "discovery.response_deadline_days" responding phase elapsed
         | _, _ => pure usage
-      let c1 := appendTrace (appendDocket { c with limit_usage := usage } "Interrogatory Responses" s!"{responding}: served")
+      let answers := match a.payload.getObjVal? "answers" with
+        | .ok value => Json.compress value
+        | .error _ => "[]"
+      let objections := match a.payload.getObjVal? "objections" with
+        | .ok value => Json.compress value
+        | .error _ => "[]"
+      let c1 := appendTrace (appendDocket { c with limit_usage := usage } "Interrogatory Responses"
+        s!"{responding}: set_index={setIndex} answers={answers} objections={objections}")
         "respond_interrogatories" "served" ["FRCP 33(b)"]
       pure <| updateCase s c1
   | "respond_interrogatory_item" =>
@@ -4755,7 +4632,11 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
         "rfp_request_count" requestLen
       let usage1 := setLimitUsage c.limit_usage "discovery.rfp_sets_per_side" servedBy phase setAttempted
       let usage2 := setLimitUsage usage1 "discovery.rfp_requests_per_set" servedBy phase requestLen
-      let c1 := appendTrace (appendDocket { c with limit_usage := usage2 } "Requests for Production Served" s!"{servedBy}: served")
+      let requests := match a.payload.getObjVal? "requests" with
+        | .ok value => Json.compress value
+        | .error _ => "[]"
+      let c1 := appendTrace (appendDocket { c with limit_usage := usage2 } "Requests for Production Served"
+        s!"{servedBy}: requests={requests}")
         "serve_request_for_production" "served" ["FRCP 34"]
       pure <| updateCase s c1
   | "respond_request_for_production" =>
@@ -4781,7 +4662,14 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
               "discovery_response_days_elapsed" elapsed
             pure <| setLimitUsage usage "discovery.response_deadline_days" responding phase elapsed
         | _, _ => pure usage
-      let c1 := appendTrace (appendDocket { c with limit_usage := usage } "Responses to Requests for Production" s!"{responding}: served")
+      let responses := match a.payload.getObjVal? "responses" with
+        | .ok value => Json.compress value
+        | .error _ => "[]"
+      let producedFileIds := match a.payload.getObjVal? "produced_file_ids" with
+        | .ok value => Json.compress value
+        | .error _ => "[]"
+      let c1 := appendTrace (appendDocket { c with limit_usage := usage } "Responses to Requests for Production"
+        s!"{responding}: set_index={setIndex} responses={responses} produced_file_ids={producedFileIds}")
         "respond_request_for_production" "served" ["FRCP 34"]
       pure <| updateCase s c1
   | "serve_requests_for_admission" =>
@@ -4802,7 +4690,11 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
         "rfa_request_count" requestLen
       let usage1 := setLimitUsage c.limit_usage "discovery.rfa_sets_per_side" servedBy phase setAttempted
       let usage2 := setLimitUsage usage1 "discovery.rfa_requests_per_set" servedBy phase requestLen
-      let c1 := appendTrace (appendDocket { c with limit_usage := usage2 } "Requests for Admission Served" s!"{servedBy}: served")
+      let requests := match a.payload.getObjVal? "requests" with
+        | .ok value => Json.compress value
+        | .error _ => "[]"
+      let c1 := appendTrace (appendDocket { c with limit_usage := usage2 } "Requests for Admission Served"
+        s!"{servedBy}: requests={requests}")
         "serve_requests_for_admission" "served" ["FRCP 36"]
       pure <| updateCase s c1
   | "respond_requests_for_admission" =>
@@ -4828,7 +4720,11 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
               "discovery_response_days_elapsed" elapsed
             pure <| setLimitUsage usage "discovery.response_deadline_days" responding phase elapsed
         | _, _ => pure usage
-      let c1 := appendTrace (appendDocket { c with limit_usage := usage } "Responses to Requests for Admission" s!"{responding}: served")
+      let responses := match a.payload.getObjVal? "responses" with
+        | .ok value => Json.compress value
+        | .error _ => "[]"
+      let c1 := appendTrace (appendDocket { c with limit_usage := usage } "Responses to Requests for Admission"
+        s!"{responding}: set_index={setIndex} responses={responses}")
         "respond_requests_for_admission" "served" ["FRCP 36"]
       pure <| updateCase s c1
   | "enter_partial_judgment" =>
@@ -4997,7 +4893,10 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
         | none => throw "rule 59 motion requires entered judgment"
       let filedAt ← getString a.payload "filed_at"
       validateRule59Timing judgmentDate filedAt
-      let c1 := appendTrace (appendDocket c "Rule 59 Motion" "filed")
+      let motionType ← getString a.payload "motion_type"
+      let grounds ← getString a.payload "grounds"
+      let c1 := appendTrace (appendDocket c "Rule 59 Motion"
+        s!"motion_type={motionType} filed_at={filedAt} grounds={grounds}")
         "file_rule59_motion" "filed" ["FRCP 59(b)", "FRCP 59(e)"]
       pure <| updateCase s c1
   | "resolve_rule59_motion" =>
@@ -5029,7 +4928,9 @@ def step (s : CourtState) (a : CourtAction) : Except String CourtState := do
       let ground ← getString a.payload "ground"
       let filedAt ← getString a.payload "filed_at"
       validateRule60Timing judgmentDate filedAt ground
-      let c1 := appendTrace (appendDocket c "Rule 60 Motion" "filed")
+      let groundDescription ← getString a.payload "ground_description"
+      let c1 := appendTrace (appendDocket c "Rule 60 Motion"
+        s!"ground={ground} filed_at={filedAt} ground_description={groundDescription}")
         "file_rule60_motion" "filed" ["FRCP 60(b)"]
       pure <| updateCase s c1
   | "enter_default" =>

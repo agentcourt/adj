@@ -4,6 +4,8 @@ Agent District Court (ADC) implements civil adjudication with a Lean rule engine
 
 ADC accepts either a complaint or a scenario JSON file.  Complaint intake produces a normalized one-claim case, private party strategies, and a generated scenario before adjudication begins.  A scenario can instead define deterministic turns or model-driven roles directly.
 
+Generated cases use the `autopilot_trial` opportunity loop.  Assigned actors provide the substance of pleadings, discovery, motions, rulings, trial presentations, and post-judgment requests.  The Lean engine supplies state-derived procedural actions such as phase transitions, jury setup, and judgment entry.
+
 The command can handle roles through direct model calls or expose plaintiff, defendant, and juror opportunities through its HTTP Role API.  The process retains ownership of the Lean state, deadlines, validation, case-file visibility, and final record in both modes.  This repository owns `adc-mcp`, `adc-run`, the participant launchers, and the runtime components required for standalone ADC operation.  The `adjservices` repository supplies optional Clerk services, attestation, deployment, reporting, and web programs.
 
 ## Documentation
@@ -78,7 +80,7 @@ The ADC directory contains the complete procedure-specific implementation.  Shar
 
 ## Records
 
-A complaint-driven run writes `normalized-case.json`, party strategies, and `generated-scenario.json` before adjudication.  The adjudication record includes `case-manifest.json`, `run.json`, `state.json`, `certificate.json`, `runtime.json`, `events.ndjson`, `run.db`, `transcript.md`, `digest.md`, and `work-notes.ndjson`.  The run and SQLite records include logical provider requests and observed usage and cost totals, including digest generation, while `adc verify-certificate` replays the accepted Lean transitions and compares the result with the recorded terminal state.
+A complaint-driven run writes `normalized-case.json`, party strategies, and `generated-scenario.json` before adjudication.  The adjudication record includes `case-manifest.json`, `run.json`, `state.json`, `certificate.json`, `runtime.json`, `events.ndjson`, `run.db`, `transcript.md`, `digest.md`, and `work-notes.ndjson`.  `run.json` includes logical provider requests and observed usage and cost totals, including digest generation.  The SQLite database stores the case state and action events.  `adc verify-certificate` replays the accepted Lean transitions and compares the result with the recorded terminal state.
 
 ## License
 

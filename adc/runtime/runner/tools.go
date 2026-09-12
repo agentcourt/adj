@@ -642,16 +642,19 @@ func buildActionSchemas() map[string]map[string]any {
 		},
 		"notice_index",
 		"by_party",
+		"resolution_summary",
 	), "withdraw_or_correct_filing")
 
 	register(schemaObj(
 		map[string]any{
 			"movant":       map[string]any{"type": "string", "enum": []string{"plaintiff", "defendant"}},
 			"notice_index": map[string]any{"type": "integer", "minimum": 0},
+			"summary":      map[string]any{"type": "string"},
 			"filed_at":     map[string]any{"type": "string"},
 		},
 		"movant",
 		"notice_index",
+		"summary",
 	), "file_rule11_motion")
 
 	register(schemaObj(
@@ -804,7 +807,7 @@ func buildActionSchemas() map[string]map[string]any {
 	register(schemaObj(
 		map[string]any{
 			"served_by": map[string]any{"type": "string", "enum": []string{"plaintiff", "defendant"}},
-			"served_on": map[string]any{"type": "string", "format": "date"},
+			"served_on": map[string]any{"type": "string", "enum": []string{"plaintiff", "defendant"}},
 			"questions": map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 			"served_at": map[string]any{"type": "string"},
 		},
@@ -823,12 +826,14 @@ func buildActionSchemas() map[string]map[string]any {
 		},
 		"responding_party",
 		"set_index",
+		"answers",
+		"objections",
 	), "respond_interrogatories")
 
 	register(schemaObj(
 		map[string]any{
 			"served_by": map[string]any{"type": "string", "enum": []string{"plaintiff", "defendant"}},
-			"served_on": map[string]any{"type": "string", "format": "date"},
+			"served_on": map[string]any{"type": "string", "enum": []string{"plaintiff", "defendant"}},
 			"requests":  map[string]any{"type": "array", "items": map[string]any{"type": "string"}},
 		},
 		"served_by",
@@ -846,6 +851,7 @@ func buildActionSchemas() map[string]map[string]any {
 		},
 		"responding_party",
 		"set_index",
+		"responses",
 	), "respond_request_for_production")
 
 	register(schemaObj(
@@ -857,22 +863,27 @@ func buildActionSchemas() map[string]map[string]any {
 		},
 		"responding_party",
 		"set_index",
+		"responses",
 	), "respond_requests_for_admission")
 
 	register(schemaObj(
 		map[string]any{
 			"motion_type": map[string]any{"type": "string"},
+			"grounds":     map[string]any{"type": "string"},
 			"filed_at":    map[string]any{"type": "string"},
 		},
 		"motion_type",
+		"grounds",
 	), "file_rule59_motion")
 
 	register(schemaObj(
 		map[string]any{
-			"ground":   map[string]any{"type": "string"},
-			"filed_at": map[string]any{"type": "string"},
+			"ground":             map[string]any{"type": "string"},
+			"ground_description": map[string]any{"type": "string"},
+			"filed_at":           map[string]any{"type": "string"},
 		},
 		"ground",
+		"ground_description",
 	), "file_rule60_motion")
 
 	register(schemaObj(

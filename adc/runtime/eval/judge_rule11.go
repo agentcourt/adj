@@ -59,7 +59,6 @@ type JudgeRule11Options struct {
 	PromptDir             string
 	PromptFiles           map[string]string
 	Court                 courts.Profile
-	CounterfactualModel   bool
 }
 
 type JudgeRule11RescoreOptions struct {
@@ -188,9 +187,6 @@ func RunJudgeRule11(ctx context.Context, opts JudgeRule11Options) (resultValue J
 	if strings.TrimSpace(opts.OutputDir) == "" {
 		return JudgeRule11Summary{}, fmt.Errorf("output directory is required")
 	}
-	if strings.TrimSpace(opts.OpportunityPromptPath) != "" && !opts.CounterfactualModel {
-		return JudgeRule11Summary{}, fmt.Errorf("opportunity prompt file requires counterfactual model mode")
-	}
 	if opts.Timeout <= 0 {
 		opts.Timeout = 90 * time.Second
 	}
@@ -212,17 +208,13 @@ func RunJudgeRule11(ctx context.Context, opts JudgeRule11Options) (resultValue J
 	if len(opts.Engine.Command) == 0 {
 		opts.Engine = lean.New(nil)
 	}
-	modelRef := modelrequest.ModelRef{}
-	var client *openai.Client
-	if opts.CounterfactualModel {
-		modelRef, err = modelrequest.ParseModelRef(opts.Model)
-		if err != nil {
-			return JudgeRule11Summary{}, fmt.Errorf("parse --model: %w", err)
-		}
-		client, err = openai.NewForEndpoint(modelRef.Endpoint, opts.Online, opts.Timeout)
-		if err != nil {
-			return JudgeRule11Summary{}, err
-		}
+	modelRef, err := modelrequest.ParseModelRef(opts.Model)
+	if err != nil {
+		return JudgeRule11Summary{}, fmt.Errorf("parse --model: %w", err)
+	}
+	client, err := openai.NewForEndpoint(modelRef.Endpoint, opts.Online, opts.Timeout)
+	if err != nil {
+		return JudgeRule11Summary{}, err
 	}
 	if err := os.MkdirAll(opts.OutputDir, 0o755); err != nil {
 		return JudgeRule11Summary{}, fmt.Errorf("create output directory %s: %w", opts.OutputDir, err)
@@ -343,8 +335,8 @@ func newJudgeRule11Summary(opts JudgeRule11Options, promptVariant judgeRule11Pro
 	return JudgeRule11Summary{
 		Evaluation:          "judge_rule11",
 		Model:               opts.Model,
-		ExecutionMode:       judgeEvalExecutionMode(opts.CounterfactualModel),
-		CounterfactualModel: opts.CounterfactualModel,
+		ExecutionMode:       "production",
+		CounterfactualModel: false,
 		PromptSource:        promptVariant.Source,
 		PromptName:          promptVariant.Name,
 		PromptPath:          promptVariant.Path,
@@ -379,24 +371,18 @@ func runJudgeRule11Fixture(
 	if err != nil {
 		return JudgeRule11Result{}, fmt.Errorf("fixture %s roles: %w", fixture.ID, err)
 	}
-	executionModel := opts.Model
-	if opts.CounterfactualModel {
-		executionModel = modelRef.Model
-	}
 	callCtx, cancel := context.WithTimeout(ctx, opts.Timeout)
 	execution, executionErr := executeJudgeOpportunity(callCtx, judgeOpportunityExecutionOptions{
-		Engine:                     opts.Engine,
-		State:                      state,
-		Roles:                      roles,
-		RolesPayload:               rolesPayload,
-		Client:                     client,
-		Court:                      opts.Court,
-		Model:                      executionModel,
-		Temperature:                opts.Temperature,
-		PromptDir:                  opts.PromptDir,
-		PromptFiles:                opts.PromptFiles,
-		CounterfactualModel:        opts.CounterfactualModel,
-		RequireDeterministicAction: true,
+		Engine:       opts.Engine,
+		State:        state,
+		Roles:        roles,
+		RolesPayload: rolesPayload,
+		Client:       client,
+		Court:        opts.Court,
+		Model:        modelRef.Model,
+		Temperature:  opts.Temperature,
+		PromptDir:    opts.PromptDir,
+		PromptFiles:  opts.PromptFiles,
 		Objective: func(opportunity map[string]any) (string, error) {
 			if strings.TrimSpace(promptVariant.Text) == "" {
 				return stringField(opportunity, "objective"), nil
@@ -418,8 +404,8 @@ func runJudgeRule11Fixture(
 	result.PromptSource = promptVariant.Source
 	result.PromptName = promptVariant.Name
 	result.PromptPath = promptVariant.Path
-	result.ExecutionMode = judgeEvalExecutionMode(opts.CounterfactualModel)
-	result.CounterfactualModel = opts.CounterfactualModel
+	result.ExecutionMode = "production"
+	result.CounterfactualModel = false
 	if result.InvalidReason == "" {
 		result.InvalidReason = judgeEvalProceduralInvalidReason(executionErr)
 	}

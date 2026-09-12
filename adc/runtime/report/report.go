@@ -365,7 +365,6 @@ func summarizeArgumentsBySideLLM(plaintiffText, defendantText, courtroomContext,
 	defer cancel()
 
 	model = resolveSummaryModel(model)
-	temp := 0.2
 	systemPrompt, err := promptCatalog.Text(adcprompts.ReportSummarySystemID)
 	if err != nil {
 		return "", "", err
@@ -389,7 +388,7 @@ func summarizeArgumentsBySideLLM(plaintiffText, defendantText, courtroomContext,
 			"content": userPrompt,
 		},
 	}
-	resp, err := client.CreateResponse(ctx, model, input, nil, "", &temp)
+	resp, err := client.CreateResponse(ctx, model, input, nil, "", nil)
 	if err != nil {
 		return "", "", fmt.Errorf("request summary: %w", err)
 	}
@@ -413,7 +412,7 @@ func summarizeArgumentsBySideLLM(plaintiffText, defendantText, courtroomContext,
 				"content": repairUser,
 			},
 		}
-		fixResp, fixErr := client.CreateResponse(ctx, model, fixPrompt, nil, "", &temp)
+		fixResp, fixErr := client.CreateResponse(ctx, model, fixPrompt, nil, "", nil)
 		if fixErr != nil {
 			return "", "", fmt.Errorf("summary parse failed (%v) and repair failed: %w", err, fixErr)
 		}

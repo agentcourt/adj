@@ -66,8 +66,6 @@ func TestRunEvalSuiteHelpIncludesSharedOptions(t *testing.T) {
 
 func TestRunEvalCounterfactualModelOption(t *testing.T) {
 	counterfactualSuites := map[string]bool{
-		"judge-rule11": true,
-		"judge-rule37": true,
 		"judge-rule58": true,
 	}
 	for _, subcommand := range []string{"judge-for-cause", "judge-voir-dire", "judge-rule11", "judge-rule12", "judge-rule37", "judge-rule51", "judge-rule52", "judge-rule56", "judge-rule58", "judge-rule60"} {

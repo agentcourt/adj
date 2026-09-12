@@ -112,56 +112,16 @@ func TestRequireJSONBooleanFieldsRejectsNonBoolean(t *testing.T) {
 	}
 }
 
-func TestDeterministicSuitesRejectCandidateOpportunityPrompt(t *testing.T) {
+func TestRule58RejectsCandidateOpportunityPromptOutsideCounterfactualMode(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name string
-		run  func() error
-	}{
-		{
-			name: "rule 11",
-			run: func() error {
-				_, err := RunJudgeRule11(nil, JudgeRule11Options{
-					FixturesPath:          "unused",
-					OutputDir:             "unused",
-					OpportunityPromptPath: "candidate.md",
-				})
-				return err
-			},
-		},
-		{
-			name: "rule 37",
-			run: func() error {
-				_, err := RunJudgeRule37(nil, JudgeRule37Options{
-					FixturesPath:          "unused",
-					OutputDir:             "unused",
-					OpportunityPromptPath: "candidate.md",
-				})
-				return err
-			},
-		},
-		{
-			name: "rule 58",
-			run: func() error {
-				_, err := RunJudgeRule58(nil, JudgeRule58Options{
-					FixturesPath:          "unused",
-					OutputDir:             "unused",
-					OpportunityPromptPath: "candidate.md",
-				})
-				return err
-			},
-		},
-	}
-	for _, test := range tests {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			err := test.run()
-			if err == nil || !strings.Contains(err.Error(), "opportunity prompt file requires counterfactual model mode") {
-				t.Fatalf("Run error = %v", err)
-			}
-		})
+	_, err := RunJudgeRule58(nil, JudgeRule58Options{
+		FixturesPath:          "unused",
+		OutputDir:             "unused",
+		OpportunityPromptPath: "candidate.md",
+	})
+	if err == nil || !strings.Contains(err.Error(), "opportunity prompt file requires counterfactual model mode") {
+		t.Fatalf("Run error = %v", err)
 	}
 }
 
