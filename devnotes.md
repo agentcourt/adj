@@ -706,3 +706,12 @@ Certificate replay passed all 13 actions for both runs.  Case-record generation 
 - [x] Run the focused and complete Go tests.
 - [x] Run Go vet, build, and final diff checks.
 - [x] Run AARD from `adj`, test council failure handling, verify the certificates, and generate the case-record listings.
+
+## AARD follow-up
+
+The installed pool excludes `ibm-granite/granite-4.1-8b` at `coreweave/bf16`.  Two live AARD council tests returned HTTP 404 for that configuration, and OpenRouter returned an empty endpoint list for the model.  The generated pool records remain available in Git history and the generation output.
+
+- [x] Remove the unavailable Granite configuration from the installed pool.
+- [ ] Route the model-pool Pi screen through the shared runtime model gateway.
+- [ ] Prove strict decrease and a bound on successful AARD run length.
+- [ ] Complete focused tests, a live council test, and the documentation updates.
