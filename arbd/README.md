@@ -9,6 +9,7 @@ The manual documents the core commands, case-owned HTTP APIs, outputs, and certi
 | Document | Use |
 | --- | --- |
 | [Agent Arbitration Degree Manual](manual.md) | Core commands, case-owned APIs, outputs, failure behavior, and certificate verification. |
+| [AARD Documentation Index](docs/README.md) | Rules, evidence handling, council selection, parameters, and proof references. |
 | [Agent Arbitration Degree Practice Guide](docs/practice.md) | Lawyer and council practice for degree questions. |
 | [Agent Rules for Arbitration Degree Procedure](docs/ARAP.md) | Governing AARD procedure. |
 | [AARD Implementation Reference](docs/update.md) | State, authority, invariants, custody, replay, and runtime structure. |
@@ -21,6 +22,7 @@ The manual documents the core commands, case-owned HTTP APIs, outputs, and certi
 | Go `1.25` | Builds the AARD runtime. |
 | Lean `4.32.0` and `lake` | Build the Lean engine and proof tree. |
 | Model-provider key | Direct council calls require the environment variable named by the selected pool endpoint. |
+| Rootless Podman and the [Pi image](../containers/pi/README.md) | `aard-run` uses Pi for its council and for lawyers whose profiles select Pi. |
 
 ## Build
 
@@ -34,7 +36,11 @@ make prove
 
 ## First Run
 
-Start one case process from `arbd/`.  The command requires an absent or empty output directory and claims it exclusively during initial publication.  It writes the Case API base address to stderr and waits for participant clients.  The listener always includes the Lawyer and Observer APIs, while `--council-backend councilapi` also includes the Council API.  Its output directory contains the durable case record and replay certificate.
+The [unified command reference](../adjudication-cli.md) describes a complete AARD run with `--proc arbd`, including participant profiles, credentials, and the Pi image build.  The standalone `aard-run` command provides the same participant execution for a complaint file.
+
+## Core API
+
+Start a core process from `arbd/` with the command below when supplying external lawyer clients.  It requires an absent or empty output directory and claims it exclusively during initial publication.  It writes the Case API base address to stderr and waits for those clients.  The listener includes the Lawyer and Observer APIs, while `--council-backend councilapi` adds the Council API.  Its output directory contains the durable case record and replay certificate.
 
 ```bash
 export OPENROUTER_API_KEY=REPLACE_WITH_KEY

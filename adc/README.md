@@ -24,6 +24,8 @@ The manual documents the command-line interface, Role API, records, and replay v
 
 ADC builds with Go 1.25 and Lean 4.32.0.  The Lean build uses `lake`.  The Makefile supplies the standard build, test, proof, and example targets.  The `ex1` acceptance fixture also requires OpenSSL to generate its linked signature inputs.
 
+`adc-run` and jury ADC through `adjudicate` require rootless Podman and the [Pi container image](../containers/pi/README.md) for jurors.  A Pi lawyer uses the same image.  The [unified command reference](../adjudication-cli.md) describes complete-case setup, participant profiles, and credentials.
+
 ## Build
 
 Run the build from `adc/`.  It writes the core command to `.bin/adc`, the participant adapter to `.bin/adc-mcp`, and the Lean engine to `.bin/adcengine`.  `adc-mcp` exposes a running case to caller-owned lawyers and jurors.  The [prompt-authoring guide](../docs/prompt-authoring.md#mcp-capabilities) documents MCP key creation, assignment capabilities, and server startup.  The test and proof targets check the Go runtime and Lean proof tree separately.

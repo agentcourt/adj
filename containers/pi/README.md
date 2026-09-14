@@ -11,16 +11,16 @@
 
 ## Build
 
-Run `./build-image.sh` from `containers/pi/`.  From the repository root, run `containers/pi/build-image.sh`.  Set `PI_CONTAINER_IMAGE` to override the default tag.
+The build requires rootless Podman and network access to the base image and package registries.  The repository's `make build` compiles the commands.  The image has a separate build script.  From the repository root:
 
 ```bash
-./build-image.sh
-PI_CONTAINER_IMAGE=my-pi-agent ./build-image.sh
+containers/pi/build-image.sh
+PI_CONTAINER_IMAGE=my-pi-agent containers/pi/build-image.sh
 ```
 
 ## Runtime Use
 
-The four launcher forms use the image for Pi lawyers, jurors, or council members.  Each agent receives a private `/home/user` mount containing its settings, MCP server configuration, model request, and role instructions.  The launcher selects another image when its `--pi-image` option is set.
+The formal local runners use the image for every council or juror process and for lawyers whose profiles select Pi.  Unified Quick uses it for Pi lawyers.  Each agent receives a private `/home/user` mount containing its settings, MCP server configuration, model request, and role instructions.  The standalone `adc-run`, `aar-run`, and `aard-run` commands accept `--pi-image` to select another image.
 
 | Runtime | Agent role | Case adapter | Search extension |
 | --- | --- | --- | --- |
@@ -29,7 +29,9 @@ The four launcher forms use the image for Pi lawyers, jurors, or council members
 | `aard-run` | Lawyers and council members | `/opt/pi-extensions/pi-mcp-adapter/node_modules/pi-mcp-adapter` | Pi Web Access for lawyers when enabled |
 | `adjudicate --proc quick` | Plaintiff and defendant lawyers | `/opt/pi-extensions/pi-mcp-adapter/node_modules/pi-mcp-adapter` | `/opt/pi-extensions/pi-web-access/node_modules/pi-web-access/index.ts` when enabled |
 
-Pi model inference uses the provider authentication selected by its pool entry or agent profile.  Current council and juror pool records use OpenRouter and therefore require `OPENROUTER_API_KEY`.  An OpenAI lawyer profile can use Codex subscription authentication from `~/.codex/auth.json`, while an API-key profile names its source environment variable.  The records and profiles also supply the model, endpoint constraints, request parameters, and persona path.
+The installed default council and juror pool uses OpenRouter and requires `OPENROUTER_API_KEY`.  Custom pools can select Anthropic, DeepSeek, Google, Hugging Face, OpenAI, OpenRouter, or xAI.  The launcher holds the selected upstream credentials and runs the shared model executor behind a local API.  Each Pi council or juror process receives a model alias and a bearer token for its opportunity.  The [model-endpoint guide](../../docs/model-endpoints.md) defines pool records, credentials, endpoint selection, and request accounting.
+
+A Pi lawyer profile selects its own provider and authentication.  OpenAI lawyers can use Codex subscription credentials from `~/.codex/auth.json`.  API-key profiles name their source environment variable.  The launcher passes that lawyer's selected credential to its container.  The [participant profile reference](../../adjudication-cli.md#participant-profiles) defines these settings.
 
 ## Lawyer Web Search
 

@@ -12,11 +12,14 @@ The public procedure identifier `arbd` selects the `aard` core implementation, w
 
 The command accepts one procedure, one proposition, and one settings file.  A document root is optional.  Case, run, and output identifiers may be supplied or generated.
 
-Build all procedure and launcher commands from the repository root.  `make build` writes `adjudicate` to `.bin/` and writes each procedure's commands to its own `.bin/` directory.  The settings example below assumes that `mysettings.json` is in the repository root and names each command and working directory explicitly.
+Build all procedure and launcher commands from the repository root.  `make build` writes `adjudicate` to `.bin/` and writes each procedure's commands to its own `.bin/` directory.  Complete ARB, ARBD, and jury ADC runs also require rootless Podman and the [Pi container image](containers/pi/README.md) for their council or juror processes.  Pi lawyers use the same image.  Codex and Claude lawyer profiles require the corresponding host command, while OpenClaw profiles require Docker and the configured OpenClaw image.  The [participant profiles](#participant-profiles) specify runner and authentication settings.
 
 ```bash
 make build
+containers/pi/build-image.sh
 ```
+
+The [complete-case example](README.md#complete-case) provides an ARB invocation with explicit participant settings.  For unified execution, the settings example below assumes that `mysettings.json` is in the repository root and names each command and working directory explicitly.  The selected profiles and pool determine the required [provider credentials](docs/model-endpoints.md#endpoints-and-credentials).
 
 ```text
 .bin/adjudicate \

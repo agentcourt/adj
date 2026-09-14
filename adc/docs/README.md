@@ -13,8 +13,8 @@ These documents cover ADC rules, practice, runtime records, and proofs.  The [Ag
 | [Courts](courts.md) | Court profiles. |
 | [Juries](juries.md) | Jury constitution, selection, and failure behavior. |
 | [Limits](limits.md) | Runtime and procedural limits. |
-| [Notices](notices.md) | Notice handling. |
-| [Protective Orders](protectiveorders.md) | Confidential evidence rules. |
+| [Copyright and Trademark Notices](notices.md) | Copyright and trademark statements. |
+| [Protective Orders](protectiveorders.md) | Order actions, recorded terms, and enforcement limits. |
 
 ## Runtime
 

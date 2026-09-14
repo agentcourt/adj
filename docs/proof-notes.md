@@ -42,7 +42,7 @@ All three formal procedures write runtime certificates and provide explicit veri
 
 ## Remaining Direction
 
-Future proof work should support operational or adjudicative claims that the system already exposes.  The current branch does not need a new ARB removal-interleaving theorem.  ARB already exposes the relevant council-failure boundary through ordered accepted actions, current-round-voter protection, failure recording, and rule-governed continuation after failure.
+ARB's council-failure results cover ordered accepted actions, current-round-voter protection, failure recording, and continuation after failure.  Further results about action order require a stated runtime or API guarantee and hypotheses that identify which executions the theorem compares.
 
 | Area | Direction | Reason |
 | --- | --- | --- |

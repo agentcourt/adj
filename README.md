@@ -31,6 +31,44 @@ make -C quick build test
 
 The shared `common/` tree contains document import and verification, record writing, case manifests, model requests, provider clients, and persona loading used across the procedures.  It also contains the default juror and council request-spec pool, the persona named by that pool, and a [persona corpus](common/etc/personas/README.md) for custom pools.  One root Go module keeps these shared packages and all five commands together.
 
+## Complete Case
+
+ARB, ARBD, and jury ADC local runs require rootless Podman and the [Pi container image](containers/pi/README.md) for council or juror processes.  Quick requires that image when a lawyer profile selects Pi.  The image has a separate build command, run from the repository root after `make build`:
+
+```bash
+containers/pi/build-image.sh
+```
+
+This example starts an ARB case with two Pi lawyers, web search enabled, and five council members from the default pool.  Three votes determine the result.  It requires valid Codex subscription credentials at `~/.codex/auth.json` for the lawyers and `OPENROUTER_API_KEY` in the environment for the council.  The lawyer model must be available to that Codex account.
+
+From the repository root:
+
+```bash
+cd arb
+.bin/aar-run \
+  --aar-bin .bin/aar \
+  --mcp-bin .bin/aar-mcp \
+  --complaint ../examples/ex01/complaint.md \
+  --council-pool ../common/data/personas/pool.jsonl \
+  --council-size 5 \
+  --required-votes 3 \
+  --plaintiff-lawyer pi \
+  --plaintiff-lawyer-model openai/gpt-5.6-sol \
+  --plaintiff-lawyer-auth subscription \
+  --plaintiff-lawyer-reasoning-effort xhigh \
+  --defendant-lawyer pi \
+  --defendant-lawyer-model openai/gpt-5.6-sol \
+  --defendant-lawyer-auth subscription \
+  --defendant-lawyer-reasoning-effort xhigh \
+  --lawyer-web-search=true \
+  --prompt-dir ../prompts/arb \
+  --launcher-prompt-dir ../prompts/arb \
+  --out-dir out/first-case
+cd ..
+```
+
+The launcher starts both lawyers, the council, the core, and its MCP adapter.  `arb/out/first-case/aar-output/` contains the case record, while `agents/` and `logs/` beneath the launcher output contain participant work and process logs.  Each invocation requires a new output directory.  The [local-runner guide](runtime/localrun/arb/README.md) describes participant settings and retained files.  The [unified command reference](adjudication-cli.md) covers settings-file execution for all five procedures and alternative lawyer runners.
+
 ## Evaluations and Model Pools
 
 The [behavior evals](evals/README.md) place an ADC actor in controlled Lean states, run the production opportunity executor, and score the resulting legal action against committed fixtures.  ADC provides ten judge suites through `adc eval`, with fixtures, candidate prompts, plans, and analyses under `evals/adc/judge/`.  Generated behavior-eval records belong under the ignored `evals/out/` directory.
@@ -39,7 +77,7 @@ The [model-pool tools](model-pool/README.md) inventory provider endpoints, evalu
 
 ## Command-Line Cases
 
-Each command provides `help` for its subcommands.  ADC can start from a complaint, proposition, or prepared scenario.  ARB and AARD start from complaints, while simple and quick start from propositions.  Model-provider credentials depend on the roles, direct model, and council request specifications selected for a case.  The ADC example signing script requires OpenSSL and creates the two linked signature inputs before complaint drafting.
+Each command provides `help` for its subcommands.  These examples exercise the individual cores.  `aar case`, `aard case`, and `quick case` wait for external lawyer clients.  The complete-case launcher above starts those clients.  ADC can start from a complaint, proposition, or prepared scenario.  ARB and AARD start from complaints, while simple and quick start from propositions.  Model-provider credentials depend on the roles, direct model, and council request specifications selected for a case.  The ADC example signing script requires OpenSSL and creates the two linked signature inputs before complaint drafting.
 
 ```bash
 cd adc
@@ -96,7 +134,16 @@ Every procedure writes `case-manifest.json`, `run.json`, and an event record in 
 
 ## Documentation
 
-The [unified command reference](adjudication-cli.md) documents one-case execution across the five procedures, and the [prompt-authoring guide](docs/prompt-authoring.md) covers core, MCP, and launcher prompt catalogs.  The [ADC manual](adc/manual.md), [ARB manual](arb/manual.md), and [AARD manual](arbd/manual.md) document procedure commands, case APIs, records, failure rules, and certificate verification.  The [simple manual](simple/manual.md) defines its direct-model request and record, while the [quick guide](quick/README.md) defines its lawyer API, council execution, and record.  The formal-procedure `docs/` directories contain governing rules, practice guides, engine notes, and proof references, and the [cross-procedure proof status](docs/proof-notes.md) summarizes the maintained Lean results.
+| Reference | Contents |
+| --- | --- |
+| [Repository documentation](docs/README.md) | Shared command, model, prompt, and process references. |
+| [Unified command reference](adjudication-cli.md) | Settings and complete one-case execution for all five procedures. |
+| [ADC documentation](adc/docs/README.md), [ARB documentation](arb/docs/README.md), [AARD documentation](arbd/docs/README.md) | Procedure manuals, rules, practice, engine notes, and proof references. |
+| [Simple manual](simple/manual.md), [Quick guide](quick/README.md) | Direct-model and one-round adversarial execution. |
+| [Prompt authoring](docs/prompt-authoring.md) | Core, MCP, and launcher prompt catalogs. |
+| [Pi container image](containers/pi/README.md), [AAR local runner](runtime/localrun/arb/README.md) | Container build, participant execution, credentials, and retained files. |
+| [Cross-procedure proof status](docs/proof-notes.md) | Maintained Lean results and verification limits. |
+| [marXiv reports](reports/marxiv/README.md) | Papers on procedures, evaluations, and model-pool generation. |
 
 ## License
 

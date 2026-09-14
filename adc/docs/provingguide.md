@@ -1,8 +1,8 @@
 # Lean Proving Guide
 
-This guide is for proving mathematics in Lean, from first contact with tactic mode to custom tactics and packages you may add later.  It is written for this repository's current toolchain, but its scope is deliberately wider than the packages installed here.
+This guide covers Lean proof construction, tactic selection, and optional proof libraries.  ADC uses Lean 4.32.0.  Its [Lake configuration](../engine/lakefile.toml) declares the local `ADC`, `Main`, and `Proofs` libraries, and its [package manifest](../engine/lake-manifest.json) has an empty dependency list.
 
-Lean changes.  Always prefer the reference manual and current package docs when exact syntax is relevant.  Use this guide as the working manual and the cited sources as the final authority.
+Core Lean supplies the tactics used by the maintained ADC proofs.  The mathlib and Aesop entries in this guide describe optional dependencies.  Using those entries requires an approved dependency change and the corresponding imports.  The [ADC proving notes](proving.md) describe the maintained proof root and procedure-specific proof work.
 
 ## Scope and sources
 
@@ -21,7 +21,9 @@ Lean changes.  Always prefer the reference manual and current package docs when 
 | [Reservoir](https://reservoir.lean-lang.org/) | Authoritative for packages | Package registry for Lean libraries and tactics not currently in this repository. |
 | [Duper](https://github.com/leanprover-community/duper) | Primary package source | Example of a substantial external tactic package that is not part of this repository by default. |
 
-The installed tactic surface in this repository comes from three places: core Lean, mathlib, and the packages mathlib pulls in.  The local directories that matter are `Lean/Elab/Tactic`, `Init/Tactics.lean`, and `engine/.lake/packages/mathlib/Mathlib/Tactic`.
+Core tactic sources reside under `src/lean/Lean/Elab/Tactic` and `src/lean/Init/Tactics.lean` in the installed toolchain.  Mathlib's tactic sources become available under `engine/.lake/packages/mathlib/Mathlib/Tactic` only after adding that package.
+
+The tables below include both core and optional tactics.  Core examples include `rfl`, `simp`, `rw`, `cases`, `induction`, `omega`, and `grind`.  Mathlib examples include `norm_num`, `linarith`, `nlinarith`, `ring`, `ring_nf`, `field_simp`, `positivity`, and `gcongr`.  `aesop` requires the Aesop package.  The core reference and each package's documentation specify its imports and syntax.
 
 ## First principles
 
@@ -265,7 +267,7 @@ Guidelines for custom tactics:
 
 ## Mathlib tactic families
 
-The installed mathlib tactic tree is large.  The useful way to understand it is by family, not by alphabetized file list.
+These optional mathlib modules group tactics by their use.  They require adding mathlib to the project and importing the relevant modules.
 
 | Family | Representative tactics or modules | Use |
 | --- | --- | --- |
@@ -279,9 +281,9 @@ The installed mathlib tactic tree is large.  The useful way to understand it is 
 
 The right way to learn a family is to read its docstring, then inspect two or three proofs that use it well.  mathlib's docs index is the fastest entry point.
 
-## Beyond the current install
+## Optional Packages
 
-This repository currently has core Lean plus mathlib and the packages mathlib pulls in.  That is already a large proving surface.  Still, you may later want tactics that are not part of the present dependency set.
+Adding mathlib, Aesop, Duper, or another external library changes ADC's dependencies.  Such a change requires approval and compatibility with the configured Lean version.
 
 | Package or source | What it adds | When to consider it |
 | --- | --- | --- |
@@ -313,7 +315,7 @@ The following table groups the core tactic modules available in this toolchain. 
 
 ## mathlib tactic catalog
 
-This is the broad mathlib proving surface you should expect to encounter or consider.  The list is grouped by function, not by file tree.
+This catalog lists optional mathlib tactics by function.  Their availability depends on an added mathlib dependency and the selected imports.
 
 | Group | Representative mathlib tactics and modules |
 | --- | --- |

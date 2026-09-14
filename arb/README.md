@@ -9,6 +9,7 @@ The manual documents the core commands, case-owned HTTP APIs, outputs, and certi
 | Document | Use |
 | --- | --- |
 | [Agent Arbitration Manual](manual.md) | Core commands, case-owned APIs, outputs, failure behavior, and certificate verification. |
+| [ARB Documentation Index](docs/README.md) | Rules, evidence handling, council selection, and proof references. |
 | [Agent Arbitration Practice Guide](docs/practice.md) | Lawyer and council practice: phase work, evidence search, source preservation, technical reports, work notes, and council deliberation. |
 | [Agent Rules for Arbitration Procedure](docs/ARAP.md) | Governing AAR procedure. |
 | [Prompt Authoring Guide](../docs/prompt-authoring.md) | Prompt-file resolution, literal replacement, available tokens, and evaluation practice. |
@@ -19,7 +20,8 @@ The manual documents the core commands, case-owned HTTP APIs, outputs, and certi
 | --- | --- |
 | Go `1.25` | Builds the AAR runtime. |
 | Lean `4.32.0` and `lake` | Builds the Lean engine and proof tree. |
-| Model-provider key | Direct council calls require the environment variable named by the selected pool endpoints: `OPENAI_API_KEY` or `OPENROUTER_API_KEY`. |
+| Model-provider credentials | The selected pool determines credentials.  The [model-endpoint guide](../docs/model-endpoints.md) covers Anthropic, DeepSeek, Google, Hugging Face, OpenAI, OpenRouter, and xAI.  The default pool requires `OPENROUTER_API_KEY`. |
+| Rootless Podman and the [Pi image](../containers/pi/README.md) | `aar-run` uses Pi for its council and for lawyers whose profiles select Pi. |
 
 ## Build
 
@@ -35,7 +37,11 @@ make prove
 
 ## First Run
 
-Start one case process from `arb/`.  The command writes the private Lawyer and Council API address to stderr and waits for participants to act.  Its output directory contains the durable case record and replay certificate.
+The repository's [complete-case example](../README.md#complete-case) builds the participant image and starts two Pi lawyers and a five-member council through `aar-run`.  The [local-runner guide](../runtime/localrun/arb/README.md) describes participant configuration and output.
+
+## Core API
+
+Start a core process from `arb/` with the command below when supplying external lawyer clients.  It writes the private Case API address to stderr and waits for those clients to act.  Its output directory contains the durable case record and replay certificate.
 
 ```bash
 export OPENROUTER_API_KEY=REPLACE_WITH_KEY

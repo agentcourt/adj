@@ -751,3 +751,16 @@ The live test used the two sonnets from `arbd/examples/ex1`, two Pi lawyers usin
 The case closed with four integer answers of 90 and one recorded council failure.  Google returned HTTP 429 for `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, reporting a daily limit of 20 requests for `gemini-3.5-flash`.  The 13-action certificate passed `aard verify-certificate`.  All case processes stopped, and `podman ps` showed no running containers.  After shutdown, the retained test directory occupies 23 MiB, and the completed lawyer sessions report an estimated $9.54 in usage.  That estimate is not a subscription billing total.  The council gateway recorded 25 logical requests, including three failed requests, and supplied token usage without cost records.
 
 Two council agents called tools after their answers were accepted: C2 made seven more calls, and C4 made three.  Their launcher tells them to stop after acceptance, while the shared MCP session tells participants to wait until the case reaches a terminal state.  These instructions need alignment before another test.  That follow-up and the ADC override-schema correction require approval.  This run tested ARBD end to end.  ADC, ARB, and Quick changes passed their Go tests without an additional live case in this review.
+
+## Documentation corrections: 2026-09-14
+
+The approved documentation review covers complete-case setup, council sampling, Lean dependencies, protective orders, provider credentials, navigation, and index descriptions.  The README now gives a complete two-Pi-lawyer ARB invocation with five council members, three required votes, Codex subscription authentication, `xhigh` reasoning, and enabled search.  The build instructions distinguish command compilation from the Pi image build.
+
+The council guide follows the [shared selector](common/councilsample/selector.go) and [ARB preflight](arb/runtime/proceeding/council_preflight.go): balance endpoints, balance records within an endpoint, and allow repeated configurations.  The protective-order guide follows the [ADC core](adc/engine/ADC/Core.lean) and [tool schemas](adc/runtime/runner/tools.go), distinguishing recorded order terms from enforcement.  The proving guide follows ADC's [Lake configuration](adc/engine/lakefile.toml) and [empty package manifest](adc/engine/lake-manifest.json).  The Pi guide uses the credential boundary documented in the [model-endpoint reference](docs/model-endpoints.md).
+
+- [x] Correct the seven documentation findings and ARB's Pi authentication help text.
+- [x] Check edited-document links and run the launcher and shared-selector tests.
+- [ ] Complete the README case command and inspect its output.
+- [ ] Commit and push the changes on `main`.
+
+`go test -p=1 ./cmd/aar-run ./common/councilsample` and the ARB launcher build passed.  The initial edited-document check covered 146 local links with no missing target or heading.  The live case uses `arb/out/first-case/` and the existing Pi image and Lean engine binary.  Its first startup encountered the sandbox's socket restriction.  Execution with the approved launcher permission started both lawyers and the case API.
