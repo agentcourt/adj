@@ -45,7 +45,7 @@ The inventory directory contains `raw/models.json`, percent-encoded files under 
 
 ### Runtime Tool-Use Screen
 
-Build `.bin/model-config-screen`, then pass the inventory rows to the Python coordinator.  Each configuration receives a Quick-style direct `submit_council_vote` check and a Pi/MCP check using the ARB council tool sequence.  The output directory must be absent or empty.
+Build `.bin/model-config-screen`, then pass the inventory rows to the Python coordinator.  Each configuration receives a Quick-style direct `submit_council_vote` check and a Pi/MCP check using the ARB council tool sequence.  Both checks use the shared model executor.  Pi reaches it through the runtime's local model gateway, and `model-requests.jsonl` records those provider calls.  The output directory must be absent or empty.
 
 ```bash
 make screen-command

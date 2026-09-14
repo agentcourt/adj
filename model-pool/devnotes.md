@@ -1,5 +1,11 @@
 # Development Notes
 
+## Shared runtime model requests
+
+The direct tool-use screen calls the shared model executor.  The Pi screen uses the formal runtimes' local model gateway and the same executor.  The host applies the request specification and retains endpoint credentials.  Pi receives a local model alias and token.  Provider request records, usage, and observed cost accompany the Pi transcript and MCP calls.
+
+Live checks passed for OpenRouter DeepSeek V4 Flash at Alibaba FP8, Anthropic Claude Sonnet 5, and Google Gemini 3.5 Flash.  The DeepSeek and Claude checks included a rejected tool argument followed by an accepted correction.  The Python inventory and partition coordinator continue to accept OpenRouter inventory rows, while the Go command accepts an individual configuration for any registered endpoint.
+
 ## 2026-08-30 Default Pool Installation
 
 Copied `results/pool-20260828-score-gt-070-r2/pool/pool.jsonl` to `common/data/personas/pool.jsonl`.  The shared runtime default now contains 100 distinct model IDs, 30 providers, 100 endpoint variants, and the `personas/generic.md` persona reference.  Quick, ARB, ARBD, and ADC use this file when the caller supplies neither an explicit pool nor a working-directory `pool.jsonl`.

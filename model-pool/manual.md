@@ -253,9 +253,11 @@ uv run --no-cache tools/model_inventory.py \
 
 ### Runtime Tool-Use Screen
 
-The screen runs two checks for every endpoint configuration.  The direct check sends the Quick council preflight prompt through the Responses API and requires one valid `submit_council_vote` call.  It uses Quick's 20-second preflight limit and three provider attempts.  The Pi check starts the Pi container and MCP proxy extension used by ARB, ARBD, and ADC, then requires `wait_for_opportunity` and `submit_council_vote` through MCP.
+The screen runs two checks for every endpoint configuration.  The direct check sends the Quick council preflight prompt through the shared model executor and requires one valid `submit_council_vote` call.  It uses Quick's 20-second preflight limit and three provider attempts.  The Pi check starts the Pi container and MCP proxy extension used by ARB, ARBD, and ADC, then requires `wait_for_opportunity` and `submit_council_vote` through MCP.  Pi calls the same local model gateway used by those runtimes, which sends each request through the shared executor and the selected endpoint's API.
 
-Both checks use the inventory row's model, exact provider route, request parameters, and disabled-fallback policy.  Endpoint capability metadata controls the Chat Completions parameter names used by Pi, while endpoint prices populate Pi's token accounting.  A model passes only when both checks submit a schema-valid vote.  After MCP accepts the Pi vote, the screen allows five seconds for Pi to exit and then stops the test container because ARB has completed the council opportunity at that point.
+Both checks use the inventory row's model, exact provider route, request parameters, and disabled-fallback policy.  Pi receives a local model alias and token.  The host retains upstream credentials and applies the request specification.  Results include provider-reported usage, observed cost, and the number of cost observations.  A model passes only when both checks submit a schema-valid vote.  After MCP accepts the Pi vote, the screen allows five seconds for Pi to exit and then stops the test container because ARB has completed the council opportunity at that point.
+
+The Python coordinator screens OpenRouter inventory rows.  The Go command also accepts an individual request specification for any registered [model endpoint](../docs/model-endpoints.md): `../.bin/model-config-screen --spec CONFIG.json --out OUTPUT_DIR`.  The selected endpoint's credential must be present in the environment.
 
 ```bash
 make screen-command
@@ -274,6 +276,7 @@ The coordinator rejects rows whose metadata lacks a model, provider route, text 
 | `results.jsonl` | One summary row per configuration. |
 | `configurations/*/result.json` | Direct and Pi status, tool calls, token usage, and cost. |
 | `configurations/*/pi.stdout.jsonl` | Pi event transcript. |
+| `configurations/*/model-requests.jsonl` | Pi provider requests, response IDs, usage, and errors from the runtime gateway. |
 | `configurations/*/pi.stderr.log`, `configurations/*/mcp.log` | Pi and MCP diagnostics. |
 | `summary.json` | Counts, cumulative cost, and output paths. |
 

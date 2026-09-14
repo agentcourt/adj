@@ -712,6 +712,10 @@ Certificate replay passed all 13 actions for both runs.  Case-record generation 
 The installed pool excludes `ibm-granite/granite-4.1-8b` at `coreweave/bf16`.  Two live AARD council tests returned HTTP 404 for that configuration, and OpenRouter returned an empty endpoint list for the model.  The generated pool records remain available in Git history and the generation output.
 
 - [x] Remove the unavailable Granite configuration from the installed pool.
-- [ ] Route the model-pool Pi screen through the shared runtime model gateway.
+- [x] Route the model-pool Pi screen through the shared runtime model gateway.
 - [ ] Prove strict decrease and a bound on successful AARD run length.
 - [ ] Complete focused tests, a live council test, and the documentation updates.
+
+The screening command now uses the shared executor for its Quick-style request and the formal runtimes' local gateway for Pi requests.  The host retains provider credentials and applies the selected request specification.  Pi receives a local alias and token.  The command records upstream response IDs, usage, errors, and observed costs, while retaining the Pi transcript and MCP calls.
+
+Live direct and Pi/MCP checks passed for OpenRouter DeepSeek V4 Flash at Alibaba FP8, Anthropic Claude Sonnet 5, and Google Gemini 3.5 Flash.  The DeepSeek and Claude runs corrected a rejected tool argument and submitted an accepted vote.  OpenRouter reported five cost observations totaling `$0.0009014716`.  Anthropic and Google returned usage without cost observations.  The records remain under `/tmp/adj-arbd-current.9Vq4G9/screen-deepseek`, `screen-anthropic`, and `screen-google`.  No screening container remained after the tests.

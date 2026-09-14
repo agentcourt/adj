@@ -20,9 +20,11 @@ import (
 	"time"
 
 	"github.com/agentcourt/adj/common/mcpbridge"
+	"github.com/agentcourt/adj/common/modelgateway"
 	"github.com/agentcourt/adj/common/modelrequest"
 	openaiapi "github.com/agentcourt/adj/common/openai"
 	"github.com/agentcourt/adj/internal/pimodel"
+	"github.com/agentcourt/adj/runtime/agent"
 )
 
 const (
@@ -226,16 +228,11 @@ func runDirectCheck(parent context.Context, opts options, spec modelrequest.Spec
 		result.ErrorClass = string(openaiapi.ProviderErrorRequest)
 		return result
 	}
-	client, err := openaiapi.NewForEndpoint(spec.Endpoint, false, opts.directTimeout)
+	client, err := modelgateway.New(opts.directTimeout, opts.maxAttempts)
 	if err != nil {
 		result.Error = err.Error()
 		result.ErrorClass = string(openaiapi.ErrorClass(err))
 		result.InfrastructureError = openaiapi.ErrorClass(err) == openaiapi.ProviderErrorAuthentication
-		return result
-	}
-	if err := client.SetMaxAttempts(opts.maxAttempts); err != nil {
-		result.Error = err.Error()
-		result.InfrastructureError = true
 		return result
 	}
 	ctx, cancel := context.WithTimeout(parent, opts.directTimeout)
@@ -263,7 +260,7 @@ func runDirectCheck(parent context.Context, opts options, spec modelrequest.Spec
 	result.CostUSD = response.CostUSD()
 	if result.CostUSD != nil {
 		result.CostObservationCount = 1
-		result.CostSource = "openrouter"
+		result.CostSource = spec.Endpoint
 	}
 	result.MetadataError = response.OpenRouterGenerationError
 	if err != nil {
@@ -485,17 +482,58 @@ func runPiCheck(parent context.Context, opts options, spec modelrequest.Spec) (r
 	started := time.Now()
 	result = checkResult{Status: "failed"}
 	defer func() { result.ElapsedSeconds = time.Since(started).Seconds() }()
-	if spec.Endpoint != "openrouter" {
-		result.Error = fmt.Sprintf("Pi council screening requires openrouter endpoint; got %s", spec.Endpoint)
-		result.ErrorClass = string(openaiapi.ProviderErrorRequest)
-		return result
-	}
-	if strings.TrimSpace(os.Getenv("OPENROUTER_API_KEY")) == "" {
-		result.Error = "OPENROUTER_API_KEY is required"
-		result.ErrorClass = string(openaiapi.ProviderErrorAuthentication)
+	executor, err := modelgateway.New(opts.piTimeout, opts.maxAttempts)
+	if err != nil {
+		result.Error = err.Error()
 		result.InfrastructureError = true
 		return result
 	}
+	modelServer, err := modelgateway.NewServer(executor)
+	if err != nil {
+		result.Error = err.Error()
+		result.InfrastructureError = true
+		return result
+	}
+	requestPath := filepath.Join(opts.outputDir, "model-requests.jsonl")
+	if err := modelServer.Start(modelgateway.ServerOptions{RecordPath: requestPath}); err != nil {
+		result.Error = err.Error()
+		result.InfrastructureError = true
+		return result
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		closeErr := modelServer.Close(ctx)
+		ids, readErr := readModelResponseIDs(requestPath)
+		result.ResponseIDs = ids
+		accounting := executor.Accounting()
+		result.Usage = accounting.Usage
+		result.CostUSD = accounting.CostUSD
+		result.CostObservationCount = accounting.CostObservedCount
+		if accounting.CostUSD != nil {
+			result.CostSource = spec.Endpoint
+		}
+		if err := errors.Join(closeErr, readErr); err != nil {
+			result.Error = strings.TrimSpace(result.Error + "\n" + err.Error())
+			result.Status = "failed"
+			result.InfrastructureError = true
+		}
+	}()
+	spec = spec.WithFallbackMaxOutputTokens(piMaxOutputTokens)
+	binding, err := modelServer.Bind("C1", spec)
+	if err != nil {
+		result.Error = err.Error()
+		result.ErrorClass = string(openaiapi.ErrorClass(err))
+		_, result.InfrastructureError = modelgateway.CredentialFailureEndpoint(err)
+		return result
+	}
+	defer func() {
+		if err := modelServer.Unbind(binding.Token); err != nil {
+			result.Error = strings.TrimSpace(result.Error + "\n" + err.Error())
+			result.Status = "failed"
+			result.InfrastructureError = true
+		}
+	}()
 
 	adapter := &screenAdapter{submissionAccepted: make(chan struct{})}
 	key := make([]byte, 32)
@@ -544,7 +582,7 @@ func runPiCheck(parent context.Context, opts options, spec modelrequest.Spec) (r
 	}
 
 	home := filepath.Join(opts.outputDir, "pi-home")
-	if err := writePiConfig(home, spec, "http://"+mcpAddress(opts.piMCPHost, addr)+"/mcp", capability); err != nil {
+	if err := writePiConfig(home, spec, modelServer.URL()+"/v1", binding.Model, "http://"+mcpAddress(opts.piMCPHost, addr)+"/mcp", capability); err != nil {
 		result.Error = err.Error()
 		result.InfrastructureError = true
 		return result
@@ -558,7 +596,7 @@ func runPiCheck(parent context.Context, opts options, spec modelrequest.Spec) (r
 	result.ContainerName = containerName
 	stdoutPath := filepath.Join(opts.outputDir, "pi.stdout.jsonl")
 	stderrPath := filepath.Join(opts.outputDir, "pi.stderr.log")
-	exitCode, stoppedAfterVote, runErr := runPiProcess(parent, opts, home, spec.UpstreamModel(), containerName, stdoutPath, stderrPath, adapter.accepted())
+	exitCode, stoppedAfterVote, runErr := runPiProcess(parent, opts, home, binding, containerName, stdoutPath, stderrPath, adapter.accepted())
 	result.ExitCode = &exitCode
 	result.StoppedAfterVote = stoppedAfterVote
 	cancelServer()
@@ -571,19 +609,6 @@ func runPiCheck(parent context.Context, opts options, spec modelrequest.Spec) (r
 	result.ToolCalls = calls
 	result.Vote = submittedVote.Vote
 	result.Rationale = submittedVote.Rationale
-	usage, responseIDs, cost, costCount, err := readPiTranscript(stdoutPath, pimodel.OpenRouterCost(spec.VariantMetadata) != nil)
-	if err != nil {
-		result.Error = err.Error()
-		result.InfrastructureError = true
-		return result
-	}
-	result.Usage = usage
-	result.ResponseIDs = responseIDs
-	result.CostUSD = cost
-	result.CostObservationCount = costCount
-	if cost != nil {
-		result.CostSource = "pi_catalog"
-	}
 	if runErr != nil {
 		var exitErr *exec.ExitError
 		if !submitted || stoppedAfterVote || !errors.As(runErr, &exitErr) {
@@ -595,6 +620,16 @@ func runPiCheck(parent context.Context, opts options, spec modelrequest.Spec) (r
 	if exitCode != 0 && !submitted {
 		result.Error = fmt.Sprintf("Pi exited with code %d", exitCode)
 		return result
+	}
+	if _, err := agent.ReadUsageFile(agent.RunnerPi, stdoutPath); err != nil {
+		var syntaxErr *json.SyntaxError
+		var pathErr *os.PathError
+		result.InfrastructureError = errors.As(err, &syntaxErr) || errors.As(err, &pathErr)
+		if !submitted || result.InfrastructureError {
+			result.Error = err.Error()
+			return result
+		}
+		result.MetadataError = err.Error()
 	}
 	waitedBeforeSubmission := false
 	for _, call := range calls {
@@ -633,20 +668,19 @@ func splitHostPort(address string) (string, string, error) {
 	return address[:last], address[last+1:], nil
 }
 
-func writePiConfig(home string, spec modelrequest.Spec, mcpURL, capability string) error {
+func writePiConfig(home string, spec modelrequest.Spec, modelURL, model, mcpURL, capability string) error {
 	settingsDir := filepath.Join(home, ".pi", "agent")
 	if err := os.MkdirAll(settingsDir, 0o755); err != nil {
 		return fmt.Errorf("create Pi settings directory: %w", err)
 	}
 	if err := writeJSON(filepath.Join(settingsDir, "settings.json"), map[string]any{
-		"defaultProvider": "openrouter", "defaultModel": spec.UpstreamModel(), "quietStartup": true,
+		"defaultProvider": "adj", "defaultModel": model, "quietStartup": true,
 	}, 0o644); err != nil {
 		return err
 	}
 	modelEntry := map[string]any{
-		"id": spec.UpstreamModel(), "name": "Model pool screen " + spec.UpstreamModel(),
+		"id": model, "name": "Model pool screen " + model,
 	}
-	spec = spec.WithFallbackMaxOutputTokens(piMaxOutputTokens)
 	if maxTokens := spec.MaxOutputTokens(); maxTokens != nil {
 		modelEntry["maxTokens"] = *maxTokens
 	}
@@ -667,14 +701,11 @@ func writePiConfig(home string, spec modelrequest.Spec, mcpURL, capability strin
 		modelEntry["compat"] = compat
 	}
 	provider := map[string]any{
-		"baseUrl": "https://openrouter.ai/api/v1", "apiKey": "$OPENROUTER_API_KEY",
+		"baseUrl": modelURL, "apiKey": "$ADJ_MODEL_API_KEY",
 		"api": "openai-completions", "models": []map[string]any{modelEntry},
 	}
-	if len(spec.Headers) > 0 {
-		provider["headers"] = spec.Headers
-	}
 	if err := writeJSON(filepath.Join(settingsDir, "models.json"), map[string]any{
-		"providers": map[string]any{"openrouter": provider},
+		"providers": map[string]any{"adj": provider},
 	}, 0o644); err != nil {
 		return err
 	}
@@ -716,7 +747,7 @@ When the result has state: ready, follow the returned instructions and submit th
 Stop after the vote is accepted. Report the terminal state. Do not ask the user for another turn, create a scheduled job, or listen for inbound HTTP.`
 }
 
-func runPiProcess(parent context.Context, opts options, home, model, containerName, stdoutPath, stderrPath string, submissionAccepted <-chan struct{}) (int, bool, error) {
+func runPiProcess(parent context.Context, opts options, home string, binding modelgateway.Binding, containerName, stdoutPath, stderrPath string, submissionAccepted <-chan struct{}) (int, bool, error) {
 	stdout, err := os.Create(stdoutPath)
 	if err != nil {
 		return -1, false, fmt.Errorf("create Pi stdout: %w", err)
@@ -732,11 +763,12 @@ func runPiProcess(parent context.Context, opts options, home, model, containerNa
 	args := []string{
 		"run", "--rm", "--name", containerName, "--network", "host", "--user", "0:0",
 		"-e", "HOME=/home/user", "-e", "TMPDIR=/home/user", "-e", "PI_CODING_AGENT_DIR=/home/user/.pi/agent",
-		"-e", "OPENROUTER_API_KEY", "-e", "NODE_OPTIONS", "-v", home + ":/home/user", "-w", "/home/user",
-		opts.piImage, "--provider", "openrouter", "--model", model, "-e", opts.piMCPAdapter,
+		"-e", "ADJ_MODEL_API_KEY", "-e", "NODE_OPTIONS", "-v", home + ":/home/user", "-w", "/home/user",
+		opts.piImage, "--provider", "adj", "--model", binding.Model, "-e", opts.piMCPAdapter,
 		"--mode", "json", "-p", piPrompt(),
 	}
 	cmd := exec.Command(opts.podmanCommand, args...)
+	cmd.Env = append(os.Environ(), "ADJ_MODEL_API_KEY="+binding.Token)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -811,83 +843,29 @@ func processExitCode(state *os.ProcessState) int {
 	return state.ExitCode()
 }
 
-func readPiTranscript(path string, costKnown bool) (*openaiapi.Usage, []string, *float64, int, error) {
+func readModelResponseIDs(path string) ([]string, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, nil, nil, 0, fmt.Errorf("read Pi transcript: %w", err)
+		return nil, fmt.Errorf("read model requests: %w", err)
 	}
 	defer file.Close()
-	type piUsage struct {
-		Input       int64 `json:"input"`
-		Output      int64 `json:"output"`
-		CacheRead   int64 `json:"cacheRead"`
-		CacheWrite  int64 `json:"cacheWrite"`
-		Reasoning   int64 `json:"reasoning"`
-		TotalTokens int64 `json:"totalTokens"`
-		Cost        struct {
-			Total float64 `json:"total"`
-		} `json:"cost"`
-	}
-	type piEvent struct {
-		Type    string `json:"type"`
-		Message struct {
-			Role       string   `json:"role"`
-			ResponseID string   `json:"responseId"`
-			Usage      *piUsage `json:"usage"`
-		} `json:"message"`
-	}
-	usage := openaiapi.Usage{}
-	usageKnown := false
-	responseIDs := []string{}
-	seenResponseIDs := map[string]struct{}{}
-	var totalCost float64
-	costCount := 0
+	var ids []string
 	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 64*1024), 8*1024*1024)
-	line := 0
 	for scanner.Scan() {
-		line++
-		var event piEvent
-		if err := json.Unmarshal(scanner.Bytes(), &event); err != nil {
-			return nil, nil, nil, 0, fmt.Errorf("parse Pi transcript line %d: %w", line, err)
+		var record struct {
+			ResponseID string `json:"response_id"`
 		}
-		if event.Type != "message_end" || event.Message.Role != "assistant" {
-			continue
+		if err := json.Unmarshal(scanner.Bytes(), &record); err != nil {
+			return nil, fmt.Errorf("parse model request: %w", err)
 		}
-		if event.Message.Usage != nil {
-			value := event.Message.Usage
-			usage.InputTokens += value.Input + value.CacheRead + value.CacheWrite
-			usage.CachedInputTokens += value.CacheRead
-			usage.OutputTokens += value.Output
-			usage.ReasoningTokens += value.Reasoning
-			usage.TotalTokens += value.TotalTokens
-			usageKnown = true
-			if costKnown {
-				totalCost += value.Cost.Total
-				costCount++
-			}
+		if record.ResponseID != "" {
+			ids = append(ids, record.ResponseID)
 		}
-		responseID := strings.TrimSpace(event.Message.ResponseID)
-		if responseID == "" {
-			continue
-		}
-		if _, exists := seenResponseIDs[responseID]; exists {
-			continue
-		}
-		seenResponseIDs[responseID] = struct{}{}
-		responseIDs = append(responseIDs, responseID)
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, nil, nil, 0, fmt.Errorf("read Pi transcript: %w", err)
+		return nil, fmt.Errorf("read model requests: %w", err)
 	}
-	var cost *float64
-	if costCount > 0 {
-		cost = &totalCost
-	}
-	if !usageKnown {
-		return nil, responseIDs, cost, costCount, nil
-	}
-	return &usage, responseIDs, cost, costCount, nil
+	return ids, nil
 }
 
 func metadataString(spec modelrequest.Spec, key string) string {
