@@ -666,3 +666,43 @@ The complete Go test suite, `go vet -p=1 ./...`, `go build -p=1 ./...`, focused 
 - [x] Run focused Lean and Go tests, the complete test suites, and live ADC cases.
 
 The documentation describes opportunity decisions for both direct-model and external Role API execution.  The theorem catalog and proof statistics derive from the current proof files.
+
+## AARD proof and documentation update
+
+The AARD state machine and procedure API now reside in `AARD/Core.lean`; `Main.lean` contains the JSON protocol and executable entry point.  The 14 proof modules use the `ArbdProofs` namespace and enter the build through direct imports in `Proofs.lean`.  The generated inventory contains 177 public theorem or lemma declarations and 5,235 lines.
+
+`ProcedureInvariants.lean`, `StepPreservation.lean`, `Progress.lean`, and `OutcomeSoundness.lean` prove the general case invariant, preservation by successful steps, active-case opportunity results, finite action-capacity bounds, and terminal outcome properties.  `CertificateFacts.lean` exposes the run invariant with closed and failed replay packages.  Review found no Go transition that differed from the proved state machine.
+
+Every proof module, the aggregate proof import, and the AARD executable passed in separate `leanrun` invocations with one Lean job.  The AARD proceeding, local-run, and command tests passed.  The rewritten AARD documents describe the current source and omit prior test transcripts and temporary paths.
+
+The first complete local test exposed two continuation errors.  Pi sometimes represented an assistant tool call with absent, null, or empty content on successive Chat Completions requests.  The local gateway now normalizes those equivalent representations before enforcing append-only history.  OpenRouter rejected a non-null `previous_response_id` on a stateless Responses request.  The shared OpenRouter client now retains the input and output items for each response and sends the full history with the next tool result, following OpenRouter's [Go agent implementation](https://github.com/OpenRouterTeam/go-agent/blob/main/model_result.go).  Focused tests cover both exchanges.
+
+The second local test reached council deliberation.  Four short-lived Pi council processes exited before final cleanup.  Podman's automatic removal also removed their container-ID files, and ARBD reported their absence as a cleanup error despite recorded exit code 0.  ARB already accepted an absent ID after a completed process.  ARBD now uses the same condition, with a focused test for a completed, automatically removed container.
+
+Further log review showed that three council members still failed the gateway's history comparison in that run.  Pi parses tool-call arguments and uses `JSON.stringify` when it includes them in the next request, changing their textual representation.  The gateway now compares parsed argument values and continues to reject changed values.  The shared executor already removes previously submitted input before continuing a provider conversation.
+
+The following run stopped during the defendant's closing because Codex reported that its usage limit had been reached.  Pi recorded the error and exited zero.  The shared Pi output reader now returns settled provider errors as well as refusals, and ARBD reads that result before recording process completion.  A focused test preserves the quota message and partial usage.  The user restored Codex authentication before the next run.
+
+The remaining-step counter has a finite upper bound.  The current AARD proofs do not establish strict decrease or bounded run length.  The verification guide states that limit.
+
+The manual's opening example now omits its empty supplemental arrays.  The validator accepts those arrays when empty and rejects nonempty ones; the specification now states that condition.  Go tests, vet, build, and the changed documentation's 47 local links pass.
+
+The model-pool screen's Pi test still calls OpenRouter Chat Completions directly, while the current formal local runners use the shared gateway and its Responses client.  The screening command was left unchanged during this AARD update.
+
+The restored-auth run completed all eight lawyer filings and 22 work notes using Pi, Codex subscription authentication, `gpt-5.6-sol`, `xhigh`, and enabled search.  Both lawyers used local programs and found no need for outside sources for the two-sonnet comparison.  Pi retried one Codex processing error and recorded a successful retry.  Kimi K2, DeepSeek V4 Flash, GLM 4.5V, and Qwen3 Max Thinking submitted answers of 88, 87, 88, and 86.  The history-comparison error did not recur.  IBM Granite 4.1 8B returned HTTP 404, and OpenRouter's endpoint listing returned an empty endpoint array for that model.  The installed pool remains unchanged.
+
+That run exposed an error in the new Pi diagnostic handling: adding a provider error to the operating-system process-exit error made cleanup reject a council failure that the core had already recorded and handled.  ARBD now includes the Pi error in process status and participant-failure handling while preserving the operating-system exit result for cleanup.  A second live test submitted the completed eight filings through the Lawyer API and ran the same five model configurations through Pi and MCP.  The unavailable Granite configuration failed again.  The other members answered 88, 90, 86, and 89, and the unified command returned `status: "ok"`, `phase: "closed"`, and exit status zero with the member failure retained.
+
+Certificate replay passed all 13 actions for both runs.  Case-record generation with work notes and sessions passed.  The full-lawyer index contains 42 chronological docket entries and 99 artifacts, with both retained session roots available.  No container with the test name prefix remained after cleanup.  Test inputs, records, sessions, work directories, and external indexes remain under `/tmp/adj-arbd-current.9Vq4G9/`; the completed full-lawyer record is `run-5/`, and the corrected-launcher test is `council-test-2/`.
+
+- [x] Move the AARD state machine and procedure API to `AARD/Core.lean`.
+- [x] Put every proof file in `ArbdProofs` and import every proof file from `Proofs.lean`.
+- [x] Add general procedure, preservation, progress, action-capacity, and outcome proofs.
+- [x] Extend the terminal certificate fact packages.
+- [x] Compare the Go runtime with the formal properties and correct any mismatch.
+- [x] Regenerate the theorem catalog and proof statistics.
+- [x] Rewrite the AARD implementation and verification documents for the current source.
+- [x] Run every Lean proof file separately through `leanrun`.
+- [x] Run the focused and complete Go tests.
+- [x] Run Go vet, build, and final diff checks.
+- [x] Run AARD from `adj`, test council failure handling, verify the certificates, and generate the case-record listings.

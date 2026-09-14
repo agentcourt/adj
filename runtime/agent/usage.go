@@ -297,8 +297,8 @@ func parsePiUsage(reader io.Reader) (*runstate.TokenUsage, error) {
 		}
 		if err := decoder.Decode(&event); err != nil {
 			if errors.Is(err, io.EOF) {
-				if refusal := settledTerminal.refusal(); refusal != nil {
-					return total, refusal
+				if err := settledTerminal.completionError(); err != nil {
+					return total, err
 				}
 				if total == nil {
 					return nil, errors.New("usage stream has no assistant message_end event")
@@ -363,7 +363,7 @@ type piTerminalMessage struct {
 	ResponseID    string `json:"responseId"`
 }
 
-func (t *piTerminal) refusal() error {
+func (t *piTerminal) completionError() error {
 	if t == nil {
 		return nil
 	}
@@ -373,6 +373,9 @@ func (t *piTerminal) refusal() error {
 			continue
 		}
 		if !strings.EqualFold(strings.TrimSpace(message.StopReason), "refusal") && !strings.EqualFold(strings.TrimSpace(message.RawStopReason), "refusal") {
+			if message.StopReason == "error" || message.StopReason == "aborted" {
+				return fmt.Errorf("Pi provider %q model %q stopped with %s: %s", message.Provider, message.Model, message.StopReason, message.ErrorMessage)
+			}
 			return nil
 		}
 		return &ProviderRefusalError{

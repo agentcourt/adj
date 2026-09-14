@@ -2366,10 +2366,14 @@ func (s *runState) startProcess(ctx context.Context, name string, kind string, c
 			stderrErr: stderrErr,
 			canceled:  ctx.Err() != nil,
 		}
+		var piErr error
+		if !exit.canceled && strings.HasPrefix(name, "pi-") {
+			_, piErr = headless.ReadUsageFile(headless.RunnerPi, stdoutPath)
+		}
 		if record.councilTarget != nil {
 			exit.recordErr = s.modelServer.Unbind(record.councilTarget.modelToken)
 		}
-		processErr := exit.err()
+		processErr := errors.Join(exit.err(), piErr)
 		state := runstate.Completed
 		if ctx.Err() != nil {
 			state = runstate.Canceled
@@ -2387,7 +2391,7 @@ func (s *runState) startProcess(ctx context.Context, name string, kind string, c
 			ExitCode:   exitCode,
 			Error:      runstate.ErrorText(processErr),
 		}))
-		processErr = exit.err()
+		processErr = errors.Join(exit.err(), piErr)
 		record.markExited()
 		record.done <- exit
 		if ctx.Err() != nil {
@@ -2729,14 +2733,19 @@ func (s *runState) removeProcess(target *processRecord) {
 
 func stopContainerProcess(proc *processRecord) error {
 	alreadyExited := proc.isExited()
+	containerIDRequired := !alreadyExited
 	containerFound, removeErr := removeProcessContainer(proc)
 	if proc.command == nil || proc.command.Process == nil {
 		return errors.Join(removeErr, cleanupProcessContainerID(proc))
 	}
 	var killErr error
 	if (!containerFound || removeErr != nil) && !alreadyExited {
-		if err := proc.command.Process.Kill(); err != nil && !errors.Is(err, os.ErrProcessDone) {
-			killErr = fmt.Errorf("kill %s after container ownership lookup or removal failure: %w", proc.name, err)
+		if err := proc.command.Process.Kill(); err != nil {
+			if errors.Is(err, os.ErrProcessDone) {
+				containerIDRequired = false
+			} else {
+				killErr = fmt.Errorf("kill %s after container ownership lookup or removal failure: %w", proc.name, err)
+			}
 		}
 	}
 	exit, waitErr := waitProcessExit(proc, agentStopWait)
@@ -2744,7 +2753,7 @@ func stopContainerProcess(proc *processRecord) error {
 		var retryErr error
 		containerFound, retryErr = removeProcessContainer(proc)
 		removeErr = errors.Join(removeErr, retryErr)
-		if !containerFound {
+		if !containerFound && containerIDRequired {
 			removeErr = errors.Join(removeErr, fmt.Errorf("container ID for %s was not recorded before the runtime client exited", proc.name))
 		}
 	}

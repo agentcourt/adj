@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/agentcourt/adj/common/modelapi"
@@ -76,6 +77,9 @@ type Client struct {
 	defaultTemperature *float64
 	retryDelays        []time.Duration
 	accounting         AccountingRecorder
+
+	openRouterMu      sync.Mutex
+	openRouterHistory map[string]responses.ResponseInputParam
 }
 
 func New(apiKey string, baseURL string, online bool, timeout time.Duration) (*Client, error) {
@@ -119,6 +123,7 @@ func New(apiKey string, baseURL string, online bool, timeout time.Duration) (*Cl
 		online:             online,
 		defaultTemperature: defaultTemperature,
 		retryDelays:        append([]time.Duration(nil), defaultRetryDelays...),
+		openRouterHistory:  map[string]responses.ResponseInputParam{},
 	}, nil
 }
 
@@ -228,6 +233,10 @@ func (c *Client) createResponse(
 	if err != nil {
 		return Response{}, err
 	}
+	convertedInput, previousResponseID, err = c.prepareOpenRouterInput(convertedInput, previousResponseID)
+	if err != nil {
+		return Response{}, err
+	}
 	convertedTools, err := convertTools(tools, c.online, isOpenRouterBaseURL(c.baseURL))
 	if err != nil {
 		return Response{}, err
@@ -246,6 +255,11 @@ func (c *Client) createResponse(
 			parsed, err := parseResponse(res)
 			if err != nil {
 				return Response{}, &ProviderError{Class: ProviderErrorProtocol, Err: err}
+			}
+			if isOpenRouterBaseURL(c.baseURL) {
+				if err := c.rememberOpenRouterResponse(parsed.ResponseID, convertedInput, res.Output); err != nil {
+					return Response{}, &ProviderError{Class: ProviderErrorProtocol, Err: err}
+				}
 			}
 			if spec != nil && strings.EqualFold(spec.Endpoint, "openrouter") {
 				c.attachOpenRouterGeneration(ctx, &parsed)
@@ -281,6 +295,47 @@ func (c *Client) createResponse(
 		return Response{}, &ProviderError{Class: c.providerFailureClass(lastErr), Err: fmt.Errorf("responses failed after retries: %w", lastErr)}
 	}
 	return Response{}, &ProviderError{Class: ProviderErrorTransient, Err: fmt.Errorf("responses failed after retries")}
+}
+
+func (c *Client) prepareOpenRouterInput(input responses.ResponseInputParam, previousResponseID string) (responses.ResponseInputParam, string, error) {
+	if !isOpenRouterBaseURL(c.baseURL) || strings.TrimSpace(previousResponseID) == "" {
+		return input, previousResponseID, nil
+	}
+	c.openRouterMu.Lock()
+	history, ok := c.openRouterHistory[previousResponseID]
+	c.openRouterMu.Unlock()
+	if !ok {
+		return nil, "", &ProviderError{
+			Class: ProviderErrorRequest,
+			Err:   fmt.Errorf("previous OpenRouter response %q is unknown", previousResponseID),
+		}
+	}
+	continued := make(responses.ResponseInputParam, 0, len(history)+len(input))
+	continued = append(continued, history...)
+	continued = append(continued, input...)
+	return continued, "", nil
+}
+
+func (c *Client) rememberOpenRouterResponse(responseID string, input responses.ResponseInputParam, output []responses.ResponseOutputItemUnion) error {
+	outputInput := make(responses.ResponseInputParam, 0, len(output))
+	for index, item := range output {
+		raw := item.RawJSON()
+		if strings.TrimSpace(raw) == "" {
+			return fmt.Errorf("OpenRouter response output item %d omitted its source JSON", index)
+		}
+		var converted responses.ResponseInputItemUnionParam
+		if err := json.Unmarshal([]byte(raw), &converted); err != nil {
+			return fmt.Errorf("convert OpenRouter response output item %d: %w", index, err)
+		}
+		outputInput = append(outputInput, converted)
+	}
+	history := make(responses.ResponseInputParam, 0, len(input)+len(outputInput))
+	history = append(history, input...)
+	history = append(history, outputInput...)
+	c.openRouterMu.Lock()
+	c.openRouterHistory[responseID] = history
+	c.openRouterMu.Unlock()
+	return nil
 }
 
 func responseParams(

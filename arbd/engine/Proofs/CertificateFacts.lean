@@ -1,3 +1,4 @@
+import Proofs.OutcomeSoundness
 import Proofs.Replay
 
 namespace ArbdProofs
@@ -39,6 +40,8 @@ structure ClosedCertificateFacts
     ∃ start,
       initializeCase req = .ok start ∧
         StepReachableFrom start claimed
+  run_invariant :
+    InitializedRunInvariant req claimed
   terminal_accounted :
     terminalClosedAccounted claimed
   answer_pairs_replayed :
@@ -68,6 +71,8 @@ structure FailedCertificateFacts
     ∃ start,
       initializeCase req = .ok start ∧
         StepReachableFrom start claimed
+  run_invariant :
+    InitializedRunInvariant req claimed
   terminal_accounted :
     terminalFailedAccounted claimed
   failure_record_replayed :
@@ -116,6 +121,19 @@ theorem checkReplayCertificate_ok_evidenceCatalog_fixed
     claimed.evidence_catalog = req.state.evidence_catalog :=
   (checkReplayCertificate_ok_recordIntegrity req actions claimed hCheck).2
 
+theorem checkReplayCertificate_ok_runInvariant
+    (req : InitializeCaseRequest)
+    (actions : List CourtAction)
+    (claimed : ArbitrationState)
+    (hCheck : checkReplayCertificate req actions claimed = .ok ()) :
+    InitializedRunInvariant req claimed := by
+  have hReplay : replayInitialized req actions = .ok claimed :=
+    (checkReplayCertificate_ok_iff req actions claimed).1 hCheck
+  rcases replayInitialized_success_components req actions claimed hReplay with
+    ⟨start, hInit, hSteps⟩
+  exact initializedRun_reachable_invariant req start claimed hInit
+    (replaySteps_success_stepReachableFrom start claimed actions hSteps)
+
 theorem terminalClosedAccounted_of_status_closed
     (s : ArbitrationState)
     (hStatus : s.case.status = "closed") :
@@ -155,6 +173,8 @@ theorem checkReplayCertificate_status_closed_facts
         checkReplayCertificate_ok_evidenceCatalog_fixed req actions claimed hCheck
       step_reachable :=
         checkReplayCertificate_ok_stepReachableFrom req actions claimed hCheck
+      run_invariant :=
+        checkReplayCertificate_ok_runInvariant req actions claimed hCheck
       terminal_accounted :=
         terminalClosedAccounted_of_status_closed claimed hStatus
       answer_pairs_replayed := ⟨claimed, hReplay, rfl⟩ }
@@ -183,6 +203,8 @@ theorem checkReplayCertificate_status_failed_facts
         checkReplayCertificate_ok_evidenceCatalog_fixed req actions claimed hCheck
       step_reachable :=
         checkReplayCertificate_ok_stepReachableFrom req actions claimed hCheck
+      run_invariant :=
+        checkReplayCertificate_ok_runInvariant req actions claimed hCheck
       terminal_accounted :=
         terminalFailedAccounted_of_status_failed claimed hStatus
       failure_record_replayed := ⟨claimed,

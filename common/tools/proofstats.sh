@@ -88,13 +88,13 @@ category_for() {
         Samples.lean|Reachability.lean|InitializeCase.lean)
           printf 'Foundations'
           ;;
-        MeritsFlow.lean|Deliberation.lean)
+        MeritsFlow.lean|Deliberation.lean|StepPreservation.lean)
           printf 'Execution'
           ;;
-        OpportunityAgreement.lean|RecordIntegrity.lean)
+        OpportunityAgreement.lean|ProcedureInvariants.lean|RecordIntegrity.lean)
           printf 'Invariants'
           ;;
-        Replay.lean|CertificateFacts.lean|CertificateExamples.lean)
+        Progress.lean|OutcomeSoundness.lean|Replay.lean|CertificateFacts.lean|CertificateExamples.lean)
           printf 'Results'
           ;;
         *)

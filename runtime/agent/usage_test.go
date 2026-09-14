@@ -230,6 +230,21 @@ func TestParsePiUsageUsesFinalSettledTerminalEvent(t *testing.T) {
 	}
 }
 
+func TestParsePiUsageReportsTerminalProviderError(t *testing.T) {
+	stream := strings.Join([]string{
+		`{"type":"message_end","message":{"role":"assistant","usage":{"input":1,"output":1,"cacheRead":0,"cacheWrite":0,"totalTokens":2}}}`,
+		`{"type":"agent_end","messages":[{"role":"assistant","provider":"openai-codex","model":"gpt-5.6-sol","stopReason":"error","errorMessage":"Codex error: The usage limit has been reached"}]}`,
+		`{"type":"agent_settled"}`,
+	}, "\n")
+	usage, err := parseUsage(RunnerPi, strings.NewReader(stream))
+	if err == nil || !strings.Contains(err.Error(), "Codex error: The usage limit has been reached") {
+		t.Fatalf("error = %v", err)
+	}
+	if usage == nil || usage.TotalTokens != 2 {
+		t.Fatalf("usage = %#v", usage)
+	}
+}
+
 func TestParsePiUsageRequiresSettledRefusal(t *testing.T) {
 	stream := strings.Join([]string{
 		`{"type":"message_end","message":{"role":"assistant","usage":{"input":1,"output":1,"cacheRead":0,"cacheWrite":0,"totalTokens":2}}}`,

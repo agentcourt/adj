@@ -99,7 +99,7 @@ Quick, ARB, ARBD, and jury ADC load every source declared in `common.provider_cr
 
 Every council and juror request uses function tools for its structured submission.  The executor converts the shared tool definitions, message content, continuation state, response text, tool calls, usage, and provider errors into one internal representation.
 
-The OpenAI, Hugging Face, OpenRouter, and xAI clients send the request through their Responses-compatible APIs.  Their supported reasoning values, content types, and request parameters depend on the selected service and model.  The executor forwards configured `temperature`, `top_p`, output-token limits, `max_tool_calls`, reasoning effort, and ordinary custom headers.  Only OpenRouter accepts the request specification's `provider` routing object.
+The OpenAI, Hugging Face, OpenRouter, and xAI clients send the request through their Responses-compatible APIs.  Their supported reasoning values, content types, and request parameters depend on the selected service and model.  The executor forwards configured `temperature`, `top_p`, output-token limits, `max_tool_calls`, reasoning effort, and ordinary custom headers.  Only OpenRouter accepts the request specification's `provider` routing object.  For an OpenRouter tool exchange, the executor retains the response input and output, sends the full history with the next tool result, and omits `previous_response_id`.  OpenRouter's [Go agent implementation](https://github.com/OpenRouterTeam/go-agent/blob/main/model_result.go) uses the same stateless continuation because the live Responses API rejects a non-null `previous_response_id` on such requests.
 
 The native adapters apply these rules:
 
@@ -117,7 +117,7 @@ Council members and jurors receive no web-search tool.  Their inputs comprise th
 
 Quick calls the executor in the Quick process.  `aar case` and `aard case` call it in the core process when `--council-backend direct` is selected.  Direct ADC juror execution also calls the executor in the core process.
 
-The complete local runners `aar-run`, `aard-run`, and `adc-run`, including their use through `adjudicate`, start Pi agents for council or juror opportunities.  The local runner keeps the shared executor and exposes a loopback OpenAI Chat Completions interface that Pi can call.  Each opportunity receives a fresh random model alias and bearer token bound to one upstream request specification.  Pi receives neither the upstream model name nor its credential.  The server accepts streamed and non-streamed Pi requests, preserves append-only continuation history, and rejects a non-null `tool_choice` field because it cannot enforce that field through every upstream endpoint.  The local runner revokes the opportunity token when its Pi process exits.
+The complete local runners `aar-run`, `aard-run`, and `adc-run`, including their use through `adjudicate`, start Pi agents for council or juror opportunities.  The local runner keeps the shared executor and exposes a loopback OpenAI Chat Completions interface that Pi can call.  Each opportunity receives a fresh random model alias and bearer token bound to one upstream request specification.  Pi receives neither the upstream model name nor its credential.  The server accepts streamed and non-streamed Pi requests and preserves append-only continuation history.  It treats omitted, null, and empty assistant content as equivalent when the message contains tool calls and compares parsed tool arguments because Pi serializes them again between requests.  It rejects a non-null `tool_choice` field because it cannot enforce that field through every upstream endpoint.  The local runner revokes the opportunity token when its Pi process exits.
 
 The local runner writes every Pi-to-provider request to JSONL:
 
@@ -129,4 +129,4 @@ The local runner writes every Pi-to-provider request to JSONL:
 
 Each row records start and finish times, endpoint, requested and returned model identifiers, response identifier, observed usage, and provider failure data.  A failed or canceled continuation also receives a row.
 
-Direct Quick, ARB, AARD, and ADC calls contribute to the core provider-accounting object.  Pi council and juror calls record usage in the JSONL request log and do not contribute to the formal core's provider-accounting totals.  Participant-model usage and procedure-provider accounting remain separate in unified records.
+Direct Quick, ARB, ARBD, and ADC calls contribute to the core provider-accounting object.  Pi council and juror calls record usage in the JSONL request log and do not contribute to the formal core's provider-accounting totals.  Participant-model usage and procedure-provider accounting remain separate in unified records.

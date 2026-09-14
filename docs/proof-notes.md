@@ -1,13 +1,13 @@
 # Proof Work Status
 
-This note records the maintained proof trees and their operational boundaries.  The current ARB results cover realisability, maximal-run terminal accounting, opportunity agreement, and certificate replay.  ADC and AARD provide smaller procedure-specific proof trees.
+This note records the maintained proof trees and their operational boundaries.  The ARB results cover realisability, maximal-run terminal accounting, opportunity agreement, and certificate replay.  ADC and AARD provide procedure-specific proof trees.
 
 ## Current proof surfaces
 
 | Procedure | Proof files | Theorem or lemma declarations | Lines |
 | --- | ---: | ---: | ---: |
 | ARB | 39 | 721 | 22,858 |
-| AARD | 10 | 98 | 2,800 |
+| AARD | 14 | 177 | 5,235 |
 | ADC | 71 | 611 | 10,830 |
 
 The maintained roots contain no `sorry`, `axiom`, or `unsafe` declaration.  ARB has the broadest theorem surface:
@@ -38,7 +38,7 @@ All three formal procedures write runtime certificates and provide explicit veri
 | --- | --- | --- |
 | ARB | Writes `certificate.json`; `aar verify-certificate` replays against `state.json`. | Accepted terminal certificates expose exact replay, exact opportunity authority, filing-time evidence chronology, reachability, record integrity, a fixed initial evidence catalog, bounded length, decision-summary replay, and either closed outcome and due-process facts or failed-opportunity facts. |
 | ADC | Writes `state.json` and `certificate.json` using `adc.replay-certificate.v1`; `adc verify-certificate` checks final-state hashes and replays deterministic steps and opportunity decisions.  An opportunity tool transition reruns `apply_decision`, compares its authorized action with the recorded executed step, and applies that step only after equality succeeds. | Accepted certificates expose exact replay, replay-start reachability, closed-terminal accounting, verdict facts, juror-failure verdict facts, juror-failure hung-jury facts, judgment facts, a combined outcome package, and concrete replayed examples.  The Lean replay relation includes direct steps and authority-checked `applyDecision` transitions. |
-| AARD | Writes `state.json` and `certificate.json`; `aard verify-certificate` replays initialization and accepted actions. | Accepted terminal certificates expose exact replay, reachability, terminal accounting, closed answer-pair replay, failed-case failure-record replay, and checked closed and failed examples. |
+| AARD | Writes `state.json` and `certificate.json`; `aard verify-certificate` replays initialization and accepted actions. | Successful initialization and every reachable step preserve phase shape, council and answer integrity, record integrity, and fixed case data.  Progress results cover active merits and deliberation opportunities.  Closed-run results require complete merits and valid answers.  Accepted terminal certificates add exact replay, authority, chronology, terminal accounting, answer-pair or failure-record replay, and checked examples. |
 
 ## Remaining Direction
 
@@ -48,7 +48,7 @@ Future proof work should support operational or adjudicative claims that the sys
 | --- | --- | --- |
 | ARB council failure and removal | Defer a step-commutation theorem. | `ClosedCertificateFacts.closed_resolution_agrees_with_matched_case` covers the matched-state decision-rule claim.  Existing step theorems cover accepted failure recording, current-round-voter protection, vote preservation, seated-set shrinkage, and terminal outcome soundness.  A commutation theorem should wait until the runtime or API intentionally promises order independence. |
 
-AARD now covers the current certificate report boundary for both terminal shapes.  ADC now covers both verdict and hung-jury outcomes that derive from a deliberating-juror timeout.  ARB closed certificates now carry the existing decision-rule package and expose a matched-case closed-resolution theorem: when another case has the same current-round vote multiset, seated count, and deliberation round, the executable closed-resolution summary agrees for the same required-vote and max-round values.
+AARD covers initialized-run invariants, active-case opportunities, closed-case soundness, failure effects, and both terminal certificate forms.  ADC covers both verdict and hung-jury outcomes that derive from a deliberating-juror timeout.  ARB closed certificates carry the decision-rule package and expose a matched-case closed-resolution theorem: when another case has the same current-round vote multiset, seated count, and deliberation round, the executable closed-resolution summary agrees for the same required-vote and max-round values.
 
 The matched-case theorem supports a narrow operational statement about removals: after the removal effects have been matched at the decision-rule inputs, ordering artifacts do not change the closed-resolution summary.  A step-level theorem for action order would require a different claim and tighter hypotheses.  If ARB later promises order independence, the theorem should specify the accepted action pair, distinct member ids, no current-round vote for the removed member, the same final seated set, and the same final current-round vote multiset.
 

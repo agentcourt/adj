@@ -1,4 +1,4 @@
-import Main
+import AARD.Core
 
 namespace ArbdProofs
 

@@ -11,7 +11,7 @@ The manual documents the core commands, case-owned HTTP APIs, outputs, and certi
 | [Agent Arbitration Degree Manual](manual.md) | Core commands, case-owned APIs, outputs, failure behavior, and certificate verification. |
 | [Agent Arbitration Degree Practice Guide](docs/practice.md) | Lawyer and council practice for degree questions. |
 | [Agent Rules for Arbitration Degree Procedure](docs/ARAP.md) | Governing AARD procedure. |
-| [Implementation Record and Porting Guide](docs/update.md) | Implemented authority, custody, replay, publication, and later-port guidance. |
+| [AARD Implementation Reference](docs/update.md) | State, authority, invariants, custody, replay, and runtime structure. |
 | [Prompt Authoring Guide](../docs/prompt-authoring.md) | Prompt-file resolution, literal replacement, available tokens, and evaluation practice. |
 
 ## Requirements

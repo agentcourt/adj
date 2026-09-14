@@ -48,7 +48,7 @@ func TestChatServerPreservesProviderConversation(t *testing.T) {
 				CallID:       "call-1",
 				Name:         "submit_council_vote",
 				Arguments:    map[string]any{"verdict": "for"},
-				RawArguments: `{"verdict":"for"}`,
+				RawArguments: `{ "verdict": "for" }`,
 			}},
 			UsageKnown: true,
 			Usage:      modelapi.Usage{InputTokens: 10, OutputTokens: 4, TotalTokens: 14},
@@ -86,6 +86,7 @@ func TestChatServerPreservesProviderConversation(t *testing.T) {
 	assistant := chatAssistantMessage(modelapi.Response{
 		ToolCalls: []modelapi.ToolCall{{CallID: "call-1", Name: "submit_council_vote", Arguments: map[string]any{"verdict": "for"}, RawArguments: `{"verdict":"for"}`}},
 	})
+	assistant["content"] = ""
 	secondMessages := append(append([]map[string]any(nil), firstMessages...), assistant, map[string]any{
 		"role": "tool", "tool_call_id": "call-1", "content": `{"accepted":true}`,
 	})
@@ -106,6 +107,12 @@ func TestChatServerPreservesProviderConversation(t *testing.T) {
 	}
 	if len(executor.calls[0].tools) != 1 || executor.calls[0].tools[0]["name"] != "submit_council_vote" {
 		t.Fatalf("converted tools = %#v", executor.calls[0].tools)
+	}
+	changed := chatAssistantMessage(modelapi.Response{
+		ToolCalls: []modelapi.ToolCall{{CallID: "call-1", Name: "submit_council_vote", RawArguments: `{"verdict":"against"}`}},
+	})
+	if err := checkMessagePrefix([]map[string]any{changed}, []map[string]any{assistant}); err == nil {
+		t.Fatal("changed tool arguments accepted")
 	}
 }
 

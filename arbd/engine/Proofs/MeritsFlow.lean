@@ -1,6 +1,6 @@
 import Proofs.Samples
 
-open ArbdProofs
+namespace ArbdProofs
 
 def afterPlaintiffOpening : Except String ArbitrationState := do
   step { state := initializedState, action := openingAction initializedState "plaintiff" "Plaintiff opening." }
@@ -83,3 +83,5 @@ theorem second_closing_opens_deliberation :
     statePhase afterTwoClosings = "deliberation" ∧
       nextOpportunityPhaseAfter afterTwoClosings = "deliberation" := by
   native_decide
+
+end ArbdProofs

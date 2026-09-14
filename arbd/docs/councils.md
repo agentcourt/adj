@@ -10,7 +10,7 @@ The Go runtime draws council members from a pool file, assigns seat ids, and sen
 | Policy validation | [`runtime/proceeding/policy.go`](../runtime/proceeding/policy.go) | Requires a positive council size and a non-empty judgment standard. |
 | Pool loading | [`common/persona/persona.go`](../../common/persona/persona.go) | Reads pool records, resolves persona files, and loads persona text. |
 | Selection | [`runtime/proceeding/council_preflight.go`](../runtime/proceeding/council_preflight.go) | Balances endpoint and configuration use, checks direct-mode availability, and assigns `C1`, `C2`, and later seat ids. |
-| Engine initialization | [`engine/Main.lean`](../engine/Main.lean) | Checks the council, stores seated members, and opens the case. |
+| Engine initialization | [`engine/AARD/Core.lean`](../engine/AARD/Core.lean) | Checks the council, stores seated members, and opens the case. |
 | Recording | [`runtime/proceeding/run.go`](../runtime/proceeding/run.go) and [`runtime/proceeding/render.go`](../runtime/proceeding/render.go) | Writes initialization events and final run artifacts. |
 
 ## Pool File

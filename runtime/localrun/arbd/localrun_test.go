@@ -939,6 +939,41 @@ func TestCouncilProcessReplacementReapsPriorProcess(t *testing.T) {
 	}
 }
 
+func TestStopContainerProcessAcceptsExitedAutoRemovedContainer(t *testing.T) {
+	dir := t.TempDir()
+	containerIDPath, containerIDDir, err := createContainerIDPath(dir, "aard-case-1-c1")
+	if err != nil {
+		t.Fatalf("create container ID path: %v", err)
+	}
+	cmd := exec.Command("true")
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start client: %v", err)
+	}
+	proc := &processRecord{
+		name:            "pi-C1",
+		kind:            "podman",
+		command:         cmd,
+		done:            make(chan processExit, 1),
+		stopCommand:     filepath.Join(dir, "podman"),
+		containerIDPath: containerIDPath,
+		containerIDDir:  containerIDDir,
+		finished:        make(chan struct{}),
+	}
+	go func() {
+		exit := processExit{waitErr: cmd.Wait()}
+		proc.markExited()
+		proc.done <- exit
+	}()
+	select {
+	case <-proc.finished:
+	case <-time.After(2 * time.Second):
+		t.Fatal("client did not exit")
+	}
+	if err := stopContainerProcess(proc); err != nil {
+		t.Fatalf("stop exited client: %v", err)
+	}
+}
+
 func TestPiMessageUpdateTailFilterCompactsAccumulatedThinking(t *testing.T) {
 	var filter piMessageUpdateTailFilter
 	first := []byte(`{"type":"message_update","assistantMessageEvent":{"type":"thinking_start","contentIndex":0,"partial":{"responseId":"r1","content":[{"type":"thinking","thinking":"abc","thinkingSignature":"reasoning"}]}},"message":{"responseId":"r1","content":[{"type":"thinking","thinking":"abc","thinkingSignature":"reasoning"}]}}`)

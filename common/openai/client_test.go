@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -158,6 +159,89 @@ func TestClientExhaustsOpenRouterInvalidPromptAttempts(t *testing.T) {
 		if !strings.Contains(err.Error(), text) {
 			t.Fatalf("error %q omits %q", err, text)
 		}
+	}
+}
+
+func TestClientContinuesOpenRouterWithLocalHistory(t *testing.T) {
+	client, err := New("key", "https://openrouter.ai/api/v1", false, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	requests := make([]map[string]any, 0, 2)
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		body, err := io.ReadAll(request.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var decoded map[string]any
+		if err := json.Unmarshal(body, &decoded); err != nil {
+			t.Fatal(err)
+		}
+		requests = append(requests, decoded)
+		response := `{
+  "id":"resp-1",
+  "object":"response",
+  "status":"completed",
+  "output":[
+    {"id":"reasoning-1","type":"reasoning","status":"completed","summary":[]},
+    {"id":"function-1","type":"function_call","status":"completed","call_id":"call-1","name":"mcp","arguments":"{\"tool\":\"wait\"}"}
+  ],
+  "usage":{"input_tokens":10,"output_tokens":5,"total_tokens":15,"cost":0.001}
+}`
+		if len(requests) == 2 {
+			response = `{
+  "id":"resp-2",
+  "object":"response",
+  "status":"completed",
+  "output":[{"id":"message-1","type":"message","role":"assistant","status":"completed","content":[{"type":"output_text","text":"done","annotations":[]}]}],
+  "usage":{"input_tokens":20,"output_tokens":2,"total_tokens":22,"cost":0.002}
+}`
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       io.NopCloser(strings.NewReader(response)),
+			Request:    request,
+		}, nil
+	})
+	client.client = openaisdk.NewClient(
+		option.WithAPIKey("key"),
+		option.WithBaseURL("https://openrouter.ai/api/v1"),
+		option.WithHTTPClient(&http.Client{Transport: transport}),
+	)
+	first, err := client.CreateResponse(context.Background(), "model", []map[string]any{{"role": "user", "content": "decide"}}, nil, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = client.CreateResponse(context.Background(), "model", []map[string]any{{"type": "function_call_output", "call_id": "call-1", "output": "record"}}, nil, first.ResponseID, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("requests = %d, want 2", len(requests))
+	}
+	if _, ok := requests[1]["previous_response_id"]; ok {
+		t.Fatalf("second request contains previous_response_id: %#v", requests[1])
+	}
+	input, ok := requests[1]["input"].([]any)
+	if !ok || len(input) != 4 {
+		t.Fatalf("second request input = %#v", requests[1]["input"])
+	}
+	types := make([]string, 0, len(input))
+	for _, raw := range input {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			t.Fatalf("second request input item = %#v", raw)
+		}
+		typ, _ := item["type"].(string)
+		if typ == "" {
+			typ = "message"
+		}
+		types = append(types, typ)
+	}
+	want := []string{"message", "reasoning", "function_call", "function_call_output"}
+	if !slices.Equal(types, want) {
+		t.Fatalf("second request input types = %v, want %v", types, want)
 	}
 }
 

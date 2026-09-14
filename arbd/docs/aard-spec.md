@@ -2,7 +2,7 @@
 
 ## Scope
 
-This specification defines the external behavior of one `aard case` process and its certificate verifier.  It covers startup, standard streams, private Lawyer and Council APIs, evidence custody, durable records, and participant failures.  The `adjservices` repository owns managed case admission and public routing.
+This specification defines the external behavior of one `aard case` process and its certificate verifier.  It covers startup, standard streams, private Lawyer and Council APIs, evidence custody, durable records, and participant failures.
 
 ## Process Model
 
@@ -73,7 +73,7 @@ The runtime captures initial case files before council sampling and Lean initial
 
 Submitted evidence carries source metadata, digest, size, and optional lineage.  A lineage names an initial or earlier submitted parent by identifier and digest and records a nonblank derivation method.  Go derives the parent digest from verified record evidence, while Lean rejects incomplete lineage, self-parenting, unknown parents, identifier collisions, malformed digests, and oversized submissions.
 
-Arguments, rebuttals, and surrebuttals may include offered evidence and technical reports.  Each offered identifier must resolve in the catalog or submitted-evidence list in the filing's source state, which prevents a later submission from validating an earlier offer.  Openings and closings reject supplemental evidence and report arrays.
+Arguments, rebuttals, and surrebuttals may include offered evidence and technical reports.  Each offered identifier must resolve in the catalog or submitted-evidence list in the filing's source state, which prevents a later submission from validating an earlier offer.  Openings and closings accept absent or empty supplemental arrays and reject any entries.
 
 Lawyer and council file reads reserve budgets under the case mutex, release the mutex for input, open one regular-file descriptor, verify complete size and SHA-256 while collecting the requested range, and revalidate the active turn after reacquiring the mutex.  Successful participant reads record `evidence_read`.  Failed or stale reads restore the reservation when applicable.  Path replacement, nonregular files, size changes, and digest changes are runtime failures.
 
@@ -122,4 +122,4 @@ Every Lean invocation has a finite engine timeout, and a participant step also o
 
 ## Test Obligations
 
-Process tests use the real command and private APIs where the behavior crosses package boundaries.  They cover startup claims, opportunity identity, request strictness, error classes, deadlines, attempt exhaustion, evidence custody, submission publication, participant failure, final snapshots, durable records, process cleanup, and certificate tampering.  The [implementation record](update.md#verification-results) gives the exact in-tree proof, runtime, formatting, and documentation checks.
+Process tests use the real command and private APIs where behavior crosses package boundaries.  They cover startup claims, opportunity identity, request strictness, error classes, deadlines, attempt exhaustion, evidence custody, submission publication, participant failure, final snapshots, durable records, process cleanup, and certificate tampering.  The [verification guide](verification.md) describes the Lean and operational verification boundaries.

@@ -336,11 +336,11 @@ func checkMessagePrefix(messages, expected []map[string]any) error {
 		return fmt.Errorf("chat request removed prior messages")
 	}
 	for index := range expected {
-		messageJSON, err := json.Marshal(messages[index])
+		messageJSON, err := historyMessageJSON(messages[index])
 		if err != nil {
 			return fmt.Errorf("encode chat message %d: %w", index, err)
 		}
-		expectedJSON, err := json.Marshal(expected[index])
+		expectedJSON, err := historyMessageJSON(expected[index])
 		if err != nil {
 			return fmt.Errorf("encode prior chat message %d: %w", index, err)
 		}
@@ -349,6 +349,40 @@ func checkMessagePrefix(messages, expected []map[string]any) error {
 		}
 	}
 	return nil
+}
+
+func historyMessageJSON(message map[string]any) ([]byte, error) {
+	role, _ := message["role"].(string)
+	if _, hasToolCalls := message["tool_calls"]; role != "assistant" || !hasToolCalls {
+		return json.Marshal(message)
+	}
+	normalized, err := copyObject(message)
+	if err != nil {
+		return nil, err
+	}
+	if content := normalized["content"]; content == nil || content == "" {
+		normalized["content"] = nil
+	}
+	calls, err := contentItems(normalized["tool_calls"])
+	if err != nil {
+		return nil, err
+	}
+	for _, call := range calls {
+		function, ok := call["function"].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("tool call function must be an object")
+		}
+		arguments, ok := function["arguments"].(string)
+		if !ok {
+			return nil, fmt.Errorf("tool call arguments must be a JSON string")
+		}
+		var value any
+		if err := json.Unmarshal([]byte(arguments), &value); err != nil {
+			return nil, fmt.Errorf("decode tool call arguments: %w", err)
+		}
+		function["arguments"] = value
+	}
+	return json.Marshal(normalized)
 }
 
 func chatInputItems(messages []map[string]any) ([]map[string]any, error) {

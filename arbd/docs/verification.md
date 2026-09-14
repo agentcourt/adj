@@ -2,46 +2,66 @@
 
 ## Scope
 
-The AARD Lean library proves properties of the executable degree-arbitration engine over initialized and reachable states.  Its selected theorem catalog emphasizes exact action authority, record integrity, filing-time evidence chronology, replay, terminal certificate facts, and concrete closed and failed certificates.  The generated proof statistics count every theorem and lemma declaration in the proof tree, including internal preservation and parsing lemmas omitted from the selected catalog.
+The AARD Lean library proves properties of the executable state transition functions in `engine/AARD/Core.lean`.  The proof tree covers initialization, exact action authority, procedural sequence, council and answer integrity, fixed case data, evidence-record integrity, progress, terminal outcomes, replay, and certificate facts.  `engine/Main.lean` implements the JSON protocol around that core.
 
-## Principal Results
+All proof declarations belong to the `ArbdProofs` namespace.  `engine/Proofs.lean` imports every proof module directly.  The [theorem catalog](theorems.md) lists every theorem and lemma declaration, while the [proof statistics](proofstats.md) count all proof files and declarations.
 
-The public `step` theorem binds each accepted action to the opportunity computed from its source state.  Record-integrity theorems establish the initial evidence catalog, validate ordered submissions and lineage, resolve offers, enforce report byte limits, and preserve the catalog through successful runs.  Replay theorems carry the same authority and source-state chronology across the certificate action list.
+## Initialized Runs
+
+`InitializedRunInvariant` combines `ProcedureInvariant` with `initializedCaseFrame`.  The procedure component contains four properties:
+
+| Property | Requirement |
+|---|---|
+| `phaseShape` | Each phase contains the exact completed and partial filing sequences allowed by the procedure. |
+| `councilIdsUnique` | Council member identifiers remain unique. |
+| `answerIntegrity` | Current-round answer owners are unique; every stored answer belongs to the current round, lies from 0 through 100, has a nonempty rationale, and belongs to a seated member. |
+| `RecordIntegrity` | The catalog, submitted-evidence history, offers, lineage, and technical reports satisfy their recorded limits and reference rules. |
+
+The frame component fixes the initialized case identifier, caption, trimmed question, policy, initial evidence catalog, and council identities.  Council status may change after a member failure, but each member's identifier, model, and persona filename remain fixed.
+
+`initializeCase_establishes_runInvariant` proves that every successful initialization establishes this package.  `step_preserves_runInvariant` proves preservation by every successful public step.  `initializedRun_reachable_invariant` extends the result to every state connected to a successful initialization by `StepReachableFrom`.
+
+## Authority and Record History
+
+The engine computes one current opportunity from the source state.  An accepted action must carry the same opportunity identifier, state version, role, phase, and scheduled council member, and its operation must occur in the opportunity's allowed operation list.
+
+`RecordIntegrity` validates the immutable initial catalog, each submitted-evidence prefix, accumulated offers, lineage, and report byte limits.  `MeritsOffersUsePriorRecord` adds the chronological condition: an argument, rebuttal, or surrebuttal may offer only evidence present before that filing step.  Replay preserves both the accumulated invariant and this source-state condition.
 
 | Area | Principal declarations | Result |
 |---|---|---|
-| Exact opportunity authority | `step_ok_matches_currentOpportunity`, `authorizeAction_ok_matches_currentOpportunity` | An accepted action supplies the current opportunity id, source state version, role, phase, scheduled member, and an operation allowed by that opportunity. |
+| Exact opportunity authority | `step_ok_matches_currentOpportunity`, `authorizeAction_ok_matches_currentOpportunity` | Every accepted action matches the source state's current opportunity and uses an allowed operation. |
 | Terminal rejection | `closed_step_rejected`, `failed_step_rejected` | Closed and failed cases reject later public steps. |
-| Record initialization | `initializeCase_establishes_recordIntegrity_and_catalog` | Initialization validates the evidence catalog and starts a state satisfying `RecordIntegrity`. |
-| Step preservation | `step_preserves_recordIntegrity_and_catalog` | Every accepted public action preserves record integrity and the exact initial catalog. |
-| Reachable record | `reachable_recordIntegrity`, `initialized_run_preserves_evidenceCatalog` | Reachable states retain valid ordered evidence records and the initialized catalog. |
-| Source-state offer rule | `step_ok_meritsOffersUsePriorRecord` | Each accepted argument, rebuttal, or surrebuttal resolves offers against the catalog and submissions present before the filing. |
-| Replay chronology | `replaySteps_success_meritsOfferChronology`, `replayInitialized_success_meritsOfferChronology` | Successful replay preserves the source-state offer rule at every merits action. |
-| Exact replay | `checkReplayCertificate_ok_iff` | Lean certificate acceptance is equivalent to initialized replay producing the claimed state exactly. |
-| Accepted certificate facts | `checkReplayCertificate_ok_authorityConforming`, `checkReplayCertificate_ok_meritsOfferChronology`, `checkReplayCertificate_ok_recordIntegrity` | Acceptance implies exact authority, filing-time chronology, reachability, record integrity, and catalog equality. |
-| Terminal certificate packages | `checkReplayCertificate_status_closed_facts`, `checkReplayCertificate_status_failed_facts`, `checkReplayCertificate_terminal_facts` | Accepted terminal certificates yield either closed answer-pair facts or failed opportunity-record facts. |
-| Concrete certificates | `sample_closed_certificate_facts`, `sample_failed_certificate_facts` | Executable closed and failed examples satisfy their complete formal fact packages. |
+| Record initialization | `initializeCase_establishes_recordIntegrity_and_catalog` | Initialization establishes record integrity and copies the initial catalog unchanged. |
+| Record preservation | `step_preserves_recordIntegrity_and_catalog`, `reachable_recordIntegrity` | Accepted steps and reachable states retain record integrity and the initialized catalog. |
+| Filing chronology | `step_ok_meritsOffersUsePriorRecord`, `replayInitialized_success_meritsOfferChronology` | Merits offers resolve against evidence present in the action's source state. |
+| Full invariant | `initializeCase_establishes_runInvariant`, `step_preserves_runInvariant`, `initializedRun_reachable_invariant` | Initialization establishes the procedural and frame invariants, and every accepted run preserves them. |
 
-## Record Integrity and Chronology
+## Progress and Outcomes
 
-`RecordIntegrity` requires a valid initial catalog, a prefix-valid submitted-evidence history, resolvable accumulated offers, and technical reports within their configured UTF-8 byte limits.  A submitted identifier cannot collide with the catalog or an earlier submission, and a derived item identifies an initial or earlier parent by identifier and SHA-256 commitment.  Successful initialization establishes the predicate, every accepted action preserves it, and every reachable state therefore satisfies it.
+The progress results concern states that satisfy the initialized-run invariants.  `merits_phase_has_currentOpportunity` proves that an active state in openings, arguments, rebuttals, surrebuttals, or closings has a current opportunity.  `deliberation_has_currentOpportunity` proves the same result while an eligible council member remains unanswered.  `accepted_step_has_currentOpportunity` derives the exact source opportunity and its authorization facts from any successful public step.
 
-Accumulated-state integrity does not establish when an offer first became valid, because a later submission appears in the final record.  `MeritsOffersUsePriorRecord` evaluates one accepted argument, rebuttal, or surrebuttal against the catalog and submitted-evidence list in that action's source state.  `MeritsOfferChronology` carries that property through replay, preventing a later submission from supplying the reference for an earlier filing.
+The remaining-step functions count open merits positions, available evidence submissions, and unanswered seated council members.  `remainingStepBudget_finite_bound` bounds their sum by eight merits positions, twice the per-side evidence-submission limit, and the configured council size.  The eight positions include the optional rebuttal and surrebuttal.
+
+A bound on this counter alone does not establish a bound on run length.  Strict decrease under every successful step and bounded termination remain unproved for AARD.
+
+`initialized_run_closed_case_sound` proves that a reachable initialized state in the closed phase has complete merits, unique council identifiers, valid answers, record integrity, and the initialized case frame.  `continueDeliberation_closes_only_with_complete_answers` proves that the deliberation continuation function enters the closed phase only when the current-round answer count equals the seated-member count.
+
+`failOpportunity_success_effect` classifies every successful failure transition.  A party failure creates the recorded case-level failure state.  A council failure delegates to `failCouncilMemberOpportunity` for the scheduled unanswered member.
 
 ## Replay Certificates
 
-The certificate schema is `aard.replay-certificate.v1`.  Its initialization request carries the AARD question, state, and council members, while each action carries its exact opportunity authority and payload.  The claimed final state preserves AARD's numeric `CouncilAnswer`, whose `answer` field is a natural number and whose executable admission rule accepts only values from 0 through 100.
+The certificate schema is `aard.replay-certificate.v1`.  Its initialization request contains the source state, question, and council roster.  Each recorded action contains its operation, actor role, exact source-state authority, and payload.  The certificate also contains the claimed final state.
 
-`checkReplayCertificate_ok_iff` states that Lean acceptance holds exactly when initialization followed by the recorded public actions produces the claimed state.  The accepted-certificate theorems then derive action authority, source-state offer chronology, reachability, final-state record integrity, and fixed-catalog equality.  Closed facts also replay the member-answer pairs, while failed facts replay the stored opportunity-failure record and establish a terminal failed state.
+`checkReplayCertificate_ok_iff` states that Lean accepts a certificate exactly when initialization followed by the recorded actions produces the claimed state.  Certificate acceptance implies authority conformance, source-state offer chronology, reachability, record integrity, fixed initial catalog, and `InitializedRunInvariant`.  The terminal certificate structures add status-specific facts: closed certificates preserve the answer pairs, while failed certificates preserve the opportunity-failure record.
 
-The concrete closed certificate records answers 72, 55, and 18 for members C1, C2, and C3.  The concrete failed certificate records a plaintiff failure at the opening opportunity with `failure_type` equal to `opportunity_failed`.  Both examples prove certificate acceptance and instantiate their respective terminal fact structures.
+The concrete certificate examples cover one closed case with three council answers and one case-level plaintiff opportunity failure.  They evaluate the executable certificate predicate and instantiate the corresponding fact structures.
 
-## Operational Boundary
+## Operational Verification
 
-The Go `aard verify-certificate` command validates the v1 schema and procedure, hashes the claimed final state, compares that hash with `state.json`, replays initialization and every action through the configured Lean engine, and hashes the replayed state.  Lean's `checkReplayCertificate` is the formal executable predicate, and successful evaluation establishes exact replay, authority, chronology, reachability, record integrity, and catalog equality.  The closed and failed fact packages require the corresponding claimed-state status premise.  The Go verifier separately requires the replayed status to be `closed` or `failed`.  It replays and hashes without invoking the Lean theorem as an exported proof checker or returning the derived formal facts as protocol data.
+`aard verify-certificate` accepts the v1 schema and procedure `aard`.  It requires one nonblank case identifier across the certificate, initialization state, claimed state, packet `state.json`, and replayed state.  It validates each recorded authority and source version, replays initialization and every action through the configured Lean executable, requires a terminal status, and compares the resulting JSON state with the claimed and packet states.
 
-Go preserves the current failure distinction during execution and replay.  A lawyer opportunity failure terminates the case with a structured failure record, while a council-member failure removes that member and permits the remaining seated council to continue when the policy allows it.  The failed certificate theorem concerns a terminal case-level opportunity failure and proves replay agreement for the stored record.
+The command executes the same Lean initialization and step functions used during a case.  It does not expose `checkReplayCertificate` or return theorem values through the protocol.  It also does not inspect work notes, events, council snapshots, transcript files, or evidence bytes.  Evidence-file custody therefore requires a separate comparison of the manifest commitments with `evidence-store/`.
 
 ## Limits
 
-The proofs cover the Lean state, executable transitions, recorded commitments, and certificate implications.  Certificate verification hashes JSON states and replays actions, but it does not rehash the files stored under `evidence-store/` or prove that a child's bytes implement its stated derivation method.  The library also does not establish the truth of the degree question, the adequacy of advocacy, or a single aggregate derived from the independent 0–100 member answers.
+The proofs establish properties of Lean state, transitions, replay, and recorded commitments.  They do not establish the truth of the case question, the quality of a lawyer's work, or an aggregate derived from the independent council answers.  Evidence lineage proves the recorded parent relationship and digest agreement; it does not prove that child bytes result from the stated transformation.

@@ -45,7 +45,9 @@ The packet records the outcome, engine state, procedural sequence, off-record pl
 | `runtime/proceeding/` | Case runner, Lawyer API, Council API, evidence storage, rendering, and policy logic. |
 | `runtime/lean/` | Go client for the Lean engine. |
 | `runtime/spec/` | Complaint parser. |
-| `engine/` | Lean degree-arbitration engine and proofs. |
+| `engine/AARD/Core.lean` | Lean state, policy, opportunities, transitions, initialization, and replay. |
+| `engine/Main.lean` | JSON protocol and executable entry point. |
+| `engine/Proofs/` | Namespaced Lean proofs over the executable core. |
 | `etc/policy.json` | Default case policy. |
 | `../prompts/arbd/` | Complete editable AARD prompt set. |
 | `examples/` | Complaints and initial case files. |
@@ -308,9 +310,7 @@ curl -sS -X POST "$BASE/do" -H 'content-type: application/json' --data '{
     "kind": "tool",
     "tool_name": "record_opening_statement",
     "payload": {
-      "text": "The score will turn on the attribution and provenance of the confession.",
-      "offered_evidence": [],
-      "technical_reports": []
+      "text": "The score will turn on the attribution and provenance of the confession."
     }
   }
 }'

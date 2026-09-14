@@ -1,6 +1,6 @@
 import Proofs.Samples
 
-open ArbdProofs
+namespace ArbdProofs
 
 theorem validatePolicy_requires_judgment_standard :
     policyErrorMessage (validatePolicy invalidBlankStandardPolicy) =
@@ -39,3 +39,5 @@ theorem initializeCase_reseats_every_council_member :
       stateAllCouncilStatusesAre "seated" (initializeCase initRequest) = true ∧
       stateAnswerCount (initializeCase initRequest) = 0 := by
   native_decide
+
+end ArbdProofs

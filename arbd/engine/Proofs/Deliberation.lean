@@ -1,7 +1,7 @@
 import Proofs.Samples
 import Proofs.MeritsFlow
 
-open ArbdProofs
+namespace ArbdProofs
 
 def activeDeliberationCase : ArbitrationCase :=
   { baseCase with
@@ -119,3 +119,5 @@ theorem nextOpportunity_skips_answered_and_nonseated_members :
     stateNextOpportunityId (nextOpportunity votedAndTimedOutState) =
       "deliberation:1:C3" := by
   native_decide
+
+end ArbdProofs

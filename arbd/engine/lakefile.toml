@@ -7,6 +7,9 @@ weakLeanArgs = ["-j1"]
 name = "Main"
 
 [[lean_lib]]
+name = "AARD"
+
+[[lean_lib]]
 name = "Proofs"
 
 [[lean_exe]]

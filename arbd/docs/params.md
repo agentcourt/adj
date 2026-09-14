@@ -2,7 +2,7 @@
 
 AARD separates four classes of input: complaint content, procedural policy, evidence-custody policy, and runtime limits.  The complaint states the question, procedural policy defines the engine-visible arbitration, custody policy bounds byte transport and inspection, and runtime limits bound the processes that conduct the case.  Procedure and custody fields share `policy.json`, but only the procedural subset enters the Lean policy.
 
-The [case command](../runtime/cmd/aard/case.go) loads these values and constructs the [proceeding options](../runtime/proceeding/types.go).  The [policy layer](../runtime/proceeding/policy.go) supplies defaults and rejects invalid combinations before initialization.  The [Lean engine](../engine/Main.lean) checks the engine-visible policy again while enforcing each accepted transition.
+The [case command](../runtime/cmd/aard/case.go) loads these values and constructs the [proceeding options](../runtime/proceeding/types.go).  The [policy layer](../runtime/proceeding/policy.go) supplies defaults and rejects invalid combinations before initialization.  The [Lean core](../engine/AARD/Core.lean) checks the engine-visible policy again while enforcing each accepted transition.
 
 ## Parameter Groups
 
