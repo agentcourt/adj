@@ -1749,13 +1749,17 @@ func (s *runState) startLawyer(ctx context.Context, role, mcpPort string) error 
 	if err != nil {
 		return err
 	}
+	searchInstructions, err := s.launcherPrompts.SearchInstructions(lawyerWebSearchEnabled(s.opts.LawyerWebSearch))
+	if err != nil {
+		return err
+	}
 	instructions, err := s.renderLauncherPrompt(promptID, instructionData{
 		CaseID:             s.opts.CaseID,
 		RoleID:             role,
 		MCPServer:          server,
 		MCPURL:             mcpURL,
 		Workspace:          lawyerPromptWorkspace(profile, workDir),
-		SearchInstructions: launcherprompt.SearchInstructions(lawyerWebSearchEnabled(s.opts.LawyerWebSearch)),
+		SearchInstructions: searchInstructions,
 	})
 	if err != nil {
 		return err
@@ -1884,13 +1888,17 @@ func (s *runState) writeRemoteLawyerSkill(role string) error {
 	if err != nil {
 		return err
 	}
+	searchInstructions, err := s.launcherPrompts.RemoteSearchInstructions(lawyerWebSearchEnabled(s.opts.LawyerWebSearch))
+	if err != nil {
+		return err
+	}
 	instructions, err := s.renderLauncherPrompt("skill.openclaw", instructionData{
 		CaseID:             s.opts.CaseID,
 		RoleID:             role,
 		MCPServer:          server,
 		MCPURL:             url,
 		MCPJSON:            string(mcpJSON),
-		SearchInstructions: launcherprompt.RemoteSearchInstructions(lawyerWebSearchEnabled(s.opts.LawyerWebSearch)),
+		SearchInstructions: searchInstructions,
 	})
 	if err != nil {
 		return err

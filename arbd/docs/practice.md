@@ -23,7 +23,7 @@ The record contains the complaint question, immutable initial evidence commitmen
 
 A derived submission names a public parent identifier and derivation method.  The runtime resolves that parent from the current record and supplies its verified SHA-256, while the engine requires the parent to be initial or earlier submitted evidence.  The derivation string records the claimed transformation but does not prove that the child bytes follow from the parent bytes.
 
-Work notes remain outside the evidentiary record in `work-notes.ndjson`.  They can record plans, search logs, source leads, adverse facts, checks, dead ends, and provisional scoring views for later review.  A filing and council answer must rely on admitted record material rather than private notes.
+Work notes remain outside the evidentiary record in `work-notes.ndjson`.  Lawyers send short updates after initial orientation, material findings or failed approaches, and before filing.  The notes explain conclusions, uncertainty, what counsel tried, and next steps so an operator can follow the work as it develops.  Detailed command output and search logs belong in workspace files.  Filings and council answers rely on admitted record material.
 
 ## Evidence Search and Preservation
 

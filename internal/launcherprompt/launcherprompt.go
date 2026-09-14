@@ -143,24 +143,30 @@ var quickParticipantTokens = []string{"{{ROLE}}", "{{CASE}}", "{{SERVER}}", "{{W
 
 const searchEnabledInstructions = `Web search is enabled.  Research the web when useful to the analysis.  Check material sources, cite them in the filing when relevant, distinguish sourced facts from inference, and summarize useful research in work notes.`
 const searchDisabledInstructions = `Web search is unavailable.  Base the analysis on the case material and available local tools.`
+const remoteSearchEnabledInstructions = `Use web search, a browser, or computer-use tools when the external environment provides them and they improve the analysis.  Check material sources, preserve citations, and distinguish sourced facts from inference.`
+const remoteSearchDisabledInstructions = `Do not use web search for this case.  Use available local analysis, execution, and computer-use tools.`
 
-func SearchInstructions(enabled bool) string {
+func (s Sources) SearchInstructions(enabled bool) (string, error) {
 	if enabled {
-		return searchEnabledInstructions
+		return s.Render("search.local.enabled", nil)
 	}
-	return searchDisabledInstructions
+	return s.Render("search.local.disabled", nil)
 }
 
-func RemoteSearchInstructions(enabled bool) string {
+func (s Sources) RemoteSearchInstructions(enabled bool) (string, error) {
 	if enabled {
-		return `Use web search, a browser, or computer-use tools when the external environment provides them and they improve the analysis.  Check material sources, preserve citations, and distinguish sourced facts from inference.`
+		return s.Render("search.remote.enabled", nil)
 	}
-	return `Do not use web search for this case.  Use available local analysis, execution, and computer-use tools.`
+	return s.Render("search.remote.disabled", nil)
 }
 
 var catalogs = map[string]catalog{
 	"arb": {
 		specs: []promptSpec{
+			{id: "search.local.enabled", relativePath: "search/local-enabled.md", fallback: searchEnabledInstructions},
+			{id: "search.local.disabled", relativePath: "search/local-disabled.md", fallback: searchDisabledInstructions},
+			{id: "search.remote.enabled", relativePath: "search/remote-enabled.md", fallback: remoteSearchEnabledInstructions},
+			{id: "search.remote.disabled", relativePath: "search/remote-disabled.md", fallback: remoteSearchDisabledInstructions},
 			{id: "participant.openclaw", relativePath: "participants/openclaw.md", fallback: arbOpenClawParticipantFallback, tokens: participantTokens, requiredTokens: participantRequiredTokens},
 			{id: "participant.headless", relativePath: "participants/headless.md", fallback: arbHeadlessParticipantFallback, tokens: participantTokens, requiredTokens: participantRequiredTokens},
 			{id: "participant.pi", relativePath: "participants/pi.md", fallback: arbPiParticipantFallback, tokens: participantTokens, requiredTokens: participantRequiredTokens},
@@ -170,6 +176,10 @@ var catalogs = map[string]catalog{
 	},
 	"arbd": {
 		specs: []promptSpec{
+			{id: "search.local.enabled", relativePath: "search/local-enabled.md", fallback: searchEnabledInstructions},
+			{id: "search.local.disabled", relativePath: "search/local-disabled.md", fallback: searchDisabledInstructions},
+			{id: "search.remote.enabled", relativePath: "search/remote-enabled.md", fallback: remoteSearchEnabledInstructions},
+			{id: "search.remote.disabled", relativePath: "search/remote-disabled.md", fallback: remoteSearchDisabledInstructions},
 			{id: "participant.openclaw", relativePath: "participants/openclaw.md", fallback: arbdOpenClawParticipantFallback, tokens: participantTokens, requiredTokens: participantRequiredTokens},
 			{id: "participant.headless", relativePath: "participants/headless.md", fallback: arbdHeadlessParticipantFallback, tokens: participantTokens, requiredTokens: participantRequiredTokens},
 			{id: "participant.pi", relativePath: "participants/pi.md", fallback: arbdPiParticipantFallback, tokens: participantTokens, requiredTokens: participantRequiredTokens},
@@ -179,6 +189,10 @@ var catalogs = map[string]catalog{
 	},
 	"adc": {
 		specs: []promptSpec{
+			{id: "search.local.enabled", relativePath: "search/local-enabled.md", fallback: searchEnabledInstructions},
+			{id: "search.local.disabled", relativePath: "search/local-disabled.md", fallback: searchDisabledInstructions},
+			{id: "search.remote.enabled", relativePath: "search/remote-enabled.md", fallback: remoteSearchEnabledInstructions},
+			{id: "search.remote.disabled", relativePath: "search/remote-disabled.md", fallback: remoteSearchDisabledInstructions},
 			{id: "participant.openclaw", relativePath: "participants/openclaw.md", fallback: adcOpenClawParticipantFallback, tokens: participantTokens, requiredTokens: participantRequiredTokens},
 			{id: "participant.pi", relativePath: "participants/pi.md", fallback: adcPiParticipantFallback, tokens: participantTokens, requiredTokens: participantRequiredTokens},
 			{id: "skill.openclaw", relativePath: "skills/openclaw-remote.md", fallback: adcOpenClawSkillFallback, tokens: skillTokens, requiredTokens: skillRequiredTokens},
@@ -187,6 +201,8 @@ var catalogs = map[string]catalog{
 	},
 	"quick": {
 		specs: []promptSpec{
+			{id: "search.remote.enabled", relativePath: "search/remote-enabled.md", fallback: remoteSearchEnabledInstructions},
+			{id: "search.remote.disabled", relativePath: "search/remote-disabled.md", fallback: remoteSearchDisabledInstructions},
 			{id: "participant", relativePath: "participants/default.md", fallback: quickParticipantFallback, tokens: quickParticipantTokens},
 			{id: "participant.pi", relativePath: "participants/pi.md", fallback: quickPiParticipantFallback, tokens: quickParticipantTokens},
 			{id: "skill.openclaw", relativePath: "skills/openclaw-remote.md", fallback: quickOpenClawSkillFallback, tokens: skillTokens, requiredTokens: skillRequiredTokens},

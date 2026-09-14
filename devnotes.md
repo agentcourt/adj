@@ -729,3 +729,21 @@ The final screening command also passed the direct vote and Pi/MCP tests for Ope
 `Proofs/BoundedTermination.lean` proves strict decrease of `remainingStepBudget` under every accepted public action from a state satisfying `ProcedureInvariant`.  Successful initialized runs contain at most `2 × max_submitted_evidence_per_side + 8 + council_size` accepted actions, and an infinite sequence of accepted actions is impossible.  Both terminal certificate fact packages now include the accepted-action bound.  The evidence-submission helper exposes the validated per-side count needed by the decrease proof, while preserving the original theorem and its statement.
 
 The maintained AARD tree contains 15 proof files, 209 theorem or lemma declarations, and 6,093 lines.  The changed record-integrity, bounded-termination, certificate-fact, and certificate-example targets passed in separate `leanrunner` invocations, followed by the explicit proof-root check.  Each invocation used one Lean job, a 6 GiB memory limit, and a 100% CPU quota.  The proof tree contains no `sorry`, `axiom`, or `unsafe` declaration.  The complete Go tests, `go vet -p=1 ./...`, `go build -p=1 ./...`, affected-document link check, and `git diff --check` passed.  The verification guide distinguishes the accepted-transition bound from runtime request and elapsed-time limits.
+
+## Prompt and documentation review: 2026-09-14
+
+The review identified conflicting lawyer tool and work-note instructions, omitted ARBD advocacy roles, incorrect evidence-phase guidance, fixed search prose outside the launcher catalogs, and outdated operating examples.  The approved work updates those prompts and their compiled fallbacks, adds search prompt entries through the existing resolver, and corrects the documentation against the current source.
+
+The search entries are `search.local.enabled`, `search.local.disabled`, `search.remote.enabled`, and `search.remote.disabled`.  Formal launchers use all four.  Quick uses the remote pair because its automatic-lawyer search instructions already belong to its core catalog.  The web-search setting selects the entry.  File selection and token validation use the existing launcher prompt rules.
+
+The ADC limits reference follows [policy initialization](adc/runtime/runner/state_init.go), [limit and override rules](adc/engine/ADC/Core.lean), and [runtime limits](adc/runtime/runner/runtime_limits.go).  Inspection also found that the Go override tool schema requires `override_value`, while Lean requires `new_value` and `ordered_by`.  Approval to correct that additional mismatch is pending.
+
+- [x] Correct lawyer tool scope, ARBD roles, evidence phases, and work notes.
+- [x] Make local and remote search instructions replaceable.
+- [x] Complete current limits, pool, prompt-authoring, and example references.
+- [x] Run all Go tests, vet, build, and edited-document link checks.
+- [ ] Complete the live ARBD test and review its record.
+
+`go test -p=1 ./...`, `go vet -p=1 ./...`, and `go build -p=1 ./...` passed.  The edited Markdown contains 52 local file links, all resolvable.  Launcher tests exercise enabled and disabled search selection through all four source levels, and generated remote-skill tests check individual search overrides.  The ARBD rendered-prompt test checks the higher-score and lower-score assignments.  No Lean source or proof changed.
+
+The live test uses the two sonnets from `arbd/examples/ex1`, two Pi lawyers using `openai/gpt-5.6-sol` at `xhigh` through Codex authentication, web search enabled, a custom `search.local.enabled` file, and five Pi/MCP council members selected from the direct-lab pool.  Its inputs, settings, notes, sessions, and case files are retained under `tmp/prompt-review-20260914/`.  Both lawyers received the custom search text, wrote and ran comparison programs, retained their work, and completed all eight filings.  They sent 23 notes across those opportunities.  Their final proposed scores were 94 and 88.  Neither used web search for this self-contained text comparison.  The plaintiff corrected a Python import error, and the defendant corrected an unavailable `python` command and missing evidence-file paths.  The council is still running.

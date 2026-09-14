@@ -79,7 +79,7 @@ func TestConfigRenderPromptFileUsesPerFileOverrideBeforePromptDir(t *testing.T) 
 	if got := prepared.modelToolDescription("List visible immutable record evidence."); got != "Custom list-evidence description." {
 		t.Fatalf("list-evidence description = %q", got)
 	}
-	if got := prepared.modelToolDescription("Accumulated private work notes for this lawyer turn."); got != "Custom notes property description." {
+	if got := prepared.modelToolDescription("A short update on the lawyer's findings, uncertainty, attempted approaches, and next steps."); got != "Custom notes property description." {
 		t.Fatalf("notes property description = %q", got)
 	}
 	tools := prepared.lawyerToolSpecs(Opportunity{})

@@ -1471,7 +1471,7 @@ func TestBuildAttorneyPromptStatesCouncilForum(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildAttorneyPrompt returned error: %v", err)
 	}
-	if !strings.Contains(prompt, "no judge, no clerk, and no voir dire") {
+	if !strings.Contains(prompt, "The participants are the two lawyers and the council.") {
 		t.Fatalf("prompt did not state the forum shape:\n%s", prompt)
 	}
 	if !strings.Contains(prompt, "Address the council, not a judge.") {
@@ -1489,7 +1489,7 @@ func TestBuildAttorneyPromptStatesCouncilForum(t *testing.T) {
 	if !strings.Contains(prompt, "Do not invent facts, sources, quotations, files, analyses, or results.") {
 		t.Fatalf("prompt did not forbid fabrication:\n%s", prompt)
 	}
-	if !strings.Contains(prompt, "When a tool returns an error, treat the error text as authoritative host feedback and correct the stated defect before trying again.") {
+	if !strings.Contains(prompt, "Read any returned error and address the stated defect before another attempt.") {
 		t.Fatalf("prompt did not instruct counsel to respond to tool errors:\n%s", prompt)
 	}
 	if !strings.Contains(prompt, "Text limit for this submission: 5000 characters.") {
@@ -1501,7 +1501,7 @@ func TestBuildAttorneyPromptStatesCouncilForum(t *testing.T) {
 	if !strings.Contains(prompt, "Use the Lawyer API as role plaintiff.") {
 		t.Fatalf("prompt did not state the Lawyer API role:\n%s", prompt)
 	}
-	if !strings.Contains(prompt, "Opportunity id: openings:plaintiff") || !strings.Contains(prompt, `opportunity_id: "openings:plaintiff"`) {
+	if !strings.Contains(prompt, "Opportunity id: openings:plaintiff") {
 		t.Fatalf("prompt did not state the current opportunity id:\n%s", prompt)
 	}
 	if strings.Contains(prompt, "Visible case files:") {
@@ -1549,20 +1549,15 @@ func TestBuildAttorneyPromptIncludesWorkGuidanceEveryTurn(t *testing.T) {
 		},
 	}
 	required := []string{
-		"Treat the notes as a working journal",
-		"Use send_work_notes to forward accumulated notes",
-		"At the start of each opportunity, check the current record and scan the evidence list",
-		"Analyze the relevant evidence before advocating from it.",
-		"use all accessible and available resources that can find or test material evidence",
-		"install useful programs, write and run scripts or small programs",
-		"use a browser for dynamic pages or visual inspection",
-		"Investigate before each substantive filing, including openings.",
-		"Build a source map before searching.",
-		"Use layered searches rather than one broad query.",
-		"Use a browser when the evidentiary content depends on rendering or interaction",
-		"When a missing local program would materially improve retrieval, extraction, or verification",
-		"create a transcript or timestamped notes for material passages",
-		"Choose a stable private path owned by the assigned agent.",
+		"After initial orientation, send a short note through send_work_notes",
+		"Send further notes as material findings, failed approaches, or changes in theory occur",
+		"At the start of each opportunity, inspect the current record and evidence list",
+		"Check adverse evidence, conflicting sources, missing context, and later corrections.",
+		"Use the analysis, execution, and computer-use tools supplied by your harness",
+		"Install tools when needed",
+		"extracting PDF text, inspecting images, transcribing media, checking signatures, or writing and running programs",
+		"Identify the factual questions that could change your filing",
+		"keep source material, programs, notes, and results in the retained workspace for later opportunities",
 		"Use list_evidence, stat_evidence, and read_evidence_range when exact evidence bytes matter.",
 	}
 
@@ -1847,7 +1842,7 @@ func TestBuildAttorneyPromptConstrainsArgumentExperiments(t *testing.T) {
 	if strings.Contains(prompt, "Legal operations allowed for this opportunity") {
 		t.Fatalf("argument prompt used obsolete opportunity wording:\n%s", prompt)
 	}
-	if !strings.Contains(prompt, "Use submit_evidence or the chunked upload tools in arguments, rebuttals, and surrebuttals") {
+	if !strings.Contains(prompt, "Evidence submission, offered evidence, and technical reports are available during arguments, rebuttals, and surrebuttals") {
 		t.Fatalf("argument prompt did not state the phase rule for evidence submission:\n%s", prompt)
 	}
 	if strings.Contains(prompt, "Allowed legal acts for submit_decision") {
@@ -2009,7 +2004,7 @@ func TestBuildAttorneyPromptAllowsSurrebuttalSupplementalMaterials(t *testing.T)
 	if !strings.Contains(prompt, "Final filing actions for submit_decision: submit_surrebuttal, pass_phase_opportunity") {
 		t.Fatalf("surrebuttal prompt did not state final filing actions:\n%s", prompt)
 	}
-	if !strings.Contains(prompt, "Use submit_evidence or the chunked upload tools in arguments, rebuttals, and surrebuttals") {
+	if !strings.Contains(prompt, "Evidence submission, offered evidence, and technical reports are available during arguments, rebuttals, and surrebuttals") {
 		t.Fatalf("surrebuttal prompt did not state the phase rule for evidence submission:\n%s", prompt)
 	}
 	if !strings.Contains(prompt, "Submitted evidence: admitted items may be at most") {

@@ -51,6 +51,14 @@ Launcher resolution has four levels, listed from lowest to highest precedence: t
 | ADC | `participant.pi` | `participants/pi.md` |
 | ADC | `skill.openclaw` | `skills/openclaw-remote.md` |
 | ADC | `juror.pi` | `jurors/pi.md` |
+| AAR, AARD, ADC | `search.local.enabled` | `search/local-enabled.md` |
+| AAR, AARD, ADC | `search.local.disabled` | `search/local-disabled.md` |
+| Quick, AAR, AARD, ADC | `search.remote.enabled` | `search/remote-enabled.md` |
+| Quick, AAR, AARD, ADC | `search.remote.disabled` | `search/remote-disabled.md` |
+
+The search entries accept no replacement tokens.  The launcher selects the enabled or disabled entry from the case's web-search setting, then inserts its rendered text into `{{SEARCH_INSTRUCTIONS}}`.  Local entries supply automatic formal-procedure lawyers.  Remote entries supply the generated lawyer skill.  Quick's automatic lawyers receive search guidance from its core `search.enabled` and `search.disabled` entries.
+
+Search entries follow the same fallback, working-directory, complete-directory, and individual-file precedence as other launcher entries.  A complete launcher directory includes the search files listed for its procedure.  For example, `--launcher-prompt-file search.local.enabled=./prompt-work/search.md` replaces the enabled-search wording in a formal local run.  The equivalent unified setting is `"launcher_prompt_files": {"search.local.enabled": "./prompt-work/search.md"}` in that procedure's settings.
 
 | Procedures and launcher IDs | Available tokens |
 | --- | --- |

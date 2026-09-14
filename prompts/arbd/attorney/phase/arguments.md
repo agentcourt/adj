@@ -24,7 +24,7 @@ Use offered_evidence only for visible evidence, by evidence_id. Submit new sourc
 
 Use list_evidence, stat_evidence, and read_evidence_range when exact evidence bytes matter. If you later offer that evidence, still refer to the original evidence_id.
 
-Offer exhibits, submitted evidence, and technical reports only in this phase.
+Submit source evidence, offer visible evidence, and include technical reports in this phase.  These permissions also apply during rebuttal and surrebuttal.
 
 If you need to add source material first, call the direct submit_evidence tool with content and provenance, then cite the returned evidence_id in offered_evidence. Do not cite a newly discovered source in the argument text unless it has been accepted as submitted evidence or was already visible record evidence.
 

@@ -48,7 +48,7 @@ func TestResolvePrecedenceAndValidation(t *testing.T) {
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		source := spec.id + " {{CASE_ID}}"
+		source := spec.id
 		for _, token := range spec.requiredTokens {
 			source += " " + token
 		}
@@ -155,29 +155,62 @@ func TestFormalRemoteSkillEnvironmentInstructions(t *testing.T) {
 	}
 }
 
-func TestSearchInstructions(t *testing.T) {
-	enabled := SearchInstructions(true)
-	for _, text := range []string{"Web search is enabled", "Check material sources", "cite them", "work notes"} {
-		if !strings.Contains(enabled, text) {
-			t.Errorf("enabled search instructions lack %q: %q", text, enabled)
-		}
+func TestSearchPromptSources(t *testing.T) {
+	repo, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
 	}
-	disabled := SearchInstructions(false)
-	for _, text := range []string{"Web search is unavailable", "case material", "local tools"} {
-		if !strings.Contains(disabled, text) {
-			t.Errorf("disabled search instructions lack %q: %q", text, disabled)
+	root := t.TempDir()
+	t.Chdir(root)
+	for _, procedure := range []string{"arb", "arbd", "adc", "quick"} {
+		completeDir := filepath.Join(repo, "prompts", procedure)
+		if _, err := Resolve(procedure, completeDir, nil); err != nil {
+			t.Fatalf("%s checked-in launcher catalog: %v", procedure, err)
 		}
-	}
-	remoteEnabled := RemoteSearchInstructions(true)
-	for _, text := range []string{"Use web search", "external environment", "preserve citations"} {
-		if !strings.Contains(remoteEnabled, text) {
-			t.Errorf("enabled remote search instructions lack %q: %q", text, remoteEnabled)
-		}
-	}
-	remoteDisabled := RemoteSearchInstructions(false)
-	for _, text := range []string{"Do not use web search", "local analysis"} {
-		if !strings.Contains(remoteDisabled, text) {
-			t.Errorf("disabled remote search instructions lack %q: %q", text, remoteDisabled)
+		for _, spec := range catalogs[procedure].specs {
+			if !strings.HasPrefix(spec.id, "search.") {
+				continue
+			}
+			t.Run(procedure+"/"+spec.id, func(t *testing.T) {
+				enabled := strings.HasSuffix(spec.id, ".enabled")
+				read := func(s Sources) (string, error) {
+					if strings.HasPrefix(spec.id, "search.remote.") {
+						return s.RemoteSearchInstructions(enabled)
+					}
+					return s.SearchInstructions(enabled)
+				}
+				check := func(dir string, overrides map[string]string, want string) {
+					t.Helper()
+					sources, err := Resolve(procedure, dir, overrides)
+					if err != nil {
+						t.Fatal(err)
+					}
+					got, err := read(sources)
+					if err != nil || got != want {
+						t.Fatalf("search prompt = %q, %v; want %q", got, err, want)
+					}
+				}
+				check("", nil, spec.fallback)
+				path := filepath.Join(root, "prompts", procedure, spec.relativePath)
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				conventional := "Conventional " + spec.id
+				if err := os.WriteFile(path, []byte(conventional), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				check("", nil, conventional)
+				checked, err := os.ReadFile(filepath.Join(completeDir, spec.relativePath))
+				if err != nil {
+					t.Fatal(err)
+				}
+				check(completeDir, nil, strings.TrimSpace(string(checked)))
+				override := filepath.Join(t.TempDir(), "search.md")
+				if err := os.WriteFile(override, []byte("Custom "+spec.id), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				check(completeDir, map[string]string{spec.id: override}, "Custom "+spec.id)
+			})
 		}
 	}
 }

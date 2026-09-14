@@ -1,11 +1,16 @@
-# Example 2
+# Example 2: Draw-Event Market
 
-This example adapts [`scratch/ronaldo.md`](../../scratch/ronaldo.md) into the file layout that `agentarbitration` can use directly.  The scratch file is a filing-style complaint with citations and argumentative prose.  The runner, by contrast, needs a proposition in `situation.md` and a starting record that both sides can read immediately.  `examples/ex02` is therefore a normalization of that draft, not a fresh archival collection.
+This example concerns whether Trump's pre-event remarks containing “Ronaldo” fall within the Kalshi market's phrase “during the FIFA World Cup Draw.”  The challenged market resolution is No, and the complaint argues for Yes.
 
-I took five steps.  First, I extracted one arbitration proposition.  Second, I rewrote that proposition once after the first live run.  The original proposition was too generic, so the opening statements drifted into invented audio and video evidence.  The revised proposition states the actual dispute in the draft: whether pre-event remarks at the venue count as occurring during the draw.  Third, I separated the draft into starting files that isolate the key dispute points: the two quoted pre-event lines, the negative point about the formal draw-program transcript, and the market-boundary question.  Fourth, I cut material that widened the initial file set without adding immediate proof value, especially the raw link list.  Fifth, I generated `complaint.md` from `situation.md` so the example matches the current `aar complain` path.
+## Files
 
-This folder does not contain downloaded source archives.  I did not fetch the American Presidency Project transcript, the Roll Call / Factba.se transcript, the Kalshi page, or the Bernard Bulletin post while building this example.  The local files here are derived from the existing draft complaint.  They are a starting point, not a substitute for a primary-source record.  If this example becomes important enough to publish or run repeatedly, the next step should be to replace these distilled files with captured source text and stable source metadata.
+| File | Contents |
+| --- | --- |
+| [Situation](situation.md) and [Complaint](complaint.md) | Arbitration proposition. |
+| [Market Question](market-question.txt) | Market title, strike, challenged resolution, and disputed event boundary. |
+| [Pre-Event Remarks](pre-event-remarks.txt) | Quotations attributed to the pre-event press exchange. |
+| [Formal Draw Program](formal-draw-program.txt) | The assertion that the formal-program transcript lacks the strike. |
 
-The file roles are simple.  `situation.md` and `complaint.md` state the proposition.  `market-question.txt` states the market, strike, challenged resolution, and the core issue in this example.  `pre-event-remarks.txt` carries the quoted `"Ronaldo"` lines attributed in the draft to the pre-event press exchange.  `formal-draw-program.txt` records the draft's contrary point that the formal draw transcript does not appear to contain the strike.
+## Source Status
 
-I then ran `make ex02` against this folder.  The first live run confirmed that the original proposition was too loose.  Both advocates treated the case as if they had a broader media record and started talking about audio and video material that had not been established.  The later revisions tightened the proposition and the initial file set.  The current prompt work is meant to let counsel investigate when that would help, while still forbidding fabricated evidence.
+The text files contain assertions and quotations derived from a draft complaint.  Their factual claims require verification against primary sources.  [Example 3](../ex03/README.md) supplies extracted market terms and a pre-event transcript for the same dispute.

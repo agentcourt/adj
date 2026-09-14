@@ -1971,7 +1971,7 @@ func workNotesSchemaWithDescription(describe func(string) string) map[string]any
 		"properties": map[string]any{
 			"notes": map[string]any{
 				"type":        "string",
-				"description": describe("Accumulated private work notes for this lawyer turn."),
+				"description": describe("A short update on the lawyer's findings, uncertainty, attempted approaches, and next steps."),
 			},
 		},
 		"required":             []string{"notes"},

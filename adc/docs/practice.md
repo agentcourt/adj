@@ -65,7 +65,7 @@ An exhibit is a trial-facing use of a case file.  The act `offer_case_file_as_ex
 
 Technical reports explain source work.  They are appropriate for signature verification, hash comparison, OCR, transcript preparation, metadata review, source-chain reconstruction, archive inspection, or a search ledger that affects weight.  The report should identify inputs by `file_id` or exhibit when possible, state the method, give the result, and state limits that matter to the factfinder.
 
-Private work notes are outside the case record.  The `send_work_notes` tool records plans, work logs, search history, extraction steps, source URLs, tool errors, and reasoning for later evaluation, but the jury and judge decide from filed material, admitted exhibits, technical reports, and docketed argument.  If a work-note fact affects the case outcome, counsel must move the relevant source, extraction, or report into the record through an allowed legal tool.
+Private work notes are short updates sent through `send_work_notes` after initial orientation, material findings or failed approaches, and before a decision.  They explain conclusions, uncertainty, what counsel tried, and next steps so an operator can follow the work as it develops.  Detailed command output and search logs belong in workspace files.  The jury and judge decide from filed material, admitted exhibits, technical reports, and docketed argument.  Counsel introduces any material source or analysis through the permitted legal tools.
 
 ## Role API and External Lawyering
 
@@ -83,7 +83,7 @@ Search results are leads, not evidence.  A search result, snippet, answer box, m
 
 Browser use applies when a source depends on rendering, layout, scrolling, session state, embedded media, or interactive controls.  A browser can reveal visible timestamps, author identity, surrounding context, media attachments, repost structure, and whether a basic text fetch missed material content.  When visual context affects meaning, counsel should preserve screenshots or source captures through the court-facing file path, and use a technical report to explain what the browser showed.
 
-Local programs matter when ordinary reading is inadequate.  OCR can turn scans and screenshots into text; PDF tools can reveal hidden text, images, or forms; media tools can extract frames and transcripts; archive tools can list contents and paths; metadata tools can show file dates and formats; hash and signature tools can test integrity.  If counsel installs tools or writes scripts, the work notes should record what was installed or written, and a technical report should state the method when the result affects the case.
+Local programs matter when ordinary reading is inadequate.  OCR can turn scans and screenshots into text; PDF tools can reveal hidden text, images, or forms; media tools can extract frames and transcripts; archive tools can list contents and paths; metadata tools can show file dates and formats; hash and signature tools can test integrity.  Work notes explain material findings from these analyses, while a technical report states the method when the result affects the case.
 
 ## Evidence Search
 
@@ -93,7 +93,7 @@ Search terms should be planned, varied, and recorded.  Effective searches use pa
 
 Adverse search tests the assigned side's theory.  The defense should look for facts that make plaintiff's proof less complete, less material, less causal, or less reliable.  The plaintiff should look for defenses, alternative causes, later corrections, missing context, and source-chain weaknesses before making a claim that the record is decisive.
 
-A search stops for a stated reason.  The reason may be that decisive sources were found and preserved, that remaining leads are cumulative, that a source class cannot be reached within the deadline, or that available access does not permit retrieval.  When a missing source affects proof, counsel should document queries, repositories, URLs or identifiers, retrieval methods, response codes or errors, sources found, sources preserved, and remaining gaps in work notes and, if material, in a technical report.
+A search stops for a stated reason.  The reason may be that decisive sources were found and preserved, that remaining leads are cumulative, that a source class cannot be reached within the deadline, or that available access does not permit retrieval.  When a missing source affects proof, work notes summarize the relevant attempts and remaining gap.  Workspace files retain retrieval details, and a technical report includes the details needed to assess the evidence.
 
 ## Source-Chain and Browser Work
 

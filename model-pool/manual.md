@@ -38,7 +38,9 @@ Refresh endpoint inventories when a claim depends on current provider behavior. 
 
 The procedure accepts OpenRouter model IDs and produces `pool.jsonl`, a JSONL file of endpoint/persona records.  A provider endpoint is evaluated as its own unit because one OpenRouter model ID can route to multiple provider endpoints with different provider tags, quantization, context limits, supported parameters, pricing, and behavior.  Each output row supplies a runtime model request and persona reference.
 
-The gene stage stores the persona path supplied through `--persona`, and aggregation and sampling preserve that value.  With the default option, a generated row contains `../common/etc/personas/generic.md`, a path relative to `model-pool/`.  A runtime resolves a relative persona path beside the selected pool file and then under `<pool-dir>/../../etc/`, so it cannot resolve that default value from the nested result directories used by the documented sampler and end-to-end commands.  Pool construction preserves that path unchanged.  The installed default at `common/data/personas/pool.jsonl` instead contains `personas/generic.md`, which resolves through the shared-tree path.
+Gene inference reads persona text from `--persona` and stores the reference selected by `--persona-record-path`.  `make pool` and the end-to-end command default the stored reference to `personas/generic.md`.  A standalone gene command defaults the stored reference to the source persona path when `--persona-record-path` is omitted.
+
+Runtime loaders resolve a relative persona path beside the pool file, then under `<pool-dir>/../../etc/`.  Installing the generated pool at `common/data/personas/pool.jsonl` makes `personas/generic.md` resolve to `common/etc/personas/generic.md`.  For a pool kept elsewhere, select a reference that resolves from that location, or pass an absolute persona path through `--persona-record-path`.
 
 | Step | Input | Script | Output |
 | --- | --- | --- | --- |
@@ -399,7 +401,7 @@ uv run --no-cache --script tools/run_first_gene_inference_embeddings.py \
   --out results/gene-1-inference-embeddings-YYYYMMDDTHHMMSSZ
 ```
 
-Check `summary.json` before passing the records to PCA.  `records_written` and `embedding_count` must equal `expected_records`, while both error counts must be zero.  The gene command writes diagnostic rows and its summary before returning a nonzero exit status for a completion or embedding failure, and the end-to-end runner stops on that failed stage.
+A standalone gene command returns a nonzero exit status after recording a completion or embedding error.  The end-to-end runner passes `--allow-record-errors`, completes every selected gene, and then excludes any configuration with a failed or missing sample from all genes.  It writes the eligible records and exclusion reasons under `gene-filter/`.  PCA consumes those eligible records.
 
 ### PCA Reduction
 

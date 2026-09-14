@@ -1,0 +1,1 @@
+Web search is enabled.  Research the web when useful to the analysis.  Check material sources, cite them in the filing when relevant, distinguish sourced facts from inference, and summarize useful research in work notes.

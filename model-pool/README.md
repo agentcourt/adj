@@ -38,7 +38,7 @@ uv run --no-cache tools/score_eval.py score --run results/mock-perfect
 
 Generated model responses, score files, provider inventories, sampled pools, and stage summaries belong under `results/`.  Git ignores that directory except for `results/.gitkeep`, and it ignores credentials under `secrets/`.  The checked-in provider-endpoint snapshot lives under `variants/filtered-20260529/`.
 
-The sampler copies `persona_path` from each gene-stage record into the pool row.  With the default `--persona`, a generated row contains `../common/etc/personas/generic.md`, a path relative to `model-pool/`.  Runtime loaders resolve a relative persona path beside the selected pool file and then under `<pool-dir>/../../etc/`, so they cannot resolve that default value from the nested result directories used by the documented sampler and end-to-end commands.  Pool construction preserves that path unchanged.  The installed default pool at `common/data/personas/pool.jsonl` instead contains `personas/generic.md`, which resolves through the shared-tree path.
+Gene inference reads persona text from `--persona`.  `--persona-record-path` selects the path written into generated records.  `make pool` and the end-to-end command default that stored path to `personas/generic.md`, which resolves when the pool is installed at `common/data/personas/pool.jsonl`.  A pool used from another directory needs a persona path resolvable there.  The [manual](manual.md#full-selection-procedure) defines path resolution and standalone gene-command defaults.
 
 ## Layout
 

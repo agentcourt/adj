@@ -1108,6 +1108,10 @@ func TestPublicMCPBaseAndManualAddressValidation(t *testing.T) {
 
 func TestWriteRemoteLawyerSkill(t *testing.T) {
 	dir := t.TempDir()
+	searchPath := filepath.Join(dir, "search.md")
+	if err := os.WriteFile(searchPath, []byte("Custom remote search instructions."), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	templatePath := filepath.Join(dir, "remote.md.tmpl")
 	if err := os.WriteFile(templatePath, []byte("case={{CASE_ID}} role={{ROLE_ID}} server={{MCP_SERVER}} url={{MCP_URL}} json={{MCP_JSON}} search={{SEARCH_INSTRUCTIONS}}\n"), 0o644); err != nil {
 		t.Fatalf("write template: %v", err)
@@ -1117,7 +1121,7 @@ func TestWriteRemoteLawyerSkill(t *testing.T) {
 			CaseID:    "case-1",
 			OutputDir: dir,
 		},
-		launcherPrompts: mustARBDLauncherPrompts(t, map[string]string{"skill.openclaw": templatePath}),
+		launcherPrompts: mustARBDLauncherPrompts(t, map[string]string{"skill.openclaw": templatePath, "search.remote.enabled": searchPath}),
 		mcpPublicBase:   "http://aard.example:8001",
 		signingKey:      []byte("01234567890123456789012345678901"),
 	}
@@ -1130,7 +1134,7 @@ func TestWriteRemoteLawyerSkill(t *testing.T) {
 		t.Fatalf("read skill: %v", err)
 	}
 	text := string(raw)
-	for _, want := range []string{"case=case-1", "role=plaintiff", "http://aard.example:8001/mcp", "Bearer adjmcp1.", "search=Use web search"} {
+	for _, want := range []string{"case=case-1", "role=plaintiff", "http://aard.example:8001/mcp", "Bearer adjmcp1.", "search=Custom remote search instructions."} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("skill missing %q: %s", want, text)
 		}

@@ -72,7 +72,7 @@ var toolDescriptionDefinitions = []toolDescriptionDefinition{
 	{id: "tool.submit_evidence", name: "submit_evidence", relativePath: "tools/submit-evidence.md", description: "Submit source evidence with provenance."},
 	{id: "tool.submit_decision", name: "submit_decision", relativePath: "tools/submit-decision.md", description: "Submit the legal act for the current opportunity."},
 	{id: "tool.submit_council_vote", name: "submit_council_vote", relativePath: "tools/submit-council-vote.md", description: "Submit one council vote for the current deliberation opportunity."},
-	{id: "tool.send_work_notes.property.notes", name: "send_work_notes", relativePath: "tools/send-work-notes/property-notes.md", description: "Accumulated private work notes for this lawyer turn."},
+	{id: "tool.send_work_notes.property.notes", name: "send_work_notes", relativePath: "tools/send-work-notes/property-notes.md", description: "A short update on the lawyer's findings, uncertainty, attempted approaches, and next steps."},
 }
 
 var promptDefinitions = func() []promptDefinition {
@@ -86,7 +86,7 @@ var promptDefinitions = func() []promptDefinition {
 		{
 			id:           promptAttorneyCommon,
 			relativePath: "attorney/common.md",
-			fallback:     "You represent {{ROLE}} in an Agent Arbitration proceeding.\n\nProposition: {{PROPOSITION}}\nStandard of evidence: {{EVIDENCE_STANDARD}}\nPhase: {{PHASE}}\nObjective: {{OBJECTIVE}}\nOpportunity ID: {{OPPORTUNITY_ID}}\n\nRecord:\n{{CURRENT_RECORD}}\n\nLimits:\n{{LIMITS_SECTION}}\n\nCouncil:\n{{COUNCIL}}\n\n{{VISIBLE_CASE_FILES_SECTION}}{{WORKSPACE_SECTION}}{{WORK_PRODUCT_SECTION}}\n\n{{MODEL_CAPABILITIES_SECTION}}\n\nAllowed final filing actions: {{DECISION_TOOLS}}",
+			fallback:     "You represent {{ROLE}} in an Agent Arbitration proceeding.\n\nProposition: {{PROPOSITION}}\nStandard of evidence: {{EVIDENCE_STANDARD}}\nPhase: {{PHASE}}\nObjective: {{OBJECTIVE}}\nOpportunity ID: {{OPPORTUNITY_ID}}\n\nRecord:\n{{CURRENT_RECORD}}\n\nLimits:\n{{LIMITS_SECTION}}\n\nCouncil:\n{{COUNCIL}}\n\n{{VISIBLE_CASE_FILES_SECTION}}{{WORKSPACE_SECTION}}{{WORK_PRODUCT_SECTION}}\n\n{{MODEL_CAPABILITIES_SECTION}}\n\nAllowed final filing actions: {{DECISION_TOOLS}}\nUse available investigation tools under the case search setting. Install tools when needed. Evidence submission, offered evidence, and technical reports are permitted during arguments, rebuttals, and surrebuttals.",
 			tokens: []string{
 				"ROLE", "PHASE", "OBJECTIVE", "OPPORTUNITY_ID", "PROPOSITION", "EVIDENCE_STANDARD",
 				"MODEL_CAPABILITIES_SECTION", "CURRENT_RECORD", "LIMITS_SECTION", "COUNCIL",
@@ -96,7 +96,7 @@ var promptDefinitions = func() []promptDefinition {
 		{
 			id:           promptAttorneyStanding,
 			relativePath: "attorney/standing.md",
-			fallback:     "Represent {{ROLE}} within the court instructions. Keep work-product/case-notes.md inside the retained case workspace assigned by the launcher or external harness, and update it before each later submission. Follow the current opportunity and the Lawyer API instructions.",
+			fallback:     "Represent {{ROLE}} with the strongest truthful filing supported by the record. Keep work-product/case-notes.md in the retained workspace and update it as the work develops. Send short higher-level notes through send_work_notes after initial orientation, material findings or failed approaches, and before filing. State conclusions, uncertainty, what you tried, and next steps. Follow the current opportunity and filing limits.",
 			tokens:       []string{"ROLE", "PHASE", "OPPORTUNITY_ID"},
 		},
 		{

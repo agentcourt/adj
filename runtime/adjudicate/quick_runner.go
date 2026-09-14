@@ -851,13 +851,17 @@ func writeQuickRemoteLawyerSkill(recordDir, role, caseID, mcpBase, capability st
 	if err != nil {
 		return "", err
 	}
+	searchInstructions, err := prompts.RemoteSearchInstructions(webSearch)
+	if err != nil {
+		return "", err
+	}
 	instructions, err := prompts.Render("skill.openclaw", map[string]string{
 		"{{CASE_ID}}":             caseID,
 		"{{ROLE_ID}}":             role,
 		"{{MCP_SERVER}}":          server,
 		"{{MCP_URL}}":             mcpURL,
 		"{{MCP_JSON}}":            string(mcpJSON),
-		"{{SEARCH_INSTRUCTIONS}}": launcherprompt.RemoteSearchInstructions(webSearch),
+		"{{SEARCH_INSTRUCTIONS}}": searchInstructions,
 	})
 	if err != nil {
 		return "", fmt.Errorf("prepare Quick %s remote-lawyer prompt: %w", role, err)

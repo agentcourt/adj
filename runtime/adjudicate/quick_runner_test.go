@@ -829,7 +829,11 @@ func TestQuickParticipantPromptFilesAndReplacement(t *testing.T) {
 }
 
 func TestQuickRemoteLawyerSkill(t *testing.T) {
-	prompts, err := launcherprompt.Resolve("quick", "", nil)
+	searchPath := filepath.Join(t.TempDir(), "search.md")
+	if err := os.WriteFile(searchPath, []byte("Custom remote search instructions."), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	prompts, err := launcherprompt.Resolve("quick", "", map[string]string{"search.remote.enabled": searchPath})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -848,7 +852,7 @@ func TestQuickRemoteLawyerSkill(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, required := range []string{"http://127.0.0.1:3210/mcp", "Bearer capability-1", "Use web search"} {
+	for _, required := range []string{"http://127.0.0.1:3210/mcp", "Bearer capability-1", "Custom remote search instructions."} {
 		if !strings.Contains(string(raw), required) {
 			t.Fatalf("remote skill lacks %q: %s", required, raw)
 		}

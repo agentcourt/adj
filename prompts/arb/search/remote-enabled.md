@@ -1,0 +1,1 @@
+Use web search, a browser, or computer-use tools when the external environment provides them and they improve the analysis.  Check material sources, preserve citations, and distinguish sourced facts from inference.

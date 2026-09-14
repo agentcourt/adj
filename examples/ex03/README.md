@@ -1,9 +1,17 @@
-# Example 3
+# Example 3: Draw-Event Market with Source Text
 
-This example starts from [`scratch/ronaldo.md`](../../scratch/ronaldo.md), but it is narrower and more source-grounded than [`examples/ex02`](../ex02).  The point of `ex03` is to place the dispute inside the Kalshi market and contract language that govern it.
+This example concerns whether Trump's pre-event use of “Ronaldo” qualifies under the Kalshi market's phrase “during the FIFA World Cup Draw.”  The complaint challenges the market's No resolution using the market terms and the pre-event reporter exchange.
 
-I rebuilt the file set around four sources.  First, I used the market URL the user supplied and recorded the public title visible at that URL.  Second, I fetched Kalshi's `PRESMENTION.pdf` and placed the full extracted text in `presmention-terms.txt`, instead of a summary.  Third, I fetched the American Presidency Project transcript for Trump's pre-event exchange with reporters before the FIFA World Cup Draw and extracted the transcript text into `pre-event-reporter-exchange.txt`, again without reducing it to a short paraphrase.  Fourth, I checked the Roll Call / Factba.se formal-draw transcript URL from the draft complaint.  The archive page exists and its title matches the event, but the full transcript is password-protected from this session.  I recorded that limit plainly instead of pretending to have a full formal-program transcript.
+## Files
 
-This folder therefore does three things.  `situation.md` states the arbitration proposition.  `market-page.txt`, `presmention-terms.txt`, and `pre-event-reporter-exchange.txt` provide the starting record that ties the proposition to the Kalshi market and the affirmative source text.  `formal-draw-archive-note.txt` records the separate formal-program archive and the retrieval limit.  The example is usable as a starting record.  It is not a full archival packet because the full market page and the full formal-program transcript were not retrievable from this session.
+| File | Contents |
+| --- | --- |
+| [Situation](situation.md) and [Complaint](complaint.md) | Arbitration proposition. |
+| [Market Page](market-page.txt) | Market URL, title, contract family, strike, and challenged resolution. |
+| [Mention-Market Terms](presmention-terms.txt) | Text extracted from Kalshi's `PRESMENTION.pdf`. |
+| [Pre-Event Reporter Exchange](pre-event-reporter-exchange.txt) | Transcript text from the American Presidency Project. |
+| [Formal Draw Archive Note](formal-draw-archive-note.txt) | Formal-program transcript URL and recorded access limitation. |
 
-The core issue is still the same as in the draft complaint: whether the strike `Ronaldo` counts for a market framed as `during the FIFA World Cup Draw` when the word was spoken in a public reporter exchange at the venue immediately before the formal program.  `ex03` improves on `ex02` by grounding that issue in Kalshi's own mention-market terms instead of leaving the market boundary implicit.
+## Source Status
+
+The record includes extracted contract terms and pre-event transcript text.  The market-page file contains identifying details.  The formal-program archive note records that the transcript required password access when the source was collected.  Analysis of the event boundary must account for that missing transcript and any further source material admitted during the case.

@@ -36,7 +36,8 @@ The core commands and complete local-run commands accept these flags:
 
 | Flag | Meaning |
 | --- | --- |
-| `--council-pool PATH` | JSONL request-specification pool. |
+| `--council-pool PATH` | Quick, ARB, and ARBD JSONL request-specification pool. |
+| `--juror-personas PATH` | ADC JSONL request-specification pool. |
 | `--council-endpoint NAME` | Permit one endpoint.  Repeat the flag to permit several endpoints.  Omitting it permits every endpoint represented in the pool. |
 | `--minimum-distinct-council-endpoints N` | Require at least `N` endpoint names in a completed Quick, ARB, or ARBD council.  Zero imposes no minimum. |
 
@@ -47,7 +48,7 @@ The unified settings names are `common.council_allowed_endpoints` and `common.co
 ```json
 {
   "common": {
-    "council_pool": "common/data/personas/pool.jsonl",
+    "council_pool": "common/data/personas/direct-lab-pool.jsonl",
     "council_size": 5,
     "council_allowed_endpoints": ["openai", "anthropic", "google"],
     "council_minimum_distinct_endpoints": 3

@@ -145,7 +145,7 @@ The strongest closing gives the council a decision path.  It identifies the one 
 
 ## Work Notes and Search Ledgers
 
-Work notes are private lawyer work product.  They contain the plan, issue outline, search log, source targets, URLs or identifiers, tools used, scripts or programs written, browser observations, OCR or extraction work, errors, adverse checks, reasoning, draft theory, decisions, and unresolved gaps.  They are not evidence, filings, technical reports, or legal support.
+Work notes are short private updates sent through `send_work_notes` after initial orientation, material findings or failed approaches, and before filing.  They explain conclusions, uncertainty, what counsel tried, and next steps so an operator can follow the work as it develops.  Detailed command output and search logs belong in workspace files.
 
 A search ledger becomes record-facing only when counsel includes it in a filing or technical report.  A record-facing ledger is concise and tied to a material issue.  It lists the decisive targets, repositories and queries checked, retrieval methods, material found and submitted, material not found, tool errors, and stopping reasons.
 

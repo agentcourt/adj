@@ -7,5 +7,5 @@ Judgment standard: {{JUDGMENT_STANDARD}}
 Record:
 {{RECORD}}
 
-Call submit_council_answer with answer written as digits only from 0 through 100, such as "60". Do not include a percent sign or words.
+Call submit_council_answer with answer as a JSON integer from 0 through 100, such as 60.
 Keep the rationale brief: no more than three sentences.

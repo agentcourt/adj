@@ -1,266 +1,120 @@
 # Local Rules Limits Guide
 
-This document proposes court-configurable procedural limits for this system.  The goal is disciplined proceedings, predictable resource use, and fair opportunity to be heard without turning limits into an arbitrary barrier to merits adjudication.
+ADC stores procedural limits in the scenario's `policy` object and the Lean state's `policy` object.  The [runtime initializer](../runtime/runner/state_init.go) supplies defaults, and the [Lean core](../engine/ADC/Core.lean) enforces limits when it accepts an action.  Model timeouts, response-size limits, and invalid-attempt limits belong to the Go runtime.
 
-The frame is FRCP-compatible local practice.  FRCP Rule 83 supports local rules and case-specific orders.  The system should treat limits as configurable local rules applied per case, with transparent waivers and explicit judicial overrides.
+## Policy Fields
 
-## Design principles
-
-Limits should preserve adversarial fairness and reduce procedural noise.  They should not pre-decide merits.  A good limit reduces abuse while still letting parties develop a complete record for dispositive motions and trial.
-
-Limits should be explicit, machine-checkable, and visible to all parties at case start or by later court order.  Every enforcement action should generate a traceable rule citation and a concrete violation reason.
-
-Limits should distinguish hard caps from default caps.  Hard caps are strict unless modified by order.  Default caps can be exceeded by leave of court.  This is closer to actual local practice and reduces needless sanctions disputes.
-
-## Limit taxonomy
-
-| Category | What is constrained | Typical risk addressed |
-|---|---|---|
-| Text volume | word, character, or page limits | prolix briefing, prompt stuffing, latency/cost spikes |
-| Filing counts | motions, requests, objections, amendments | serial motion practice, harassment, docket clutter |
-| Evidence volume | number and size of exhibits/files | document dumps, low-signal records |
-| Discovery volume | interrogatories, RFPs, RFAs, disclosures | disproportional discovery burden |
-| Timing | deadlines, response windows, extension caps | delay tactics, deadline games |
-| Hearing/trial cadence | opening/closing duration, witness/exhibit slots | runaway trial phases |
-| Retry behavior | repeated rejected tool calls or invalid filings | denial-of-service style loops |
-
-## Recommended first-wave limits
-
-These are the highest-value limits for this codebase now.  They map directly to flows already implemented.
-
-| Area | Limit | Recommended default | Type |
-|---|---|---|---|
-| Opening statement | max chars per side | 6,000 | hard cap |
-| Closing argument | max chars per side | 8,000 | hard cap |
-| Trial theory statement | max chars per side | 4,000 | hard cap |
-| Rule 12 motion summary | max chars | 6,000 | default cap |
-| Rule 56 motion summary + SUMF text | max chars | 10,000 | default cap |
-| Rule 12/56 replies | max chars | 4,000 | default cap |
-| Motions per side, per phase | count | 1 dispositive motion track unless leave granted | default cap |
-| Interrogatories per set | count | 25 | hard cap |
-| RFP requests per set | count | 40 | default cap |
-| RFA requests per set | count | 40 | default cap |
-| Evidence exhibits per side at trial | count | 40 | default cap |
-| Uploaded file size | bytes per file | 25 MB | hard cap |
-| Total produced file volume | bytes per side | 500 MB | default cap |
-| Trial objections per side per phase | count | 30 | default cap |
-| Invalid action retries in a turn | count | 2 | hard cap |
-
-The numeric defaults should be treated as starting points, not doctrine.  They are intended to keep live runs tractable while preserving realistic litigation behavior.
-
-## Discovery-specific limits
-
-Discovery is where proportionality failures appear first.  Interrogatories already have a well-known federal baseline, so a hard cap at 25 is a natural anchor.  RFP and RFA counts should be defaults with judicial adjustment, because complex commercial cases legitimately exceed simple fixed numbers.
-
-Initial disclosures should enforce completeness fields rather than volume limits.  The higher-value control is required structure: witness list, document categories, damages computation summary, and insurance disclosure marker if applicable.
-
-Requests and responses should enforce one-to-one cardinality where required.  If a set has N requests, the response set should have N response slots, with each slot designated as admit, deny, produce, object, or partially comply where applicable.
-
-## Motion practice limits
-
-A single dispositive-motion track per side before trial should be the default.  Serial Rule 12 or Rule 56 filings without changed circumstances are usually abusive in this environment and create low-signal churn.
-
-If a party seeks additional motions, the court should require a leave motion with a narrow statement of new basis.  The leave decision should be explicit and docketed so later enforcement is deterministic.
-
-For Rule 11, limit repeated safe-harbor notices on the same target filing without new grounds.  This prevents harassment cycles while preserving legitimate sanctions practice.
-
-## Trial-phase limits
-
-Trial needs limits that preserve courtroom sequence integrity.  The useful limits are per-side statement length, exhibit count, and objection count, plus strict phase gating.  Counting limits should reset by phase only where that matches real procedure.
-
-Jury-facing content should remain concise and structured.  Length limits on closings and trial theories are practical controls against non-merits verbosity.  They also support consistent juror role prompts and transcript quality.
-
-## Timing and deadline limits
-
-Timing limits should be represented as explicit intervals in case policy, not implicit by runtime clock behavior.  The system should validate deadlines using recorded filing timestamps and policy windows.
-
-Useful timing controls now include response windows for Rule 12 oppositions/replies, Rule 56 oppositions/replies, discovery response windows, and extension-request caps per side.  Extension requests should require reason text and either consent flag or judicial decision.
-
-A practical model is one stipulated extension per item up to a short cap, with further extensions requiring judicial findings.  This mirrors ordinary scheduling-order practice while keeping automation deterministic.
-
-## Sanctions and consequences model
-
-Limit violations should not default to immediate merits-preclusive sanctions.  Start with graduated consequences.
-
-| Violation severity | Typical response |
-|---|---|
-| Minor first violation | reject filing/action with reason; allow corrected resubmission |
-| Repeated technical violation | strike noncompliant filing and require leave to refile |
-| Repeated bad-faith violation | monetary or procedural sanction per judge order |
-| Phase integrity violation | reject action; preserve phase state unchanged |
-
-Every enforcement should record: violated rule id, measured value, allowed value, actor, timestamp, and remedy applied.
-
-## Waivers, stipulations, and judge overrides
-
-Local-rule limits need explicit escape valves.  Parties should be able to stipulate to certain extensions or count increases where court approval is not mandatory.  The judge should be able to override any limit by order, with optional one-time or case-wide scope.
-
-Overrides must be data, not hidden behavior.  A limit change should be represented as a docketed policy amendment that states old value, new value, reason, scope, and effective interval.
-
-## Anti-gaming controls
-
-Without anti-gaming controls, numeric limits can be bypassed by fragmentation tactics.  The system should define anti-fragmentation semantics before implementation.
-
-A filing should count by substantive unit, not by transport chunk.  Multiple filings within a short window that are materially one brief should be merge-counted unless the court orders otherwise.  Likewise, duplicate exhibits with minor renaming should count once for quota purposes unless there is a valid evidentiary reason.
-
-## Observability and audit requirements
-
-Limit enforcement is only credible if observable.  The system should emit structured events for every accepted, rejected, and overridden limit check.
-
-At minimum, logs and case state should allow a reviewer to answer: which rule applied, what value was measured, why it passed or failed, and who authorized any deviation.
-
-## Suggested implementation order
-
-| Stage | Scope | Why this order |
-|---|---|---|
-| Stage 1 | text-length limits for trial statements and dispositive filings | lowest complexity, immediate quality gain |
-| Stage 2 | discovery cardinality limits and response matching | high procedural value, deterministic checks |
-| Stage 3 | motion-count caps and leave-to-file workflow | reduces abuse loops and docket churn |
-| Stage 4 | exhibit/file volume caps and anti-duplication counting | controls resource abuse and transcript sprawl |
-| Stage 5 | deadline windows and extension policy | highest realism, needs careful timestamp policy |
-
-## Open design questions for discussion
-
-| Question | Options to evaluate |
-|---|---|
-| Unit for text limits | chars only, words only, or both |
-| Scope of motion caps | per side per case, per side per phase, or per claim |
-| Exhibit cap scope | per side total or per claim |
-| Deadline source | case filed date anchors vs. per-event anchors |
-| Override authority | judge only vs. stipulated + judge ratification |
-| Enforcement default | reject-and-correct vs. auto-strike after threshold |
-
-## Immediate recommendation
-
-Adopt a conservative local-rules policy with clear defaults, not aggressive hard caps.  Start by enforcing text limits, discovery cardinality, and one dispositive-motion track per side with leave-to-file for extras.  Keep override paths explicit and docketed.
-
-This yields high control with low risk of distorting merits adjudication.
-
-## V1 policy schema
-
-This section defines the concrete configuration shape for initial implementation.
+A scenario can override selected limits with a flat `policy` object:
 
 ```json
 {
-  "policy_version": "1.0",
-  "effective_on": "2026-01-01",
-  "limits": {
-    "text": {
-      "opening_chars_per_side": {"value": 6000, "kind": "hard"},
-      "closing_chars_per_side": {"value": 8000, "kind": "hard"},
-      "trial_theory_chars_per_side": {"value": 4000, "kind": "hard"},
-      "rule12_summary_chars": {"value": 6000, "kind": "default"},
-      "rule56_summary_chars": {"value": 10000, "kind": "default"},
-      "rule56_reply_chars": {"value": 4000, "kind": "default"}
-    },
-    "discovery": {
-      "interrogatories_per_set": {"value": 5, "kind": "hard"},
-      "rfp_requests_per_set": {"value": 40, "kind": "default"},
-      "rfa_requests_per_set": {"value": 40, "kind": "default"}
-    },
-    "motions": {
-      "dispositive_motions_per_side_pretrial": {"value": 1, "kind": "default"}
-    },
-    "runtime": {
-      "invalid_actions_per_turn": {"value": 2, "kind": "hard"}
-    }
-  },
-  "overrides": []
+  "policy": {
+    "max_opening_chars": 6000,
+    "max_closing_chars": 8000,
+    "max_interrogatories_per_set": 5,
+    "max_dispositive_motions_per_side_pretrial": 2
+  }
 }
 ```
 
-### Schema notes
+This object is a fragment of a scenario passed to `adc scenario --scenario FILE`.  Omitted fields receive defaults.  The [manual](../manual.md#scenario-files) describes the surrounding scenario.
 
-`kind` determines default enforcement posture:
+### Limits with Judicial Overrides
 
-- `hard`: reject when exceeded unless an explicit override exists.
-- `default`: reject when exceeded unless an explicit override exists.
+Each row maps a policy field to the key used by local-rule overrides and violation messages.  Text lengths use Lean's `String.length`.  Count limits measure the accepted items specified in the last column.
 
-In v1, `hard` and `default` have the same runtime behavior.  The distinction is policy intent and reporting semantics.  It allows later refinement without schema breakage.
+| Policy field | Default | Override key | Measurement |
+| --- | ---: | --- | --- |
+| `max_opening_chars` | 6000 | `text.opening_chars_per_side` | Opening summary length. |
+| `max_trial_theory_chars` | 4000 | `text.trial_theory_chars_per_side` | Trial-theory length. |
+| `max_closing_chars` | 8000 | `text.closing_chars_per_side` | Closing argument length. |
+| `max_exhibits_per_side` | 20 | `trial.exhibits_offered_per_side` | Exhibits offered by the party. |
+| `max_dispositive_motions_per_side_pretrial` | 2 | `motions.dispositive_motions_per_side_pretrial` | Rule 12 and Rule 56 motions by the party. |
+| `max_interrogatories_per_set` | 5 | `discovery.interrogatories_per_set` | Interrogatories in one set. |
+| `max_interrogatory_sets_per_side` | 2 | `discovery.interrogatory_sets_per_side` | Sets served by the party. |
+| `max_rfp_requests_per_set` | 40 | `discovery.rfp_requests_per_set` | Production requests in one set. |
+| `max_rfp_sets_per_side` | 2 | `discovery.rfp_sets_per_side` | Production-request sets served by the party. |
+| `max_rfa_requests_per_set` | 40 | `discovery.rfa_requests_per_set` | Admission requests in one set. |
+| `max_rfa_sets_per_side` | 2 | `discovery.rfa_sets_per_side` | Admission-request sets served by the party. |
+| `max_discovery_response_deadline_days` | 30 | `discovery.response_deadline_days` | Elapsed days between supplied `served_on_date` and `responded_at` values. |
+| `max_rule12_summary_chars` | 5000 | `text.rule12_summary_chars` | Rule 12 motion summary length. |
+| `max_rule56_summary_chars` | 10000 | `text.rule56_summary_chars` | Rule 56 motion summary length. |
+| `max_rule56_reply_chars` | 4000 | `text.rule56_reply_chars` | Rule 56 reply summary length. |
+| `max_technical_reports_per_side` | 3 | `reports.per_side_count` | Reports submitted by the party. |
+| `max_technical_report_summary_chars` | 5000 | `reports.summary_chars_per_report` | One report summary's length. |
 
-Each constrained action must map to one `limit_key` and one `measured_unit`.  Example: `deliver_closing_argument` maps to `text.closing_chars_per_side` and measures UTF-8 character count.
+The engine checks the proposed count or length against the effective limit before accepting the action.  Successful measured actions update `case.limit_usage` with `limit_key`, `actor`, `phase`, and `value`.  Count checks derive their totals from the case's accepted filings or reports.  The phase field identifies where the check occurred.
 
-## V1 override record
+Discovery response actions check elapsed days only when both date fields are supplied.  A response date before the service date produces an elapsed value of zero.
 
-Overrides are case-scoped records in policy state and should be docketed by linked order.
+### Other Procedural Settings
+
+These fields also belong to `policy`.  Judicial local-rule overrides apply to the keys in the preceding table.
+
+| Policy field | Default | Meaning |
+| --- | ---: | --- |
+| `max_support_tool_calls_per_opportunity` | 30 | Support-operation budget per opportunity. |
+| `max_jury_note_chars` | 3000 | Stored jury-note length setting.  The current engine and runtime do not enforce it. |
+| `skip_voir_dire` | 0 | Use voir dire by default.  A value of 1 selects random empanelment. |
+| `jury_juror_count` | 6 | Nominal jury size. |
+| `jury_unanimous_required` | 1 | Require unanimity by default. |
+| `jury_minimum_concurring` | 6 | Nominal minimum concurrence. |
+| `voir_dire_candidate_count` | 10 | Initial candidate count. |
+| `max_voir_dire_questions_per_side_per_juror` | 1 | Question allowance for each side and candidate. |
+| `max_disallowed_voir_dire_questions_per_side` | 3 | Disallowed-question limit per side. |
+| `max_for_cause_challenges_per_side` | 1 | For-cause challenge allowance per side. |
+| `max_peremptory_challenges_per_side` | 1 | Peremptory challenge allowance per side. |
+| `max_deliberation_rounds` | 3 | Deliberation-round limit. |
+
+The [jury guide](juries.md) describes candidate selection, challenges, voting, and juror failure.  The [manual](../manual.md#jury-configuration) describes jury command-line overrides and valid size and concurrence ranges.
+
+## Judicial Overrides
+
+The Lean action `enter_local_rule_override` requires the judge role.  Its payload contains `limit_key`, nonnegative integer `new_value`, `ordered_by`, and `reason`.  Optional fields are `override_id`, `scope_party`, `scope_phase`, and `expires_at`.
 
 ```json
 {
-  "override_id": "ovr-0001",
-  "limit_key": "motions.dispositive_motions_per_side_pretrial",
-  "scope": {
-    "case_id": "2026-08-19-0001",
-    "party": "defendant",
-    "phase": "pretrial"
-  },
-  "new_value": 2,
-  "reason": "Leave granted for newly discovered schedule evidence.",
-  "ordered_by": "judge",
-  "ordered_on": "2026-10-02T15:00:00Z",
-  "expires_on": null
+  "type": "enter_local_rule_override",
+  "role": "judge",
+  "payload": {
+    "limit_key": "text.closing_chars_per_side",
+    "new_value": 10000,
+    "ordered_by": "judge",
+    "reason": "Additional length is needed to address the admitted technical reports.",
+    "scope_party": "plaintiff",
+    "scope_phase": "closings"
+  }
 }
 ```
 
-Override semantics:
+This is an engine action.  The current model-facing tool schema instead requires `override_value` and omits `ordered_by`.  That mismatch prevents a schema-conforming model payload from satisfying the Lean action's required fields.
 
-1. Overrides are additive and most-specific scope wins.
-2. If two overrides are equally specific, the latest `ordered_on` wins.
-3. Expired overrides are ignored.
+An accepted override appends an entry to `case.local_rule_overrides`, a docket entry, and a decision trace.  The stored entry includes the payload fields, `active: true`, and `ordered_at` set to `case.filed_on`.  An omitted or blank identifier becomes `lro-N`, where N is the new entry's position.  Blank optional scope or expiry fields mean unrestricted scope or no expiry.
 
-## V1 violation result shape
+### Selection and Time
 
-Every rejected action on limit grounds should return a structured error with machine-stable fields.
+An override applies when its key matches, it is active, its optional party and phase match the action, and its expiry comparison succeeds.  More scoped fields give an override priority: party plus phase outranks either field alone, which outranks an unscoped override.  At equal specificity, the later `ordered_at` string wins.  Equal timestamps select the later entry in the list.
 
-```json
-{
-  "error_code": "LOCAL_RULE_LIMIT_EXCEEDED",
-  "limit_key": "text.closing_chars_per_side",
-  "measured_value": 9124,
-  "allowed_value": 8000,
-  "measured_unit": "chars",
-  "actor": "plaintiff",
-  "case_id": "2026-08-19-0001",
-  "action": "deliver_closing_argument",
-  "detail": "closing argument exceeds local rule cap"
-}
+Current limit checks supply `case.filed_on` as the comparison time.  Expiry succeeds when that string is less than or equal to `expires_at`.  This compares stored strings and includes the expiry value.  The result therefore depends on the case date and consistent date formatting.  The action's optional expiry value does not impose a wall-clock deadline on a model process.
+
+## Limit Errors and Runtime Budgets
+
+A measured-limit rejection returns a string in this format:
+
+```text
+LOCAL_RULE_LIMIT_EXCEEDED|limit_key=text.closing_chars_per_side|actor=plaintiff|phase=closings|attempted=9124|allowed=8000|detail=closing_argument_chars
 ```
 
-## V1 error codes
+The fields identify the rule, actor, phase, proposed measurement, effective limit, and action-specific detail.  An unknown lookup key returns `unknown local-rule limit key: KEY`.  The rejected action leaves the prior state unchanged.
 
-| Code | Meaning | Typical action |
-|---|---|---|
-| `LOCAL_RULE_LIMIT_EXCEEDED` | value exceeded and no valid override | reject action |
-| `LOCAL_RULE_INVALID_OVERRIDE_SCOPE` | override scope malformed or unsupported | reject override request |
-| `LOCAL_RULE_OVERRIDE_NOT_FOUND` | referenced override id missing | reject mutation |
-| `LOCAL_RULE_POLICY_MISSING` | required policy key absent | fail fast and log config error |
-| `LOCAL_RULE_UNIT_MISMATCH` | measured unit does not match limit unit | fail fast and log bug |
+The Go [runtime limits](../runtime/runner/runtime_limits.go) apply to model and participant execution:
 
-## Enforcement matrix
+| Runtime field | Default | Command-line option |
+| --- | ---: | --- |
+| `llm_timeout_seconds` | 180 | `--timeout-seconds` |
+| `roleapi_timeout_seconds` | 480 | `--roleapi-timeout-seconds` |
+| `max_response_bytes` | 131072 | `--max-response-bytes` |
+| `invalid_attempt_limit` | 3 | `--invalid-attempt-limit` |
+| `juror_max_output_tokens` | 4096 | Juror request configuration. |
 
-| Action | Limit key | Unit | Counter scope |
-|---|---|---|---|
-| `record_opening_statement` | `text.opening_chars_per_side` | chars | case + party |
-| `deliver_closing_argument` | `text.closing_chars_per_side` | chars | case + party |
-| `submit_trial_theory` | `text.trial_theory_chars_per_side` | chars | case + party |
-| `file_rule12_motion` | `text.rule12_summary_chars` | chars | each filing |
-| `file_rule56_motion` | `text.rule56_summary_chars` | chars | each filing |
-| `reply_rule56_motion` | `text.rule56_reply_chars` | chars | each filing |
-| `serve_interrogatories` | `discovery.interrogatories_per_set` | count | each set |
-| `serve_request_for_production` | `discovery.rfp_requests_per_set` | count | each set |
-| `serve_request_for_admission` | `discovery.rfa_requests_per_set` | count | each set |
-| `file_rule12_motion` and `file_rule56_motion` | `motions.dispositive_motions_per_side_pretrial` | count | case + party + pretrial |
-| any tool action in a role turn | `runtime.invalid_actions_per_turn` | count | turn |
-
-## Implementation constraint
-
-Do not infer limits from prompts.  Enforce only from structured arguments and state.  Prompt text can guide agents but cannot serve as legal data.
-
-## Test requirements for v1
-
-Minimum required test coverage before release:
-
-1. one passing and one failing test for each enforced limit key;
-2. override acceptance and override expiration behavior;
-3. precedence resolution when multiple overrides apply;
-4. deterministic error payload assertions for every error code;
-5. live-scenario regression runs for at least one trial-heavy and one discovery-heavy scenario.
+An invalid participant decision consumes an invalid attempt.  The runtime records procedural failure when the allowance is exhausted.  The current opportunity reports its permitted actions, deadline, attempt allowance, and support budget.  Lawyers plan investigation and filing within those values.
