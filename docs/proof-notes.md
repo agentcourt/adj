@@ -7,7 +7,7 @@ This note records the maintained proof trees and their operational boundaries.  
 | Procedure | Proof files | Theorem or lemma declarations | Lines |
 | --- | ---: | ---: | ---: |
 | ARB | 39 | 721 | 22,858 |
-| AARD | 14 | 177 | 5,235 |
+| AARD | 15 | 209 | 6,093 |
 | ADC | 71 | 611 | 10,830 |
 
 The maintained roots contain no `sorry`, `axiom`, or `unsafe` declaration.  ARB has the broadest theorem surface:
@@ -38,7 +38,7 @@ All three formal procedures write runtime certificates and provide explicit veri
 | --- | --- | --- |
 | ARB | Writes `certificate.json`; `aar verify-certificate` replays against `state.json`. | Accepted terminal certificates expose exact replay, exact opportunity authority, filing-time evidence chronology, reachability, record integrity, a fixed initial evidence catalog, bounded length, decision-summary replay, and either closed outcome and due-process facts or failed-opportunity facts. |
 | ADC | Writes `state.json` and `certificate.json` using `adc.replay-certificate.v1`; `adc verify-certificate` checks final-state hashes and replays deterministic steps and opportunity decisions.  An opportunity tool transition reruns `apply_decision`, compares its authorized action with the recorded executed step, and applies that step only after equality succeeds. | Accepted certificates expose exact replay, replay-start reachability, closed-terminal accounting, verdict facts, juror-failure verdict facts, juror-failure hung-jury facts, judgment facts, a combined outcome package, and concrete replayed examples.  The Lean replay relation includes direct steps and authority-checked `applyDecision` transitions. |
-| AARD | Writes `state.json` and `certificate.json`; `aard verify-certificate` replays initialization and accepted actions. | Successful initialization and every reachable step preserve phase shape, council and answer integrity, record integrity, and fixed case data.  Progress results cover active merits and deliberation opportunities.  Closed-run results require complete merits and valid answers.  Accepted terminal certificates add exact replay, authority, chronology, terminal accounting, answer-pair or failure-record replay, and checked examples. |
+| AARD | Writes `state.json` and `certificate.json`; `aard verify-certificate` replays initialization and accepted actions. | Successful initialization and every reachable step preserve phase shape, council and answer integrity, record integrity, and fixed case data.  Progress results cover active merits and deliberation opportunities.  Every accepted action strictly decreases a budget bounded by twice the per-side evidence limit plus eight merits actions and the council size.  Accepted terminal certificates add exact replay, authority, chronology, bounded length, terminal accounting, answer-pair or failure-record replay, and checked examples. |
 
 ## Remaining Direction
 

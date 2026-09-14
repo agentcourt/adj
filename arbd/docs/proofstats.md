@@ -6,10 +6,10 @@ Generated from `engine/Proofs/*.lean` using declarations matching `^(theorem|lem
 
 | Metric | Value |
 |---|---:|
-| Proof files | 14 |
-| Total proofs | 177 |
-| Total lines | 5235 |
-| Total bytes | 244519 |
+| Proof files | 15 |
+| Total proofs | 209 |
+| Total lines | 6093 |
+| Total bytes | 287835 |
 
 ## By Category
 
@@ -17,8 +17,8 @@ Generated from `engine/Proofs/*.lean` using declarations matching `^(theorem|lem
 |---|---:|---:|---:|---:|
 | Execution | 3 | 62 | 1680 | 84679 |
 | Foundations | 3 | 7 | 335 | 10592 |
-| Invariants | 3 | 54 | 1985 | 96393 |
-| Results | 5 | 54 | 1235 | 52855 |
+| Invariants | 3 | 55 | 2008 | 97648 |
+| Results | 6 | 85 | 2070 | 94916 |
 
 ## By File
 
@@ -32,9 +32,10 @@ Generated from `engine/Proofs/*.lean` using declarations matching `^(theorem|lem
 | Foundations | Samples.lean | 0 | 244 | 7315 |
 | Invariants | OpportunityAgreement.lean | 6 | 103 | 3922 |
 | Invariants | ProcedureInvariants.lean | 16 | 438 | 18006 |
-| Invariants | RecordIntegrity.lean | 32 | 1444 | 74465 |
+| Invariants | RecordIntegrity.lean | 33 | 1467 | 75720 |
+| Results | BoundedTermination.lean | 31 | 826 | 41518 |
 | Results | CertificateExamples.lean | 11 | 167 | 5745 |
-| Results | CertificateFacts.lean | 11 | 248 | 9848 |
+| Results | CertificateFacts.lean | 11 | 257 | 10391 |
 | Results | OutcomeSoundness.lean | 3 | 212 | 12099 |
 | Results | Progress.lean | 11 | 287 | 13172 |
 | Results | Replay.lean | 18 | 321 | 11991 |

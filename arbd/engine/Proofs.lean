@@ -10,5 +10,6 @@ import Proofs.ProcedureInvariants
 import Proofs.StepPreservation
 import Proofs.Progress
 import Proofs.OutcomeSoundness
+import Proofs.BoundedTermination
 import Proofs.CertificateFacts
 import Proofs.CertificateExamples

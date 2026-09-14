@@ -2,23 +2,30 @@
 
 | Theorem | File | Importance | Comment |
 |---|---|---|---|
-| `ArbdProofs.ClosedCertificateFacts.answer_pairs_replayed_eq` | `Proofs/CertificateFacts.lean` | medium | Extracts exact replay agreement for the closed certificate's member-answer pairs. |
-| `ArbdProofs.FailedCertificateFacts.failure_record_replayed_eq` | `Proofs/CertificateFacts.lean` | medium | Extracts exact replay agreement for the failed certificate's opportunity-failure record. |
+| `ArbdProofs.ClosedCertificateFacts.answer_pairs_replayed_eq` | `Proofs/CertificateFacts.lean` |  |  |
+| `ArbdProofs.FailedCertificateFacts.failure_record_replayed_eq` | `Proofs/CertificateFacts.lean` |  |  |
 | `ArbdProofs.accepted_step_has_currentOpportunity` | `Proofs/Progress.lean` |  |  |
+| `ArbdProofs.addArgument_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.addArgument_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `ArbdProofs.addClosing_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.addClosing_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `ArbdProofs.addFiling_budget_fields` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.addFiling_preserves_answerIntegrity` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.addFiling_preserves_caseFrameFields` | `Proofs/ProcedureInvariants.lean` |  |  |
 | `ArbdProofs.addFiling_preserves_councilIdsUnique` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.addFiling_preserves_record` | `Proofs/RecordIntegrity.lean` |  |  |
+| `ArbdProofs.addOpening_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.addOpening_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `ArbdProofs.addRebuttal_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.addRebuttal_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `ArbdProofs.addSurrebuttal_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.addSurrebuttal_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.advanceAfterMerits_preserves_answerIntegrity` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.advanceAfterMerits_preserves_caseFrameFields` | `Proofs/ProcedureInvariants.lean` |  |  |
 | `ArbdProofs.advanceAfterMerits_preserves_councilIdsUnique` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.advanceAfterMerits_preserves_record` | `Proofs/RecordIntegrity.lean` |  |  |
 | `ArbdProofs.answerIntegrity_congr` | `Proofs/ProcedureInvariants.lean` |  |  |
+| `ArbdProofs.answers_lt_seated_of_fresh` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.appendCurrentRoundAnswer_preserves_answerIntegrity` | `Proofs/ProcedureInvariants.lean` |  |  |
 | `ArbdProofs.appendMaterials_preserves_recordIntegrity` | `Proofs/RecordIntegrity.lean` | medium | Shows that admitting validated offered evidence and reports preserves record integrity. |
 | `ArbdProofs.appendSubmittedEvidence_preserves_answerIntegrity` | `Proofs/StepPreservation.lean` |  |  |
@@ -31,7 +38,10 @@
 | `ArbdProofs.appendSupplementalMaterials_preserves_councilIdsUnique` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.appendSupplementalMaterials_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.authorizeAction_ok_matches_currentOpportunity` | `Proofs/OpportunityAgreement.lean` | high | Shows that successful authorization uses the current opportunity, exact source-state authority, and an allowed operation. |
+| `ArbdProofs.budget_eq_components` | `Proofs/BoundedTermination.lean` |  |  |
+| `ArbdProofs.budget_le_components` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.certificateCheckAccepted_eq_true` | `Proofs/CertificateExamples.lean` | low | Relates the Boolean certificate-example check to successful Lean certificate acceptance. |
+| `ArbdProofs.checkReplayCertificate_length_bound` | `Proofs/BoundedTermination.lean` | high | Bounds every accepted certificate's action count by the initialized policy. |
 | `ArbdProofs.checkReplayCertificate_ok_authorityConforming` | `Proofs/Replay.lean` | high | Shows that every action in an accepted certificate carries exact current-opportunity authority and uses an authorized operation. |
 | `ArbdProofs.checkReplayCertificate_ok_evidenceCatalog_fixed` | `Proofs/CertificateFacts.lean` | high | Shows that an accepted certificate retains the initialized evidence catalog exactly. |
 | `ArbdProofs.checkReplayCertificate_ok_iff` | `Proofs/Replay.lean` | high | Characterizes certificate acceptance as exact initialized replay to the claimed state. |
@@ -45,6 +55,7 @@
 | `ArbdProofs.checkReplayCertificate_terminal_facts` | `Proofs/CertificateFacts.lean` | high | Classifies an accepted terminal certificate into the closed or failed formal fact package. |
 | `ArbdProofs.closed_step_rejected` | `Proofs/OpportunityAgreement.lean` | medium | Shows that the public step function rejects every action after closure. |
 | `ArbdProofs.continueDeliberation_closes_only_with_complete_answers` | `Proofs/OutcomeSoundness.lean` | high | Shows that deliberation enters the closed phase only after every eligible council member has answered. |
+| `ArbdProofs.continueDeliberation_decreases_budget` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.continueDeliberation_preserves_answerIntegrity` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.continueDeliberation_preserves_caseFrameMatches` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.continueDeliberation_preserves_councilIdsUnique` | `Proofs/StepPreservation.lean` |  |  |
@@ -59,6 +70,7 @@
 | `ArbdProofs.currentRoundAnswerIds_length_eq_seatedCouncilMemberIds_length` | `Proofs/Progress.lean` |  |  |
 | `ArbdProofs.deliberation_has_currentOpportunity` | `Proofs/Progress.lean` | high | Shows that active deliberation has a current opportunity while an eligible member remains unanswered. |
 | `ArbdProofs.evidenceReferenceWithinLimit_submitted_concat` | `Proofs/RecordIntegrity.lean` |  |  |
+| `ArbdProofs.failCouncilMemberOpportunity_decreases_budget` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.failCouncilMemberOpportunity_preserves_invariants` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.failCouncilMemberOpportunity_preserves_recordIntegrity_and_catalog` | `Proofs/RecordIntegrity.lean` |  |  |
 | `ArbdProofs.failOpportunity_preserves_invariants` | `Proofs/StepPreservation.lean` |  |  |
@@ -66,8 +78,11 @@
 | `ArbdProofs.failOpportunity_success_effect` | `Proofs/OutcomeSoundness.lean` | high | Classifies every accepted opportunity failure as a case-level party failure or the scheduled council-member failure. |
 | `ArbdProofs.failed_step_rejected` | `Proofs/OpportunityAgreement.lean` | medium | Shows that the public step function rejects every action after case failure. |
 | `ArbdProofs.filed_rebuttal_and_surrebuttal_advance_the_case` | `Proofs/MeritsFlow.lean` |  |  |
+| `ArbdProofs.filing_decreases_budget` | `Proofs/BoundedTermination.lean` |  |  |
+| `ArbdProofs.filter_length_decreases` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.hasDuplicateStrings_eq_false_implies_nodup` | `Proofs/ProcedureInvariants.lean` |  |  |
 | `ArbdProofs.hasDuplicateStrings_eq_true_of_not_nodup` | `Proofs/ProcedureInvariants.lean` |  |  |
+| `ArbdProofs.initializeCase_council_size` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.initializeCase_deterministic` | `Proofs/Replay.lean` |  |  |
 | `ArbdProofs.initializeCase_establishes_answerIntegrity` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.initializeCase_establishes_councilIdsUnique` | `Proofs/StepPreservation.lean` |  |  |
@@ -88,19 +103,27 @@
 | `ArbdProofs.initialized_run_closed_case_sound` | `Proofs/OutcomeSoundness.lean` | high | Packages completed merits, council and answer integrity, record integrity, and fixed case data for a closed initialized run. |
 | `ArbdProofs.initialized_run_preserves_evidenceCatalog` | `Proofs/RecordIntegrity.lean` | high | Shows that every successful initialized run retains the request evidence catalog exactly. |
 | `ArbdProofs.list_length_eq_of_nodup_same_members` | `Proofs/Progress.lean` |  |  |
+| `ArbdProofs.list_length_le_of_nodup_subset` | `Proofs/BoundedTermination.lean` |  |  |
+| `ArbdProofs.list_length_lt_of_nodup_subset_and_fresh` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.markCaseFailed_preserves_invariants` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.merits_phase_has_currentOpportunity` | `Proofs/Progress.lean` | high | Shows that every active invariant-preserving merits phase has a current participant opportunity. |
 | `ArbdProofs.nextCouncilMember_none_implies_answers_complete` | `Proofs/Progress.lean` |  |  |
 | `ArbdProofs.nextOpportunity_skips_answered_and_nonseated_members` | `Proofs/Deliberation.lean` |  |  |
 | `ArbdProofs.nextOpportunity_starts_with_plaintiff_opening` | `Proofs/MeritsFlow.lean` |  |  |
+| `ArbdProofs.no_infinite_initialized_run` | `Proofs/BoundedTermination.lean` | high | Excludes an infinite sequence of accepted actions from a successful initialization. |
 | `ArbdProofs.offeredEvidenceBatchValid_append` | `Proofs/RecordIntegrity.lean` |  |  |
 | `ArbdProofs.offeredEvidenceBatchValid_submitted_concat` | `Proofs/RecordIntegrity.lean` |  |  |
+| `ArbdProofs.opportunity_implies_positive_budget` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.out_of_range_answer_is_rejected` | `Proofs/Deliberation.lean` |  |  |
+| `ArbdProofs.passRebuttal_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.passRebuttal_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
+| `ArbdProofs.passSurrebuttal_decreases_remainingMeritsSteps` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.passSurrebuttal_preserves_phaseShape` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.pass_actions_advance_optional_merits_phases` | `Proofs/MeritsFlow.lean` |  |  |
 | `ArbdProofs.phaseShape_closed_merits_complete` | `Proofs/ProcedureInvariants.lean` |  |  |
+| `ArbdProofs.phase_update_decreases_budget` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.reachable_recordIntegrity` | `Proofs/RecordIntegrity.lean` | high | Shows that every reachable state has a valid catalog, ordered valid submissions, resolvable accumulated offers, and byte-bounded reports. |
+| `ArbdProofs.recordCouncilAnswer_decreases_budget` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.recordCouncilAnswer_preserves_invariants` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.recordCouncilAnswer_preserves_recordIntegrity_and_catalog` | `Proofs/RecordIntegrity.lean` |  |  |
 | `ArbdProofs.recordMeritsSubmission_ok_phase` | `Proofs/StepPreservation.lean` |  |  |
@@ -110,16 +133,19 @@
 | `ArbdProofs.remainingStepBudget_finite_bound` | `Proofs/Progress.lean` | medium | Bounds the remaining merits, evidence-submission, and deliberation measure from policy and council size. |
 | `ArbdProofs.remainingSubmittedEvidenceSteps_le` | `Proofs/Progress.lean` |  |  |
 | `ArbdProofs.removal_of_current_round_answerer_is_rejected` | `Proofs/Deliberation.lean` |  |  |
+| `ArbdProofs.removeCouncilMember_decreases_budget` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.removeCouncilMember_preserves_invariants` | `Proofs/StepPreservation.lean` |  |  |
 | `ArbdProofs.removeCouncilMember_preserves_recordIntegrity_and_catalog` | `Proofs/RecordIntegrity.lean` |  |  |
 | `ArbdProofs.removing_last_unanswered_member_closes_the_case` | `Proofs/Deliberation.lean` |  |  |
 | `ArbdProofs.removing_one_unanswered_member_keeps_deliberation_open` | `Proofs/Deliberation.lean` |  |  |
+| `ArbdProofs.replayInitialized_length_bound` | `Proofs/BoundedTermination.lean` | high | Bounds successful initialized runs by twice the per-side evidence limit plus eight merits actions and the council size. |
 | `ArbdProofs.replayInitialized_success_authorityConforming` | `Proofs/Replay.lean` | high | Lifts exact action authority through every successful replay from initialization. |
 | `ArbdProofs.replayInitialized_success_components` | `Proofs/Replay.lean` |  |  |
 | `ArbdProofs.replayInitialized_success_meritsOfferChronology` | `Proofs/Replay.lean` | high | Lifts source-state merits-offer chronology through every successful replay from initialization. |
 | `ArbdProofs.replayInitialized_success_reachable` | `Proofs/Replay.lean` | high | Shows that a successful initialized replay produces a reachable state. |
 | `ArbdProofs.replayInitialized_success_stepReachableFrom` | `Proofs/Replay.lean` | medium | Produces the initialized source state and public-step path for a successful initialized replay. |
 | `ArbdProofs.replaySteps_concat_ok` | `Proofs/Replay.lean` |  |  |
+| `ArbdProofs.replaySteps_length_add_budget_le` | `Proofs/BoundedTermination.lean` | high | Bounds accepted actions plus the final budget by the initial budget. |
 | `ArbdProofs.replaySteps_success_authorityConforming` | `Proofs/Replay.lean` | high | Shows that every accepted action in a successful replay matches its exact source-state opportunity authority. |
 | `ArbdProofs.replaySteps_success_meritsOfferChronology` | `Proofs/Replay.lean` | high | Shows that each accepted merits filing resolves its offers against the record available before that filing. |
 | `ArbdProofs.replaySteps_success_reachable` | `Proofs/Replay.lean` | medium | Preserves reachability across a successful action replay. |
@@ -138,6 +164,8 @@
 | `ArbdProofs.sample_failed_certificate_status` | `Proofs/CertificateExamples.lean` | medium | Shows that the concrete failure run is terminal and retains the failed opening phase and reason. |
 | `ArbdProofs.seatedCouncilMemberIds_nodup` | `Proofs/ProcedureInvariants.lean` |  |  |
 | `ArbdProofs.seatedCouncilMemberIds_sublist` | `Proofs/ProcedureInvariants.lean` |  |  |
+| `ArbdProofs.seated_and_fresh` | `Proofs/BoundedTermination.lean` |  |  |
+| `ArbdProofs.seated_count_decreases` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.second_answer_keeps_deliberation_open` | `Proofs/Deliberation.lean` |  |  |
 | `ArbdProofs.second_argument_advances_to_rebuttals` | `Proofs/MeritsFlow.lean` |  |  |
 | `ArbdProofs.second_closing_opens_deliberation` | `Proofs/MeritsFlow.lean` |  |  |
@@ -156,6 +184,7 @@
 | `ArbdProofs.stepCore_ok_of_step_ok` | `Proofs/Reachability.lean` |  |  |
 | `ArbdProofs.stepReachableFrom_reachable` | `Proofs/Reachability.lean` |  |  |
 | `ArbdProofs.stepReachableFrom_replaySteps_exists` | `Proofs/Replay.lean` |  |  |
+| `ArbdProofs.step_decreases_remainingStepBudget` | `Proofs/BoundedTermination.lean` | high | Every accepted public action from an invariant-preserving state strictly decreases the remaining-step budget. |
 | `ArbdProofs.step_deliver_closing_statement_result` | `Proofs/RecordIntegrity.lean` |  |  |
 | `ArbdProofs.step_deterministic` | `Proofs/Replay.lean` |  |  |
 | `ArbdProofs.step_ok_matches_currentOpportunity` | `Proofs/OpportunityAgreement.lean` | high | Shows that every accepted public action matches the exact current opportunity authority and an authorized operation. |
@@ -165,7 +194,9 @@
 | `ArbdProofs.step_preserves_recordIntegrity_and_catalog` | `Proofs/RecordIntegrity.lean` | high | Shows that every accepted public step preserves record integrity and exact catalog equality. |
 | `ArbdProofs.step_preserves_runInvariant` | `Proofs/StepPreservation.lean` | high | Shows that every successful public step preserves the complete initialized-run invariant. |
 | `ArbdProofs.step_record_opening_statement_result` | `Proofs/RecordIntegrity.lean` |  |  |
+| `ArbdProofs.submitEvidence_decreases_budget` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.submitEvidence_record_details` | `Proofs/RecordIntegrity.lean` |  |  |
+| `ArbdProofs.submitEvidence_record_details_with_count` | `Proofs/RecordIntegrity.lean` |  |  |
 | `ArbdProofs.submitted_evidence_stays_in_arguments` | `Proofs/MeritsFlow.lean` |  |  |
 | `ArbdProofs.technicalReportBatchValid_append` | `Proofs/RecordIntegrity.lean` |  |  |
 | `ArbdProofs.terminalClosedAccounted_of_status_closed` | `Proofs/CertificateFacts.lean` | medium | Shows that closed status yields a terminal next-opportunity result with the answers-complete reason. |
@@ -173,6 +204,7 @@
 | `ArbdProofs.third_answer_closes_the_case` | `Proofs/Deliberation.lean` |  |  |
 | `ArbdProofs.updateUnansweredCouncilMember_preserves_answerIntegrity` | `Proofs/ProcedureInvariants.lean` |  |  |
 | `ArbdProofs.updateUnansweredCouncilMember_preserves_invariants` | `Proofs/StepPreservation.lean` |  |  |
+| `ArbdProofs.updatedCouncil_decreases_budget` | `Proofs/BoundedTermination.lean` |  |  |
 | `ArbdProofs.validateEvidenceCatalog_ok` | `Proofs/RecordIntegrity.lean` | medium | Turns successful catalog validation into unique identifiers and canonical evidence commitments. |
 | `ArbdProofs.validateOfferedEvidenceBatch_ok` | `Proofs/RecordIntegrity.lean` | medium | Turns successful offer validation into source-record resolution and size compliance. |
 | `ArbdProofs.validatePolicy_requires_judgment_standard` | `Proofs/InitializeCase.lean` |  |  |

@@ -24,6 +24,8 @@ The Go runtime derives authority from the opportunity returned by Lean.  After a
 
 `Proofs/Progress.lean` proves that every active merits state satisfying the phase invariant has a current opportunity.  It proves the corresponding result for deliberation while an eligible member remains unanswered.  It also defines a remaining-step measure and bounds its merits, evidence-submission, and deliberation components from the policy and council size.
 
+`Proofs/BoundedTermination.lean` proves that every accepted public action strictly decreases that measure.  A successful initialized run contains at most `2 × max_submitted_evidence_per_side + 8 + council_size` accepted actions, and an infinite accepted run is impossible.  The bound applies to Lean transitions.  Runtime limits control model requests, invalid submissions, and elapsed time.
+
 `Proofs/OutcomeSoundness.lean` packages the properties of an initialized closed case: completed merits, unique council identifiers, valid answers, record integrity, and the initialized case frame.  It proves that deliberation closes only after every eligible council member has answered.  Its failure theorem classifies an accepted `fail_opportunity` transition as either the recorded case-level party failure or the delegated failure of the scheduled unanswered council member.
 
 ## Record Integrity
@@ -46,7 +48,7 @@ A plaintiff or defendant opportunity failure records its role, phase, opportunit
 
 Terminal cases write `certificate.json` using schema `aard.replay-certificate.v1`.  The certificate contains the initialization request, ordered accepted actions with their source-state authority, and the claimed final state.  The Go verifier checks procedure and case identity, terminal status, action authority shape and source version, packet-state equality, and exact replay through the configured Lean engine.
 
-Lean's `checkReplayCertificate` accepts exactly when initialization followed by the recorded action list produces the claimed state.  The certificate fact packages derive replay agreement, authority conformance, source-state offer chronology, reachability, record integrity, fixed initialization data, and the initialized-run invariant.  Closed facts also preserve the member-answer pairs.  Failed facts preserve the recorded opportunity failure.
+Lean's `checkReplayCertificate` accepts exactly when initialization followed by the recorded action list produces the claimed state.  The certificate fact packages derive replay agreement, authority conformance, source-state offer chronology, reachability, record integrity, fixed initialization data, the initialized-run invariant, and the accepted-action bound.  Closed facts also preserve the member-answer pairs.  Failed facts preserve the recorded opportunity failure.
 
 The Go verifier checks recorded transitions and JSON state equality.  It does not rehash `evidence-store/`, validate a claimed derivation against source bytes, or return Lean theorem values through the process protocol.
 

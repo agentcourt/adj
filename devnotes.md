@@ -713,11 +713,19 @@ The installed pool excludes `ibm-granite/granite-4.1-8b` at `coreweave/bf16`.  T
 
 - [x] Remove the unavailable Granite configuration from the installed pool.
 - [x] Route the model-pool Pi screen through the shared runtime model gateway.
-- [ ] Prove strict decrease and a bound on successful AARD run length.
-- [ ] Complete focused tests, a live council test, and the documentation updates.
+- [x] Prove strict decrease and a bound on successful AARD run length.
+- [x] Complete focused tests, a live council test, and the documentation updates.
 
 The screening command now uses the shared executor for its Quick-style request and the formal runtimes' local gateway for Pi requests.  The host retains provider credentials and applies the selected request specification.  Pi receives a local alias and token.  The command records upstream response IDs, usage, errors, and observed costs, while retaining the Pi transcript and MCP calls.
 
 Live direct and Pi/MCP checks passed for OpenRouter DeepSeek V4 Flash at Alibaba FP8, Anthropic Claude Sonnet 5, and Google Gemini 3.5 Flash.  The DeepSeek and Claude runs corrected a rejected tool argument and submitted an accepted vote.  OpenRouter reported five cost observations totaling `$0.0009014716`.  Anthropic and Google returned usage without cost observations.  The records remain under `/tmp/adj-arbd-current.9Vq4G9/screen-deepseek`, `screen-anthropic`, and `screen-google`.  No screening container remained after the tests.
 
 The next live AARD council sampled two more unavailable routes: KAT Coder Pro v2.5 at StreamLake and GLM-5 at AtlasCloud FP8.  OpenRouter returned HTTP 404 with the requested and available routes.  Its endpoint listings confirmed that KAT Coder Pro v2.5 was available only at AtlasCloud and that GLM-5 had eight routes, excluding AtlasCloud.  The installed pool excludes those two configurations and now contains 97 entries.  Their case failures and provider responses remain in `council-test-3/`.
+
+That council test completed with answers of 89, 86, and 87 and two recorded member failures.  The unified command returned `status: "ok"`, `phase: "closed"`, and exit status zero.  Certificate verification passed all thirteen actions, and case-record generation included work notes and retained sessions.  The pool removals concern the three configurations that failed these live tests.  The remaining 97 configurations have not undergone another complete availability screen.
+
+The final screening command also passed the direct vote and Pi/MCP tests for OpenAI `gpt-5.6-luna`.  Across all four configurations, the tests recorded 19 provider responses and 55,338 total tokens.  The reported cost remains `$0.0009014716`, with five OpenRouter observations and no cost observations from the direct services.  The OpenAI record is `screen-openai/` beside the other screening records.  No screening or AARD test container remained after cleanup.
+
+`Proofs/BoundedTermination.lean` proves strict decrease of `remainingStepBudget` under every accepted public action from a state satisfying `ProcedureInvariant`.  Successful initialized runs contain at most `2 × max_submitted_evidence_per_side + 8 + council_size` accepted actions, and an infinite sequence of accepted actions is impossible.  Both terminal certificate fact packages now include the accepted-action bound.  The evidence-submission helper exposes the validated per-side count needed by the decrease proof, while preserving the original theorem and its statement.
+
+The maintained AARD tree contains 15 proof files, 209 theorem or lemma declarations, and 6,093 lines.  The changed record-integrity, bounded-termination, certificate-fact, and certificate-example targets passed in separate `leanrunner` invocations, followed by the explicit proof-root check.  Each invocation used one Lean job, a 6 GiB memory limit, and a 100% CPU quota.  The proof tree contains no `sorry`, `axiom`, or `unsafe` declaration.  The complete Go tests, `go vet -p=1 ./...`, `go build -p=1 ./...`, affected-document link check, and `git diff --check` passed.  The verification guide distinguishes the accepted-transition bound from runtime request and elapsed-time limits.

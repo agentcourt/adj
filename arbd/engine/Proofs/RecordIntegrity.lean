@@ -550,7 +550,7 @@ theorem recordMeritsSubmission_with_materials_record_details
                                                 rfl, rfl, hOfferedValid,
                                                 hReportsValid, rfl⟩
 
-theorem submitEvidence_record_details
+theorem submitEvidence_record_details_with_count
     (s t : ArbitrationState)
     (actorRole : String)
     (payload : Lean.Json)
@@ -560,6 +560,8 @@ theorem submitEvidence_record_details
       validateSubmittedEvidenceEntry
           s.evidence_catalog s.case.submitted_evidence
           s.policy.max_submitted_evidence_bytes evidence = .ok () ∧
+      submittedEvidenceCountForRole s.case.submitted_evidence evidence.role + 1 ≤
+        s.policy.max_submitted_evidence_per_side ∧
       t = stateWithCase s (appendSubmittedEvidence s.case evidence) := by
   have handle (expectedRole : String)
       (hOrigin : materialOriginAllowed s.case.phase expectedRole)
@@ -580,6 +582,8 @@ theorem submitEvidence_record_details
         validateSubmittedEvidenceEntry
             s.evidence_catalog s.case.submitted_evidence
             s.policy.max_submitted_evidence_bytes evidence = .ok () ∧
+        submittedEvidenceCountForRole s.case.submitted_evidence evidence.role + 1 ≤
+          s.policy.max_submitted_evidence_per_side ∧
         t = stateWithCase s (appendSubmittedEvidence s.case evidence) := by
     cases hRole : requireRole actorRole expectedRole with
     | error err =>
@@ -616,7 +620,11 @@ theorem submitEvidence_record_details
                     cases countValue
                     simp [total, hCount] at hCore
                     cases hCore
-                    exact ⟨evidence, by simpa [evidence] using hOrigin, hValid, rfl⟩
+                    have hLimit : total ≤ s.policy.max_submitted_evidence_per_side := by
+                      by_cases hBad : total > s.policy.max_submitted_evidence_per_side
+                      · simp [requireCountWithinLimit, hBad] at hCount
+                      · omega
+                    exact ⟨evidence, by simpa [evidence] using hOrigin, hValid, hLimit, rfl⟩
   by_cases hArguments : s.case.phase = "arguments"
   · have hCore :
         (do
@@ -681,6 +689,21 @@ theorem submitEvidence_record_details
               Bind.bind, Except.bind, Pure.pure, Except.pure] at hSubmit
       · simp [submitEvidence,
           Bind.bind, Except.bind, Pure.pure, Except.pure] at hSubmit
+
+theorem submitEvidence_record_details
+    (s t : ArbitrationState)
+    (actorRole : String)
+    (payload : Lean.Json)
+    (hSubmit : submitEvidence s actorRole payload = .ok t) :
+    ∃ evidence,
+      materialOriginAllowed evidence.phase evidence.role ∧
+      validateSubmittedEvidenceEntry
+          s.evidence_catalog s.case.submitted_evidence
+          s.policy.max_submitted_evidence_bytes evidence = .ok () ∧
+      t = stateWithCase s (appendSubmittedEvidence s.case evidence) := by
+  rcases submitEvidence_record_details_with_count s t actorRole payload hSubmit with
+    ⟨evidence, hOrigin, hValid, _, hTarget⟩
+  exact ⟨evidence, hOrigin, hValid, hTarget⟩
 
 theorem step_record_opening_statement_result
     (s t : ArbitrationState)

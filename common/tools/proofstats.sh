@@ -94,7 +94,7 @@ category_for() {
         OpportunityAgreement.lean|ProcedureInvariants.lean|RecordIntegrity.lean)
           printf 'Invariants'
           ;;
-        Progress.lean|OutcomeSoundness.lean|Replay.lean|CertificateFacts.lean|CertificateExamples.lean)
+        Progress.lean|BoundedTermination.lean|OutcomeSoundness.lean|Replay.lean|CertificateFacts.lean|CertificateExamples.lean)
           printf 'Results'
           ;;
         *)

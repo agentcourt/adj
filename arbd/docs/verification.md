@@ -42,7 +42,7 @@ The progress results concern states that satisfy the initialized-run invariants.
 
 The remaining-step functions count open merits positions, available evidence submissions, and unanswered seated council members.  `remainingStepBudget_finite_bound` bounds their sum by eight merits positions, twice the per-side evidence-submission limit, and the configured council size.  The eight positions include the optional rebuttal and surrebuttal.
 
-A bound on this counter alone does not establish a bound on run length.  Strict decrease under every successful step and bounded termination remain unproved for AARD.
+`step_decreases_remainingStepBudget` proves strict decrease under every accepted public action from a state satisfying `ProcedureInvariant`.  `replaySteps_length_add_budget_le` bounds the accepted action count plus the final budget by the initial budget.  `replayInitialized_length_bound` therefore bounds every successful initialized run by `2 × max_submitted_evidence_per_side + 8 + council_size` actions.  `no_infinite_initialized_run` excludes an infinite sequence of accepted actions.  These bounds concern accepted Lean transitions.  Model-request retries, invalid submissions, work notes, evidence reads, and elapsed time remain governed by runtime limits.
 
 `initialized_run_closed_case_sound` proves that a reachable initialized state in the closed phase has complete merits, unique council identifiers, valid answers, record integrity, and the initialized case frame.  `continueDeliberation_closes_only_with_complete_answers` proves that the deliberation continuation function enters the closed phase only when the current-round answer count equals the seated-member count.
 
@@ -52,7 +52,7 @@ A bound on this counter alone does not establish a bound on run length.  Strict 
 
 The certificate schema is `aard.replay-certificate.v1`.  Its initialization request contains the source state, question, and council roster.  Each recorded action contains its operation, actor role, exact source-state authority, and payload.  The certificate also contains the claimed final state.
 
-`checkReplayCertificate_ok_iff` states that Lean accepts a certificate exactly when initialization followed by the recorded actions produces the claimed state.  Certificate acceptance implies authority conformance, source-state offer chronology, reachability, record integrity, fixed initial catalog, and `InitializedRunInvariant`.  The terminal certificate structures add status-specific facts: closed certificates preserve the answer pairs, while failed certificates preserve the opportunity-failure record.
+`checkReplayCertificate_ok_iff` states that Lean accepts a certificate exactly when initialization followed by the recorded actions produces the claimed state.  Certificate acceptance implies authority conformance, source-state offer chronology, reachability, record integrity, fixed initial catalog, `InitializedRunInvariant`, and the accepted-action bound.  Both terminal certificate structures include `bounded_length`.  Closed certificates preserve the answer pairs, while failed certificates preserve the opportunity-failure record.
 
 The concrete certificate examples cover one closed case with three council answers and one case-level plaintiff opportunity failure.  They evaluate the executable certificate predicate and instantiate the corresponding fact structures.
 

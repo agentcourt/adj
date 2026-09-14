@@ -1,5 +1,4 @@
-import Proofs.OutcomeSoundness
-import Proofs.Replay
+import Proofs.BoundedTermination
 
 namespace ArbdProofs
 
@@ -42,6 +41,10 @@ structure ClosedCertificateFacts
         StepReachableFrom start claimed
   run_invariant :
     InitializedRunInvariant req claimed
+  bounded_length :
+    actions.length ≤
+      (req.state.policy.max_submitted_evidence_per_side +
+        req.state.policy.max_submitted_evidence_per_side) + 8 + req.state.policy.council_size
   terminal_accounted :
     terminalClosedAccounted claimed
   answer_pairs_replayed :
@@ -73,6 +76,10 @@ structure FailedCertificateFacts
         StepReachableFrom start claimed
   run_invariant :
     InitializedRunInvariant req claimed
+  bounded_length :
+    actions.length ≤
+      (req.state.policy.max_submitted_evidence_per_side +
+        req.state.policy.max_submitted_evidence_per_side) + 8 + req.state.policy.council_size
   terminal_accounted :
     terminalFailedAccounted claimed
   failure_record_replayed :
@@ -177,6 +184,7 @@ theorem checkReplayCertificate_status_closed_facts
         checkReplayCertificate_ok_runInvariant req actions claimed hCheck
       terminal_accounted :=
         terminalClosedAccounted_of_status_closed claimed hStatus
+      bounded_length := checkReplayCertificate_length_bound req actions claimed hCheck
       answer_pairs_replayed := ⟨claimed, hReplay, rfl⟩ }
 
 theorem checkReplayCertificate_status_failed_facts
@@ -207,6 +215,7 @@ theorem checkReplayCertificate_status_failed_facts
         checkReplayCertificate_ok_runInvariant req actions claimed hCheck
       terminal_accounted :=
         terminalFailedAccounted_of_status_failed claimed hStatus
+      bounded_length := checkReplayCertificate_length_bound req actions claimed hCheck
       failure_record_replayed := ⟨claimed,
         (checkReplayCertificate_ok_iff req actions claimed).1 hCheck, rfl⟩ }
 
