@@ -760,7 +760,13 @@ The council guide follows the [shared selector](common/councilsample/selector.go
 
 - [x] Correct the seven documentation findings and ARB's Pi authentication help text.
 - [x] Check edited-document links and run the launcher and shared-selector tests.
-- [ ] Complete the README case command and inspect its output.
-- [ ] Commit and push the changes on `main`.
+- [x] Complete the README case command and inspect its output.
+- [x] Commit and push the changes on `main`.
 
 `go test -p=1 ./cmd/aar-run ./common/councilsample` and the ARB launcher build passed.  The initial edited-document check covered 146 local links with no missing target or heading.  The live case uses `arb/out/first-case/` and the existing Pi image and Lean engine binary.  Its first startup encountered the sandbox's socket restriction.  Execution with the approved launcher permission started both lawyers and the case API.
+
+The final documentation check covered 160 local links, including the development journal, with all targets and headings resolved.  `git diff --check` and the launcher help check passed.  Commit `ad87800` contains the documentation corrections and two CLI help-string changes and was pushed to `origin/main`.
+
+The README command completed in 32 minutes and 6 seconds with exit status zero, `status: "ok"`, `phase: "closed"`, and resolution `demonstrated`.  Both Pi lawyers completed their four filings and sent twenty work notes in total.  They used local execution and retained files, including signature verification.  Search was enabled, with zero recorded search-tool calls.  Five models from the default pool voted: Kimi K2 and Muse Glimmer voted `not_demonstrated`, while GPT-4 Turbo, Gemini 2.5 Pro, and Aion 3.0 Mini voted `demonstrated`.  `aar verify-certificate` accepted all thirteen recorded actions.
+
+The council log contains fifteen successful requests and 123,758 total tokens.  It provides no dollar-cost observations.  The core's five availability requests reported $0.00080588, and the Pi lawyer sessions report $9.524578 in estimated usage.  Subscription billing is separate from that estimate.  After shutdown, Podman listed zero running containers, both lawyer credential files were absent, and the retained case directory occupied 31 MiB.  The case record, participant work, and logs remain under `arb/out/first-case/`.
