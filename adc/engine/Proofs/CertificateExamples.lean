@@ -1,5 +1,9 @@
 import Proofs.CertificateFacts
 
+namespace ADCProofs.CertificateExamples
+
+open ADCProofs.Reachability ADCProofs.Replay ADCProofs.CertificateFacts
+
 def certificateExampleBaseCase : CaseState :=
   { (default : CaseState) with
     case_id := "certificate-case-1"
@@ -76,3 +80,5 @@ theorem sample_closed_certificate_facts :
     sampleClosedCertificateState
     sample_closed_certificate_replay
     sample_closed_certificate_status
+
+end ADCProofs.CertificateExamples

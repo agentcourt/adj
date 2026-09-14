@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.Interrogatories
 
 def interrogatoryCase : CaseState :=
   { (default : CaseState) with
@@ -11,7 +13,8 @@ def interrogatoryCase : CaseState :=
 def interrogatoryState (c : CaseState := interrogatoryCase) : CourtState :=
   { (default : CourtState) with
     schema_version := "v1",
-    case := c
+    case := c,
+    policy := { max_interrogatory_sets_per_side := 0 }
   }
 
 def serveInterrogatoriesAction : CourtAction :=
@@ -58,15 +61,17 @@ theorem step_serve_interrogatories_requires_pretrial :
 
 theorem step_respond_interrogatory_item_requires_prior_service :
     stepErrorMessage (step (interrogatoryState) respondInterrogatoryItemAction) =
-      "cannot draft interrogatory response before service" := by
+      "interrogatory set was not served on the responding party" := by
   native_decide
 
 theorem step_finalize_interrogatories_requires_prior_service :
     stepErrorMessage (step (interrogatoryState) finalizeInterrogatoriesAction) =
-      "cannot finalize interrogatory responses before service" := by
+      "interrogatory set was not served on the responding party" := by
   native_decide
 
 theorem step_serve_interrogatories_enforces_local_rule_limit :
     stepErrorMessage (step (interrogatoryState) serveInterrogatoriesAction) =
       "LOCAL_RULE_LIMIT_EXCEEDED|limit_key=discovery.interrogatory_sets_per_side|actor=plaintiff|phase=discovery|attempted=1|allowed=0|detail=interrogatory_set_count" := by
   native_decide
+
+end ADCProofs.Interrogatories

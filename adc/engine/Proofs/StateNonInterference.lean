@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.StateNonInterference
 
 theorem updateCase_preserves_schema_version
     (s : CourtState) (c : CaseState) :
@@ -18,27 +20,27 @@ theorem updateCase_preserves_policy
 theorem appendDocket_preserves_status
     (c : CaseState) (title desc : String) :
     (appendDocket c title desc).status = c.status := by
-  simp [appendDocket]
+  simp [appendDocket, appendDocketWithFields]
 
 theorem appendDocket_preserves_trial_mode
     (c : CaseState) (title desc : String) :
     (appendDocket c title desc).trial_mode = c.trial_mode := by
-  simp [appendDocket]
+  simp [appendDocket, appendDocketWithFields]
 
 theorem appendDocket_preserves_phase
     (c : CaseState) (title desc : String) :
     (appendDocket c title desc).phase = c.phase := by
-  simp [appendDocket]
+  simp [appendDocket, appendDocketWithFields]
 
 theorem appendDocket_preserves_jury_verdict
     (c : CaseState) (title desc : String) :
     (appendDocket c title desc).jury_verdict = c.jury_verdict := by
-  simp [appendDocket]
+  simp [appendDocket, appendDocketWithFields]
 
 theorem appendDocket_preserves_hung_jury
     (c : CaseState) (title desc : String) :
     (appendDocket c title desc).hung_jury = c.hung_jury := by
-  simp [appendDocket]
+  simp [appendDocket, appendDocketWithFields]
 
 theorem appendTrace_preserves_status
     (c : CaseState) (action outcome : String) (citations : List String) :
@@ -64,3 +66,5 @@ theorem appendTrace_preserves_hung_jury
     (c : CaseState) (action outcome : String) (citations : List String) :
     (appendTrace c action outcome citations).hung_jury = c.hung_jury := by
   simp [appendTrace]
+
+end ADCProofs.StateNonInterference

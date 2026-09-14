@@ -377,7 +377,7 @@ the judge's reminder that statements by lawyers are not evidence, 3
 samples, to the four label-absorbers (m25, m3, m7, m12), the two
 wobblers (m9, m16), and the two provenance-strict members (m1, m19).
 The screening probe presents the engine's own screening instruction
-(from the voir dire judge turn in `Main.lean`) plus a candidate
+(from the voir dire judge turn in `ADC/Core.lean`) plus a candidate
 question to `openai/gpt-5`, 5 samples per question; this is a
 reconstruction of the runtime judge turn, not the turn itself.  qs2
 asks the borderline screening survivor as a voir dire question, 2
@@ -459,7 +459,7 @@ unstable voters.  (c) The persona axis, still untouched.
 
 The identification test uses only the channel every lawyer gets for
 free: the court's own eight-question questionnaire (text taken from
-`defaultJurorQuestionnaire` in `Main.lean`).  Every live member
+`defaultJurorQuestionnaire` in `ADC/Core.lean`).  Every live member
 answers it twice.  Two samples per member support three measurements:
 a determinism score (how alike a member's two answer sets are), a
 form-feature scan (formatting tics, refusals, length), and an

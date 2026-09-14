@@ -21,9 +21,9 @@ The current matrix marks 95 rules or rule groups.  Coverage is uneven and still 
 
 | Status | Count |
 |---|---:|
-| Done | 16 |
-| Partial | 24 |
-| Gap | 51 |
+| Done | 17 |
+| Partial | 26 |
+| Gap | 48 |
 | Abrogated | 4 |
 
 Most open work remains in discovery depth, deposition stack, jury-instruction workflows, and post-judgment procedural detail.
@@ -83,13 +83,13 @@ Most open work remains in discovery depth, deposition stack, jury-instruction wo
 | 45 | Gap | TBD | Subpoenas not modeled. |
 | 46 | Partial | Later | `object_to_evidence` action exists; full preservation/error practice is limited. |
 | 47 | Done |  | Voir dire questions, cause challenges, peremptory strikes, jury swearing. |
-| 48 | Done |  | Jury configuration, verdict votes, failed-juror threshold adjustment, polling, hung declaration. |
+| 48 | Done |  | Jury configuration, individual verdict votes, failed-juror threshold adjustment, and derived verdict or hung-jury result. |
 | 49 | Partial | Soon | General verdict with interrogatories action exists; full Rule 49 practice is limited. |
 | 50 | Gap | Later | JMOL/new-trial conditional structure not modeled. |
-| 51 | Gap | Soon | Jury instruction/objection package not modeled. |
+| 51 | Partial | Soon | Proposal, objection, settlement, and delivery actions exist.  Timing and preservation detail remain limited. |
 | 52 | Partial | Soon | Bench findings/conclusions/opinion exist; full Rule 52 practice is limited. |
 | 53 | Gap | TBD | Masters not modeled. |
-| 54 | Partial | Later | Judgment evidence exist; costs/multi-claim judgment details are limited. |
+| 54 | Partial | Later | Judgment entries exist.  Costs and multi-claim judgment details are limited. |
 | 55 | Done |  | Default entry and default judgment. |
 | 56 | Done |  | Motion, opposition, reply, and judicial decision path. |
 | 57 | Gap | TBD | Declaratory judgment process not modeled separately. |
@@ -97,14 +97,14 @@ Most open work remains in discovery depth, deposition stack, jury-instruction wo
 | 59 | Partial | Later | Motion filing and timeliness validation exist; full adjudication/remedy logic is limited. |
 | 60 | Partial | Later | Motion filing/timeliness and resolution path exist; full doctrinal detail is limited. |
 | 61 | Gap | TBD | Harmless-error doctrine not modeled. |
-| 62 | Gap | Later | Stay pending enforcement not modeled. |
+| 62 | Partial | Later | Supersedeas bond, discretionary stay, and stay-lift actions exist.  Enforcement and appellate detail remain limited. |
 | 63 | Gap | TBD | Judge inability/substitution procedure not modeled. |
 | 64 | Gap | TBD | Seizure remedies not modeled. |
 | 65 | Gap | TBD | Injunction/TRO procedures not modeled. |
 | 65.1 | Gap | TBD | Surety proceedings not modeled. |
 | 66 | Gap | TBD | Receivers not modeled. |
 | 67 | Gap | TBD | Deposit into court not modeled. |
-| 68 | Gap | TBD | Offer-of-judgment procedure not modeled. |
+| 68 | Done |  | Offer, acceptance, expiration, and cost-shift evaluation actions. |
 | 69 | Gap | TBD | Execution procedure not modeled. |
 | 70 | Gap | TBD | Specific-act enforcement not modeled. |
 | 71 | Gap | TBD | Nonparty enforcement not modeled. |
@@ -128,12 +128,12 @@ Most open work remains in discovery depth, deposition stack, jury-instruction wo
 
 ## Priority gaps for ARCP fidelity
 
-High-value missing areas for near-term ARCP completeness:
+High-priority incomplete areas for ARCP coverage:
 
-1. Rule 51 jury-instruction workflow.
-2. Rule 26(e) supplementation and integration with Rule 37 consequences.
-3. Protective-order enforcement in discovery/PACER visibility.
-4. Deposition stack (Rules 30-32) if discovery realism is a near-term goal.
+1. Rule 26(e) supplementation and integration with Rule 37 consequences.
+2. Protective-order enforcement in discovery and PACER visibility.
+3. Depositions under Rules 30 through 32.
+4. Rule 50 judgment as a matter of law and its relationship to Rule 59.
 
 ## References
 

@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.RuleWindows
 
 theorem rule60GroundHasOneYearLimit_true_iff (ground : String) :
     rule60GroundHasOneYearLimit ground = true ↔
@@ -77,3 +79,5 @@ theorem isRule60Timely_limited_ground_of_elapsedDaysBetween_ok
   rw [helapsed]
   rw [hground]
   rfl
+
+end ADCProofs.RuleWindows

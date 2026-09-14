@@ -1,5 +1,9 @@
 import Proofs.CertificateFacts
 
+namespace ADCProofs.CertificateOutcomeFacts
+
+open ADCProofs.Reachability ADCProofs.Replay ADCProofs.CertificateFacts
+
 def juryVerdictAccounted (state : CourtState) : Bool :=
   match state.case.jury_verdict with
   | none => false
@@ -261,3 +265,5 @@ theorem acceptedReplayCertificate_juror_failure_hung_jury_outcome_facts
   exact OutcomeCertificateFacts.jurorFailureHungJury jurorId
     (acceptedReplayCertificate_juror_failure_hung_jury_facts
       init transitions claimed jurorId hAccepted hTimeout hHung)
+
+end ADCProofs.CertificateOutcomeFacts

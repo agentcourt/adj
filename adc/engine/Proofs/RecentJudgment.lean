@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.RecentJudgment
 
 open Lean
 
@@ -69,15 +71,6 @@ theorem step_enter_judgment_from_jury_verdict_sets_amount_and_status :
     recentEnterJudgmentSummary = true := by
   native_decide
 
-/-
-This theorem closes the path from verdict derivation to final judgment in the
-maintained proof set.
-
-It proves more than validator success.  The engine does the two concrete
-things judgment entry must do: carry the verdict amount into
-`monetary_judgment`, and move the case into `judgment_entered`.
--/
-
 def recentHungJuryCase : CaseState :=
   { (default : CaseState) with
     case_id := "case-hung"
@@ -107,12 +100,11 @@ def recentHungJuryReq : OpportunityRequest :=
 /--
 When a jury deadlocks and the case reaches `post_verdict`, the next judicial
 step is to close the case rather than to enter judgment.
-
-This is the missing terminal path for hung juries.  Without it, the engine can
-record the deadlock but cannot finish the case.
 -/
 theorem nextOpportunity_hung_jury_post_verdict_closes_case :
     (nextOpportunity recentHungJuryReq).opportunity.map
         (fun opportunity => (opportunity.role, opportunity.allowed_tools, opportunity.kind)) =
       some ("judge", ["transition_case"], "required") := by
   native_decide
+
+end ADCProofs.RecentJudgment

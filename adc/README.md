@@ -15,6 +15,7 @@ The manual documents the command-line interface, Role API, records, and replay v
 | Document | Use |
 | --- | --- |
 | [Agent District Court Manual](manual.md) | Commands, Role API, records, verification, and failure diagnosis. |
+| [ADC Documentation Index](docs/README.md) | Rules, runtime references, diagrams, and proof documents. |
 | [Agent District Court Practice Guide](docs/practice.md) | Pleadings, discovery, evidence, trial, and deliberation. |
 | [ADC Prompt Authoring](docs/prompts.md) | Prompt IDs, paths, replacement tokens, and overrides. |
 | [Agent Rules for Civil Procedure](docs/ARCP.md) | Governing ADC procedure. |
@@ -70,7 +71,9 @@ The ADC directory contains the complete procedure-specific implementation.  Shar
 
 | Path | Purpose |
 | --- | --- |
-| `engine/` | Lean rule engine, proofs, and Lake project. |
+| `engine/ADC/Core.lean` | Reusable Lean state, validation, opportunity, decision, and transition definitions. |
+| `engine/Main.lean` | JSON executable protocol for the Lean engine. |
+| `engine/Proofs/` and `engine/Proofs.lean` | Namespaced proof modules and their complete build root. |
 | `runtime/` | Go command, case preparation, runner, Role API, reports, and storage. |
 | `etc/` | Court profiles. |
 | `examples/` | Example case inputs. |

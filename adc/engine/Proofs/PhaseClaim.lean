@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.PhaseClaim
 
 theorem parseCaseStatusV1_roundtrip_filed :
     parseCaseStatusV1 "filed" = some .filed := by
@@ -53,9 +55,13 @@ theorem allowedPhases_contains_implies_parseTrialPhaseV1_some
       phase = "voir_dire" ∨
       phase = "openings" ∨
       phase = "plaintiff_case" ∨
+      phase = "plaintiff_evidence" ∨
       phase = "defense_case" ∨
+      phase = "defense_evidence" ∨
       phase = "plaintiff_rebuttal" ∨
+      phase = "plaintiff_rebuttal_evidence" ∨
       phase = "defense_surrebuttal" ∨
+      phase = "defense_surrebuttal_evidence" ∨
       phase = "charge_conference" ∨
       phase = "closings" ∨
       phase = "jury_charge" ∨
@@ -63,14 +69,18 @@ theorem allowedPhases_contains_implies_parseTrialPhaseV1_some
       phase = "verdict_return" ∨
       phase = "post_verdict" := by
     simpa [allowedPhases] using h
-  rcases hphase with hnone | hvd | hopen | hpl | hdef | hpr | hds | hcc | hcl | hjc | hdel | hvret | hpost
+  rcases hphase with hnone | hvd | hopen | hpl | hple | hdef | hdefe | hpr | hpre | hds | hdse | hcc | hcl | hjc | hdel | hvret | hpost
   · subst hnone; exact ⟨.none, by simp [parseTrialPhaseV1]⟩
   · subst hvd; exact ⟨.voirDire, by simp [parseTrialPhaseV1]⟩
   · subst hopen; exact ⟨.openings, by simp [parseTrialPhaseV1]⟩
   · subst hpl; exact ⟨.plaintiffCase, by simp [parseTrialPhaseV1]⟩
+  · subst hple; exact ⟨.plaintiffEvidence, by simp [parseTrialPhaseV1]⟩
   · subst hdef; exact ⟨.defenseCase, by simp [parseTrialPhaseV1]⟩
+  · subst hdefe; exact ⟨.defenseEvidence, by simp [parseTrialPhaseV1]⟩
   · subst hpr; exact ⟨.plaintiffRebuttal, by simp [parseTrialPhaseV1]⟩
+  · subst hpre; exact ⟨.plaintiffRebuttalEvidence, by simp [parseTrialPhaseV1]⟩
   · subst hds; exact ⟨.defenseSurrebuttal, by simp [parseTrialPhaseV1]⟩
+  · subst hdse; exact ⟨.defenseSurrebuttalEvidence, by simp [parseTrialPhaseV1]⟩
   · subst hcc; exact ⟨.chargeConference, by simp [parseTrialPhaseV1]⟩
   · subst hcl; exact ⟨.closings, by simp [parseTrialPhaseV1]⟩
   · subst hjc; exact ⟨.juryCharge, by simp [parseTrialPhaseV1]⟩
@@ -194,38 +204,12 @@ theorem phaseAllowsActionV1_opening_true_iff_openings (phase : TrialPhaseV1) :
     phaseAllowsActionV1 .recordOpeningStatement phase = true ↔ phase = .openings := by
   cases phase <;> simp [phaseAllowsActionV1]
 
-theorem phaseAllowsActionV1_verdict_only_verdictReturn (phase : TrialPhaseV1) :
-    phaseAllowsActionV1 .recordJuryVerdict phase = true -> phase = .verdictReturn := by
-  cases phase <;> simp [phaseAllowsActionV1]
-
-theorem phaseAllowsActionV1_verdict_true_iff_verdictReturn (phase : TrialPhaseV1) :
-    phaseAllowsActionV1 .recordJuryVerdict phase = true ↔ phase = .verdictReturn := by
-  cases phase <;> simp [phaseAllowsActionV1]
-
-theorem phaseAllowsActionV1_poll_only_postVerdict (phase : TrialPhaseV1) :
-    phaseAllowsActionV1 .pollJury phase = true -> phase = .postVerdict := by
-  cases phase <;> simp [phaseAllowsActionV1]
-
-theorem phaseAllowsActionV1_poll_true_iff_postVerdict (phase : TrialPhaseV1) :
-    phaseAllowsActionV1 .pollJury phase = true ↔ phase = .postVerdict := by
-  cases phase <;> simp [phaseAllowsActionV1]
-
-theorem phaseAllowsActionV1_hung_implies_delib_or_verdictReturn (phase : TrialPhaseV1) :
-    phaseAllowsActionV1 .declareHungJury phase = true ->
-      phase = .deliberation ∨ phase = .verdictReturn := by
-  cases phase <;> simp [phaseAllowsActionV1]
-
-theorem phaseAllowsActionV1_offerExhibit_true_iff_party_case (phase : TrialPhaseV1) :
+theorem phaseAllowsActionV1_offerExhibit_true_iff_evidence_phase (phase : TrialPhaseV1) :
     phaseAllowsActionV1 .offerExhibit phase = true ↔
-      phase = .plaintiffCase ∨
-      phase = .defenseCase ∨
-      phase = .plaintiffRebuttal ∨
-      phase = .defenseSurrebuttal := by
-  cases phase <;> simp [phaseAllowsActionV1]
-
-theorem phaseAllowsActionV1_hung_true_iff_delib_or_verdictReturn (phase : TrialPhaseV1) :
-    phaseAllowsActionV1 .declareHungJury phase = true ↔
-      phase = .deliberation ∨ phase = .verdictReturn := by
+      phase = .plaintiffEvidence ∨
+      phase = .defenseEvidence ∨
+      phase = .plaintiffRebuttalEvidence ∨
+      phase = .defenseSurrebuttalEvidence := by
   cases phase <;> simp [phaseAllowsActionV1]
 
 theorem parseVerdictSide_plaintiff :
@@ -1109,3 +1093,5 @@ theorem noHung_pureDisposition_verdict_implies_canEnter_true
     simp [canEnterJudgmentFromClaimDispositionV1]
   · rw [hdef]
     simp [canEnterJudgmentFromClaimDispositionV1]
+
+end ADCProofs.PhaseClaim

@@ -2,6 +2,11 @@ import Proofs.DecisionConfinement
 import Proofs.JurisdictionDismissal
 import Proofs.OrchestrationCore
 
+namespace ADCProofs.JurisdictionFlow
+
+open ADCProofs.DecisionConfinement ADCProofs.JurisdictionDismissal
+  ADCProofs.OrchestrationCore
+
 
 def dismissalToolForFlow : List String :=
   ["dismiss_for_lack_of_subject_matter_jurisdiction"]
@@ -123,13 +128,10 @@ In a filed case with a facially defective diversity allegation, the
 subject-matter-jurisdiction dismissal opportunity preempts the defendant's Rule
 12 and answer opportunities.
 
-The proof plan is concrete because the point is the full orchestration choice,
-not a local helper.  Build a filed case that already has a complaint, gives the
-defendant both ordinary pleading tools, and gives the judge the dismissal tool.
-Then compute `nextOpportunity` and check the public facts that matter: the
-response is not terminal, the selected role is the judge, the allowed tool set
-is the dismissal tool, and the priority is `10`.  That shows Lean chooses the
-mandatory jurisdiction screen before party-controlled pleading moves.
+The proof builds a filed case with a complaint, both defendant pleading tools,
+and the judge's dismissal tool.  Computing `nextOpportunity` establishes that
+the response is nonterminal and selects the judge's dismissal tool at priority
+`10` before party-controlled pleading moves.
 -/
 theorem nextOpportunity_defective_filed_case_selects_judge_dismissal :
     let resp := nextOpportunity defectiveFiledReqForFlow
@@ -138,36 +140,18 @@ theorem nextOpportunity_defective_filed_case_selects_judge_dismissal :
       some ("judge", dismissalToolForFlow, 10) := by
   native_decide
 
-/-
-This theorem is the first realistic jurisdiction-flow result.  The case is not
-judge-only.  The defendant has genuine pleading choices, but the engine still
-puts the court's jurisdiction duty first.  That is a concrete demonstration of
-the overall approach: agent choices persist, but formal procedure controls the
-order in which those choices may matter.
--/
-
 /--
 In that same filed case, the defendant's Rule 12 opportunity remains available
 in the open set even though the judge's dismissal opportunity is current.
 
-The proof plan checks `openOpportunities` directly.  The theorem looks for two
-facts at once: one open opportunity for the judge with the dismissal tool, and
-one open opportunity for the defendant with the Rule 12 tool.  This is the
-important complement to the selection theorem above.  The engine does not erase
-party choices.  It orders them.
+The proof checks `openOpportunities` for the judge's dismissal tool and the
+defendant's Rule 12 tool.
 -/
 theorem openOpportunities_defective_filed_case_keep_rule12_while_selecting_judge :
     let opportunities := openOpportunities defectiveFiledReqForFlow
     opportunities.any (fun o => o.role = "judge" && o.allowed_tools = dismissalToolForFlow) = true ∧
     opportunities.any (fun o => o.role = "defendant" && o.allowed_tools = ["file_rule12_motion"]) = true := by
   native_decide
-
-/-
-This is the strongest theorem in the file so far.  It states the key ordering
-property of the whole approach in concrete form.  The party's pleading option
-persists in the open opportunity set.  Lean still chooses the judge's
-jurisdiction duty as the current move.
--/
 
 /--
 If the same defective filed case omits the judge's dismissal tool, the engine
@@ -177,8 +161,7 @@ The proof plan is the contrast case for the previous theorem.  Keep the same
 defective complaint and the same defendant pleading tools, but remove the
 judge's dismissal tool from the role policy.  Then compute `nextOpportunity`
 and check that the selected role is now the defendant with the Rule 12 tool.
-This shows that the earlier preemption result comes from formal procedure and
-tool policy, not from a hard-coded preference for judges.
+Formal procedure and tool policy therefore determine the earlier preemption.
 -/
 theorem nextOpportunity_defective_filed_case_without_judge_dismissal_selects_rule12 :
     let resp := nextOpportunity defectiveFiledReqWithoutJudgeDismissalForFlow
@@ -186,13 +169,6 @@ theorem nextOpportunity_defective_filed_case_without_judge_dismissal_selects_rul
     resp.opportunity.map (fun o => (o.role, o.allowed_tools)) =
       some ("defendant", ["file_rule12_motion"]) := by
   native_decide
-
-/-
-This contrast theorem makes the selection story sharper.  The engine does not
-always hand the case to the judge.  It does so here because the jurisdiction
-screen is available and outranks the ordinary pleading path.  Remove that tool,
-and the defendant's Rule 12 opportunity becomes current.
--/
 
 /--
 In the defective filed case, the public `currentOpenOpportunity?` boundary
@@ -212,13 +188,6 @@ theorem currentOpenOpportunity_defective_filed_case_selects_judge_dismissal :
   simpa [nextOpportunity_opportunity_eq_currentOpenOpportunity defectiveFiledReqForFlow] using
     nextOpportunity_defective_filed_case_selects_judge_dismissal.2
 
-/-
-This theorem turns the concrete `nextOpportunity` computation into a fact about
-the public selector boundary itself.  That is the right shape for later
-decision-boundary proofs, because `applyDecision` is keyed to
-`currentOpenOpportunity?`, not to `nextOpportunity` directly.
--/
-
 /--
 The named defective-filed opportunity is the current open opportunity.
 
@@ -237,20 +206,11 @@ theorem currentOpenOpportunity_defective_filed_case_eq_named_opportunity :
   | some opportunity =>
       simp
 
-/-
-This is a small but necessary bridge theorem.  The file uses a named
-opportunity value in the later `ApplyDecisionRequest`.  To apply the generic
-decision-boundary theorems, the file needs that named value to agree with the
-actual current opportunity.
--/
-
 /--
 The named defective-filed opportunity has the selected judge-dismissal shape.
 
-The proof plan rewrites the current-opportunity tuple theorem to the named
-opportunity and then extracts the resulting equality from `Option.some.inj`.
-That one tuple equality is more useful than separate ad hoc field facts because
-later proofs can read the role, tool set, and priority from a single source.
+The proof rewrites the current-opportunity tuple theorem to the named
+opportunity and extracts the equality from `Option.some.inj`.
 -/
 theorem defectiveFiledOpportunityForFlow_shape :
     (defectiveFiledOpportunityForFlow.role,
@@ -265,23 +225,16 @@ theorem defectiveFiledOpportunityForFlow_shape :
       currentOpenOpportunity_defective_filed_case_selects_judge_dismissal
   exact Option.some.inj hshape
 
-/-
-This theorem replaces a few narrower field lemmas with one reusable tuple fact.
-That makes the later proofs shorter and clearer.
--/
-
 /--
 In that same defective filed case, the defendant's Rule 12 opportunity remains
-open but is not actionable while the judge's jurisdiction-dismissal opportunity
-is current.
+open while the judge alone may act on the current jurisdiction-dismissal
+opportunity.
 
-The proof plan keeps the two public facts together.  First, reuse the earlier
+The proof keeps the two public facts together.  First, reuse the earlier
 open-opportunity theorem to confirm that the defendant's Rule 12 path still
 appears in the open set.  Then submit a defendant Rule 12 decision against the
 current opportunity id, which belongs to the judge.  `applyDecision` must
-reject that request with `WRONG_ROLE`.  This is the architecture in one step:
-party options may remain open, but formal priority still determines who may act
-now.
+reject that request with `WRONG_ROLE`.
 -/
 theorem defective_filed_case_rule12_available_but_not_actionable :
     let opportunities := openOpportunities defectiveFiledReqForFlow
@@ -289,7 +242,8 @@ theorem defective_filed_case_rule12_available_but_not_actionable :
     applyDecisionErrorCodeForFlow (applyDecision defectiveFiledWrongRoleRule12ReqForFlow) = "WRONG_ROLE" := by
   constructor
   · exact (openOpportunities_defective_filed_case_keep_rule12_while_selecting_judge).2
-  · simpa [defectiveFiledWrongRoleRule12ReqForFlow, applyDecisionErrorCodeForFlow] using
+  · change applyDecisionErrorCode (applyDecision defectiveFiledWrongRoleRule12ReqForFlow) = "WRONG_ROLE"
+    simpa [defectiveFiledWrongRoleRule12ReqForFlow] using
       applyDecision_wrong_role_of_current_opportunity_returns_wrong_role
         defectiveFiledStateForFlow
         defectiveFiledRolesForFlow
@@ -303,27 +257,15 @@ theorem defective_filed_case_rule12_available_but_not_actionable :
             exact congrArg Prod.fst defectiveFiledOpportunityForFlow_shape]
           native_decide)
 
-/-
-This theorem is the clearest jurisdiction-flow boundary result so far.  The
-defendant's pleading option persists in the open set.  Lean still bars the
-defendant from acting on it because the current move belongs to the judge.  The
-system therefore preserves party choices without letting them bypass procedural
-priority.
--/
-
 /--
 In the defective filed case, the matching judge decision emits one executable
 subject-matter-jurisdiction dismissal action with the expected role and payload
 fields.
 
-The proof plan applies the generic public decision-boundary theorem
+The proof applies the generic public decision-boundary theorem
 `applyDecision_tool_success_exact_action` and then reads the result fields.
-The generic theorem already does the hard work: it proves that the public
-decision boundary emits exactly one executable action for the current
-opportunity.  This concrete theorem states the public facts that matter for the
-flow theorem below: the result kind is `execute_tool`, the state is not updated
-yet, the action type is the jurisdiction-dismissal tool, the actor role is the
-judge, and the payload preserves the decisive jurisdiction basis and reasoning.
+The result kind is `execute_tool`; the result contains no state update; and the
+action preserves the tool, actor role, jurisdiction basis, and reasoning.
 -/
 theorem applyDecision_defective_filed_case_emits_judge_dismissal :
     let result := applyDecision defectiveFiledApplyReqForFlow
@@ -340,12 +282,6 @@ theorem applyDecision_defective_filed_case_emits_judge_dismissal :
           | none => false
       | .error _ => false) = true := by
   native_decide
-
-/-
-This is the positive public-boundary theorem for the filed-case example.  It no
-longer asks Lean to recompute the whole example by brute force.  It uses the
-selector and confinement lemmas that the proof suite already established.
--/
 
 /--
 Once the judge takes that dismissal action in the defective filed case, `step`
@@ -370,13 +306,6 @@ theorem defective_filed_case_dismissal_then_stops :
       | .error _ => false) = true := by
   native_decide
 
-/-
-This theorem states the public postconditions that matter.  It does not try to
-name the entire successor state.  That is the right level for this file.  The
-point is the boundary behavior: the dismissal closes the case, records the
-docket entry, and stops the opportunity engine.
--/
-
 /--
 After the judge dismisses the defective filed case for lack of subject-matter
 jurisdiction, the defendant's former Rule 12 path no longer has a current
@@ -395,14 +324,6 @@ theorem defective_filed_case_dismissal_blocks_later_rule12_decision :
   apply applyDecision_closed_case_returns_no_current_opportunity
   · native_decide
   · rfl
-
-/-
-This theorem completes the filed-case story at the public boundary.  Before the
-dismissal, the defendant's Rule 12 path remains open but not actionable.  After
-the dismissal, that same path is gone because the case is closed.  The engine
-does not leave a stale party opportunity hanging after the court resolves the
-mandatory jurisdiction screen.
--/
 
 /--
 In the defective filed case, the open set preserves the defendant's Rule 12
@@ -462,16 +383,4 @@ theorem defective_filed_case_confinement :
   · exact defective_filed_case_dismissal_then_stops
   · exact defective_filed_case_dismissal_blocks_later_rule12_decision
 
-/-
-This is the strongest jurisdiction-flow theorem in the current suite.  The
-theorem is still concrete, but it demonstrates the architecture directly:
-multiple options may remain open, formal priority selects the current actor,
-out-of-order action is rejected, the matching decision emits the right action
-fields, the dismissal step closes the case and stops the engine, and later
-party attempts fail because no current opportunity remains.
-
-The next worthwhile generalization is to remove more of the concrete filed-case
-scaffolding.  The right direction is a theorem that starts from a shaped
-`availableOpportunities` list and a shaped current opportunity, then derives
-this same confinement story without naming one fixed case.
--/
+end ADCProofs.JurisdictionFlow

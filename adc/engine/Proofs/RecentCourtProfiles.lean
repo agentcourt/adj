@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.RecentCourtProfiles
 
 open Lean
 
@@ -89,9 +91,8 @@ def unitedStatesDistrictFiledReq : OpportunityRequest :=
 /--
 The International Claw District disables the subject-matter-jurisdiction Rule 12 ground.
 
-This matters because the same Rule 12 path runs in both courts.  The active court
-profile must remove the federal jurisdiction ground when the court does not use a
-jurisdiction screen.
+The same Rule 12 path runs in both courts, so the active court profile removes
+the federal jurisdiction ground when the court disables jurisdiction screening.
 -/
 theorem validRule12Ground_internationalClaw_disables_subject_matter_jurisdiction :
     validRule12Ground internationalClawFiledState "lack_subject_matter_jurisdiction" = false := by
@@ -110,12 +111,9 @@ theorem rule12GroundSummary_internationalClaw_omits_subject_matter_jurisdiction 
   native_decide
 
 /--
-In a filed International Claw case, the next opportunity is the defendant's
-optional Rule 12 motion rather than a judge jurisdiction dismissal.
-
-This is the operational effect of disabling the jurisdiction screen.  The engine
-still exposes Rule 12, but it does not insert a dismissal opportunity ahead of
-the defendant's pleading choice.
+In a filed International Claw case, disabling jurisdiction screening makes the
+defendant's optional Rule 12 motion the next opportunity.  The engine omits the
+judge's dismissal opportunity.
 -/
 theorem nextOpportunity_internationalClaw_filed_case_selects_defendant_rule12 :
     (nextOpportunity internationalClawFiledReq).opportunity.map
@@ -137,11 +135,8 @@ theorem openOpportunities_internationalClaw_have_no_jurisdiction_dismissal :
   native_decide
 
 /--
-The federal profile still treats defective diversity pleading as a facial
-subject-matter-jurisdiction defect.
-
-This is the contrast with `International Claw District`.  Residence allegations
-and a `$108` amount do not satisfy the federal diversity screen.
+The federal profile treats residence allegations and a `$108` amount as a
+facial subject-matter-jurisdiction defect.
 -/
 theorem subjectMatterJurisdictionFaciallyDefective_unitedStatesDistrict_detects_defective_diversity :
     subjectMatterJurisdictionFaciallyDefective unitedStatesDistrictFiledState = true := by
@@ -161,10 +156,4 @@ theorem nextOpportunity_unitedStatesDistrict_filed_case_selects_jurisdiction_dis
       some ("judge", ["dismiss_for_lack_of_subject_matter_jurisdiction"], "optional") := by
   native_decide
 
-/-
-These court-profile theorems prove the operational effect of the new court
-split.
-
-They do not stop at static configuration values.  They prove that the profile
-changes the actual opportunity stream seen by the judge and defendant.
--/
+end ADCProofs.RecentCourtProfiles

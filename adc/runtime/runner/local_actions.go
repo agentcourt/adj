@@ -662,15 +662,9 @@ func (r *Runner) executeLocalActionContext(ctx context.Context, actorRole, actio
 		if strings.TrimSpace(fileID) == "" || strings.TrimSpace(producedTo) == "" {
 			return ActionExecution{Result: map[string]any{"ok": false, "error": "file_id and produced_to are required"}}, true, nil
 		}
-		leanPayload := map[string]any{
-			"file_id":     fileID,
-			"produced_by": producedBy,
-			"produced_to": producedTo,
-			"produced_at": time.Now().UTC().Format(time.RFC3339),
-		}
-		if requestRef, _ := payload["request_ref"].(string); strings.TrimSpace(requestRef) != "" {
-			leanPayload["request_ref"] = requestRef
-		}
+		leanPayload := clonePayload(payload)
+		leanPayload["produced_by"] = producedBy
+		leanPayload["produced_to"] = producedTo
 		leanRes, err := r.stepForCertificateContext(ctx, "produce_case_file", actorRole, leanPayload)
 		if err != nil {
 			return ActionExecution{}, true, err
@@ -679,6 +673,23 @@ func (r *Runner) executeLocalActionContext(ctx context.Context, actorRole, actio
 			nextState, _ := leanRes["state"].(map[string]any)
 			if nextState == nil {
 				return ActionExecution{}, true, fmt.Errorf("lean response missing state for produce_case_file")
+			}
+			r.state = nextState
+			leanRes["state"] = nextState
+			if err := r.writeEvidenceManifest(); err != nil {
+				return ActionExecution{}, true, err
+			}
+		}
+		return ActionExecution{Result: leanRes}, true, nil
+	case "offer_exhibit":
+		leanRes, err := r.stepForCertificateContext(ctx, actionType, actorRole, payload)
+		if err != nil {
+			return ActionExecution{}, true, err
+		}
+		if ok, _ := leanRes["ok"].(bool); ok {
+			nextState, _ := leanRes["state"].(map[string]any)
+			if nextState == nil {
+				return ActionExecution{}, true, fmt.Errorf("lean response missing state for offer_exhibit")
 			}
 			r.state = nextState
 			leanRes["state"] = nextState
@@ -761,7 +772,7 @@ func (r *Runner) executeLocalActionContext(ctx context.Context, actorRole, actio
 		}
 		return ActionExecution{Result: leanRes}, true, nil
 	case "rest_case":
-		leanRes, err := r.stepForCertificateContext(ctx, "rest_case", actorRole, map[string]any{})
+		leanRes, err := r.stepForCertificateContext(ctx, "rest_case", actorRole, payload)
 		if err != nil {
 			return ActionExecution{}, true, err
 		}

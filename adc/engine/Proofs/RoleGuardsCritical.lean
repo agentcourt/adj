@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.RoleGuardsCritical
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -23,24 +25,22 @@ def enterJudgmentActionAs (role : String) : CourtAction :=
       ]
   }
 
-def recordJuryVerdictActionAs (role : String) : CourtAction :=
-  { action_type := "record_jury_verdict"
+def submitJurorVoteActionAs (role : String) : CourtAction :=
+  { action_type := "submit_juror_vote"
   , actor_role := role
   , payload := Lean.Json.mkObj
-      [ ("claim_id", Lean.Json.str "claim-1")
-      , ("verdict_for", Lean.Json.str "plaintiff")
-      , ("votes_for_verdict", Lean.Json.num 6)
+      [ ("juror_id", Lean.Json.str "J1")
+      , ("vote", Lean.Json.str "plaintiff")
       , ("damages", Lean.Json.num 100)
+      , ("confidence", Lean.Json.str "high")
+      , ("explanation", Lean.Json.str "The evidence supports the verdict.")
       ]
   }
 
-def declareHungJuryActionAs (role : String) : CourtAction :=
-  { action_type := "declare_hung_jury"
+def empanelJuryActionAs (role : String) : CourtAction :=
+  { action_type := "empanel_jury"
   , actor_role := role
-  , payload := Lean.Json.mkObj
-      [ ("claim_id", Lean.Json.str "claim-1")
-      , ("note", Lean.Json.str "deadlock")
-      ]
+  , payload := Lean.Json.mkObj []
   }
 
 def resolveRule59ActionAs (role : String) : CourtAction :=
@@ -62,14 +62,14 @@ theorem step_enter_judgment_rejects_non_judge_role :
       "role plaintiff not permitted for enter_judgment" := by
   native_decide
 
-theorem step_record_jury_verdict_rejects_non_foreperson_role :
-    stepErrorMessage (step (stateOf) (recordJuryVerdictActionAs "judge")) =
-      "role judge not permitted for record_jury_verdict" := by
+theorem step_submit_juror_vote_rejects_non_juror_role :
+    stepErrorMessage (step (stateOf) (submitJurorVoteActionAs "judge")) =
+      "role judge not permitted for submit_juror_vote" := by
   native_decide
 
-theorem step_declare_hung_jury_rejects_non_foreperson_role :
-    stepErrorMessage (step (stateOf) (declareHungJuryActionAs "defendant")) =
-      "role defendant not permitted for declare_hung_jury" := by
+theorem step_empanel_jury_rejects_non_judge_role :
+    stepErrorMessage (step (stateOf) (empanelJuryActionAs "defendant")) =
+      "role defendant not permitted for empanel_jury" := by
   native_decide
 
 theorem step_resolve_rule59_rejects_non_judge_role :
@@ -77,3 +77,5 @@ theorem step_resolve_rule59_rejects_non_judge_role :
     stepErrorMessage (step (stateOf c) (resolveRule59ActionAs "defendant")) =
       "role defendant not permitted for resolve_rule59_motion" := by
   native_decide
+
+end ADCProofs.RoleGuardsCritical

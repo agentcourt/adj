@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.Rule56WindowBasics
 
 /--
 Closing a Rule 56 window marks that party as closed.
@@ -18,12 +20,6 @@ theorem closeRule56WindowFor_marks_party_closed
   · simp [hparty, hmem]
   · simp [hparty, hmem]
 
-/-
-This theorem is small, but it is not an evaluator check.  It captures the
-intended postcondition of the closure helper and avoids repeating list
-reasoning in later orchestration proofs.
--/
-
 /--
 Reopening Rule 56 windows clears the closure state for every party.
 
@@ -37,55 +33,68 @@ theorem reopenRule56Windows_clears_party
   unfold rule56WindowClosedFor reopenRule56Windows
   simp
 
-/-
-This lemma gives the reopening side of the same helper story.  Together,
-the two lemmas isolate the Rule 56 window mechanism from the surrounding
-opportunity engine.
--/
-
 /--
 Passing a non-Rule-56 opportunity does not change the Rule 56 closure set.
 
 The proof plan is again structural.  Unfold `recordOpportunityPassFor`.
-When the opportunity does not expose only `file_rule56_motion`, the
-function returns the bumped state `s1` unchanged on the case field.  The
-resulting closed-window list is therefore exactly the original one.
+Every pass effect other than `rule56` either records a trace without changing
+the closure set or records an ordinary opportunity pass.
 -/
+private theorem applyOpportunityPassToCase_non_rule56_preserves_window
+    (c : CaseState) (opportunity : OpportunitySpec)
+    (h : opportunity.pass_effect ≠ "rule56") :
+    match applyOpportunityPassToCase? c opportunity with
+    | some next => next.rule56_window_closed_for = c.rule56_window_closed_for
+    | none => True := by
+  unfold applyOpportunityPassToCase?
+  by_cases hrule37 : opportunity.pass_effect = "rule37"
+  · simp [hrule37, appendTrace]
+  · by_cases hvoir : opportunity.pass_effect = "voir_dire_question"
+    · simp [hvoir]
+      cases requiredPayloadString? opportunity.constraints "asked_by" <;>
+        cases requiredPayloadString? opportunity.constraints "juror_id" <;>
+        simp [appendTrace]
+    · by_cases hcause : opportunity.pass_effect = "for_cause_challenge"
+      · simp [hcause, appendTrace]
+      · by_cases hperemptory : opportunity.pass_effect = "peremptory_challenge"
+        · simp [hperemptory, appendTrace]
+        · simp [hrule37, h, hvoir, hcause, hperemptory]
+
 theorem recordOpportunityPassFor_non_rule56_preserves_window
     (s : CourtState) (opportunity : OpportunitySpec)
-    (h : opportunity.allowed_tools ≠ ["file_rule56_motion"]) :
+    (h : opportunity.pass_effect ≠ "rule56") :
     (recordOpportunityPassFor s opportunity).case.rule56_window_closed_for =
       s.case.rule56_window_closed_for := by
   unfold recordOpportunityPassFor
-  simp [h, bumpStateVersion]
-
-/-
-This is the first lemma that connects the helper functions to the
-opportunity engine.  It states that ordinary optional opportunities do not
-silently affect the Rule 56 window.
--/
+  cases happly : applyOpportunityPassToCase? s.case opportunity with
+  | none =>
+      simp [recordOpportunityPass, bumpStateVersion]
+  | some next =>
+      have hpreserve :=
+        applyOpportunityPassToCase_non_rule56_preserves_window s.case opportunity h
+      rw [happly] at hpreserve
+      simp [updateCase, clearPassedOpportunities, bumpStateVersion, hpreserve]
 
 /--
 Passing a Rule 56 opportunity closes the Rule 56 window for that role.
 
 The proof plan combines the previous ideas.  Unfold
-`recordOpportunityPassFor`, rewrite with the Rule 56 tool hypothesis, and
+`recordOpportunityPassFor`, rewrite with the Rule 56 pass-effect hypothesis, and
 reduce the goal to the helper lemma embodied in
 `closeRule56WindowFor_marks_party_closed`.
 -/
 theorem recordOpportunityPassFor_rule56_closes_window
     (s : CourtState) (opportunity : OpportunitySpec)
-    (htools : opportunity.allowed_tools = ["file_rule56_motion"])
+    (heffect : opportunity.pass_effect = "rule56")
     (hrole : normalizePartyToken opportunity.role ≠ "") :
     rule56WindowClosedFor (recordOpportunityPassFor s opportunity).case opportunity.role = true := by
+  have happly :
+      applyOpportunityPassToCase? s.case opportunity =
+        some (closeRule56WindowFor s.case opportunity.role) := by
+    simp [applyOpportunityPassToCase?, heffect]
   unfold recordOpportunityPassFor
-  unfold rule56WindowClosedFor closeRule56WindowFor
-  by_cases hmem : normalizePartyToken opportunity.role ∈ s.case.rule56_window_closed_for
-  · simp [htools, hrole, hmem, bumpStateVersion]
-  · simp [htools, hrole, hmem, bumpStateVersion]
+  rw [happly]
+  change rule56WindowClosedFor (closeRule56WindowFor s.case opportunity.role) opportunity.role = true
+  exact closeRule56WindowFor_marks_party_closed s.case opportunity.role hrole
 
-/-
-This theorem states the core procedural effect of a Rule 56 pass without
-building a concrete case.  Later orchestration theorems can use it instead
-of re-evaluating a particular `ApplyDecisionRequest`.
--/
+end ADCProofs.Rule56WindowBasics

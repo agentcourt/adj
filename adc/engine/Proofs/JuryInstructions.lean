@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.JuryInstructions
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -82,3 +84,5 @@ theorem step_deliver_jury_instructions_records_docket :
       | .ok s' => hasDocketTitle s'.case "Jury instructions delivered"
       | .error _ => false) = true := by
   native_decide
+
+end ADCProofs.JuryInstructions

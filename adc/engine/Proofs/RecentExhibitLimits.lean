@@ -1,5 +1,9 @@
-import Main
+import ADC.Core
 import Proofs.EffectiveLimitBasics
+
+namespace ADCProofs.RecentExhibitLimits
+
+open ADCProofs.EffectiveLimitBasics
 
 open Lean
 
@@ -69,6 +73,11 @@ def exhibitEvidenceCase : CaseState :=
     docket :=
       [ { title := "Exhibit PX-1 - admitted"
         , description := "plaintiff: instructions.txt"
+        , fields := [
+            { name := "party", value := "plaintiff" },
+            { name := "exhibit_id", value := "PX-1" },
+            { name := "file_id", value := "f1" }
+          ]
         }
       ]
   }
@@ -84,7 +93,7 @@ def exhibitEvidenceState (maxExhibits : Nat) : CourtState :=
 def exhibitEvidenceReq (maxExhibits : Nat) : OpportunityRequest :=
   { state := exhibitEvidenceState maxExhibits
   , roles :=
-      [ { role := "plaintiff", allowed_tools := ["offer_case_file_as_exhibit", "rest_case"] }
+      [ { role := "plaintiff", allowed_tools := ["offer_exhibit", "rest_case"] }
       , { role := "judge", allowed_tools := ["advance_trial_phase"] }
       ]
   , max_steps_per_turn := 3
@@ -126,14 +135,14 @@ theorem plaintiff_evidence_exposes_offer_or_rest_below_limit :
     (availableOpportunities (exhibitEvidenceReq 2)).any (fun opportunity =>
       opportunity.role = "plaintiff" &&
       opportunity.phase = "plaintiff_evidence" &&
-      opportunity.allowed_tools = ["offer_case_file_as_exhibit", "rest_case"]) := by
+      opportunity.allowed_tools = ["offer_exhibit", "rest_case"]) := by
   native_decide
 
 theorem plaintiff_evidence_removes_offer_at_limit :
     !(availableOpportunities (exhibitEvidenceReq 1)).any (fun opportunity =>
       opportunity.role = "plaintiff" &&
       opportunity.phase = "plaintiff_evidence" &&
-      opportunity.allowed_tools = ["offer_case_file_as_exhibit", "rest_case"]) := by
+      opportunity.allowed_tools = ["offer_exhibit", "rest_case"]) := by
   native_decide
 
 theorem plaintiff_evidence_exposes_rest_only_at_limit :
@@ -151,3 +160,14 @@ theorem step_offer_exhibit_rejects_when_limit_reached_on_sample :
     stepErrorMessage (step (exhibitEvidenceState 1) offerPlaintiffExhibitAction) =
       "LOCAL_RULE_LIMIT_EXCEEDED|limit_key=trial.exhibits_offered_per_side|actor=plaintiff|phase=plaintiff_evidence|attempted=2|allowed=1|detail=exhibits_offered" := by
   native_decide
+
+theorem exhibit_count_uses_party_field :
+    let c := { exhibitEvidenceCase with docket := [
+      docketEntryWithFields "Exhibit PX-1 - admitted" "plaintiff: misleading description"
+        [("party", "defendant"), ("exhibit_id", "PX-1")]
+    ] }
+    countExhibitsOfferedByParty c "plaintiff" = 0 ∧
+      countExhibitsOfferedByParty c "defendant" = 1 := by
+  native_decide
+
+end ADCProofs.RecentExhibitLimits

@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.RecentVoirDireLimits
 
 open Lean
 
@@ -155,3 +157,5 @@ theorem voir_dire_opportunities_leave_defendant_question_below_its_disallow_limi
       opportunity.phase = "voir_dire" &&
       opportunity.allowed_tools = ["record_voir_dire_question"]) := by
   native_decide
+
+end ADCProofs.RecentVoirDireLimits

@@ -1,5 +1,9 @@
 import Proofs.ApplyDecision
 
+namespace ADCProofs.Rule56Lifecycle
+
+open ADCProofs.ApplyDecision
+
 def rule56PassStateForLifecycle : CourtState :=
   match applyDecision validRule56PassReq with
   | .ok ok =>
@@ -57,7 +61,7 @@ def reopenedRule56OpportunityAfterAmendedComplaintMatches : Bool :=
       opportunity.kind = "optional" &&
       opportunity.may_pass = true &&
       opportunity.phase = "pretrial" &&
-      opportunity.objective = "For case 0, optionally file Rule 56 motion if no genuine dispute of material fact."
+      opportunity.objective = "For case 0, file a Rule 56 motion only if the record establishes that no genuine dispute of material fact requires trial. Otherwise pass."
   | none => false
 
 /--
@@ -128,18 +132,4 @@ theorem rule56_pass_persists_until_amended_complaint :
   · exact step_initial_disclosures_after_rule56_pass_keeps_rule56_unavailable
   · exact step_amended_complaint_after_initial_disclosures_reopens_rule56
 
-/-
-This is the right Rule 56 theorem for the current engine.  It is more
-interesting than a one-step guard check because it follows the opportunity
-through a small procedural history.  The theorem still stays objective.  It
-does not say whether summary judgment would be correct.  It says that Lean
-remembers the pass, ignores unrelated pretrial churn, and reopens the window
-only when the amended-complaint step says it should.
-
-The proof is intentionally mixed.  The lifecycle theorem itself composes prior
-theorems.  The two intervening-step theorems use `native_decide` because they
-are fully closed concrete flows, and forcing them into a longer manual proof
-would not reveal more structure.  The next useful step is a more generic
-pretrial-memory theorem that covers other unrelated `updateCase` steps, not
-only `serve_initial_disclosures`.
--/
+end ADCProofs.Rule56Lifecycle

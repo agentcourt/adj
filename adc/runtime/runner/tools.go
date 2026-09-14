@@ -566,6 +566,7 @@ func buildActionSchemas() map[string]map[string]any {
 	register(schemaObj(
 		map[string]any{
 			"party":       map[string]any{"type": "string", "enum": []string{"plaintiff", "defendant"}},
+			"file_id":     map[string]any{"type": "string"},
 			"exhibit_id":  map[string]any{"type": "string"},
 			"description": map[string]any{"type": "string"},
 			"admitted":    map[string]any{"type": "boolean"},

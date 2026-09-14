@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.TransitionCase
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -67,3 +69,5 @@ theorem step_transition_case_trial_to_judgment_succeeds_with_verdict :
       | .ok s' => s'.case.status
       | .error _ => "") = "judgment_entered" := by
   native_decide
+
+end ADCProofs.TransitionCase

@@ -1,341 +1,187 @@
-import Main
+import ADC.Core
 
-theorem validateRecordJuryVerdict_invalid_current_phase
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (msg : String)
-    (hPhase : parseCurrentPhaseV1 c = .error msg) :
-    validateRecordJuryVerdict c verdictFor votes damages = .error msg := by
-  unfold validateRecordJuryVerdict
-  simp [hPhase]
+namespace ADCProofs.ValidateRecordJuryVerdict
 
-theorem validateRecordJuryVerdict_phase_gate_error
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (currentPhase : TrialPhaseV1)
-    (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
-    (hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = false) :
-    validateRecordJuryVerdict c verdictFor votes damages =
-      .error s!"jury verdict requires verdict_return phase; current phase is {c.phase}" := by
-  unfold validateRecordJuryVerdict
-  simp [hPhase, hGate]
+def swornJuror (jurorId : String) : JurorRecord :=
+  { juror_id := jurorId, name := jurorId, status := "sworn" }
 
-theorem validateRecordJuryVerdict_hung_error
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (currentPhase : TrialPhaseV1)
-    (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
-    (hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = true)
-    (hHung : c.hung_jury.isSome = true) :
-    validateRecordJuryVerdict c verdictFor votes damages =
-      .error "cannot record verdict after hung jury is declared" := by
-  unfold validateRecordJuryVerdict
-  simp [hPhase, hGate, hHung]
+def plaintiffVote (jurorId : String) (round damages : Nat) : JurorVote :=
+  {
+    juror_id := jurorId
+    round := round
+    vote := "plaintiff"
+    damages := Float.ofNat damages
+    confidence := "high"
+    explanation := "Plaintiff proved the claim."
+    submitted_at := "2026-01-01"
+  }
 
-theorem validateRecordJuryVerdict_invalid_verdict_for
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (currentPhase : TrialPhaseV1)
-    (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
-    (hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = true)
-    (hHung : c.hung_jury.isSome = false)
-    (hSide : parseVerdictSide verdictFor = none) :
-    validateRecordJuryVerdict c verdictFor votes damages =
-      .error s!"invalid verdict_for value: {verdictFor}" := by
-  unfold validateRecordJuryVerdict
-  simp [hPhase, hGate, hHung, hSide]
+def defendantVote (jurorId : String) (round : Nat) : JurorVote :=
+  {
+    juror_id := jurorId
+    round := round
+    vote := "defendant"
+    damages := 0.0
+    confidence := "high"
+    explanation := "Plaintiff did not prove the claim."
+    submitted_at := "2026-01-01"
+  }
 
-theorem validateRecordJuryVerdict_negative_damages
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (currentPhase : TrialPhaseV1)
-    (side : VerdictSide)
-    (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
-    (hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = true)
-    (hHung : c.hung_jury.isSome = false)
-    (hSide : parseVerdictSide verdictFor = some side)
-    (hNeg : damages < 0) :
-    validateRecordJuryVerdict c verdictFor votes damages =
-      .error "damages must be nonnegative" := by
-  unfold validateRecordJuryVerdict
-  simp [hPhase, hGate, hHung, hSide, hNeg]
+def baseCase : CaseState :=
+  { (default : CaseState) with
+    case_id := "case-1"
+    filed_on := "2026-01-01"
+    status := "trial"
+    trial_mode := "jury"
+    phase := "deliberation"
+    jury_configuration := some {
+      juror_count := 2
+      unanimous_required := true
+      minimum_concurring := 2
+    }
+    jurors := [swornJuror "J1", swornJuror "J2"]
+  }
 
-theorem validateRecordJuryVerdict_defendant_nonzero_damages
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (currentPhase : TrialPhaseV1)
-    (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
-    (hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = true)
-    (hHung : c.hung_jury.isSome = false)
-    (hSide : parseVerdictSide verdictFor = some VerdictSide.defendant)
-    (hNonNeg : ¬ damages < 0)
-    (hNonZero : damages != 0.0) :
-    validateRecordJuryVerdict c verdictFor votes damages =
-      .error "damages must be zero on defendant verdict" := by
-  unfold validateRecordJuryVerdict
-  simp [hPhase, hGate, hHung, hSide, hNonNeg, hNonZero]
+def stateOf (c : CaseState := baseCase) (version : Nat := 0) : CourtState :=
+  { (default : CourtState) with
+    schema_version := "v1"
+    case := c
+    state_version := version
+  }
 
-theorem validateRecordJuryVerdict_missing_jury_configuration
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (currentPhase : TrialPhaseV1)
-    (side : VerdictSide)
-    (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
-    (hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = true)
-    (hHung : c.hung_jury.isSome = false)
-    (hSide : parseVerdictSide verdictFor = some side)
-    (hNonNeg : ¬ damages < 0)
-    (hDefCheck : (side = VerdictSide.defendant && damages != 0.0) = false)
-    (hCfg : c.jury_configuration = none) :
-    validateRecordJuryVerdict c verdictFor votes damages =
-      .error "jury configuration required before verdict" := by
-  unfold validateRecordJuryVerdict
-  simp [hPhase, hGate, hHung, hSide, hNonNeg, hDefCheck, hCfg]
+def submitVoteAction
+    (jurorId vote confidence : String)
+    (damages : Nat) : CourtAction :=
+  { action_type := "submit_juror_vote"
+  , actor_role := "juror"
+  , payload := Lean.Json.mkObj [
+      ("juror_id", Lean.Json.str jurorId),
+      ("vote", Lean.Json.str vote),
+      ("damages", Lean.Json.num damages),
+      ("confidence", Lean.Json.str confidence),
+      ("explanation", Lean.Json.str "The record supports this vote.")
+    ]
+  }
 
-theorem validateRecordJuryVerdict_insufficient_votes
-    (c : CaseState)
-    (verdictFor : String)
-    (votes required : Nat)
-    (damages : Float)
-    (currentPhase : TrialPhaseV1)
-    (side : VerdictSide)
-    (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
-    (hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = true)
-    (hHung : c.hung_jury.isSome = false)
-    (hSide : parseVerdictSide verdictFor = some side)
-    (hNonNeg : ¬ damages < 0)
-    (hDefCheck : (side = VerdictSide.defendant && damages != 0.0) = false)
-    (hCfg : c.jury_configuration = some { juror_count := 6, unanimous_required := true, minimum_concurring := required })
-    (hVotes : votes < required) :
-    validateRecordJuryVerdict c verdictFor votes damages =
-      .error "insufficient concurring votes for verdict" := by
-  unfold validateRecordJuryVerdict
-  simp [hPhase, hGate, hHung, hSide, hNonNeg, hDefCheck, hCfg, hVotes]
+def stepErrorMessage (result : Except String CourtState) : String :=
+  match result with
+  | .error message => message
+  | .ok _ => ""
 
-theorem validateRecordJuryVerdict_ok
-    (c : CaseState)
-    (verdictFor : String)
-    (votes required : Nat)
-    (damages : Float)
-    (currentPhase : TrialPhaseV1)
-    (side : VerdictSide)
-    (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
-    (hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = true)
-    (hHung : c.hung_jury.isSome = false)
-    (hSide : parseVerdictSide verdictFor = some side)
-    (hNonNeg : ¬ damages < 0)
-    (hDefCheck : (side = VerdictSide.defendant && damages != 0.0) = false)
-    (hCfg : c.jury_configuration = some { juror_count := 6, unanimous_required := true, minimum_concurring := required })
-    (hVotes : required ≤ votes) :
-    validateRecordJuryVerdict c verdictFor votes damages = .ok (side, required) := by
-  unfold validateRecordJuryVerdict
-  have hNotLt : ¬ votes < required := Nat.not_lt.mpr hVotes
-  simp [hPhase, hGate, hHung, hSide, hNonNeg, hDefCheck, hCfg, hNotLt]
+theorem submit_juror_vote_requires_deliberation_phase :
+    let c := { baseCase with phase := "verdict_return" }
+    stepErrorMessage (step (stateOf c) (submitVoteAction "J1" "plaintiff" "high" 100)) =
+      "juror vote requires deliberation phase; current phase is verdict_return" := by
+  native_decide
 
-theorem validateRecordJuryVerdict_ok_implies_no_hung
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (side : VerdictSide)
-    (required : Nat)
-    (hOk : validateRecordJuryVerdict c verdictFor votes damages = .ok (side, required)) :
-    c.hung_jury.isSome = false := by
-  unfold validateRecordJuryVerdict at hOk
-  cases hPhase : parseCurrentPhaseV1 c with
-  | error e =>
-      simp [hPhase] at hOk
-  | ok currentPhase =>
-      by_cases hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = false
-      · simp [hPhase, hGate] at hOk
-      · by_cases hHung : c.hung_jury.isSome
-        · simp [hPhase, hGate, hHung] at hOk
-        · simp [hHung]
+theorem submit_juror_vote_requires_known_juror :
+    stepErrorMessage (step (stateOf) (submitVoteAction "J3" "plaintiff" "high" 100)) =
+      "unknown juror_id: J3" := by
+  native_decide
 
-theorem validateRecordJuryVerdict_ok_implies_has_jury_configuration
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (side : VerdictSide)
-    (required : Nat)
-    (hOk : validateRecordJuryVerdict c verdictFor votes damages = .ok (side, required)) :
-    ∃ cfg : JuryConfiguration, c.jury_configuration = some cfg ∧ required = cfg.minimum_concurring := by
-  unfold validateRecordJuryVerdict at hOk
-  cases hPhase : parseCurrentPhaseV1 c with
-  | error e =>
-      simp [hPhase] at hOk
-  | ok currentPhase =>
-      by_cases hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = false
-      · simp [hPhase, hGate] at hOk
-      · by_cases hHung : c.hung_jury.isSome
-        · simp [hPhase, hGate, hHung] at hOk
-        · cases hSide : parseVerdictSide verdictFor with
-          | none =>
-              simp [hPhase, hGate, hHung, hSide] at hOk
-          | some verdictSide =>
-              by_cases hNeg : damages < 0
-              · simp [hPhase, hGate, hHung, hSide, hNeg] at hOk
-              · by_cases hDefCheck : (verdictSide = VerdictSide.defendant && damages != 0.0) = true
-                · simp [hPhase, hGate, hHung, hSide, hNeg, hDefCheck] at hOk
-                · cases hCfg : c.jury_configuration with
-                  | none =>
-                      simp [hPhase, hGate, hHung, hSide, hNeg, hDefCheck, hCfg] at hOk
-                  | some cfg =>
-                      by_cases hVotesLt : votes < cfg.minimum_concurring
-                      · simp [hPhase, hGate, hHung, hSide, hNeg, hDefCheck, hCfg, hVotesLt] at hOk
-                      · have hEq : (verdictSide, cfg.minimum_concurring) = (side, required) := by
-                          simpa [hPhase, hGate, hHung, hSide, hNeg, hDefCheck, hCfg, hVotesLt] using hOk
-                        have hReq : required = cfg.minimum_concurring := by
-                          exact congrArg Prod.snd hEq.symm
-                        exact ⟨cfg, rfl, hReq⟩
+theorem submit_juror_vote_requires_sworn_juror :
+    let c := { baseCase with jurors := [
+      { swornJuror "J1" with status := "candidate" },
+      swornJuror "J2"
+    ] }
+    stepErrorMessage (step (stateOf c) (submitVoteAction "J1" "plaintiff" "high" 100)) =
+      "juror J1 is not sworn" := by
+  native_decide
 
-theorem validateRecordJuryVerdict_ok_implies_votes_meet_required
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (side : VerdictSide)
-    (required : Nat)
-    (hOk : validateRecordJuryVerdict c verdictFor votes damages = .ok (side, required)) :
-    required ≤ votes := by
-  have hCfg :
-      ∃ cfg : JuryConfiguration, c.jury_configuration = some cfg ∧ required = cfg.minimum_concurring :=
-    validateRecordJuryVerdict_ok_implies_has_jury_configuration c verdictFor votes damages side required hOk
-  rcases hCfg with ⟨cfg, hCfgEq, hReqEq⟩
-  unfold validateRecordJuryVerdict at hOk
-  cases hPhase : parseCurrentPhaseV1 c with
-  | error e =>
-      simp [hPhase] at hOk
-  | ok currentPhase =>
-      by_cases hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = false
-      · simp [hPhase, hGate] at hOk
-      · by_cases hHung : c.hung_jury.isSome
-        · simp [hPhase, hGate, hHung] at hOk
-        · cases hSide : parseVerdictSide verdictFor with
-          | none =>
-              simp [hPhase, hGate, hHung, hSide] at hOk
-          | some verdictSide =>
-              by_cases hNeg : damages < 0
-              · simp [hPhase, hGate, hHung, hSide, hNeg] at hOk
-              · by_cases hDefCheck : (verdictSide = VerdictSide.defendant && damages != 0.0) = true
-                · simp [hPhase, hGate, hHung, hSide, hNeg, hDefCheck] at hOk
-                · rw [hCfgEq] at hOk
-                  by_cases hVotesLt : votes < cfg.minimum_concurring
-                  · simp [hPhase, hGate, hHung, hSide, hNeg, hDefCheck, hVotesLt] at hOk
-                  · have hNotLt : ¬ votes < cfg.minimum_concurring := by
-                      simpa using hVotesLt
-                    have hLeCfg : cfg.minimum_concurring ≤ votes := Nat.not_lt.mp hNotLt
-                    simpa [hReqEq] using hLeCfg
+theorem submit_juror_vote_rejects_duplicate_in_current_round :
+    let c := { baseCase with juror_votes := [plaintiffVote "J1" 1 100] }
+    stepErrorMessage (step (stateOf c) (submitVoteAction "J1" "plaintiff" "high" 100)) =
+      "juror vote already submitted for round 1: J1" := by
+  native_decide
 
-theorem validateRecordJuryVerdict_ok_implies_phase_parse_success
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (side : VerdictSide)
-    (required : Nat)
-    (hOk : validateRecordJuryVerdict c verdictFor votes damages = .ok (side, required)) :
-    ∃ currentPhase : TrialPhaseV1, parseCurrentPhaseV1 c = .ok currentPhase := by
-  unfold validateRecordJuryVerdict at hOk
-  cases hPhase : parseCurrentPhaseV1 c with
-  | error e =>
-      simp [hPhase] at hOk
-  | ok currentPhase =>
-      exact ⟨currentPhase, rfl⟩
+theorem submit_juror_vote_rejects_invalid_side :
+    stepErrorMessage (step (stateOf) (submitVoteAction "J1" "abstain" "high" 0)) =
+      "invalid juror vote: abstain" := by
+  native_decide
 
-theorem validateRecordJuryVerdict_ok_implies_phase_gate_true
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (side : VerdictSide)
-    (required : Nat)
-    (hOk : validateRecordJuryVerdict c verdictFor votes damages = .ok (side, required)) :
-    ∃ currentPhase : TrialPhaseV1,
-      parseCurrentPhaseV1 c = .ok currentPhase ∧
-      phaseAllowsActionV1 .recordJuryVerdict currentPhase = true := by
-  rcases
-      validateRecordJuryVerdict_ok_implies_phase_parse_success
-        c verdictFor votes damages side required hOk
-    with ⟨currentPhase, hPhase⟩
-  unfold validateRecordJuryVerdict at hOk
-  by_cases hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = false
-  · simp [hPhase, hGate] at hOk
-  · have hGateTrue : phaseAllowsActionV1 .recordJuryVerdict currentPhase = true := by
-      cases hGateBool : phaseAllowsActionV1 .recordJuryVerdict currentPhase with
-      | false =>
-          exact (hGate hGateBool).elim
-      | true =>
-          rfl
-    exact ⟨currentPhase, hPhase, hGateTrue⟩
+theorem submit_juror_vote_requires_zero_damages_for_defendant :
+    stepErrorMessage (step (stateOf) (submitVoteAction "J1" "defendant" "high" 100)) =
+      "juror vote damages must be zero on a defense vote" := by
+  native_decide
 
-theorem validateRecordJuryVerdict_ok_implies_phase_is_verdict_return
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (side : VerdictSide)
-    (required : Nat)
-    (hOk : validateRecordJuryVerdict c verdictFor votes damages = .ok (side, required)) :
-    ∃ currentPhase : TrialPhaseV1,
-      parseCurrentPhaseV1 c = .ok currentPhase ∧
-      currentPhase = TrialPhaseV1.verdictReturn := by
-  rcases
-      validateRecordJuryVerdict_ok_implies_phase_gate_true
-        c verdictFor votes damages side required hOk
-    with ⟨currentPhase, hPhase, hGate⟩
-  cases currentPhase <;> simp [phaseAllowsActionV1] at hGate
-  · exact ⟨TrialPhaseV1.verdictReturn, hPhase, rfl⟩
+theorem submit_juror_vote_rejects_invalid_confidence :
+    stepErrorMessage (step (stateOf) (submitVoteAction "J1" "plaintiff" "certain" 100)) =
+      "invalid confidence: certain" := by
+  native_decide
 
-theorem validateRecordJuryVerdict_ok_implies_side_parses
-    (c : CaseState)
-    (verdictFor : String)
-    (votes : Nat)
-    (damages : Float)
-    (side : VerdictSide)
-    (required : Nat)
-    (hOk : validateRecordJuryVerdict c verdictFor votes damages = .ok (side, required)) :
-    parseVerdictSide verdictFor = some side := by
-  unfold validateRecordJuryVerdict at hOk
-  cases hPhase : parseCurrentPhaseV1 c with
-  | error e =>
-      simp [hPhase] at hOk
-  | ok currentPhase =>
-      by_cases hGate : phaseAllowsActionV1 .recordJuryVerdict currentPhase = false
-      · simp [hPhase, hGate] at hOk
-      · by_cases hHung : c.hung_jury.isSome
-        · simp [hPhase, hGate, hHung] at hOk
-        · cases hSide : parseVerdictSide verdictFor with
-          | none =>
-              simp [hPhase, hGate, hHung, hSide] at hOk
-          | some parsedSide =>
-              by_cases hNeg : damages < 0
-              · simp [hPhase, hGate, hHung, hSide, hNeg] at hOk
-              · by_cases hDefCheck : (parsedSide = VerdictSide.defendant && damages != 0.0) = true
-                · simp [hPhase, hGate, hHung, hSide, hNeg, hDefCheck] at hOk
-                · cases hCfg : c.jury_configuration with
-                  | none =>
-                      simp [hPhase, hGate, hHung, hSide, hNeg, hDefCheck, hCfg] at hOk
-                  | some cfg =>
-                      by_cases hVotesLt : votes < cfg.minimum_concurring
-                      · simp [hPhase, hGate, hHung, hSide, hNeg, hDefCheck, hCfg, hVotesLt] at hOk
-                      · have hEq : (parsedSide, cfg.minimum_concurring) = (side, required) := by
-                          simpa [hPhase, hGate, hHung, hSide, hNeg, hDefCheck, hCfg, hVotesLt] using hOk
-                        have hSideEq : parsedSide = side := congrArg Prod.fst hEq
-                        cases hSideEq
-                        rfl
+theorem submit_juror_vote_appends_current_round_vote :
+    (match step (stateOf) (submitVoteAction "J1" "plaintiff" "high" 100) with
+    | .error _ => false
+    | .ok next =>
+        next.case.juror_votes.any (fun vote =>
+          vote.juror_id = "J1" &&
+          vote.round = 1 &&
+          vote.vote = "plaintiff")) = true := by
+  native_decide
+
+theorem submit_juror_vote_increments_state_version :
+    (match step (stateOf baseCase 7) (submitVoteAction "J1" "plaintiff" "high" 100) with
+    | .error _ => 0
+    | .ok next => next.state_version) = 8 := by
+  native_decide
+
+theorem incomplete_ballot_does_not_derive_verdict :
+    (match step (stateOf) (submitVoteAction "J1" "plaintiff" "high" 100) with
+    | .error _ => false
+    | .ok next => next.case.jury_verdict.isNone) = true := by
+  native_decide
+
+def plaintiffVerdictAfterFinalVote : Option JuryVerdict :=
+  let c := { baseCase with juror_votes := [plaintiffVote "J1" 1 100] }
+  match step (stateOf c) (submitVoteAction "J2" "plaintiff" "high" 300) with
+  | .error _ => none
+  | .ok next => next.case.jury_verdict
+
+theorem final_concurring_vote_derives_plaintiff_verdict :
+    (match plaintiffVerdictAfterFinalVote with
+    | some verdict =>
+        verdict.verdict_for = "plaintiff" &&
+        verdict.votes_for_verdict = 2 &&
+        verdict.required_votes = 2
+    | none => false) = true := by
+  native_decide
+
+theorem plaintiff_verdict_uses_mean_plaintiff_damages :
+    (match plaintiffVerdictAfterFinalVote with
+    | some verdict => verdict.damages.toBits = (200.0).toBits
+    | none => false) = true := by
+  native_decide
+
+def defendantVerdictAfterFinalVote : Option JuryVerdict :=
+  let c := { baseCase with juror_votes := [defendantVote "J1" 1] }
+  match step (stateOf c) (submitVoteAction "J2" "defendant" "high" 0) with
+  | .error _ => none
+  | .ok next => next.case.jury_verdict
+
+theorem final_concurring_vote_derives_defendant_verdict :
+    (match defendantVerdictAfterFinalVote with
+    | some verdict =>
+        verdict.verdict_for = "defendant" &&
+        verdict.votes_for_verdict = 2 &&
+        verdict.required_votes = 2
+    | none => false) = true := by
+  native_decide
+
+theorem defendant_verdict_has_zero_damages :
+    (match defendantVerdictAfterFinalVote with
+    | some verdict => verdict.damages.toBits = (0.0).toBits
+    | none => false) = true := by
+  native_decide
+
+theorem prior_round_vote_does_not_block_current_round_vote :
+    let c := { baseCase with
+      deliberation_round := 2
+      juror_votes := [plaintiffVote "J1" 1 100]
+    }
+    (match step (stateOf c) (submitVoteAction "J1" "plaintiff" "high" 100) with
+    | .error _ => false
+    | .ok next =>
+        next.case.juror_votes.any (fun vote => vote.juror_id = "J1" && vote.round = 2)) = true := by
+  native_decide
+
+end ADCProofs.ValidateRecordJuryVerdict

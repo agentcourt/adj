@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.ValidatePostJudgmentMotions
 
 theorem validateRule59Timing_of_isRule59Timely_error
     (judgmentDate filedAt : String)
@@ -65,3 +67,5 @@ theorem validateRule60Timing_ok_implies_isRule60Timely_true
       simp [hTimely] at hOk
   | ok timely =>
       cases timely <;> simp [hTimely] at hOk ⊢
+
+end ADCProofs.ValidatePostJudgmentMotions

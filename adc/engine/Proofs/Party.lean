@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.Party
 
 theorem normalizePartyToken_claimant :
     normalizePartyToken "claimant" = "plaintiff" := by
@@ -35,16 +37,12 @@ theorem normalizePartyToken_output_classification (s : String) :
     normalizePartyToken s = "plaintiff" ∨
       normalizePartyToken s = "defendant" ∨
       normalizePartyToken s = (trimString s).toLower := by
-  by_cases hpl :
-      (((trimString s).toLower = "plaintiff" ∨ (trimString s).toLower = "claimant") ∨
-          (trimString s).toLower.contains "plaintiff" = true) ∨
-        (trimString s).toLower.contains "claimant" = true
-  · exact Or.inl (by simp [normalizePartyToken, hpl])
-  · by_cases hdef :
-      (((((trimString s).toLower = "defendant" ∨ (trimString s).toLower = "defense") ∨
-              (trimString s).toLower = "defence") ∨
-            (trimString s).toLower.contains "defendant" = true) ∨
-          (trimString s).toLower.contains "defense" = true) ∨
-        (trimString s).toLower.contains "defence" = true
-    · exact Or.inr (Or.inl (by simp [normalizePartyToken, hpl, hdef]))
-    · exact Or.inr (Or.inr (by simp [normalizePartyToken, hpl, hdef]))
+  unfold normalizePartyToken
+  dsimp
+  split
+  · exact Or.inl rfl
+  · split
+    · exact Or.inr (Or.inl rfl)
+    · exact Or.inr (Or.inr rfl)
+
+end ADCProofs.Party

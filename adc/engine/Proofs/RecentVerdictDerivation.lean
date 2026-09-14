@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.RecentVerdictDerivation
 
 def swornJurorRecent (jurorId model persona : String) : JurorRecord :=
   { juror_id := jurorId
@@ -189,32 +191,16 @@ theorem deriveVerdictFromJurorVotes_none_when_current_round_vote_missing
   | some cfg =>
       simp [hMissing, hSworn]
 
-/-
-This theorem marks the remaining formal boundary of the verdict logic.
-
-Once the jury still has enough sworn jurors to reach the threshold, a complete
-current round is the first hard precondition of verdict derivation itself.
--/
-
 /--
 When plaintiff votes meet the concurrence threshold, the engine returns a
 plaintiff verdict with the arithmetic mean of plaintiff-side damages.
 
-The proof checks the derived verdict summary rather than whole-structure
-equality.  That is the right statement in Lean because the verdict contains a
+The proof checks the derived verdict summary because the verdict contains a
 `Float`, and decidable equality on the enclosing structure is unavailable.
 -/
 theorem deriveVerdictFromJurorVotes_plaintiff_majority_uses_plaintiff_mean :
     plaintiffMajorityVerdictSummary = true := by
   native_decide
-
-/-
-The proof checks the damage field by its bit pattern.
-
-That avoids a proof evidence from Lean's `Float` representation while keeping
-the substantive claim exact: the derived amount is `100.0`, the mean of the
-four plaintiff-side damages.
--/
 
 /--
 When defendant votes meet the concurrence threshold, the engine returns a
@@ -227,13 +213,6 @@ theorem deriveVerdictFromJurorVotes_defendant_majority_zeroes_damages :
     defendantMajorityVerdictSummary = true := by
   native_decide
 
-/-
-This proof uses the same summary style as the plaintiff-side theorem.
-
-That keeps the theorem exact about the verdict's content while avoiding the
-same `Float` equality problem on the enclosing structure.
--/
-
 /--
 Reordering the sample plaintiff-majority votes does not change the derived
 verdict summary.
@@ -245,14 +224,6 @@ count votes and average plaintiff-side damages, not care about storage order.
 theorem deriveVerdictFromJurorVotes_plaintiff_majority_is_order_invariant_on_sample :
     plaintiffMajorityPermutedVerdictSummary = plaintiffMajorityVerdictSummary := by
   native_decide
-
-/-
-This theorem checks order invariance at the point where it matters.
-
-The current derivation code counts votes and computes the mean of
-plaintiff-side damages.  Those operations should be permutation-invariant, and
-the sample theorem proves that behavior on a nontrivial reordered vote list.
--/
 
 /--
 If round 2 repeats round 1 with the same split and the same damages positions,
@@ -269,27 +240,15 @@ theorem deriveVerdictFromJurorVotes_adjusts_threshold_after_failed_juror :
     plaintiffAfterFailedJurorVerdictSummary = true := by
   native_decide
 
-/-
-The hung-jury theorem matters because it rules out empty extra rounds.
-
-Once the split and damages positions stop moving, the engine must stop the jury
-process rather than continue to solicit identical ballots.
--/
-
 /--
 If a split round is not yet stable and neither side has the required
 concurrence, the engine advances to the next round.
 
-This is the positive side of the deliberation loop.  The engine keeps the jury
-voting when the prior round changed but still failed to produce a verdict.
+The engine keeps the jury voting when the prior round changed but failed to
+produce a verdict.
 -/
 theorem deriveVerdictFromJurorVotes_nonstable_split_advances_round :
     continuingSplitAdvanceSummary = true := by
   native_decide
 
-/-
-This theorem distinguishes disagreement from deadlock.
-
-A split vote does not end the process by itself.  The engine advances only when
-the jury still has a live path to movement under the round cap.
--/
+end ADCProofs.RecentVerdictDerivation

@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.ValidateTrialActionPhase
 
 theorem validateTrialActionPhase_invalid_current_phase
     (c : CaseState)
@@ -65,3 +67,5 @@ theorem validateTrialActionPhase_ok_implies_gate_true
       | true =>
           rfl
     exact ⟨currentPhase, hPhase, hGateTrue⟩
+
+end ADCProofs.ValidateTrialActionPhase

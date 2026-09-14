@@ -2,527 +2,614 @@
 
 | Theorem | File | Importance | Comment |
 |---|---|---|---|
-| `allowedPhases_contains_implies_parseTrialPhaseV1_some` | `Proofs/PhaseClaim.lean` | low |  |
-| `allowedPhases_contains_implies_phaseOrder_le_twelve` | `Proofs/StepInvariants.lean` | trivial |  |
-| `allowedPhases_contains_implies_phaseOrder_ne_fallback` | `Proofs/StepInvariants.lean` | trivial |  |
-| `allowedStatus_contains_implies_parseCaseStatusV1_some` | `Proofs/PhaseClaim.lean` | low |  |
-| `allowedStatuses_contains_implies_statusRank_le_four` | `Proofs/StepInvariants.lean` | trivial |  |
-| `allowedStatuses_contains_implies_statusRank_ne_fallback` | `Proofs/StepInvariants.lean` | trivial |  |
-| `amendedComplaint_clears_closed_rule56_windows` | `Proofs/Rule56.lean` | low |  |
-| `amendedComplaint_reopens_rule56_window` | `Proofs/Rule56.lean` | low |  |
-| `appendDocket_preserves_hung_jury` | `Proofs/StateNonInterference.lean` | low |  |
-| `appendDocket_preserves_jury_verdict` | `Proofs/StateNonInterference.lean` | low |  |
-| `appendDocket_preserves_phase` | `Proofs/StateNonInterference.lean` | low |  |
-| `appendDocket_preserves_status` | `Proofs/StateNonInterference.lean` | low |  |
-| `appendDocket_preserves_trial_mode` | `Proofs/StateNonInterference.lean` | low |  |
-| `appendTrace_preserves_hung_jury` | `Proofs/StateNonInterference.lean` | low |  |
-| `appendTrace_preserves_jury_verdict` | `Proofs/StateNonInterference.lean` | low |  |
-| `appendTrace_preserves_phase` | `Proofs/StateNonInterference.lean` | low |  |
-| `appendTrace_preserves_status` | `Proofs/StateNonInterference.lean` | low |  |
-| `appendTrace_preserves_trial_mode` | `Proofs/StateNonInterference.lean` | low |  |
-| `append_last_current_opportunity_partitions_roles_and_seals_after_closure` | `Proofs/OpportunityClosure.lean` | high | Combines priority selection, role partition, and case closure at the public boundary. |
-| `applyDecisionAtOpportunity_pass_success_shape` | `Proofs/DecisionConfinement.lean` | low |  |
-| `applyDecisionAtOpportunity_tool_success_confined` | `Proofs/DecisionConfinement.lean` | low |  |
-| `applyDecisionAtOpportunity_tool_success_exact_action` | `Proofs/DecisionConfinement.lean` | low |  |
-| `applyDecision_closed_case_returns_no_current_opportunity` | `Proofs/DecisionConfinement.lean` | medium | Shows that the decision boundary respects case closure directly. |
-| `applyDecision_conflicting_required_payload_returns_constraint_code` | `Proofs/ApplyDecision.lean` | low |  |
-| `applyDecision_current_role_partition_when_append_last_target_is_current` | `Proofs/OpportunityConfinement.lean` | low |  |
-| `applyDecision_defective_filed_case_emits_judge_dismissal` | `Proofs/JurisdictionFlow.lean` | medium | Shows that the public decision boundary emits the expected jurisdiction-dismissal action in the defective filed case. |
-| `applyDecision_defective_jurisdiction_emits_expected_action` | `Proofs/DecisionConfinement.lean` | low |  |
-| `applyDecision_defective_jurisdiction_then_step_stops` | `Proofs/DecisionConfinement.lean` | medium | Shows that the accepted dismissal action closes the case and stops the engine on the next query. |
-| `applyDecision_disallowed_tool_returns_tool_not_allowed_code` | `Proofs/ApplyDecision.lean` | low |  |
-| `applyDecision_missing_tool_name_returns_missing_tool_name_code` | `Proofs/ApplyDecision.lean` | low |  |
-| `applyDecision_pass_success_has_no_action` | `Proofs/DecisionConfinement.lean` | low |  |
-| `applyDecision_pass_success_shape` | `Proofs/DecisionConfinement.lean` | low |  |
-| `applyDecision_rule56_pass_closes_window` | `Proofs/ApplyDecision.lean` | medium | Shows that a valid Rule 56 pass changes later availability, not just immediate output. |
-| `applyDecision_stale_state_version_returns_stale_code` | `Proofs/ApplyDecision.lean` | low |  |
-| `applyDecision_tool_applies_fixed_payload_defaults` | `Proofs/ApplyDecision.lean` | medium | Shows that fixed payload defaults are inserted before execution at the public decision boundary. |
-| `applyDecision_tool_success_confined` | `Proofs/DecisionConfinement.lean` | high | Shows that the decision boundary cannot change role, tool, or payload outside the selected opportunity. |
-| `applyDecision_tool_success_exact_action` | `Proofs/DecisionConfinement.lean` | high | Shows that an accepted tool decision yields exactly the executable action selected by the current opportunity. |
-| `applyDecision_tool_success_has_no_state_update` | `Proofs/DecisionConfinement.lean` | low |  |
-| `applyDecision_tool_success_when_append_last_target_is_current` | `Proofs/OpportunityConfinement.lean` | low |  |
-| `applyDecision_valid_pass_records_state` | `Proofs/ApplyDecision.lean` | medium | Shows the public pass path updates state only through pass bookkeeping. |
-| `applyDecision_without_current_opportunity_returns_no_current_code` | `Proofs/ApplyDecision.lean` | low |  |
-| `applyDecision_wrong_role_of_current_opportunity_returns_wrong_role` | `Proofs/DecisionConfinement.lean` | low |  |
-| `applyDecision_wrong_role_returns_wrong_role_code` | `Proofs/ApplyDecision.lean` | low |  |
-| `applyDecision_wrong_role_when_append_last_target_is_current` | `Proofs/OpportunityConfinement.lean` | high | Shows that once selection fixes the current opportunity, every other role is rejected. |
-| `assignOpportunityIds_numbers_actions_sequentially` | `Proofs/OrchestrationCore.lean` | low |  |
-| `availableActions_closed_returns_empty` | `Proofs/OrchestrationCore.lean` | low |  |
-| `availableOpportunities_nil_when_case_closed` | `Proofs/OrchestrationCore.lean` | medium | Shows that closure removes the entire opportunity set, not just the selected entry. |
-| `canAdvancePhaseV1_antisymm_true` | `Proofs/PhaseClaim.lean` | low |  |
-| `canAdvancePhaseV1_refl` | `Proofs/PhaseClaim.lean` | low |  |
-| `canAdvancePhaseV1_trans` | `Proofs/PhaseClaim.lean` | low |  |
-| `canAdvancePhaseV1_true_and_ne_implies_rank_lt` | `Proofs/PhaseClaim.lean` | low |  |
-| `canAdvancePhaseV1_true_iff_rank_le` | `Proofs/PhaseClaim.lean` | low |  |
-| `canAdvance_chargeConference_to_closings` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `canAdvance_closings_to_juryCharge` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `canAdvance_closings_to_verdictReturn` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `canAdvance_defenseCase_to_chargeConference` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `canAdvance_deliberation_to_verdictReturn` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `canAdvance_juryCharge_to_deliberation` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `canAdvance_none_to_openings` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `canAdvance_openings_to_plaintiffCase` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `canAdvance_plaintiffCase_to_defenseCase` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `canAdvance_verdictReturn_to_postVerdict` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `canEnterJudgmentFromClaimDispositionV1_false_iff_nonverdict` | `Proofs/PhaseClaim.lean` | low |  |
-| `canEnterJudgmentFromClaimDispositionV1_hung_false` | `Proofs/PhaseClaim.lean` | low |  |
-| `canEnterJudgmentFromClaimDispositionV1_pending_false` | `Proofs/PhaseClaim.lean` | low |  |
-| `canEnterJudgmentFromClaimDispositionV1_true_iff_verdict` | `Proofs/PhaseClaim.lean` | low |  |
-| `canEnterJudgmentFromClaimDispositionV1_verdictDefendant_true` | `Proofs/PhaseClaim.lean` | low |  |
-| `canEnterJudgmentFromClaimDispositionV1_verdictPlaintiff_true` | `Proofs/PhaseClaim.lean` | low |  |
-| `canTransitionStatusV1_closed_false` | `Proofs/PhaseClaim.lean` | low |  |
-| `canTransitionStatusV1_filed_true_iff` | `Proofs/PhaseClaim.lean` | low |  |
-| `canTransitionStatusV1_irrefl` | `Proofs/PhaseClaim.lean` | low |  |
-| `canTransitionStatusV1_judgment_entered_eq_closed` | `Proofs/PhaseClaim.lean` | low |  |
-| `canTransitionStatusV1_pretrial_true_iff` | `Proofs/PhaseClaim.lean` | low |  |
-| `canTransitionStatusV1_to_closed_iff_not_closed` | `Proofs/PhaseClaim.lean` | low |  |
-| `canTransitionStatusV1_trial_true_iff` | `Proofs/PhaseClaim.lean` | low |  |
-| `canTransitionStatusV1_true_implies_current_ne_next` | `Proofs/StatusBasics.lean` | trivial |  |
-| `canTransitionStatusV1_true_implies_current_not_closed` | `Proofs/PhaseClaim.lean` | trivial |  |
-| `canTransitionStatusV1_true_implies_current_not_closed` | `Proofs/StatusBasics.lean` | trivial |  |
-| `canTransitionStatusV1_true_implies_ne` | `Proofs/PhaseClaim.lean` | low |  |
-| `canTransitionStatusV1_true_implies_next_not_filed` | `Proofs/PhaseClaim.lean` | trivial |  |
-| `canTransitionStatusV1_true_implies_next_not_filed` | `Proofs/StatusBasics.lean` | trivial |  |
-| `cannot_advance_defenseCase_to_openings` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `cannot_advance_postVerdict_to_deliberation` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `cannot_advance_trial_to_voirDire` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `cannot_advance_verdictReturn_to_plaintiffCase` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
-| `checkTransition_closed_false` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_filed_characterization` | `Proofs/StepInvariants.lean` | trivial |  |
-| `checkTransition_filed_not_trial` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_filed_true_implies_allowed_next` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_judgment_entered_eq_closed` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_judgment_entered_true_implies_allowed_next` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_matches_typed_on_enums` | `Proofs/PhaseClaim.lean` | low |  |
-| `checkTransition_pretrial_characterization` | `Proofs/StepInvariants.lean` | trivial |  |
-| `checkTransition_pretrial_true_implies_allowed_next` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_trial_characterization` | `Proofs/StepInvariants.lean` | trivial |  |
-| `checkTransition_trial_true_implies_allowed_next` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_true_implies_both_allowed` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_true_implies_current_allowed` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_true_implies_current_ne_next` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_true_implies_current_not_closed` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_true_implies_next_allowed` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_true_implies_next_not_filed` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_true_implies_reverse_false` | `Proofs/StepInvariants.lean` | low |  |
-| `checkTransition_true_implies_statusRank_lt` | `Proofs/StepInvariants.lean` | low |  |
-| `chooseOverride_isSome` | `Proofs/OverrideBasics.lean` | trivial |  |
-| `chooseOverride_keeps_existing_on_lower_specificity` | `Proofs/OverrideBasics.lean` | trivial |  |
-| `chooseOverride_none_is_candidate` | `Proofs/OverrideBasics.lean` | trivial |  |
-| `chooseOverride_prefers_higher_specificity` | `Proofs/OverrideBasics.lean` | trivial |  |
-| `chooseOverride_tie_prefers_candidate_when_not_older` | `Proofs/OverrideBasics.lean` | trivial |  |
-| `chooseOverride_tie_prefers_existing_when_candidate_older` | `Proofs/OverrideBasics.lean` | trivial |  |
-| `claimDispositionFromCaseStateV1_defendant_verdict` | `Proofs/PhaseClaim.lean` | low |  |
-| `claimDispositionFromCaseStateV1_hung` | `Proofs/PhaseClaim.lean` | low |  |
-| `claimDispositionFromCaseStateV1_ne_judgmentEntered` | `Proofs/PhaseClaim.lean` | low |  |
-| `claimDispositionFromCaseStateV1_pending` | `Proofs/PhaseClaim.lean` | low |  |
-| `claimDispositionFromCaseStateV1_pending_iff` | `Proofs/PhaseClaim.lean` | low |  |
-| `claimDispositionFromCaseStateV1_plaintiff_verdict` | `Proofs/PhaseClaim.lean` | low |  |
-| `claimDisposition_allowsJudgment_implies_no_hung` | `Proofs/PhaseClaim.lean` | low |  |
-| `claimDisposition_allowsJudgment_implies_parseVerdict_some` | `Proofs/PhaseClaim.lean` | low |  |
-| `claimDisposition_allowsJudgment_implies_verdict_for_legal_token` | `Proofs/PhaseClaim.lean` | low |  |
-| `claimDisposition_allowsJudgment_implies_verdict_present` | `Proofs/PhaseClaim.lean` | low |  |
-| `claimDisposition_invalidVerdict_for_is_error` | `Proofs/PhaseClaim.lean` | low |  |
-| `claimDisposition_invalidVerdict_for_not_pure` | `Proofs/PhaseClaim.lean` | low |  |
-| `closeRule56WindowFor_marks_party_closed` | `Proofs/Rule56WindowBasics.lean` | trivial |  |
-| `completeDiversityCase_has_no_jurisdictionDismissalCandidate` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `contemptCountFor_incrementContemptCount` | `Proofs/Contempt.lean` | low |  |
-| `contemptCountFor_incrementContemptCount_ge` | `Proofs/Contempt.lean` | low |  |
-| `contemptCountFor_incrementContemptCount_le_sum_plus_one` | `Proofs/Contempt.lean` | low |  |
-| `contemptCountFor_le_sumContemptCounts` | `Proofs/Contempt.lean` | low |  |
-| `contemptCountFor_other_unchanged` | `Proofs/Contempt.lean` | low |  |
-| `contemptCountFor_target_increment` | `Proofs/Contempt.lean` | low |  |
-| `contemptCountFor_target_positive_after_increment` | `Proofs/Contempt.lean` | low |  |
-| `countAvailableFold_bound` | `Proofs/Jury.lean` | low |  |
-| `countAvailable_le_length` | `Proofs/Jury.lean` | low |  |
-| `countAvailable_swearAvailable_le_length` | `Proofs/Jury.lean` | low |  |
-| `currentOpenOpportunity_defective_filed_case_eq_named_opportunity` | `Proofs/JurisdictionFlow.lean` | low |  |
-| `currentOpenOpportunity_defective_filed_case_selects_judge_dismissal` | `Proofs/JurisdictionFlow.lean` | medium | Shows the actual current opportunity in a defective filed case, not just a candidate list. |
-| `currentOpenOpportunity_none_when_case_closed` | `Proofs/OrchestrationCore.lean` | medium | Shows that closure eliminates the selector result used by the decision boundary. |
-| `currentOpenOpportunity_of_available_append_last_if_no_passes` | `Proofs/OpportunitySelection.lean` | low |  |
-| `decide_juror_for_cause_challenge_granted_reduces_candidate_count_on_sample` | `Proofs/RecentJurySelection.lean` | medium | Shows that a granted for-cause ruling changes panel size in the expected way and records the targeted juror as excused for cause. |
-| `defectiveFiledOpportunityForFlow_shape` | `Proofs/JurisdictionFlow.lean` | low |  |
-| `defective_filed_case_confinement` | `Proofs/JurisdictionFlow.lean` | high | Shows that jurisdiction dismissal outranks Rule 12 while preserving formal confinement of later acts. |
-| `defective_filed_case_dismissal_blocks_later_rule12_decision` | `Proofs/JurisdictionFlow.lean` | medium | Shows that later merits attempts fail once jurisdiction dismissal closes the case. |
-| `defective_filed_case_dismissal_then_stops` | `Proofs/JurisdictionFlow.lean` | medium | Shows the end-to-end filed-case path: jurisdiction dismissal closes the case and stops opportunity generation. |
-| `defective_filed_case_rule12_available_but_not_actionable` | `Proofs/JurisdictionFlow.lean` | low |  |
-| `deriveVerdictFromJurorVotes_defendant_majority_zeroes_damages` | `Proofs/RecentVerdictDerivation.lean` | medium | Shows that a defense verdict carries zero damages even if some jurors proposed plaintiff-side amounts. |
-| `deriveVerdictFromJurorVotes_adjusts_threshold_after_failed_juror` | `Proofs/RecentVerdictDerivation.lean` | high | Shows that verdict derivation caps the required vote count after a deliberating juror fails. |
-| `deriveVerdictFromJurorVotes_none_when_current_round_vote_missing` | `Proofs/RecentVerdictDerivation.lean` | high | Shows that verdict derivation cannot run until every sworn juror has cast a ballot in the current round. |
-| `deriveVerdictFromJurorVotes_nonstable_split_advances_round` | `Proofs/RecentVerdictDerivation.lean` | medium | Shows that the jury gets another ballot round when the split is still moving and no side has reached the threshold. |
-| `deriveVerdictFromJurorVotes_plaintiff_majority_is_order_invariant_on_sample` | `Proofs/RecentVerdictDerivation.lean` | medium | Checks that vote storage order does not affect the representative plaintiff-majority verdict. |
-| `deriveVerdictFromJurorVotes_plaintiff_majority_uses_plaintiff_mean` | `Proofs/RecentVerdictDerivation.lean` | medium | Defines the plaintiff-side damages aggregation rule: the verdict amount is the mean of plaintiff-vote damages. |
-| `deriveVerdictFromJurorVotes_stable_split_declares_hung_jury` | `Proofs/RecentVerdictDerivation.lean` | high | Captures the deliberation stop rule: an unchanged split in consecutive rounds produces a hung jury. |
-| `dispositionDefendant_iff_noHung_and_tokenDefendant` | `Proofs/PhaseClaim.lean` | low |  |
-| `dispositionDefendant_implies_noHung` | `Proofs/PhaseClaim.lean` | low |  |
-| `dispositionIsVerdict_iff_wellFormedVerdictState` | `Proofs/PhaseClaim.lean` | low |  |
-| `dispositionIsVerdict_implies_noHung` | `Proofs/PhaseClaim.lean` | low |  |
-| `dispositionPlaintiff_iff_noHung_and_tokenPlaintiff` | `Proofs/PhaseClaim.lean` | low |  |
-| `dispositionPlaintiff_implies_noHung` | `Proofs/PhaseClaim.lean` | low |  |
-| `effectiveLimitValue_no_overrides_eq_policy` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
-| `effectiveLimitValue_single_override_applies_eq_override` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
-| `effectiveLimitValue_single_override_mismatched_key_eq_policy` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
-| `effectiveLimitValue_single_override_not_applicable_eq_policy` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
-| `effectiveLimitValue_two_overrides_first_kept_when_second_lower_specificity` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
-| `effectiveLimitValue_two_overrides_second_wins_on_higher_specificity` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
-| `effectiveLimitValue_unknown_key_error` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
-| `elapsedDaysBetween_diff_when_response_not_precedes_service` | `Proofs/TimeBasics.lean` | trivial |  |
-| `elapsedDaysBetween_diff_when_service_le_response` | `Proofs/TimeBasics.lean` | trivial |  |
-| `elapsedDaysBetween_of_ordinalDay_ok` | `Proofs/TimeBasics.lean` | trivial |  |
-| `elapsedDaysBetween_self_of_ordinalDay_exists` | `Proofs/TimeBasics.lean` | trivial |  |
-| `elapsedDaysBetween_self_of_ordinalDay_ok` | `Proofs/TimeBasics.lean` | trivial |  |
-| `elapsedDaysBetween_zero_when_response_precedes_service` | `Proofs/TimeBasics.lean` | trivial |  |
-| `empanelSelectedJurors_marks_J1_excused_on_sample` | `Proofs/RecentJurySelection.lean` | low |  |
-| `empanelSelectedJurors_marks_J2_sworn_on_sample` | `Proofs/RecentJurySelection.lean` | low |  |
-| `empanelSelectedJurors_marks_J4_sworn_on_sample` | `Proofs/RecentJurySelection.lean` | low |  |
-| `empanelSelectedJurors_preserves_identity_projection_on_sample` | `Proofs/RecentJurySelection.lean` | medium | Shows that empanelment preserves juror identity fields, which is the core invariant for the persona-driven jury model. |
-| `enforceMeasuredLimit_error_of_effectiveLimitValue_ok_gt` | `Proofs/LimitBasics.lean` | trivial |  |
-| `enforceMeasuredLimit_no_overrides_ok_of_policy` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
-| `enforceMeasuredLimit_ok_implies_attempted_le` | `Proofs/LimitBasics.lean` | trivial |  |
-| `enforceMeasuredLimit_ok_of_effectiveLimitValue_ok` | `Proofs/LimitBasics.lean` | trivial |  |
-| `filedCandidates_offers_enter_default_judgment_after_default` | `Proofs/AvailableActionsPretrial.lean` | low |  |
-| `filedCandidates_offers_enter_default_when_answer_missing` | `Proofs/AvailableActionsPretrial.lean` | low |  |
-| `filedCandidates_offers_file_complaint_when_missing` | `Proofs/AvailableActionsPretrial.lean` | low |  |
-| `filedCandidates_offers_rule12_when_complaint_unanswered` | `Proofs/AvailableActionsPretrial.lean` | medium | Shows the filed-phase generator exposes Rule 12 at the correct early stage. |
-| `filedCandidates_rule11_motion_not_offered_after_correction` | `Proofs/AvailableActionsPretrial.lean` | low |  |
-| `filedCandidates_rule11_motion_requires_notice_and_no_correction` | `Proofs/AvailableActionsPretrial.lean` | low |  |
-| `hungJury_blocks_judgment_eligibility` | `Proofs/PhaseClaim.lean` | low |  |
-| `incrementContemptCount_length` | `Proofs/Contempt.lean` | low |  |
-| `initializeCase_rejects_already_initialized_case` | `Proofs/InitializeCase.lean` | low |  |
-| `initializeCase_requires_nonempty_summary` | `Proofs/InitializeCase.lean` | low |  |
-| `initializeCase_requires_plaintiff_filed_by` | `Proofs/InitializeCase.lean` | low |  |
-| `initializeCase_success_records_core_complaint_effects` | `Proofs/InitializeCase.lean` | medium | Shows that case initialization installs the complaint, docket entry, and initial trace coherently. |
-| `initializeCase_success_seeds_attachment_record` | `Proofs/InitializeCase.lean` | medium | Shows that complaint attachments enter state at initialization rather than through later scripted turns. |
-| `invalidVerdictToken_blocks_judgment_eligibility` | `Proofs/PhaseClaim.lean` | low |  |
-| `isRule59Timely_false_iff_elapsed_gt` | `Proofs/RuleWindows.lean` | trivial |  |
-| `isRule59Timely_of_elapsedDaysBetween_ok` | `Proofs/RuleWindows.lean` | trivial |  |
-| `isRule59Timely_true_iff_elapsed_le` | `Proofs/RuleWindows.lean` | trivial |  |
-| `isRule60Timely_limited_ground_of_elapsedDaysBetween_ok` | `Proofs/RuleWindows.lean` | trivial |  |
-| `isRule60Timely_unlimited_ground_true` | `Proofs/RuleWindows.lean` | trivial |  |
-| `judgmentEligibility_existsUnique_iff_exists` | `Proofs/PhaseClaim.lean` | low |  |
-| `judgmentEligibility_iff_dispositionIsVerdict` | `Proofs/PhaseClaim.lean` | low |  |
-| `judgmentEligibility_iff_noHung_and_legalToken` | `Proofs/PhaseClaim.lean` | low |  |
-| `judgmentEligibility_iff_wellFormedVerdict` | `Proofs/PhaseClaim.lean` | low |  |
-| `judgmentEligibility_witness_unique` | `Proofs/PhaseClaim.lean` | low |  |
-| `judgmentEligible_bench_with_hung_false` | `Proofs/JudgmentEligibility.lean` | low |  |
-| `judgmentEligible_bench_without_hung_true` | `Proofs/JudgmentEligibility.lean` | low |  |
-| `judgmentEligible_jury_defendant_verdict_true` | `Proofs/JudgmentEligibility.lean` | low |  |
-| `judgmentEligible_jury_hung_false` | `Proofs/JudgmentEligibility.lean` | low |  |
-| `judgmentEligible_jury_invalid_verdict_token_false` | `Proofs/JudgmentEligibility.lean` | low |  |
-| `judgmentEligible_jury_pending_false` | `Proofs/JudgmentEligibility.lean` | low |  |
-| `judgmentEligible_jury_plaintiff_verdict_true` | `Proofs/JudgmentEligibility.lean` | low |  |
-| `jurisdictionDismissalCandidates_nil_of_not_defective` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `jurisdictionDismissalCandidates_nil_of_prior_dismissal` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `jurisdictionDismissalCandidates_nil_when_judge_disabled` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `jurisdictionDismissalCandidates_nonempty_has_length_one` | `Proofs/JurisdictionScreening.lean` | medium | Shows that the jurisdiction screen emits one deterministic dismissal candidate when it fires. |
-| `jurisdictionDismissalCandidates_nonempty_implies_defective` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `jurisdictionDismissalCandidates_nonempty_implies_judge_enabled` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `jurisdictionDismissalCandidates_nonempty_implies_no_prior_dismissal` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `jurisdictionDismissalCandidates_nonempty_implies_not_closed` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `jurisdictionDismissalCandidates_nonempty_implies_not_judgment_entered` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `jurisdictionDismissalCandidates_singleton_when_enabled` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `legalVerdictToken_implies_parseVerdict_some` | `Proofs/PhaseClaim.lean` | low |  |
-| `missingAmountDiversityCase_emits_jurisdictionDismissalCandidate` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `mkAdvanceTrialPhaseJudgeAction_action_type` | `Proofs/StepPostconditions.lean` | trivial |  |
-| `mkAdvanceTrialPhaseJudgeAction_actor_role` | `Proofs/StepPostconditions.lean` | trivial |  |
-| `mkEnterJudgmentJudgeAction_action_type` | `Proofs/StepPostconditions.lean` | trivial |  |
-| `mkEnterJudgmentJudgeAction_actor_role` | `Proofs/StepPostconditions.lean` | trivial |  |
-| `nextOpportunity_closed_stops_with_reason` | `Proofs/OrchestrationCore.lean` | low |  |
-| `nextOpportunity_defective_filed_case_selects_judge_dismissal` | `Proofs/JurisdictionFlow.lean` | medium | Shows that the selector prioritizes the judge's jurisdiction duty in a defective filed case. |
-| `nextOpportunity_defective_filed_case_without_judge_dismissal_selects_rule12` | `Proofs/JurisdictionFlow.lean` | low |  |
-| `nextOpportunity_internationalClaw_filed_case_selects_defendant_rule12` | `Proofs/RecentCourtProfiles.lean` | high | Shows the operational effect of the Claw profile in the live opportunity stream: defendant Rule 12 remains, but jurisdiction dismissal disappears. |
-| `nextOpportunity_of_available_append_last_if_no_passes` | `Proofs/OpportunitySelection.lean` | low |  |
-| `nextOpportunity_opportunity_eq_currentOpenOpportunity` | `Proofs/OrchestrationCore.lean` | medium | Connects the public next-opportunity API to the underlying selector. |
-| `nextOpportunity_terminal_iff_no_currentOpenOpportunity` | `Proofs/OrchestrationCore.lean` | medium | Characterizes termination in terms of the open-opportunity selector. |
-| `nextOpportunity_terminal_when_case_closed` | `Proofs/OrchestrationCore.lean` | medium | Captures the shutdown property used by the runner: closed cases expose no further opportunity. |
-| `nextOpportunity_unitedStatesDistrict_filed_case_selects_jurisdiction_dismissal` | `Proofs/RecentCourtProfiles.lean` | high | Shows the federal-side contrast: defective diversity pleading still puts the judge dismissal opportunity ahead of the defendant pleading choice. |
-| `noHung_and_legalVerdictToken_implies_judgment_eligibility` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_and_legalVerdictToken_implies_not_hung` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_and_legalVerdictToken_implies_not_pending` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_pureDisposition_canEnter_false_iff_pending` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_pureDisposition_canEnter_false_implies_not_verdict` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_pureDisposition_canEnter_iff_nonpending` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_pureDisposition_ne_hung_and_ne_judgmentEntered` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_pureDisposition_partition` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_pureDisposition_verdict_implies_canEnter_true` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_pureNonPending_iff_dispositionIsVerdict` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_pureNonPending_iff_parseableVerdictPresent` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_pureNonPending_implies_canEnter` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_verdictTokenDefendant_implies_dispositionDefendant` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_verdictTokenDefendant_implies_exact_judgment_witness` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_verdictTokenDefendant_not_dispositionPlaintiff` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_verdictTokenPlaintiff_implies_dispositionPlaintiff` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_verdictTokenPlaintiff_implies_exact_judgment_witness` | `Proofs/PhaseClaim.lean` | low |  |
-| `noHung_verdictTokenPlaintiff_not_dispositionDefendant` | `Proofs/PhaseClaim.lean` | low |  |
-| `noScreenCase_has_no_jurisdictionDismissalCandidate` | `Proofs/JurisdictionScreening.lean` | medium | Shows that the same defective diversity allegations produce no dismissal candidate in International Claw District. |
-| `noVerdict_noHung_blocks_judgment_eligibility` | `Proofs/PhaseClaim.lean` | low |  |
-| `normalizePartyToken_claimant` | `Proofs/Party.lean` | trivial |  |
-| `normalizePartyToken_defence` | `Proofs/Party.lean` | trivial |  |
-| `normalizePartyToken_defendant_fixed` | `Proofs/Party.lean` | trivial |  |
-| `normalizePartyToken_defense` | `Proofs/Party.lean` | trivial |  |
-| `normalizePartyToken_idempotent_on_normalized` | `Proofs/Party.lean` | trivial |  |
-| `normalizePartyToken_output_classification` | `Proofs/Party.lean` | trivial |  |
-| `normalizePartyToken_plaintiff_fixed` | `Proofs/Party.lean` | trivial |  |
-| `openOpportunities_defective_filed_case_keep_rule12_while_selecting_judge` | `Proofs/JurisdictionFlow.lean` | medium | Shows that Rule 12 remains available even while the selector chooses jurisdiction dismissal first. |
-| `openOpportunities_internationalClaw_have_no_jurisdiction_dismissal` | `Proofs/RecentCourtProfiles.lean` | medium | Rules out the unwanted jurisdiction-dismissal tool directly in the open opportunity set. |
-| `optionalRule12Opportunity_is_defendant_passable` | `Proofs/ApplyDecision.lean` | low |  |
-| `optionalRule56Opportunity_is_defendant_passable` | `Proofs/ApplyDecision.lean` | low |  |
-| `overrideSpecificity_le_two` | `Proofs/OverrideBasics.lean` | trivial |  |
-| `parseCaseStatusV1_roundtrip_closed` | `Proofs/PhaseClaim.lean` | low |  |
-| `parseCaseStatusV1_roundtrip_filed` | `Proofs/PhaseClaim.lean` | low |  |
-| `parseCaseStatusV1_roundtrip_judgment_entered` | `Proofs/PhaseClaim.lean` | low |  |
-| `parseCaseStatusV1_roundtrip_pretrial` | `Proofs/PhaseClaim.lean` | low |  |
-| `parseCaseStatusV1_roundtrip_trial` | `Proofs/PhaseClaim.lean` | low |  |
-| `parseCaseStatusV1_toString_roundtrip` | `Proofs/PhaseClaim.lean` | low |  |
-| `parseVerdictSide_defendant` | `Proofs/PhaseClaim.lean` | low |  |
-| `parseVerdictSide_plaintiff` | `Proofs/PhaseClaim.lean` | low |  |
-| `parseVerdictSide_some_implies_token` | `Proofs/PhaseClaim.lean` | low |  |
-| `phaseAllowsActionV1_chargeConference_false` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_closings_true_iff` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_defenseCase_true_iff` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_defenseSurrebuttal_true_iff` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_deliberation_true_iff` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_hung_implies_delib_or_verdictReturn` | `Proofs/PhaseClaim.lean` | low |  |
-| `phaseAllowsActionV1_hung_true_iff_delib_or_verdictReturn` | `Proofs/PhaseClaim.lean` | low |  |
-| `phaseAllowsActionV1_juryCharge_false` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_none_false` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_offerExhibit_true_iff_party_case` | `Proofs/PhaseClaim.lean` | low |  |
-| `phaseAllowsActionV1_opening_only_openings` | `Proofs/PhaseClaim.lean` | low |  |
-| `phaseAllowsActionV1_opening_true_iff_openings` | `Proofs/PhaseClaim.lean` | low |  |
-| `phaseAllowsActionV1_openings_true_iff` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_plaintiffCase_true_iff` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_plaintiffRebuttal_true_iff` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_poll_only_postVerdict` | `Proofs/PhaseClaim.lean` | low |  |
-| `phaseAllowsActionV1_poll_true_iff_postVerdict` | `Proofs/PhaseClaim.lean` | low |  |
-| `phaseAllowsActionV1_postVerdict_true_iff` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_true_implies_phase_not_none` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_verdictReturn_true_iff` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `phaseAllowsActionV1_verdict_only_verdictReturn` | `Proofs/PhaseClaim.lean` | low |  |
-| `phaseAllowsActionV1_verdict_true_iff_verdictReturn` | `Proofs/PhaseClaim.lean` | low |  |
-| `phaseAllowsActionV1_voirDire_false` | `Proofs/PhaseCompleteness.lean` | low |  |
-| `postJudgmentCandidates_offers_resolve_rule59_when_pending` | `Proofs/AvailableActionsPostJudgment.lean` | low |  |
-| `postJudgmentCandidates_offers_rule59_when_missing` | `Proofs/AvailableActionsPostJudgment.lean` | low |  |
-| `postJudgmentCandidates_offers_rule60_default_judgment_track` | `Proofs/AvailableActionsPostJudgment.lean` | low |  |
-| `postJudgmentCandidates_offers_rule60_general_track` | `Proofs/AvailableActionsPostJudgment.lean` | low |  |
-| `postJudgmentCandidates_offers_supersedeas_then_stay_then_lift` | `Proofs/AvailableActionsPostJudgment.lean` | low |  |
-| `pretrialCandidates_offers_decide_rule37_when_motion_pending` | `Proofs/AvailableActionsPretrial.lean` | low |  |
-| `pretrialCandidates_offers_respond_rfp_when_served_pending` | `Proofs/AvailableActionsPretrial.lean` | low |  |
-| `ready_voir_dire_panel_exposes_empanelment_boundary` | `Proofs/RecentJurySelection.lean` | high | Shows that once questionnaires and oral questioning are complete for every remaining candidate, the judge can empanel the jury. |
-| `recordOpportunityPassFor_non_rule56_preserves_window` | `Proofs/Rule56WindowBasics.lean` | low |  |
-| `recordOpportunityPassFor_rule56_closes_window` | `Proofs/Rule56WindowBasics.lean` | low |  |
-| `reopenRule56Windows_clears_party` | `Proofs/Rule56WindowBasics.lean` | trivial |  |
-| `reopenRule56Windows_restores_eligibility` | `Proofs/Rule56Eligibility.lean` | medium | Shows that reopening the Rule 56 window restores eligibility when the ordinary prerequisites still hold. |
-| `resolveDeclaratoryForWinner_maps_burden_holder_to_demonstrated` | `Proofs/AdjudicationResolution.lean` | high | Connects a declaratory claim's burden holder to the common demonstrated result. |
-| `resolveDeclaratoryForWinner_maps_opponent_to_not_demonstrated` | `Proofs/AdjudicationResolution.lean` | high | Connects an opposing merits winner to the common not-demonstrated result. |
-| `resolveDeclaratoryForWinner_preserves_ordinary_cases` | `Proofs/AdjudicationResolution.lean` | medium | Keeps the proposition resolution field inactive for ordinary civil claims. |
-| `rule12GroundSummary_internationalClaw_omits_subject_matter_jurisdiction` | `Proofs/RecentCourtProfiles.lean` | low |  |
-| `rule56WindowEligible_false_when_window_closed` | `Proofs/Rule56Eligibility.lean` | low |  |
-| `rule56WindowEligible_true_when_prerequisites_hold` | `Proofs/Rule56Eligibility.lean` | medium | Captures the exact objective prerequisites for Rule 56 eligibility. |
-| `rule56_pass_persists_until_amended_complaint` | `Proofs/Rule56Lifecycle.lean` | medium | Shows that Rule 56 window closure persists across unrelated pretrial activity and reopens only on amendment. |
-| `rule60GroundHasOneYearLimit_true_iff` | `Proofs/RuleWindows.lean` | trivial |  |
-| `selectLowestPriorityOpportunity_append_last_if_strictly_lower` | `Proofs/OpportunitySelection.lean` | low |  |
-| `selectLowestPriorityOpportunity_empty_none` | `Proofs/OrchestrationCore.lean` | low |  |
-| `selectLowestPriorityOpportunity_prefers_lower_priority_value` | `Proofs/OrchestrationCore.lean` | low |  |
-| `step_accept_rule68_only_offeree_may_accept` | `Proofs/Rule68.lean` | low |  |
-| `step_accept_rule68_requires_index_or_id` | `Proofs/Rule68.lean` | low |  |
-| `step_accept_rule68_success_sets_status_judgment_entered` | `Proofs/Rule68.lean` | low |  |
-| `step_add_bench_conclusion_appends_entry` | `Proofs/BenchReasoning.lean` | low |  |
-| `step_add_bench_conclusion_requires_trial_status` | `Proofs/BenchReasoning.lean` | low |  |
-| `step_add_bench_finding_appends_entry` | `Proofs/BenchReasoning.lean` | low |  |
-| `step_add_bench_finding_requires_trial_status` | `Proofs/BenchReasoning.lean` | low |  |
-| `step_add_juror_rejects_duplicate_id` | `Proofs/JurySetup.lean` | low |  |
-| `step_advance_trial_phase_propagates_validator_error` | `Proofs/StepPostconditions.lean` | trivial |  |
-| `step_amended_complaint_after_initial_disclosures_reopens_rule56` | `Proofs/Rule56Lifecycle.lean` | low |  |
-| `step_bench_opinion_records_structured_resolution` | `Proofs/AdjudicationResolution.lean` | high | Shows that the required bench winner produces a durable declaratory resolution. |
-| `step_challenge_for_cause_granted_marks_excused` | `Proofs/VoirDire.lean` | low |  |
-| `step_decide_rule11_denied_cannot_include_sanction` | `Proofs/Rule11.lean` | low |  |
-| `step_decide_rule11_denied_without_sanction_records_order` | `Proofs/Rule11.lean` | low |  |
-| `step_decide_rule11_granted_monetary_requires_amount` | `Proofs/Rule11.lean` | low |  |
-| `step_decide_rule12_granted_failure_to_state_a_claim_closes_case` | `Proofs/Rule12.lean` | low |  |
-| `step_decide_rule12_rejects_conflicting_prejudice_and_amend` | `Proofs/Rule12.lean` | low |  |
-| `step_decide_rule12_rejects_invalid_disposition` | `Proofs/Rule12.lean` | low |  |
-| `step_decide_rule12_requires_jurisdiction_basis_rejected` | `Proofs/Rule12.lean` | low |  |
-| `step_decide_rule12_requires_matching_ground` | `Proofs/Rule12.lean` | low |  |
-| `step_decide_rule12_requires_missing_elements` | `Proofs/Rule12.lean` | low |  |
-| `step_decide_rule12_requires_motion` | `Proofs/Rule12.lean` | low |  |
-| `step_decide_rule12_requires_standing_component` | `Proofs/Rule12.lean` | low |  |
-| `step_decide_rule37_denied_cannot_include_sanctions` | `Proofs/Rule37.lean` | low |  |
-| `step_decide_rule37_fees_requires_positive_amount` | `Proofs/Rule37.lean` | low |  |
-| `step_decide_rule37_records_order_when_valid` | `Proofs/Rule37.lean` | low |  |
-| `step_decide_rule37_requires_existing_motion` | `Proofs/Rule37.lean` | low |  |
-| `step_decide_rule56_records_order` | `Proofs/Rule56.lean` | low |  |
-| `step_decide_rule56_rejects_invalid_disposition` | `Proofs/Rule56.lean` | low |  |
-| `step_decide_rule56_requires_prior_motion` | `Proofs/Rule56.lean` | low |  |
-| `step_declare_hung_jury_rejects_non_foreperson_role` | `Proofs/RoleGuardsCritical.lean` | low |  |
-| `step_deliver_jury_instructions_records_docket` | `Proofs/JuryInstructions.lean` | low |  |
-| `step_deliver_jury_instructions_requires_settlement` | `Proofs/JuryInstructions.lean` | low |  |
-| `step_dismiss_rule41_closes_case` | `Proofs/CaseDisposition.lean` | low |  |
-| `step_enter_default_judgment_rejects_invalid_against_party` | `Proofs/DefaultJudgment.lean` | low |  |
-| `step_enter_default_judgment_success_records_docket` | `Proofs/DefaultJudgment.lean` | low |  |
-| `step_enter_default_judgment_success_sets_status` | `Proofs/DefaultJudgment.lean` | low |  |
-| `step_enter_judgment_from_jury_verdict_sets_amount_and_status` | `Proofs/RecentJudgment.lean` | high | Closes the loop from jury verdict to final judgment: the verdict amount becomes the monetary judgment and the case reaches judgment_entered. |
-| `step_enter_judgment_propagates_validator_error` | `Proofs/StepPostconditions.lean` | trivial |  |
-| `step_enter_judgment_rejects_non_judge_role` | `Proofs/RoleGuardsCritical.lean` | low |  |
-| `step_enter_local_rule_override_assigns_default_id_when_blank` | `Proofs/LocalRuleOverrideStep.lean` | low |  |
-| `step_enter_local_rule_override_records_docket` | `Proofs/LocalRuleOverrideStep.lean` | low |  |
-| `step_enter_local_rule_override_rejects_non_judge` | `Proofs/LocalRuleOverrideStep.lean` | low |  |
-| `step_enter_local_rule_override_respects_explicit_id` | `Proofs/LocalRuleOverrideStep.lean` | low |  |
-| `step_enter_partial_judgment_requires_nonempty_issues` | `Proofs/CaseDisposition.lean` | low |  |
-| `step_enter_partial_judgment_requires_pretrial` | `Proofs/CaseDisposition.lean` | low |  |
-| `step_enter_partial_judgment_sets_positive_monetary_amount` | `Proofs/CaseDisposition.lean` | low |  |
-| `step_enter_protective_order_records_docket` | `Proofs/ProtectiveOrders.lean` | low |  |
-| `step_enter_protective_order_rejects_duplicate_order_id` | `Proofs/ProtectiveOrders.lean` | low |  |
-| `step_enter_protective_order_requires_nonempty_allowed_roles` | `Proofs/ProtectiveOrders.lean` | low |  |
-| `step_enter_settlement_consent_enters_judgment_even_zero` | `Proofs/CaseDisposition.lean` | low |  |
-| `step_enter_settlement_positive_enters_judgment` | `Proofs/CaseDisposition.lean` | low |  |
-| `step_enter_settlement_zero_without_consent_closes_case` | `Proofs/CaseDisposition.lean` | low |  |
-| `step_evaluate_rule68_records_cost_shift_docket` | `Proofs/Rule68.lean` | low |  |
-| `step_evaluate_rule68_requires_index_or_id` | `Proofs/Rule68.lean` | low |  |
-| `step_file_bench_opinion_records_docket` | `Proofs/BenchReasoning.lean` | low |  |
-| `step_file_rule12_requires_filed_or_pretrial` | `Proofs/Rule12.lean` | low |  |
-| `step_file_rule12_unavailable_after_answer` | `Proofs/Rule12.lean` | low |  |
-| `step_file_rule37_checks_interrogatory_set_range` | `Proofs/Rule37.lean` | low |  |
-| `step_file_rule37_rejects_invalid_discovery_type` | `Proofs/Rule37.lean` | low |  |
-| `step_file_rule37_target_must_be_opposing_party` | `Proofs/Rule37.lean` | low |  |
-| `step_file_rule56_rejects_when_already_decided` | `Proofs/Rule56.lean` | low |  |
-| `step_file_rule56_requires_pretrial` | `Proofs/Rule56.lean` | low |  |
-| `step_file_rule59_enforces_timeliness` | `Proofs/PostJudgmentMotions.lean` | low |  |
-| `step_file_rule59_requires_judgment_date` | `Proofs/PostJudgmentMotions.lean` | low |  |
-| `step_file_rule60_enforces_one_year_window_for_60b1_to_60b3` | `Proofs/PostJudgmentMotions.lean` | low |  |
-| `step_file_rule60_requires_judgment_date` | `Proofs/PostJudgmentMotions.lean` | low |  |
-| `step_finalize_interrogatories_requires_prior_service` | `Proofs/Interrogatories.lean` | low |  |
-| `step_hung_jury_close_records_no_decision` | `Proofs/AdjudicationResolution.lean` | high | Shows that a hung-jury closure records the absence of a merits decision. |
-| `step_initial_disclosures_after_rule56_pass_keeps_rule56_unavailable` | `Proofs/Rule56Lifecycle.lean` | low |  |
-| `step_initial_disclosures_after_rule56_pass_preserves_closed_window` | `Proofs/Rule56Lifecycle.lean` | low |  |
-| `step_jury_judgment_records_demonstrated` | `Proofs/AdjudicationResolution.lean` | high | Shows that a jury verdict for the burden holder reaches the common demonstrated result. |
-| `step_jury_judgment_records_not_demonstrated` | `Proofs/AdjudicationResolution.lean` | high | Shows that a jury verdict for the opponent reaches the common not-demonstrated result. |
-| `step_jury_status_transition_records_demonstrated` | `Proofs/AdjudicationResolution.lean` | medium | Preserves the declaratory resolution on the direct jury-judgment transition path. |
-| `step_jurisdiction_dismissal_blocks_next_opportunity` | `Proofs/JurisdictionDismissal.lean` | medium | Connects jurisdiction dismissal to the public opportunity boundary. |
-| `step_jurisdiction_dismissal_closes_case_and_records_docket` | `Proofs/JurisdictionDismissal.lean` | medium | Shows that a jurisdiction dismissal has the expected closure and record effects. |
-| `step_jurisdiction_dismissal_requires_reasoning` | `Proofs/JurisdictionDismissal.lean` | low |  |
-| `step_lift_protective_order_records_docket` | `Proofs/ProtectiveOrders.lean` | low |  |
-| `step_lift_protective_order_requires_existing_order` | `Proofs/ProtectiveOrders.lean` | low |  |
-| `step_lift_protective_order_requires_order_id` | `Proofs/ProtectiveOrders.lean` | low |  |
-| `step_lift_stay_records_lift_entry_when_valid` | `Proofs/Stays.lean` | low |  |
-| `step_lift_stay_rejects_already_lifted` | `Proofs/Stays.lean` | low |  |
-| `step_lift_stay_requires_existing_stay` | `Proofs/Stays.lean` | low |  |
-| `step_lift_stay_requires_in_order_resolution` | `Proofs/Stays.lean` | low |  |
-| `step_make_rule68_rejects_invalid_offeree` | `Proofs/Rule68.lean` | low |  |
-| `step_order_discretionary_stay_records_docket` | `Proofs/Stays.lean` | low |  |
-| `step_peremptory_strike_marks_struck` | `Proofs/VoirDire.lean` | low |  |
-| `step_post_supersedeas_bond_records_docket` | `Proofs/Stays.lean` | low |  |
-| `step_propose_jury_instruction_requires_charge_conference` | `Proofs/JuryInstructions.lean` | low |  |
-| `step_record_jury_verdict_rejects_non_foreperson_role` | `Proofs/RoleGuardsCritical.lean` | low |  |
-| `step_record_voir_dire_rejects_unknown_juror` | `Proofs/VoirDire.lean` | low |  |
-| `step_record_voir_dire_requires_trial_status` | `Proofs/VoirDire.lean` | low |  |
-| `step_record_voir_dire_requires_voir_dire_phase` | `Proofs/VoirDire.lean` | low |  |
-| `step_resolve_rule59_must_be_in_order` | `Proofs/PostJudgmentMotions.lean` | low |  |
-| `step_resolve_rule59_rejects_non_judge_role` | `Proofs/RoleGuardsCritical.lean` | low |  |
-| `step_resolve_rule59_requires_existing_motion` | `Proofs/PostJudgmentMotions.lean` | low |  |
-| `step_resolve_rule60_records_order_when_valid` | `Proofs/PostJudgmentMotions.lean` | low |  |
-| `step_respond_interrogatory_item_requires_prior_service` | `Proofs/Interrogatories.lean` | low |  |
-| `step_serve_interrogatories_enforces_local_rule_limit` | `Proofs/Interrogatories.lean` | low |  |
-| `step_serve_interrogatories_requires_pretrial` | `Proofs/Interrogatories.lean` | low |  |
-| `step_set_jury_configuration_rejects_invalid_minimum` | `Proofs/JurySetup.lean` | low |  |
-| `step_set_jury_configuration_rejects_size_too_small` | `Proofs/JurySetup.lean` | low |  |
-| `step_settle_jury_instructions_records_docket` | `Proofs/JuryInstructions.lean` | low |  |
-| `step_settle_jury_instructions_requires_jury_charge` | `Proofs/JuryInstructions.lean` | low |  |
-| `step_settle_jury_instructions_requires_proposal` | `Proofs/JuryInstructions.lean` | low |  |
-| `step_settlement_records_no_decision` | `Proofs/AdjudicationResolution.lean` | high | Shows that settlement closes a declaratory case without a merits decision. |
-| `step_swear_jury_marks_required_count_sworn` | `Proofs/JurySetup.lean` | low |  |
-| `step_swear_jury_requires_configuration` | `Proofs/JurySetup.lean` | low |  |
-| `step_swear_jury_requires_enough_available_jurors` | `Proofs/JurySetup.lean` | low |  |
-| `step_transition_case_filed_to_pretrial_succeeds` | `Proofs/TransitionCase.lean` | low |  |
-| `step_transition_case_rejects_invalid_status` | `Proofs/TransitionCase.lean` | low |  |
-| `step_transition_case_rejects_invalid_transition` | `Proofs/TransitionCase.lean` | low |  |
-| `step_transition_case_trial_to_judgment_rejects_hung` | `Proofs/TransitionCase.lean` | low |  |
-| `step_transition_case_trial_to_judgment_requires_verdict` | `Proofs/TransitionCase.lean` | low |  |
-| `step_transition_case_trial_to_judgment_succeeds_with_verdict` | `Proofs/TransitionCase.lean` | low |  |
-| `strike_juror_peremptorily_reduces_candidate_count_on_sample` | `Proofs/RecentJurySelection.lean` | medium | Shows that a peremptory strike removes exactly one candidate from the panel and records the targeted juror as struck. |
-| `subjectMatterJurisdictionFaciallyDefective_complete_diversity_false` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `subjectMatterJurisdictionFaciallyDefective_missing_amount_true` | `Proofs/JurisdictionScreening.lean` | low |  |
-| `subjectMatterJurisdictionFaciallyDefective_no_screen_false` | `Proofs/JurisdictionScreening.lean` | medium | Shows that the International Claw profile disables the federal jurisdiction screen at the defect detector itself. |
-| `subjectMatterJurisdictionFaciallyDefective_unitedStatesDistrict_detects_defective_diversity` | `Proofs/RecentCourtProfiles.lean` | medium | Shows that the federal profile still treats residence-only diversity pleading and a $108 amount as facially defective. |
-| `sumContemptCounts_incrementContemptCount` | `Proofs/Contempt.lean` | low |  |
-| `sumContemptCounts_incrementContemptCount_gt` | `Proofs/Contempt.lean` | low |  |
-| `sumContemptCounts_positive_after_increment` | `Proofs/Contempt.lean` | low |  |
-| `swearAvailableLoop_length` | `Proofs/Jury.lean` | low |  |
-| `swearAvailableLoop_zero` | `Proofs/Jury.lean` | low |  |
-| `swearAvailable_length` | `Proofs/Jury.lean` | low |  |
-| `swearAvailable_zero` | `Proofs/Jury.lean` | low |  |
-| `tool_execution_closing_case_blocks_followup_decisions` | `Proofs/ExecutionConfinement.lean` | high | Shows that a closing execution seals the engine against later decisions. |
-| `updateCase_preserves_court_name` | `Proofs/StateNonInterference.lean` | low |  |
-| `updateCase_preserves_policy` | `Proofs/StateNonInterference.lean` | low |  |
-| `updateCase_preserves_schema_version` | `Proofs/StateNonInterference.lean` | low |  |
-| `validRule12Ground_internationalClaw_disables_subject_matter_jurisdiction` | `Proofs/RecentCourtProfiles.lean` | medium | Shows that the International Claw profile removes the federal subject-matter Rule 12 ground. |
-| `validVerdictSideState_implies_claimDisposition_allowsJudgment` | `Proofs/PhaseClaim.lean` | low |  |
-| `validateAdvanceTrialPhase_backward_transition` | `Proofs/ValidateAdvancePhase.lean` | low |  |
-| `validateAdvanceTrialPhase_deliberation_ok_when_instructions_delivered` | `Proofs/ValidateAdvancePhaseJury.lean` | low |  |
-| `validateAdvanceTrialPhase_invalid_current_phase` | `Proofs/ValidateAdvancePhase.lean` | low |  |
-| `validateAdvanceTrialPhase_invalid_phase` | `Proofs/ValidateAdvancePhase.lean` | low |  |
-| `validateAdvanceTrialPhase_ok_implies_forward_parse_and_gate` | `Proofs/ValidateAdvancePhase.lean` | low |  |
-| `validateAdvanceTrialPhase_ok_implies_phase_allowed` | `Proofs/ValidateAdvancePhase.lean` | low |  |
-| `validateAdvanceTrialPhase_ok_implies_trial_status` | `Proofs/ValidateAdvancePhase.lean` | low |  |
-| `validateAdvanceTrialPhase_requires_bench_opinion_for_post_verdict` | `Proofs/ValidateAdvancePhase.lean` | low |  |
-| `validateAdvanceTrialPhase_requires_jury_instructions_before_deliberation` | `Proofs/ValidateAdvancePhaseJury.lean` | low |  |
-| `validateAdvanceTrialPhase_requires_jury_outcome_for_post_verdict` | `Proofs/ValidateAdvancePhaseJury.lean` | low |  |
-| `validateAdvanceTrialPhase_requires_trial_status` | `Proofs/ValidateAdvancePhase.lean` | low |  |
-| `validateBenchOpinion_invalid_current_phase` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateBenchOpinion_ok` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateBenchOpinion_ok_implies_bench_mode` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateBenchOpinion_ok_implies_trial_status` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateBenchOpinion_phase_gate_error` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateBenchOpinion_requires_bench_mode` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateBenchOpinion_requires_nonempty_text` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateBenchOpinion_requires_trial_status` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateDeclareHungJury_invalid_current_phase` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateDeclareHungJury_ok` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateDeclareHungJury_ok_implies_no_verdict` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateDeclareHungJury_ok_implies_phase_gate_true` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateDeclareHungJury_ok_implies_phase_is_delib_or_verdict_return` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateDeclareHungJury_phase_gate_error` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateDeclareHungJury_verdict_already_returned` | `Proofs/ValidateHungAndBench.lean` | low |  |
-| `validateEnterJudgment_bench_hung_error` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_bench_ok` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_bench_ok_implies_bench_opinion` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_bench_ok_implies_no_hung` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_bench_requires_opinion` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_jury_disposition_hung_error` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_jury_disposition_pending_error` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_jury_disposition_verdict_defendant_ok` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_jury_disposition_verdict_plaintiff_ok` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_ok_implies_jury_disposition_allows` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_ok_implies_jury_disposition_is_verdict` | `Proofs/ValidateEnterJudgment.lean` | medium | Shows that judgment entry on a jury case requires an actual verdict rather than a pending or hung state. |
-| `validateEnterJudgment_ok_implies_no_hung` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_ok_implies_trial_status` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_ok_jury_implies_not_pending_or_hung` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateEnterJudgment_requires_trial_status` | `Proofs/ValidateEnterJudgment.lean` | low |  |
-| `validateRecordJuryVerdict_defendant_nonzero_damages` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_hung_error` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_insufficient_votes` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_invalid_current_phase` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_invalid_verdict_for` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_missing_jury_configuration` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_negative_damages` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_ok` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_ok_implies_has_jury_configuration` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_ok_implies_no_hung` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_ok_implies_phase_gate_true` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_ok_implies_phase_is_verdict_return` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_ok_implies_phase_parse_success` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_ok_implies_side_parses` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRecordJuryVerdict_ok_implies_votes_meet_required` | `Proofs/ValidateRecordJuryVerdict.lean` | medium | Shows that an accepted jury verdict satisfies the configured vote requirement. |
-| `validateRecordJuryVerdict_phase_gate_error` | `Proofs/ValidateRecordJuryVerdict.lean` | low |  |
-| `validateRule59Timing_of_isRule59Timely_error` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
-| `validateRule59Timing_of_isRule59Timely_false` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
-| `validateRule59Timing_of_isRule59Timely_true` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
-| `validateRule59Timing_ok_implies_isRule59Timely_true` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
-| `validateRule60Timing_of_isRule60Timely_error` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
-| `validateRule60Timing_of_isRule60Timely_false` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
-| `validateRule60Timing_of_isRule60Timely_true` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
-| `validateRule60Timing_ok_implies_isRule60Timely_true` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
-| `validateTrialActionPhase_gate_error` | `Proofs/ValidateTrialActionPhase.lean` | low |  |
-| `validateTrialActionPhase_invalid_current_phase` | `Proofs/ValidateTrialActionPhase.lean` | low |  |
-| `validateTrialActionPhase_ok` | `Proofs/ValidateTrialActionPhase.lean` | low |  |
-| `validateTrialActionPhase_ok_implies_gate_true` | `Proofs/ValidateTrialActionPhase.lean` | low |  |
-| `validateTrialActionPhase_ok_implies_phase_parse_success` | `Proofs/ValidateTrialActionPhase.lean` | low |  |
+| `ADCProofs.AdjudicationResolution.resolveDeclaratoryForWinner_maps_burden_holder_to_demonstrated` | `Proofs/AdjudicationResolution.lean` |  |  |
+| `ADCProofs.AdjudicationResolution.resolveDeclaratoryForWinner_maps_opponent_to_not_demonstrated` | `Proofs/AdjudicationResolution.lean` |  |  |
+| `ADCProofs.AdjudicationResolution.resolveDeclaratoryForWinner_preserves_ordinary_cases` | `Proofs/AdjudicationResolution.lean` |  |  |
+| `ADCProofs.AdjudicationResolution.step_bench_opinion_records_structured_resolution` | `Proofs/AdjudicationResolution.lean` |  |  |
+| `ADCProofs.AdjudicationResolution.step_hung_jury_close_records_no_decision` | `Proofs/AdjudicationResolution.lean` |  |  |
+| `ADCProofs.AdjudicationResolution.step_jury_judgment_records_demonstrated` | `Proofs/AdjudicationResolution.lean` |  |  |
+| `ADCProofs.AdjudicationResolution.step_jury_judgment_records_not_demonstrated` | `Proofs/AdjudicationResolution.lean` |  |  |
+| `ADCProofs.AdjudicationResolution.step_jury_status_transition_records_demonstrated` | `Proofs/AdjudicationResolution.lean` |  |  |
+| `ADCProofs.AdjudicationResolution.step_settlement_records_no_decision` | `Proofs/AdjudicationResolution.lean` |  |  |
+| `ADCProofs.ApplyDecision.applyDecision_conflicting_required_payload_returns_constraint_code` | `Proofs/ApplyDecision.lean` | low |  |
+| `ADCProofs.ApplyDecision.applyDecision_disallowed_tool_returns_tool_not_allowed_code` | `Proofs/ApplyDecision.lean` | low |  |
+| `ADCProofs.ApplyDecision.applyDecision_missing_tool_name_returns_missing_tool_name_code` | `Proofs/ApplyDecision.lean` | low |  |
+| `ADCProofs.ApplyDecision.applyDecision_rule56_pass_closes_window` | `Proofs/ApplyDecision.lean` | medium | Shows that a valid Rule 56 pass closes the party's window and removes the opportunity from later availability. |
+| `ADCProofs.ApplyDecision.applyDecision_stale_state_version_returns_stale_code` | `Proofs/ApplyDecision.lean` | low |  |
+| `ADCProofs.ApplyDecision.applyDecision_tool_applies_fixed_payload_defaults` | `Proofs/ApplyDecision.lean` | medium | Shows that fixed payload defaults are inserted before execution at the public decision boundary. |
+| `ADCProofs.ApplyDecision.applyDecision_valid_pass_records_state` | `Proofs/ApplyDecision.lean` | medium | Shows the public pass path updates state only through pass bookkeeping. |
+| `ADCProofs.ApplyDecision.applyDecision_without_current_opportunity_returns_no_current_code` | `Proofs/ApplyDecision.lean` | low |  |
+| `ADCProofs.ApplyDecision.applyDecision_wrong_role_returns_wrong_role_code` | `Proofs/ApplyDecision.lean` | low |  |
+| `ADCProofs.ApplyDecision.optionalRule12Opportunity_is_defendant_passable` | `Proofs/ApplyDecision.lean` | low |  |
+| `ADCProofs.ApplyDecision.optionalRule56Opportunity_is_defendant_passable` | `Proofs/ApplyDecision.lean` | low |  |
+| `ADCProofs.AvailableActionsPostJudgment.postJudgmentCandidates_offers_resolve_rule59_when_pending` | `Proofs/AvailableActionsPostJudgment.lean` | low |  |
+| `ADCProofs.AvailableActionsPostJudgment.postJudgmentCandidates_offers_rule59_when_missing` | `Proofs/AvailableActionsPostJudgment.lean` | low |  |
+| `ADCProofs.AvailableActionsPostJudgment.postJudgmentCandidates_offers_rule60_default_judgment_track` | `Proofs/AvailableActionsPostJudgment.lean` | low |  |
+| `ADCProofs.AvailableActionsPostJudgment.postJudgmentCandidates_offers_rule60_general_track` | `Proofs/AvailableActionsPostJudgment.lean` | low |  |
+| `ADCProofs.AvailableActionsPostJudgment.postJudgmentCandidates_offers_supersedeas_then_stay_then_lift` | `Proofs/AvailableActionsPostJudgment.lean` | low |  |
+| `ADCProofs.AvailableActionsPretrial.filedCandidates_offers_enter_default_judgment_after_default` | `Proofs/AvailableActionsPretrial.lean` | low |  |
+| `ADCProofs.AvailableActionsPretrial.filedCandidates_offers_enter_default_when_answer_missing` | `Proofs/AvailableActionsPretrial.lean` | low |  |
+| `ADCProofs.AvailableActionsPretrial.filedCandidates_offers_file_complaint_when_missing` | `Proofs/AvailableActionsPretrial.lean` | low |  |
+| `ADCProofs.AvailableActionsPretrial.filedCandidates_offers_rule12_when_complaint_unanswered` | `Proofs/AvailableActionsPretrial.lean` | medium | Shows that the filed-phase generator includes Rule 12 after a complaint and before an answer or Rule 12 motion. |
+| `ADCProofs.AvailableActionsPretrial.filedCandidates_rule11_motion_not_offered_after_correction` | `Proofs/AvailableActionsPretrial.lean` | low |  |
+| `ADCProofs.AvailableActionsPretrial.filedCandidates_rule11_motion_requires_notice_and_no_correction` | `Proofs/AvailableActionsPretrial.lean` | low |  |
+| `ADCProofs.AvailableActionsPretrial.pretrialCandidates_does_not_repeat_rule37_after_pass` | `Proofs/AvailableActionsPretrial.lean` |  |  |
+| `ADCProofs.AvailableActionsPretrial.pretrialCandidates_offers_decide_rule37_when_motion_pending` | `Proofs/AvailableActionsPretrial.lean` | low |  |
+| `ADCProofs.AvailableActionsPretrial.pretrialCandidates_offers_respond_rfp_when_served_pending` | `Proofs/AvailableActionsPretrial.lean` | low |  |
+| `ADCProofs.AvailableActionsPretrial.pretrialCandidates_reopens_rule37_after_discovery_changes` | `Proofs/AvailableActionsPretrial.lean` |  |  |
+| `ADCProofs.BenchReasoning.step_add_bench_conclusion_appends_entry` | `Proofs/BenchReasoning.lean` | low |  |
+| `ADCProofs.BenchReasoning.step_add_bench_conclusion_requires_trial_status` | `Proofs/BenchReasoning.lean` | low |  |
+| `ADCProofs.BenchReasoning.step_add_bench_finding_appends_entry` | `Proofs/BenchReasoning.lean` | low |  |
+| `ADCProofs.BenchReasoning.step_add_bench_finding_requires_trial_status` | `Proofs/BenchReasoning.lean` | low |  |
+| `ADCProofs.BenchReasoning.step_file_bench_opinion_records_docket` | `Proofs/BenchReasoning.lean` | low |  |
+| `ADCProofs.CaseDisposition.step_dismiss_rule41_closes_case` | `Proofs/CaseDisposition.lean` | low |  |
+| `ADCProofs.CaseDisposition.step_enter_partial_judgment_requires_nonempty_issues` | `Proofs/CaseDisposition.lean` | low |  |
+| `ADCProofs.CaseDisposition.step_enter_partial_judgment_requires_pretrial` | `Proofs/CaseDisposition.lean` | low |  |
+| `ADCProofs.CaseDisposition.step_enter_partial_judgment_sets_positive_monetary_amount` | `Proofs/CaseDisposition.lean` | low |  |
+| `ADCProofs.CaseDisposition.step_enter_settlement_consent_enters_judgment_even_zero` | `Proofs/CaseDisposition.lean` | low |  |
+| `ADCProofs.CaseDisposition.step_enter_settlement_positive_enters_judgment` | `Proofs/CaseDisposition.lean` | low |  |
+| `ADCProofs.CaseDisposition.step_enter_settlement_zero_without_consent_closes_case` | `Proofs/CaseDisposition.lean` | low |  |
+| `ADCProofs.CertificateExamples.sample_closed_certificate_facts` | `Proofs/CertificateExamples.lean` |  |  |
+| `ADCProofs.CertificateExamples.sample_closed_certificate_replay` | `Proofs/CertificateExamples.lean` |  |  |
+| `ADCProofs.CertificateExamples.sample_closed_certificate_replay_bool` | `Proofs/CertificateExamples.lean` |  |  |
+| `ADCProofs.CertificateExamples.sample_closed_certificate_status` | `Proofs/CertificateExamples.lean` |  |  |
+| `ADCProofs.CertificateExamples.sample_closed_certificate_terminal` | `Proofs/CertificateExamples.lean` |  |  |
+| `ADCProofs.CertificateFacts.acceptedReplayCertificate_status_closed_facts` | `Proofs/CertificateFacts.lean` |  |  |
+| `ADCProofs.CertificateFacts.acceptedReplayCertificate_terminal_facts` | `Proofs/CertificateFacts.lean` |  |  |
+| `ADCProofs.CertificateFacts.certificateStateOrDefault_ok` | `Proofs/CertificateFacts.lean` |  |  |
+| `ADCProofs.CertificateFacts.terminalClosedAccounted_of_status_closed` | `Proofs/CertificateFacts.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_judgment_certificate_accounted` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_judgment_certificate_facts` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_judgment_certificate_outcome_facts` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_judgment_certificate_replay` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_judgment_certificate_replay_bool` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_certificate_accounted` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_certificate_facts` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_certificate_outcome_facts` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_certificate_replay` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_certificate_replay_bool` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_certificate_transition_recorded` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_hung_jury_certificate_accounted` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_hung_jury_certificate_facts` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_hung_jury_certificate_outcome_facts` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_hung_jury_certificate_replay` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_hung_jury_certificate_replay_bool` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_juror_timeout_hung_jury_certificate_transition_recorded` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_verdict_certificate_accounted` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_verdict_certificate_facts` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_verdict_certificate_outcome_facts` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_verdict_certificate_replay` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeExamples.sample_verdict_certificate_replay_bool` | `Proofs/CertificateOutcomeExamples.lean` |  |  |
+| `ADCProofs.CertificateOutcomeFacts.acceptedReplayCertificate_judgment_facts` | `Proofs/CertificateOutcomeFacts.lean` |  |  |
+| `ADCProofs.CertificateOutcomeFacts.acceptedReplayCertificate_judgment_outcome_facts` | `Proofs/CertificateOutcomeFacts.lean` |  |  |
+| `ADCProofs.CertificateOutcomeFacts.acceptedReplayCertificate_juror_failure_hung_jury_facts` | `Proofs/CertificateOutcomeFacts.lean` |  |  |
+| `ADCProofs.CertificateOutcomeFacts.acceptedReplayCertificate_juror_failure_hung_jury_outcome_facts` | `Proofs/CertificateOutcomeFacts.lean` |  |  |
+| `ADCProofs.CertificateOutcomeFacts.acceptedReplayCertificate_juror_failure_verdict_facts` | `Proofs/CertificateOutcomeFacts.lean` |  |  |
+| `ADCProofs.CertificateOutcomeFacts.acceptedReplayCertificate_juror_failure_verdict_outcome_facts` | `Proofs/CertificateOutcomeFacts.lean` |  |  |
+| `ADCProofs.CertificateOutcomeFacts.acceptedReplayCertificate_status_closed_outcome_facts` | `Proofs/CertificateOutcomeFacts.lean` |  |  |
+| `ADCProofs.CertificateOutcomeFacts.acceptedReplayCertificate_verdict_facts` | `Proofs/CertificateOutcomeFacts.lean` |  |  |
+| `ADCProofs.CertificateOutcomeFacts.acceptedReplayCertificate_verdict_outcome_facts` | `Proofs/CertificateOutcomeFacts.lean` |  |  |
+| `ADCProofs.Contempt.contemptCountFor_incrementContemptCount` | `Proofs/Contempt.lean` | low |  |
+| `ADCProofs.Contempt.contemptCountFor_incrementContemptCount_ge` | `Proofs/Contempt.lean` | low |  |
+| `ADCProofs.Contempt.contemptCountFor_incrementContemptCount_le_sum_plus_one` | `Proofs/Contempt.lean` | low |  |
+| `ADCProofs.Contempt.contemptCountFor_le_sumContemptCounts` | `Proofs/Contempt.lean` | low |  |
+| `ADCProofs.Contempt.contemptCountFor_other_unchanged` | `Proofs/Contempt.lean` | low |  |
+| `ADCProofs.Contempt.contemptCountFor_target_increment` | `Proofs/Contempt.lean` | low |  |
+| `ADCProofs.Contempt.contemptCountFor_target_positive_after_increment` | `Proofs/Contempt.lean` | low |  |
+| `ADCProofs.Contempt.incrementContemptCount_length` | `Proofs/Contempt.lean` | low |  |
+| `ADCProofs.Contempt.sumContemptCounts_incrementContemptCount` | `Proofs/Contempt.lean` | low |  |
+| `ADCProofs.Contempt.sumContemptCounts_incrementContemptCount_gt` | `Proofs/Contempt.lean` | low |  |
+| `ADCProofs.Contempt.sumContemptCounts_positive_after_increment` | `Proofs/Contempt.lean` | low |  |
+| `ADCProofs.DecisionConfinement.applyDecisionAtOpportunity_pass_success_shape` | `Proofs/DecisionConfinement.lean` | low |  |
+| `ADCProofs.DecisionConfinement.applyDecisionAtOpportunity_tool_success_confined` | `Proofs/DecisionConfinement.lean` | low |  |
+| `ADCProofs.DecisionConfinement.applyDecisionAtOpportunity_tool_success_exact_action` | `Proofs/DecisionConfinement.lean` | low |  |
+| `ADCProofs.DecisionConfinement.applyDecision_closed_case_returns_no_current_opportunity` | `Proofs/DecisionConfinement.lean` | medium | Shows that `applyDecision` returns `NO_CURRENT_OPPORTUNITY` for a closed case. |
+| `ADCProofs.DecisionConfinement.applyDecision_defective_jurisdiction_emits_expected_action` | `Proofs/DecisionConfinement.lean` | low |  |
+| `ADCProofs.DecisionConfinement.applyDecision_defective_jurisdiction_then_step_stops` | `Proofs/DecisionConfinement.lean` | medium | Shows that the accepted dismissal action closes the case and stops the engine on the next query. |
+| `ADCProofs.DecisionConfinement.applyDecision_pass_success_has_no_action` | `Proofs/DecisionConfinement.lean` | low |  |
+| `ADCProofs.DecisionConfinement.applyDecision_pass_success_shape` | `Proofs/DecisionConfinement.lean` | low |  |
+| `ADCProofs.DecisionConfinement.applyDecision_tool_success_confined` | `Proofs/DecisionConfinement.lean` | high | Confines the returned action to the selected opportunity's role, tool, and payload. |
+| `ADCProofs.DecisionConfinement.applyDecision_tool_success_exact_action` | `Proofs/DecisionConfinement.lean` | high | Shows that an accepted tool decision yields exactly the executable action selected by the current opportunity. |
+| `ADCProofs.DecisionConfinement.applyDecision_tool_success_has_no_state_update` | `Proofs/DecisionConfinement.lean` | low |  |
+| `ADCProofs.DecisionConfinement.applyDecision_wrong_role_of_current_opportunity_returns_wrong_role` | `Proofs/DecisionConfinement.lean` | low |  |
+| `ADCProofs.DeclaratoryDamages.singleClaimDeclaratoryOnly_defaults_false_when_field_absent` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.step_declaratory_bench_judgment_rejects_positive_damages` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.step_declaratory_default_judgment_rejects_positive_damages` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.step_declaratory_juror_vote_rejects_positive_damages` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.step_declaratory_jury_judgment_rejects_positive_damages` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.step_declaratory_partial_judgment_rejects_positive_damages` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.step_declaratory_rule68_acceptance_rejects_positive_damages` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.step_declaratory_rule68_evaluation_rejects_positive_damages` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.step_declaratory_rule68_offer_rejects_positive_damages` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.step_declaratory_settlement_rejects_positive_damages` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.step_declaratory_status_transition_rejects_positive_jury_damages` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.validateDeclaratoryDamages_accepts_zero` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DeclaratoryDamages.validateDeclaratoryDamages_preserves_civil_positive_damages` | `Proofs/DeclaratoryDamages.lean` |  |  |
+| `ADCProofs.DefaultJudgment.step_enter_default_judgment_rejects_invalid_against_party` | `Proofs/DefaultJudgment.lean` | low |  |
+| `ADCProofs.DefaultJudgment.step_enter_default_judgment_success_records_docket` | `Proofs/DefaultJudgment.lean` | low |  |
+| `ADCProofs.DefaultJudgment.step_enter_default_judgment_success_sets_status` | `Proofs/DefaultJudgment.lean` | low |  |
+| `ADCProofs.EffectiveLimitBasics.effectiveLimitValue_no_overrides_eq_policy` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
+| `ADCProofs.EffectiveLimitBasics.effectiveLimitValue_single_override_applies_eq_override` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
+| `ADCProofs.EffectiveLimitBasics.effectiveLimitValue_single_override_mismatched_key_eq_policy` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
+| `ADCProofs.EffectiveLimitBasics.effectiveLimitValue_single_override_not_applicable_eq_policy` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
+| `ADCProofs.EffectiveLimitBasics.effectiveLimitValue_two_overrides_first_kept_when_second_lower_specificity` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
+| `ADCProofs.EffectiveLimitBasics.effectiveLimitValue_two_overrides_second_wins_on_higher_specificity` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
+| `ADCProofs.EffectiveLimitBasics.effectiveLimitValue_unknown_key_error` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
+| `ADCProofs.EffectiveLimitBasics.enforceMeasuredLimit_no_overrides_ok_of_policy` | `Proofs/EffectiveLimitBasics.lean` | trivial |  |
+| `ADCProofs.ExecutionConfinement.tool_execution_closing_case_blocks_followup_decisions` | `Proofs/ExecutionConfinement.lean` | high | Shows that every later decision returns `NO_CURRENT_OPPORTUNITY` after an authorized execution closes the case. |
+| `ADCProofs.InitializeCase.initializeCase_rejects_already_initialized_case` | `Proofs/InitializeCase.lean` | low |  |
+| `ADCProofs.InitializeCase.initializeCase_requires_nonempty_summary` | `Proofs/InitializeCase.lean` | low |  |
+| `ADCProofs.InitializeCase.initializeCase_requires_plaintiff_filed_by` | `Proofs/InitializeCase.lean` | low |  |
+| `ADCProofs.InitializeCase.initializeCase_success_records_core_complaint_effects` | `Proofs/InitializeCase.lean` | medium | Shows that case initialization records the complaint, docket entry, and initial trace in one state. |
+| `ADCProofs.InitializeCase.initializeCase_success_seeds_attachment_record` | `Proofs/InitializeCase.lean` | medium | Shows that case initialization records the complaint attachments. |
+| `ADCProofs.Interrogatories.step_finalize_interrogatories_requires_prior_service` | `Proofs/Interrogatories.lean` | low |  |
+| `ADCProofs.Interrogatories.step_respond_interrogatory_item_requires_prior_service` | `Proofs/Interrogatories.lean` | low |  |
+| `ADCProofs.Interrogatories.step_serve_interrogatories_enforces_local_rule_limit` | `Proofs/Interrogatories.lean` | low |  |
+| `ADCProofs.Interrogatories.step_serve_interrogatories_requires_pretrial` | `Proofs/Interrogatories.lean` | low |  |
+| `ADCProofs.JudgmentEligibility.judgmentEligible_bench_with_hung_false` | `Proofs/JudgmentEligibility.lean` | low |  |
+| `ADCProofs.JudgmentEligibility.judgmentEligible_bench_without_hung_true` | `Proofs/JudgmentEligibility.lean` | low |  |
+| `ADCProofs.JudgmentEligibility.judgmentEligible_jury_defendant_verdict_true` | `Proofs/JudgmentEligibility.lean` | low |  |
+| `ADCProofs.JudgmentEligibility.judgmentEligible_jury_hung_false` | `Proofs/JudgmentEligibility.lean` | low |  |
+| `ADCProofs.JudgmentEligibility.judgmentEligible_jury_invalid_verdict_token_false` | `Proofs/JudgmentEligibility.lean` | low |  |
+| `ADCProofs.JudgmentEligibility.judgmentEligible_jury_pending_false` | `Proofs/JudgmentEligibility.lean` | low |  |
+| `ADCProofs.JudgmentEligibility.judgmentEligible_jury_plaintiff_verdict_true` | `Proofs/JudgmentEligibility.lean` | low |  |
+| `ADCProofs.JurisdictionDismissal.step_jurisdiction_dismissal_blocks_next_opportunity` | `Proofs/JurisdictionDismissal.lean` | medium | Shows that a jurisdiction dismissal leaves no next opportunity. |
+| `ADCProofs.JurisdictionDismissal.step_jurisdiction_dismissal_closes_case_and_records_docket` | `Proofs/JurisdictionDismissal.lean` | medium | Shows that a jurisdiction dismissal closes the case and records a docket entry. |
+| `ADCProofs.JurisdictionDismissal.step_jurisdiction_dismissal_requires_reasoning` | `Proofs/JurisdictionDismissal.lean` | low |  |
+| `ADCProofs.JurisdictionFlow.applyDecision_defective_filed_case_emits_judge_dismissal` | `Proofs/JurisdictionFlow.lean` | medium | Shows that the public decision boundary emits the judge's jurisdiction-dismissal action in the defective filed case. |
+| `ADCProofs.JurisdictionFlow.currentOpenOpportunity_defective_filed_case_eq_named_opportunity` | `Proofs/JurisdictionFlow.lean` | low |  |
+| `ADCProofs.JurisdictionFlow.currentOpenOpportunity_defective_filed_case_selects_judge_dismissal` | `Proofs/JurisdictionFlow.lean` | medium | Identifies the judge's jurisdiction-dismissal opportunity as current in a defective filed case. |
+| `ADCProofs.JurisdictionFlow.defectiveFiledOpportunityForFlow_shape` | `Proofs/JurisdictionFlow.lean` | low |  |
+| `ADCProofs.JurisdictionFlow.defective_filed_case_confinement` | `Proofs/JurisdictionFlow.lean` | high | Shows that jurisdiction dismissal outranks Rule 12, rejects an out-of-order party decision, and closes the case. |
+| `ADCProofs.JurisdictionFlow.defective_filed_case_dismissal_blocks_later_rule12_decision` | `Proofs/JurisdictionFlow.lean` | medium | Shows that later merits attempts fail once jurisdiction dismissal closes the case. |
+| `ADCProofs.JurisdictionFlow.defective_filed_case_dismissal_then_stops` | `Proofs/JurisdictionFlow.lean` | medium | Shows that jurisdiction dismissal closes a filed case and terminates opportunity generation. |
+| `ADCProofs.JurisdictionFlow.defective_filed_case_rule12_available_but_not_actionable` | `Proofs/JurisdictionFlow.lean` | low |  |
+| `ADCProofs.JurisdictionFlow.nextOpportunity_defective_filed_case_selects_judge_dismissal` | `Proofs/JurisdictionFlow.lean` | medium | Shows that the selector prioritizes the judge's jurisdiction duty in a defective filed case. |
+| `ADCProofs.JurisdictionFlow.nextOpportunity_defective_filed_case_without_judge_dismissal_selects_rule12` | `Proofs/JurisdictionFlow.lean` | low |  |
+| `ADCProofs.JurisdictionFlow.openOpportunities_defective_filed_case_keep_rule12_while_selecting_judge` | `Proofs/JurisdictionFlow.lean` | medium | Shows that Rule 12 remains available even while the selector chooses jurisdiction dismissal first. |
+| `ADCProofs.JurisdictionScreening.completeDiversityCase_has_no_jurisdictionDismissalCandidate` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.jurisdictionDismissalCandidates_nil_of_not_defective` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.jurisdictionDismissalCandidates_nil_of_prior_dismissal` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.jurisdictionDismissalCandidates_nil_when_judge_disabled` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.jurisdictionDismissalCandidates_nonempty_has_length_one` | `Proofs/JurisdictionScreening.lean` | medium | Shows that an enabled jurisdiction screen emits exactly one deterministic dismissal candidate. |
+| `ADCProofs.JurisdictionScreening.jurisdictionDismissalCandidates_nonempty_implies_defective` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.jurisdictionDismissalCandidates_nonempty_implies_judge_enabled` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.jurisdictionDismissalCandidates_nonempty_implies_no_prior_dismissal` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.jurisdictionDismissalCandidates_nonempty_implies_not_closed` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.jurisdictionDismissalCandidates_nonempty_implies_not_judgment_entered` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.jurisdictionDismissalCandidates_singleton_when_enabled` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.missingAmountDiversityCase_emits_jurisdictionDismissalCandidate` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.noScreenCase_has_no_jurisdictionDismissalCandidate` | `Proofs/JurisdictionScreening.lean` | medium | Shows that the same defective diversity allegations produce no dismissal candidate in International Claw District. |
+| `ADCProofs.JurisdictionScreening.subjectMatterJurisdictionFaciallyDefective_complete_diversity_false` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.subjectMatterJurisdictionFaciallyDefective_missing_amount_true` | `Proofs/JurisdictionScreening.lean` | low |  |
+| `ADCProofs.JurisdictionScreening.subjectMatterJurisdictionFaciallyDefective_no_screen_false` | `Proofs/JurisdictionScreening.lean` | medium | Shows that the International Claw profile disables the federal jurisdiction screen in the defect detector. |
+| `ADCProofs.Jury.countCandidatesFold_bound` | `Proofs/Jury.lean` |  |  |
+| `ADCProofs.Jury.countCandidates_le_length` | `Proofs/Jury.lean` |  |  |
+| `ADCProofs.Jury.countCandidates_swearAvailable_le_length` | `Proofs/Jury.lean` |  |  |
+| `ADCProofs.Jury.swearAvailableLoop_length` | `Proofs/Jury.lean` |  |  |
+| `ADCProofs.Jury.swearAvailableLoop_zero` | `Proofs/Jury.lean` |  |  |
+| `ADCProofs.Jury.swearAvailable_length` | `Proofs/Jury.lean` |  |  |
+| `ADCProofs.Jury.swearAvailable_zero` | `Proofs/Jury.lean` |  |  |
+| `ADCProofs.JuryInstructions.step_deliver_jury_instructions_records_docket` | `Proofs/JuryInstructions.lean` | low |  |
+| `ADCProofs.JuryInstructions.step_deliver_jury_instructions_requires_settlement` | `Proofs/JuryInstructions.lean` | low |  |
+| `ADCProofs.JuryInstructions.step_propose_jury_instruction_requires_charge_conference` | `Proofs/JuryInstructions.lean` | low |  |
+| `ADCProofs.JuryInstructions.step_settle_jury_instructions_records_docket` | `Proofs/JuryInstructions.lean` | low |  |
+| `ADCProofs.JuryInstructions.step_settle_jury_instructions_requires_jury_charge` | `Proofs/JuryInstructions.lean` | low |  |
+| `ADCProofs.JuryInstructions.step_settle_jury_instructions_requires_proposal` | `Proofs/JuryInstructions.lean` | low |  |
+| `ADCProofs.JurySetup.step_add_juror_rejects_duplicate_id` | `Proofs/JurySetup.lean` |  |  |
+| `ADCProofs.JurySetup.step_set_jury_configuration_rejects_invalid_minimum` | `Proofs/JurySetup.lean` |  |  |
+| `ADCProofs.JurySetup.step_set_jury_configuration_rejects_size_too_small` | `Proofs/JurySetup.lean` |  |  |
+| `ADCProofs.JurySetup.step_swear_jury_marks_required_count_sworn` | `Proofs/JurySetup.lean` |  |  |
+| `ADCProofs.JurySetup.step_swear_jury_requires_configuration` | `Proofs/JurySetup.lean` |  |  |
+| `ADCProofs.JurySetup.step_swear_jury_requires_enough_candidate_jurors` | `Proofs/JurySetup.lean` |  |  |
+| `ADCProofs.LimitBasics.enforceMeasuredLimit_error_of_effectiveLimitValue_ok_gt` | `Proofs/LimitBasics.lean` | trivial |  |
+| `ADCProofs.LimitBasics.enforceMeasuredLimit_ok_implies_attempted_le` | `Proofs/LimitBasics.lean` | trivial |  |
+| `ADCProofs.LimitBasics.enforceMeasuredLimit_ok_of_effectiveLimitValue_ok` | `Proofs/LimitBasics.lean` | trivial |  |
+| `ADCProofs.LocalRuleOverrideStep.step_enter_local_rule_override_assigns_default_id_when_blank` | `Proofs/LocalRuleOverrideStep.lean` | low |  |
+| `ADCProofs.LocalRuleOverrideStep.step_enter_local_rule_override_records_docket` | `Proofs/LocalRuleOverrideStep.lean` | low |  |
+| `ADCProofs.LocalRuleOverrideStep.step_enter_local_rule_override_rejects_non_judge` | `Proofs/LocalRuleOverrideStep.lean` | low |  |
+| `ADCProofs.LocalRuleOverrideStep.step_enter_local_rule_override_respects_explicit_id` | `Proofs/LocalRuleOverrideStep.lean` | low |  |
+| `ADCProofs.OpportunityClosure.append_last_current_opportunity_partitions_roles_and_seals_after_closure` | `Proofs/OpportunityClosure.lean` | high | Combines priority selection, role partition, and case closure at the public boundary. |
+| `ADCProofs.OpportunityConfinement.applyDecision_current_role_partition_when_append_last_target_is_current` | `Proofs/OpportunityConfinement.lean` | low |  |
+| `ADCProofs.OpportunityConfinement.applyDecision_tool_success_when_append_last_target_is_current` | `Proofs/OpportunityConfinement.lean` | low |  |
+| `ADCProofs.OpportunityConfinement.applyDecision_wrong_role_when_append_last_target_is_current` | `Proofs/OpportunityConfinement.lean` | high | Shows that once selection fixes the current opportunity, every other role is rejected. |
+| `ADCProofs.OpportunitySelection.currentOpenOpportunity_of_available_append_last_if_no_passes` | `Proofs/OpportunitySelection.lean` | low |  |
+| `ADCProofs.OpportunitySelection.nextOpportunity_of_available_append_last_if_no_passes` | `Proofs/OpportunitySelection.lean` | low |  |
+| `ADCProofs.OpportunitySelection.selectLowestPriorityOpportunity_append_last_if_strictly_lower` | `Proofs/OpportunitySelection.lean` | low |  |
+| `ADCProofs.OrchestrationCore.assignOpportunityIdsFrom_preserves_length` | `Proofs/OrchestrationCore.lean` |  |  |
+| `ADCProofs.OrchestrationCore.assignOpportunityIds_preserves_length` | `Proofs/OrchestrationCore.lean` |  |  |
+| `ADCProofs.OrchestrationCore.availableActions_closed_returns_empty` | `Proofs/OrchestrationCore.lean` | low |  |
+| `ADCProofs.OrchestrationCore.availableOpportunities_nil_when_case_closed` | `Proofs/OrchestrationCore.lean` | medium | Shows that closure removes every available opportunity. |
+| `ADCProofs.OrchestrationCore.currentOpenOpportunity_none_when_case_closed` | `Proofs/OrchestrationCore.lean` | medium | Shows that closure eliminates the selector result used by the decision boundary. |
+| `ADCProofs.OrchestrationCore.nextOpportunity_closed_stops_with_reason` | `Proofs/OrchestrationCore.lean` | low |  |
+| `ADCProofs.OrchestrationCore.nextOpportunity_opportunity_eq_currentOpenOpportunity` | `Proofs/OrchestrationCore.lean` | medium | Connects the public next-opportunity API to the selector. |
+| `ADCProofs.OrchestrationCore.nextOpportunity_terminal_iff_no_currentOpenOpportunity` | `Proofs/OrchestrationCore.lean` | medium | Characterizes termination in terms of the open-opportunity selector. |
+| `ADCProofs.OrchestrationCore.nextOpportunity_terminal_when_case_closed` | `Proofs/OrchestrationCore.lean` | medium | Shows that `nextOpportunity` is terminal for a closed case. |
+| `ADCProofs.OrchestrationCore.selectLowestPriorityOpportunity_empty_none` | `Proofs/OrchestrationCore.lean` | low |  |
+| `ADCProofs.OrchestrationCore.selectLowestPriorityOpportunity_prefers_lower_priority_value` | `Proofs/OrchestrationCore.lean` | low |  |
+| `ADCProofs.OverrideBasics.chooseOverride_isSome` | `Proofs/OverrideBasics.lean` | trivial |  |
+| `ADCProofs.OverrideBasics.chooseOverride_keeps_existing_on_lower_specificity` | `Proofs/OverrideBasics.lean` | trivial |  |
+| `ADCProofs.OverrideBasics.chooseOverride_none_is_candidate` | `Proofs/OverrideBasics.lean` | trivial |  |
+| `ADCProofs.OverrideBasics.chooseOverride_prefers_higher_specificity` | `Proofs/OverrideBasics.lean` | trivial |  |
+| `ADCProofs.OverrideBasics.chooseOverride_tie_prefers_candidate_when_not_older` | `Proofs/OverrideBasics.lean` | trivial |  |
+| `ADCProofs.OverrideBasics.chooseOverride_tie_prefers_existing_when_candidate_older` | `Proofs/OverrideBasics.lean` | trivial |  |
+| `ADCProofs.OverrideBasics.overrideSpecificity_le_two` | `Proofs/OverrideBasics.lean` | trivial |  |
+| `ADCProofs.Party.normalizePartyToken_claimant` | `Proofs/Party.lean` | trivial |  |
+| `ADCProofs.Party.normalizePartyToken_defence` | `Proofs/Party.lean` | trivial |  |
+| `ADCProofs.Party.normalizePartyToken_defendant_fixed` | `Proofs/Party.lean` | trivial |  |
+| `ADCProofs.Party.normalizePartyToken_defense` | `Proofs/Party.lean` | trivial |  |
+| `ADCProofs.Party.normalizePartyToken_idempotent_on_normalized` | `Proofs/Party.lean` | trivial |  |
+| `ADCProofs.Party.normalizePartyToken_output_classification` | `Proofs/Party.lean` | trivial |  |
+| `ADCProofs.Party.normalizePartyToken_plaintiff_fixed` | `Proofs/Party.lean` | trivial |  |
+| `ADCProofs.PhaseClaim.allowedPhases_contains_implies_parseTrialPhaseV1_some` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.allowedStatus_contains_implies_parseCaseStatusV1_some` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canAdvancePhaseV1_antisymm_true` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canAdvancePhaseV1_refl` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canAdvancePhaseV1_trans` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canAdvancePhaseV1_true_and_ne_implies_rank_lt` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canAdvancePhaseV1_true_iff_rank_le` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canEnterJudgmentFromClaimDispositionV1_false_iff_nonverdict` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canEnterJudgmentFromClaimDispositionV1_hung_false` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canEnterJudgmentFromClaimDispositionV1_pending_false` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canEnterJudgmentFromClaimDispositionV1_true_iff_verdict` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canEnterJudgmentFromClaimDispositionV1_verdictDefendant_true` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canEnterJudgmentFromClaimDispositionV1_verdictPlaintiff_true` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canTransitionStatusV1_closed_false` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canTransitionStatusV1_filed_true_iff` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canTransitionStatusV1_irrefl` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canTransitionStatusV1_judgment_entered_eq_closed` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canTransitionStatusV1_pretrial_true_iff` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canTransitionStatusV1_to_closed_iff_not_closed` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canTransitionStatusV1_trial_true_iff` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canTransitionStatusV1_true_implies_current_not_closed` | `Proofs/PhaseClaim.lean` | trivial |  |
+| `ADCProofs.PhaseClaim.canTransitionStatusV1_true_implies_ne` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.canTransitionStatusV1_true_implies_next_not_filed` | `Proofs/PhaseClaim.lean` | trivial |  |
+| `ADCProofs.PhaseClaim.checkTransition_matches_typed_on_enums` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDispositionFromCaseStateV1_defendant_verdict` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDispositionFromCaseStateV1_hung` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDispositionFromCaseStateV1_ne_judgmentEntered` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDispositionFromCaseStateV1_pending` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDispositionFromCaseStateV1_pending_iff` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDispositionFromCaseStateV1_plaintiff_verdict` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDisposition_allowsJudgment_implies_no_hung` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDisposition_allowsJudgment_implies_parseVerdict_some` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDisposition_allowsJudgment_implies_verdict_for_legal_token` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDisposition_allowsJudgment_implies_verdict_present` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDisposition_invalidVerdict_for_is_error` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.claimDisposition_invalidVerdict_for_not_pure` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.dispositionDefendant_iff_noHung_and_tokenDefendant` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.dispositionDefendant_implies_noHung` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.dispositionIsVerdict_iff_wellFormedVerdictState` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.dispositionIsVerdict_implies_noHung` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.dispositionPlaintiff_iff_noHung_and_tokenPlaintiff` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.dispositionPlaintiff_implies_noHung` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.hungJury_blocks_judgment_eligibility` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.invalidVerdictToken_blocks_judgment_eligibility` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.judgmentEligibility_existsUnique_iff_exists` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.judgmentEligibility_iff_dispositionIsVerdict` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.judgmentEligibility_iff_noHung_and_legalToken` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.judgmentEligibility_iff_wellFormedVerdict` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.judgmentEligibility_witness_unique` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.legalVerdictToken_implies_parseVerdict_some` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_and_legalVerdictToken_implies_judgment_eligibility` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_and_legalVerdictToken_implies_not_hung` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_and_legalVerdictToken_implies_not_pending` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_pureDisposition_canEnter_false_iff_pending` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_pureDisposition_canEnter_false_implies_not_verdict` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_pureDisposition_canEnter_iff_nonpending` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_pureDisposition_ne_hung_and_ne_judgmentEntered` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_pureDisposition_partition` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_pureDisposition_verdict_implies_canEnter_true` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_pureNonPending_iff_dispositionIsVerdict` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_pureNonPending_iff_parseableVerdictPresent` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_pureNonPending_implies_canEnter` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_verdictTokenDefendant_implies_dispositionDefendant` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_verdictTokenDefendant_implies_exact_judgment_witness` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_verdictTokenDefendant_not_dispositionPlaintiff` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_verdictTokenPlaintiff_implies_dispositionPlaintiff` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_verdictTokenPlaintiff_implies_exact_judgment_witness` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noHung_verdictTokenPlaintiff_not_dispositionDefendant` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.noVerdict_noHung_blocks_judgment_eligibility` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.parseCaseStatusV1_roundtrip_closed` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.parseCaseStatusV1_roundtrip_filed` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.parseCaseStatusV1_roundtrip_judgment_entered` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.parseCaseStatusV1_roundtrip_pretrial` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.parseCaseStatusV1_roundtrip_trial` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.parseCaseStatusV1_toString_roundtrip` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.parseVerdictSide_defendant` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.parseVerdictSide_plaintiff` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.parseVerdictSide_some_implies_token` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.phaseAllowsActionV1_offerExhibit_true_iff_evidence_phase` | `Proofs/PhaseClaim.lean` |  |  |
+| `ADCProofs.PhaseClaim.phaseAllowsActionV1_opening_only_openings` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.phaseAllowsActionV1_opening_true_iff_openings` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseClaim.validVerdictSideState_implies_claimDisposition_allowsJudgment` | `Proofs/PhaseClaim.lean` | low |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_chargeConference_false` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_closings_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_defenseCase_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_defenseEvidence_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_defenseSurrebuttalEvidence_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_defenseSurrebuttal_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_deliberation_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_juryCharge_false` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_none_false` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_openings_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_plaintiffCase_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_plaintiffEvidence_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_plaintiffRebuttalEvidence_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_plaintiffRebuttal_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_postVerdict_false` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_true_implies_phase_not_none` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_verdictReturn_false` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseCompleteness.phaseAllowsActionV1_voirDire_true_iff` | `Proofs/PhaseCompleteness.lean` |  |  |
+| `ADCProofs.PhaseTransitionPlan.canAdvance_chargeConference_to_closings` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.canAdvance_closings_to_juryCharge` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.canAdvance_closings_to_verdictReturn` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.canAdvance_defenseCase_to_chargeConference` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.canAdvance_deliberation_to_verdictReturn` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.canAdvance_juryCharge_to_deliberation` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.canAdvance_none_to_openings` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.canAdvance_openings_to_plaintiffCase` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.canAdvance_plaintiffCase_to_defenseCase` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.canAdvance_verdictReturn_to_postVerdict` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.cannot_advance_defenseCase_to_openings` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.cannot_advance_postVerdict_to_deliberation` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.cannot_advance_trial_to_voirDire` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PhaseTransitionPlan.cannot_advance_verdictReturn_to_plaintiffCase` | `Proofs/PhaseTransitionPlan.lean` | trivial |  |
+| `ADCProofs.PostJudgmentMotions.step_file_rule59_enforces_timeliness` | `Proofs/PostJudgmentMotions.lean` | low |  |
+| `ADCProofs.PostJudgmentMotions.step_file_rule59_requires_judgment_date` | `Proofs/PostJudgmentMotions.lean` | low |  |
+| `ADCProofs.PostJudgmentMotions.step_file_rule60_enforces_one_year_window_for_60b1_to_60b3` | `Proofs/PostJudgmentMotions.lean` | low |  |
+| `ADCProofs.PostJudgmentMotions.step_file_rule60_requires_judgment_date` | `Proofs/PostJudgmentMotions.lean` | low |  |
+| `ADCProofs.PostJudgmentMotions.step_resolve_rule59_must_be_in_order` | `Proofs/PostJudgmentMotions.lean` | low |  |
+| `ADCProofs.PostJudgmentMotions.step_resolve_rule59_requires_existing_motion` | `Proofs/PostJudgmentMotions.lean` | low |  |
+| `ADCProofs.PostJudgmentMotions.step_resolve_rule60_records_order_when_valid` | `Proofs/PostJudgmentMotions.lean` | low |  |
+| `ADCProofs.ProtectiveOrders.step_enter_protective_order_records_docket` | `Proofs/ProtectiveOrders.lean` | low |  |
+| `ADCProofs.ProtectiveOrders.step_enter_protective_order_rejects_duplicate_order_id` | `Proofs/ProtectiveOrders.lean` | low |  |
+| `ADCProofs.ProtectiveOrders.step_enter_protective_order_requires_nonempty_allowed_roles` | `Proofs/ProtectiveOrders.lean` | low |  |
+| `ADCProofs.ProtectiveOrders.step_lift_protective_order_records_docket` | `Proofs/ProtectiveOrders.lean` | low |  |
+| `ADCProofs.ProtectiveOrders.step_lift_protective_order_requires_existing_order` | `Proofs/ProtectiveOrders.lean` | low |  |
+| `ADCProofs.ProtectiveOrders.step_lift_protective_order_requires_order_id` | `Proofs/ProtectiveOrders.lean` | low |  |
+| `ADCProofs.RecentCourtProfiles.nextOpportunity_internationalClaw_filed_case_selects_defendant_rule12` | `Proofs/RecentCourtProfiles.lean` | high | Shows that the International Claw profile selects the defendant's Rule 12 opportunity and omits jurisdiction dismissal. |
+| `ADCProofs.RecentCourtProfiles.nextOpportunity_unitedStatesDistrict_filed_case_selects_jurisdiction_dismissal` | `Proofs/RecentCourtProfiles.lean` | high | Shows that defective diversity pleading under the federal profile selects the judge's dismissal opportunity before defendant pleading. |
+| `ADCProofs.RecentCourtProfiles.openOpportunities_internationalClaw_have_no_jurisdiction_dismissal` | `Proofs/RecentCourtProfiles.lean` | medium | Shows that the International Claw open opportunity set contains no jurisdiction-dismissal tool. |
+| `ADCProofs.RecentCourtProfiles.rule12GroundSummary_internationalClaw_omits_subject_matter_jurisdiction` | `Proofs/RecentCourtProfiles.lean` | low |  |
+| `ADCProofs.RecentCourtProfiles.subjectMatterJurisdictionFaciallyDefective_unitedStatesDistrict_detects_defective_diversity` | `Proofs/RecentCourtProfiles.lean` | medium | Shows that the federal profile treats residence-only diversity pleading and a $108 amount as facially defective. |
+| `ADCProofs.RecentCourtProfiles.validRule12Ground_internationalClaw_disables_subject_matter_jurisdiction` | `Proofs/RecentCourtProfiles.lean` | medium | Shows that the International Claw profile removes the federal subject-matter Rule 12 ground. |
+| `ADCProofs.RecentExhibitLimits.enforceMeasuredLimit_exhibits_error_of_no_overrides_gt` | `Proofs/RecentExhibitLimits.lean` |  |  |
+| `ADCProofs.RecentExhibitLimits.enforceMeasuredLimit_exhibits_ok_of_no_overrides` | `Proofs/RecentExhibitLimits.lean` |  |  |
+| `ADCProofs.RecentExhibitLimits.exhibit_count_uses_party_field` | `Proofs/RecentExhibitLimits.lean` |  |  |
+| `ADCProofs.RecentExhibitLimits.plaintiff_evidence_exposes_offer_or_rest_below_limit` | `Proofs/RecentExhibitLimits.lean` |  |  |
+| `ADCProofs.RecentExhibitLimits.plaintiff_evidence_exposes_rest_only_at_limit` | `Proofs/RecentExhibitLimits.lean` |  |  |
+| `ADCProofs.RecentExhibitLimits.plaintiff_evidence_removes_offer_at_limit` | `Proofs/RecentExhibitLimits.lean` |  |  |
+| `ADCProofs.RecentExhibitLimits.policyLimitValue_exhibits_eq_max` | `Proofs/RecentExhibitLimits.lean` |  |  |
+| `ADCProofs.RecentExhibitLimits.step_offer_exhibit_increments_count_within_limit_on_sample` | `Proofs/RecentExhibitLimits.lean` |  |  |
+| `ADCProofs.RecentExhibitLimits.step_offer_exhibit_rejects_when_limit_reached_on_sample` | `Proofs/RecentExhibitLimits.lean` |  |  |
+| `ADCProofs.RecentJudgment.nextOpportunity_hung_jury_post_verdict_closes_case` | `Proofs/RecentJudgment.lean` |  |  |
+| `ADCProofs.RecentJudgment.step_enter_judgment_from_jury_verdict_sets_amount_and_status` | `Proofs/RecentJudgment.lean` | high | Shows that judgment entry copies the jury verdict amount and sets the case status to `judgment_entered`. |
+| `ADCProofs.RecentJurySelection.decide_juror_for_cause_challenge_granted_reduces_candidate_count_on_sample` | `Proofs/RecentJurySelection.lean` | medium | Shows that a granted for-cause ruling removes one candidate and records that juror as excused for cause. |
+| `ADCProofs.RecentJurySelection.empanelSelectedJurors_marks_J1_excused_on_sample` | `Proofs/RecentJurySelection.lean` | low |  |
+| `ADCProofs.RecentJurySelection.empanelSelectedJurors_marks_J2_sworn_on_sample` | `Proofs/RecentJurySelection.lean` | low |  |
+| `ADCProofs.RecentJurySelection.empanelSelectedJurors_marks_J4_sworn_on_sample` | `Proofs/RecentJurySelection.lean` | low |  |
+| `ADCProofs.RecentJurySelection.empanelSelectedJurors_preserves_identity_projection_on_sample` | `Proofs/RecentJurySelection.lean` | medium | Shows that empanelment preserves each juror's id, name, note, model, and persona file. |
+| `ADCProofs.RecentJurySelection.passing_last_voir_dire_question_still_leaves_next_opportunity` | `Proofs/RecentJurySelection.lean` |  |  |
+| `ADCProofs.RecentJurySelection.ready_voir_dire_panel_exposes_empanelment_boundary` | `Proofs/RecentJurySelection.lean` | high | Shows that once questionnaires and oral questioning are complete for every remaining candidate, the judge can empanel the jury. |
+| `ADCProofs.RecentJurySelection.strike_juror_peremptorily_reduces_candidate_count_on_sample` | `Proofs/RecentJurySelection.lean` | medium | Shows that a peremptory strike removes exactly one candidate from the panel and records the targeted juror as struck. |
+| `ADCProofs.RecentVerdictDerivation.deriveVerdictFromJurorVotes_adjusts_threshold_after_failed_juror` | `Proofs/RecentVerdictDerivation.lean` |  |  |
+| `ADCProofs.RecentVerdictDerivation.deriveVerdictFromJurorVotes_defendant_majority_zeroes_damages` | `Proofs/RecentVerdictDerivation.lean` | medium | Shows that a defense verdict carries zero damages even if some jurors proposed plaintiff-side amounts. |
+| `ADCProofs.RecentVerdictDerivation.deriveVerdictFromJurorVotes_none_when_current_round_vote_missing` | `Proofs/RecentVerdictDerivation.lean` | high | Shows that verdict derivation cannot run until every sworn juror has cast a ballot in the current round. |
+| `ADCProofs.RecentVerdictDerivation.deriveVerdictFromJurorVotes_nonstable_split_advances_round` | `Proofs/RecentVerdictDerivation.lean` | medium | Shows that a changed split advances to another ballot round when neither side reaches the threshold. |
+| `ADCProofs.RecentVerdictDerivation.deriveVerdictFromJurorVotes_plaintiff_majority_is_order_invariant_on_sample` | `Proofs/RecentVerdictDerivation.lean` | medium | Checks that vote storage order does not affect the representative plaintiff-majority verdict. |
+| `ADCProofs.RecentVerdictDerivation.deriveVerdictFromJurorVotes_plaintiff_majority_uses_plaintiff_mean` | `Proofs/RecentVerdictDerivation.lean` | medium | Defines the plaintiff-side damages aggregation rule: the verdict amount is the mean of plaintiff-vote damages. |
+| `ADCProofs.RecentVerdictDerivation.deriveVerdictFromJurorVotes_stable_split_declares_hung_jury` | `Proofs/RecentVerdictDerivation.lean` | high | Shows that an unchanged split in consecutive rounds produces a hung jury. |
+| `ADCProofs.RecentVoirDireLimits.countDisallowedVoirDireQuestionsFrom_counts_rejected_questions_on_sample` | `Proofs/RecentVoirDireLimits.lean` |  |  |
+| `ADCProofs.RecentVoirDireLimits.step_decide_voir_dire_question_disallowed_increments_count_and_stores_reason_on_sample` | `Proofs/RecentVoirDireLimits.lean` |  |  |
+| `ADCProofs.RecentVoirDireLimits.step_record_voir_dire_question_rejects_when_disallow_limit_reached_on_sample` | `Proofs/RecentVoirDireLimits.lean` |  |  |
+| `ADCProofs.RecentVoirDireLimits.voir_dire_opportunities_leave_defendant_question_below_its_disallow_limit_on_sample` | `Proofs/RecentVoirDireLimits.lean` |  |  |
+| `ADCProofs.RecentVoirDireLimits.voir_dire_opportunities_remove_plaintiff_question_after_disallow_limit_on_sample` | `Proofs/RecentVoirDireLimits.lean` |  |  |
+| `ADCProofs.Replay.acceptedReplayCertificate_reachableFrom` | `Proofs/Replay.lean` |  |  |
+| `ADCProofs.Replay.replayCertificate_success_components` | `Proofs/Replay.lean` |  |  |
+| `ADCProofs.Replay.replayCertificate_success_reachableFrom` | `Proofs/Replay.lean` |  |  |
+| `ADCProofs.Replay.replayReachableFrom_replayTransitions_exists` | `Proofs/Replay.lean` |  |  |
+| `ADCProofs.Replay.replayTransitions_concat_ok` | `Proofs/Replay.lean` |  |  |
+| `ADCProofs.Replay.replayTransitions_success_reachableFrom` | `Proofs/Replay.lean` |  |  |
+| `ADCProofs.Replay.replayTransitions_success_reachableFrom_of_base` | `Proofs/Replay.lean` |  |  |
+| `ADCProofs.RoleGuardsCritical.step_empanel_jury_rejects_non_judge_role` | `Proofs/RoleGuardsCritical.lean` |  |  |
+| `ADCProofs.RoleGuardsCritical.step_enter_judgment_rejects_non_judge_role` | `Proofs/RoleGuardsCritical.lean` |  |  |
+| `ADCProofs.RoleGuardsCritical.step_resolve_rule59_rejects_non_judge_role` | `Proofs/RoleGuardsCritical.lean` |  |  |
+| `ADCProofs.RoleGuardsCritical.step_submit_juror_vote_rejects_non_juror_role` | `Proofs/RoleGuardsCritical.lean` |  |  |
+| `ADCProofs.Rule11.step_decide_rule11_denied_cannot_include_sanction` | `Proofs/Rule11.lean` | low |  |
+| `ADCProofs.Rule11.step_decide_rule11_denied_without_sanction_records_order` | `Proofs/Rule11.lean` | low |  |
+| `ADCProofs.Rule11.step_decide_rule11_granted_monetary_requires_amount` | `Proofs/Rule11.lean` | low |  |
+| `ADCProofs.Rule12.step_decide_rule12_granted_failure_to_state_a_claim_closes_case` | `Proofs/Rule12.lean` | low |  |
+| `ADCProofs.Rule12.step_decide_rule12_rejects_conflicting_prejudice_and_amend` | `Proofs/Rule12.lean` | low |  |
+| `ADCProofs.Rule12.step_decide_rule12_rejects_invalid_disposition` | `Proofs/Rule12.lean` | low |  |
+| `ADCProofs.Rule12.step_decide_rule12_requires_jurisdiction_basis_rejected` | `Proofs/Rule12.lean` | low |  |
+| `ADCProofs.Rule12.step_decide_rule12_requires_matching_ground` | `Proofs/Rule12.lean` | low |  |
+| `ADCProofs.Rule12.step_decide_rule12_requires_missing_elements` | `Proofs/Rule12.lean` | low |  |
+| `ADCProofs.Rule12.step_decide_rule12_requires_motion` | `Proofs/Rule12.lean` | low |  |
+| `ADCProofs.Rule12.step_decide_rule12_requires_standing_component` | `Proofs/Rule12.lean` | low |  |
+| `ADCProofs.Rule12.step_file_rule12_requires_filed_or_pretrial` | `Proofs/Rule12.lean` | low |  |
+| `ADCProofs.Rule12.step_file_rule12_unavailable_after_answer` | `Proofs/Rule12.lean` | low |  |
+| `ADCProofs.Rule37.decided_rule37_motion_blocks_same_discovery_generation` | `Proofs/Rule37.lean` |  |  |
+| `ADCProofs.Rule37.new_discovery_generation_allows_later_rule37_motion` | `Proofs/Rule37.lean` |  |  |
+| `ADCProofs.Rule37.rule37_pass_expires_after_same_party_discovery` | `Proofs/Rule37.lean` |  |  |
+| `ADCProofs.Rule37.rule37_pass_survives_opposing_party_discovery` | `Proofs/Rule37.lean` |  |  |
+| `ADCProofs.Rule37.step_decide_rule37_denied_cannot_include_sanctions` | `Proofs/Rule37.lean` | low |  |
+| `ADCProofs.Rule37.step_decide_rule37_fees_requires_positive_amount` | `Proofs/Rule37.lean` | low |  |
+| `ADCProofs.Rule37.step_decide_rule37_records_order_when_valid` | `Proofs/Rule37.lean` | low |  |
+| `ADCProofs.Rule37.step_decide_rule37_requires_existing_motion` | `Proofs/Rule37.lean` | low |  |
+| `ADCProofs.Rule37.step_file_rule37_checks_interrogatory_set_range` | `Proofs/Rule37.lean` | low |  |
+| `ADCProofs.Rule37.step_file_rule37_rejects_invalid_discovery_type` | `Proofs/Rule37.lean` | low |  |
+| `ADCProofs.Rule37.step_file_rule37_target_must_be_opposing_party` | `Proofs/Rule37.lean` | low |  |
+| `ADCProofs.Rule56.amendedComplaint_clears_closed_rule56_windows` | `Proofs/Rule56.lean` | low |  |
+| `ADCProofs.Rule56.amendedComplaint_reopens_rule56_window` | `Proofs/Rule56.lean` | low |  |
+| `ADCProofs.Rule56.dispositive_motion_count_uses_movant_field` | `Proofs/Rule56.lean` |  |  |
+| `ADCProofs.Rule56.rule56_reply_requires_opposition_for_same_motion` | `Proofs/Rule56.lean` |  |  |
+| `ADCProofs.Rule56.second_rule56_motion_accepts_one_opposition_and_rejects_duplicate` | `Proofs/Rule56.lean` |  |  |
+| `ADCProofs.Rule56.step_decide_rule56_records_order` | `Proofs/Rule56.lean` | low |  |
+| `ADCProofs.Rule56.step_decide_rule56_rejects_invalid_disposition` | `Proofs/Rule56.lean` | low |  |
+| `ADCProofs.Rule56.step_decide_rule56_requires_prior_motion` | `Proofs/Rule56.lean` | low |  |
+| `ADCProofs.Rule56.step_file_rule56_rejects_second_motion_by_party` | `Proofs/Rule56.lean` |  |  |
+| `ADCProofs.Rule56.step_file_rule56_requires_pretrial` | `Proofs/Rule56.lean` | low |  |
+| `ADCProofs.Rule56Eligibility.reopenRule56Windows_restores_eligibility` | `Proofs/Rule56Eligibility.lean` | medium | Shows that reopening the Rule 56 window restores eligibility when the ordinary prerequisites still hold. |
+| `ADCProofs.Rule56Eligibility.rule56WindowEligible_false_when_window_closed` | `Proofs/Rule56Eligibility.lean` | low |  |
+| `ADCProofs.Rule56Eligibility.rule56WindowEligible_true_when_prerequisites_hold` | `Proofs/Rule56Eligibility.lean` | medium | Captures the exact objective prerequisites for Rule 56 eligibility. |
+| `ADCProofs.Rule56Lifecycle.rule56_pass_persists_until_amended_complaint` | `Proofs/Rule56Lifecycle.lean` | medium | Shows that Rule 56 window closure persists across unrelated pretrial activity and reopens only on amendment. |
+| `ADCProofs.Rule56Lifecycle.step_amended_complaint_after_initial_disclosures_reopens_rule56` | `Proofs/Rule56Lifecycle.lean` | low |  |
+| `ADCProofs.Rule56Lifecycle.step_initial_disclosures_after_rule56_pass_keeps_rule56_unavailable` | `Proofs/Rule56Lifecycle.lean` | low |  |
+| `ADCProofs.Rule56Lifecycle.step_initial_disclosures_after_rule56_pass_preserves_closed_window` | `Proofs/Rule56Lifecycle.lean` | low |  |
+| `ADCProofs.Rule56WindowBasics.closeRule56WindowFor_marks_party_closed` | `Proofs/Rule56WindowBasics.lean` | trivial |  |
+| `ADCProofs.Rule56WindowBasics.recordOpportunityPassFor_non_rule56_preserves_window` | `Proofs/Rule56WindowBasics.lean` | low |  |
+| `ADCProofs.Rule56WindowBasics.recordOpportunityPassFor_rule56_closes_window` | `Proofs/Rule56WindowBasics.lean` | low |  |
+| `ADCProofs.Rule56WindowBasics.reopenRule56Windows_clears_party` | `Proofs/Rule56WindowBasics.lean` | trivial |  |
+| `ADCProofs.Rule68.step_accept_rule68_only_offeree_may_accept` | `Proofs/Rule68.lean` | low |  |
+| `ADCProofs.Rule68.step_accept_rule68_requires_index_or_id` | `Proofs/Rule68.lean` | low |  |
+| `ADCProofs.Rule68.step_accept_rule68_success_sets_status_judgment_entered` | `Proofs/Rule68.lean` | low |  |
+| `ADCProofs.Rule68.step_evaluate_rule68_records_cost_shift_docket` | `Proofs/Rule68.lean` | low |  |
+| `ADCProofs.Rule68.step_evaluate_rule68_requires_index_or_id` | `Proofs/Rule68.lean` | low |  |
+| `ADCProofs.Rule68.step_make_rule68_rejects_invalid_offeree` | `Proofs/Rule68.lean` | low |  |
+| `ADCProofs.RuleWindows.isRule59Timely_false_iff_elapsed_gt` | `Proofs/RuleWindows.lean` | trivial |  |
+| `ADCProofs.RuleWindows.isRule59Timely_of_elapsedDaysBetween_ok` | `Proofs/RuleWindows.lean` | trivial |  |
+| `ADCProofs.RuleWindows.isRule59Timely_true_iff_elapsed_le` | `Proofs/RuleWindows.lean` | trivial |  |
+| `ADCProofs.RuleWindows.isRule60Timely_limited_ground_of_elapsedDaysBetween_ok` | `Proofs/RuleWindows.lean` | trivial |  |
+| `ADCProofs.RuleWindows.isRule60Timely_unlimited_ground_true` | `Proofs/RuleWindows.lean` | trivial |  |
+| `ADCProofs.RuleWindows.rule60GroundHasOneYearLimit_true_iff` | `Proofs/RuleWindows.lean` | trivial |  |
+| `ADCProofs.StateNonInterference.appendDocket_preserves_hung_jury` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.appendDocket_preserves_jury_verdict` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.appendDocket_preserves_phase` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.appendDocket_preserves_status` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.appendDocket_preserves_trial_mode` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.appendTrace_preserves_hung_jury` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.appendTrace_preserves_jury_verdict` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.appendTrace_preserves_phase` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.appendTrace_preserves_status` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.appendTrace_preserves_trial_mode` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.updateCase_preserves_court_name` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.updateCase_preserves_policy` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StateNonInterference.updateCase_preserves_schema_version` | `Proofs/StateNonInterference.lean` | low |  |
+| `ADCProofs.StatusBasics.canTransitionStatusV1_true_implies_current_ne_next` | `Proofs/StatusBasics.lean` |  |  |
+| `ADCProofs.StatusBasics.canTransitionStatusV1_true_implies_current_not_closed` | `Proofs/StatusBasics.lean` |  |  |
+| `ADCProofs.StatusBasics.canTransitionStatusV1_true_implies_next_not_filed` | `Proofs/StatusBasics.lean` |  |  |
+| `ADCProofs.Stays.step_lift_stay_records_lift_entry_when_valid` | `Proofs/Stays.lean` | low |  |
+| `ADCProofs.Stays.step_lift_stay_rejects_already_lifted` | `Proofs/Stays.lean` | low |  |
+| `ADCProofs.Stays.step_lift_stay_requires_existing_stay` | `Proofs/Stays.lean` | low |  |
+| `ADCProofs.Stays.step_lift_stay_requires_in_order_resolution` | `Proofs/Stays.lean` | low |  |
+| `ADCProofs.Stays.step_order_discretionary_stay_records_docket` | `Proofs/Stays.lean` | low |  |
+| `ADCProofs.Stays.step_post_supersedeas_bond_records_docket` | `Proofs/Stays.lean` | low |  |
+| `ADCProofs.StepInvariants.allowedPhases_contains_implies_phaseOrder_le_sixteen` | `Proofs/StepInvariants.lean` |  |  |
+| `ADCProofs.StepInvariants.allowedPhases_contains_implies_phaseOrder_ne_fallback` | `Proofs/StepInvariants.lean` | trivial |  |
+| `ADCProofs.StepInvariants.allowedStatuses_contains_implies_statusRank_le_four` | `Proofs/StepInvariants.lean` | trivial |  |
+| `ADCProofs.StepInvariants.allowedStatuses_contains_implies_statusRank_ne_fallback` | `Proofs/StepInvariants.lean` | trivial |  |
+| `ADCProofs.StepInvariants.checkTransition_closed_false` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_filed_characterization` | `Proofs/StepInvariants.lean` | trivial |  |
+| `ADCProofs.StepInvariants.checkTransition_filed_not_trial` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_filed_true_implies_allowed_next` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_judgment_entered_eq_closed` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_judgment_entered_true_implies_allowed_next` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_pretrial_characterization` | `Proofs/StepInvariants.lean` | trivial |  |
+| `ADCProofs.StepInvariants.checkTransition_pretrial_true_implies_allowed_next` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_trial_characterization` | `Proofs/StepInvariants.lean` | trivial |  |
+| `ADCProofs.StepInvariants.checkTransition_trial_true_implies_allowed_next` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_true_implies_both_allowed` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_true_implies_current_allowed` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_true_implies_current_ne_next` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_true_implies_current_not_closed` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_true_implies_next_allowed` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_true_implies_next_not_filed` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_true_implies_reverse_false` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepInvariants.checkTransition_true_implies_statusRank_lt` | `Proofs/StepInvariants.lean` | low |  |
+| `ADCProofs.StepPostconditions.mkAdvanceTrialPhaseJudgeAction_action_type` | `Proofs/StepPostconditions.lean` |  |  |
+| `ADCProofs.StepPostconditions.mkAdvanceTrialPhaseJudgeAction_actor_role` | `Proofs/StepPostconditions.lean` |  |  |
+| `ADCProofs.StepPostconditions.mkEnterJudgmentJudgeAction_action_type` | `Proofs/StepPostconditions.lean` |  |  |
+| `ADCProofs.StepPostconditions.mkEnterJudgmentJudgeAction_actor_role` | `Proofs/StepPostconditions.lean` |  |  |
+| `ADCProofs.StepPostconditions.step_advance_trial_phase_propagates_validator_error` | `Proofs/StepPostconditions.lean` |  |  |
+| `ADCProofs.StepPostconditions.step_enter_judgment_propagates_validator_error` | `Proofs/StepPostconditions.lean` |  |  |
+| `ADCProofs.TimeBasics.elapsedDaysBetween_diff_when_response_not_precedes_service` | `Proofs/TimeBasics.lean` | trivial |  |
+| `ADCProofs.TimeBasics.elapsedDaysBetween_diff_when_service_le_response` | `Proofs/TimeBasics.lean` | trivial |  |
+| `ADCProofs.TimeBasics.elapsedDaysBetween_of_ordinalDay_ok` | `Proofs/TimeBasics.lean` | trivial |  |
+| `ADCProofs.TimeBasics.elapsedDaysBetween_self_of_ordinalDay_exists` | `Proofs/TimeBasics.lean` | trivial |  |
+| `ADCProofs.TimeBasics.elapsedDaysBetween_self_of_ordinalDay_ok` | `Proofs/TimeBasics.lean` | trivial |  |
+| `ADCProofs.TimeBasics.elapsedDaysBetween_zero_when_response_precedes_service` | `Proofs/TimeBasics.lean` | trivial |  |
+| `ADCProofs.TransitionCase.step_transition_case_filed_to_pretrial_succeeds` | `Proofs/TransitionCase.lean` | low |  |
+| `ADCProofs.TransitionCase.step_transition_case_rejects_invalid_status` | `Proofs/TransitionCase.lean` | low |  |
+| `ADCProofs.TransitionCase.step_transition_case_rejects_invalid_transition` | `Proofs/TransitionCase.lean` | low |  |
+| `ADCProofs.TransitionCase.step_transition_case_trial_to_judgment_rejects_hung` | `Proofs/TransitionCase.lean` | low |  |
+| `ADCProofs.TransitionCase.step_transition_case_trial_to_judgment_requires_verdict` | `Proofs/TransitionCase.lean` | low |  |
+| `ADCProofs.TransitionCase.step_transition_case_trial_to_judgment_succeeds_with_verdict` | `Proofs/TransitionCase.lean` | low |  |
+| `ADCProofs.ValidateAdvancePhase.validateAdvanceTrialPhase_backward_transition` | `Proofs/ValidateAdvancePhase.lean` |  |  |
+| `ADCProofs.ValidateAdvancePhase.validateAdvanceTrialPhase_invalid_current_phase` | `Proofs/ValidateAdvancePhase.lean` |  |  |
+| `ADCProofs.ValidateAdvancePhase.validateAdvanceTrialPhase_invalid_phase` | `Proofs/ValidateAdvancePhase.lean` |  |  |
+| `ADCProofs.ValidateAdvancePhase.validateAdvanceTrialPhase_ok_implies_forward_parse_and_gate` | `Proofs/ValidateAdvancePhase.lean` |  |  |
+| `ADCProofs.ValidateAdvancePhase.validateAdvanceTrialPhase_ok_implies_phase_allowed` | `Proofs/ValidateAdvancePhase.lean` |  |  |
+| `ADCProofs.ValidateAdvancePhase.validateAdvanceTrialPhase_ok_implies_trial_status` | `Proofs/ValidateAdvancePhase.lean` |  |  |
+| `ADCProofs.ValidateAdvancePhase.validateAdvanceTrialPhase_requires_bench_opinion_for_post_verdict` | `Proofs/ValidateAdvancePhase.lean` |  |  |
+| `ADCProofs.ValidateAdvancePhase.validateAdvanceTrialPhase_requires_trial_status` | `Proofs/ValidateAdvancePhase.lean` |  |  |
+| `ADCProofs.ValidateAdvancePhaseJury.validateAdvanceTrialPhase_deliberation_ok_when_instructions_delivered` | `Proofs/ValidateAdvancePhaseJury.lean` |  |  |
+| `ADCProofs.ValidateAdvancePhaseJury.validateAdvanceTrialPhase_requires_jury_instructions_before_deliberation` | `Proofs/ValidateAdvancePhaseJury.lean` |  |  |
+| `ADCProofs.ValidateAdvancePhaseJury.validateAdvanceTrialPhase_requires_jury_outcome_for_post_verdict` | `Proofs/ValidateAdvancePhaseJury.lean` |  |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_bench_hung_error` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_bench_ok` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_bench_ok_implies_bench_opinion` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_bench_ok_implies_no_hung` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_bench_requires_opinion` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_jury_disposition_hung_error` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_jury_disposition_pending_error` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_jury_disposition_verdict_defendant_ok` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_jury_disposition_verdict_plaintiff_ok` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_ok_implies_jury_disposition_allows` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_ok_implies_jury_disposition_is_verdict` | `Proofs/ValidateEnterJudgment.lean` | medium | Shows that judgment entry on a jury case requires the `verdict` disposition. |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_ok_implies_no_hung` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_ok_implies_trial_status` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_ok_jury_implies_not_pending_or_hung` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateEnterJudgment.validateEnterJudgment_requires_trial_status` | `Proofs/ValidateEnterJudgment.lean` | low |  |
+| `ADCProofs.ValidateHungAndBench.applyDerivedDeliberationOutcome_stores_hung_jury` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.applyDerivedDeliberationOutcome_stores_verdict` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.deriveVerdict_waits_for_each_sworn_juror` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.deriveVerdict_without_configuration_returns_none` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.deriveVerdict_without_sworn_jurors_returns_hung_jury` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.split_jury_advances_to_second_round` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.split_jury_at_final_round_returns_hung_jury` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.validateBenchOpinion_invalid_current_phase` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.validateBenchOpinion_ok` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.validateBenchOpinion_ok_implies_bench_mode` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.validateBenchOpinion_ok_implies_trial_status` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.validateBenchOpinion_phase_gate_error` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.validateBenchOpinion_requires_bench_mode` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.validateBenchOpinion_requires_nonempty_text` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidateHungAndBench.validateBenchOpinion_requires_trial_status` | `Proofs/ValidateHungAndBench.lean` |  |  |
+| `ADCProofs.ValidatePostJudgmentMotions.validateRule59Timing_of_isRule59Timely_error` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
+| `ADCProofs.ValidatePostJudgmentMotions.validateRule59Timing_of_isRule59Timely_false` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
+| `ADCProofs.ValidatePostJudgmentMotions.validateRule59Timing_of_isRule59Timely_true` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
+| `ADCProofs.ValidatePostJudgmentMotions.validateRule59Timing_ok_implies_isRule59Timely_true` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
+| `ADCProofs.ValidatePostJudgmentMotions.validateRule60Timing_of_isRule60Timely_error` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
+| `ADCProofs.ValidatePostJudgmentMotions.validateRule60Timing_of_isRule60Timely_false` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
+| `ADCProofs.ValidatePostJudgmentMotions.validateRule60Timing_of_isRule60Timely_true` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
+| `ADCProofs.ValidatePostJudgmentMotions.validateRule60Timing_ok_implies_isRule60Timely_true` | `Proofs/ValidatePostJudgmentMotions.lean` | low |  |
+| `ADCProofs.ValidateRecordJuryVerdict.defendant_verdict_has_zero_damages` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.final_concurring_vote_derives_defendant_verdict` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.final_concurring_vote_derives_plaintiff_verdict` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.incomplete_ballot_does_not_derive_verdict` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.plaintiff_verdict_uses_mean_plaintiff_damages` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.prior_round_vote_does_not_block_current_round_vote` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.submit_juror_vote_appends_current_round_vote` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.submit_juror_vote_increments_state_version` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.submit_juror_vote_rejects_duplicate_in_current_round` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.submit_juror_vote_rejects_invalid_confidence` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.submit_juror_vote_rejects_invalid_side` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.submit_juror_vote_requires_deliberation_phase` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.submit_juror_vote_requires_known_juror` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.submit_juror_vote_requires_sworn_juror` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateRecordJuryVerdict.submit_juror_vote_requires_zero_damages_for_defendant` | `Proofs/ValidateRecordJuryVerdict.lean` |  |  |
+| `ADCProofs.ValidateTrialActionPhase.validateTrialActionPhase_gate_error` | `Proofs/ValidateTrialActionPhase.lean` | low |  |
+| `ADCProofs.ValidateTrialActionPhase.validateTrialActionPhase_invalid_current_phase` | `Proofs/ValidateTrialActionPhase.lean` | low |  |
+| `ADCProofs.ValidateTrialActionPhase.validateTrialActionPhase_ok` | `Proofs/ValidateTrialActionPhase.lean` | low |  |
+| `ADCProofs.ValidateTrialActionPhase.validateTrialActionPhase_ok_implies_gate_true` | `Proofs/ValidateTrialActionPhase.lean` | low |  |
+| `ADCProofs.ValidateTrialActionPhase.validateTrialActionPhase_ok_implies_phase_parse_success` | `Proofs/ValidateTrialActionPhase.lean` | low |  |
+| `ADCProofs.VoirDire.step_answer_voir_dire_question_records_response` | `Proofs/VoirDire.lean` |  |  |
+| `ADCProofs.VoirDire.step_challenge_for_cause_adds_pending_challenge` | `Proofs/VoirDire.lean` |  |  |
+| `ADCProofs.VoirDire.step_decide_challenge_for_cause_granted_marks_excused` | `Proofs/VoirDire.lean` |  |  |
+| `ADCProofs.VoirDire.step_decide_voir_dire_question_records_ruling` | `Proofs/VoirDire.lean` |  |  |
+| `ADCProofs.VoirDire.step_peremptory_strike_marks_struck` | `Proofs/VoirDire.lean` |  |  |
+| `ADCProofs.VoirDire.step_record_voir_dire_adds_pending_exchange` | `Proofs/VoirDire.lean` |  |  |
+| `ADCProofs.VoirDire.step_record_voir_dire_rejects_unknown_juror` | `Proofs/VoirDire.lean` |  |  |
+| `ADCProofs.VoirDire.step_record_voir_dire_requires_trial_status` | `Proofs/VoirDire.lean` |  |  |
+| `ADCProofs.VoirDire.step_record_voir_dire_requires_voir_dire_phase` | `Proofs/VoirDire.lean` |  |  |

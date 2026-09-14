@@ -1,6 +1,10 @@
 import Proofs.Replay
 import Proofs.OrchestrationCore
 
+namespace ADCProofs.CertificateFacts
+
+open ADCProofs.Reachability ADCProofs.Replay ADCProofs.OrchestrationCore
+
 def terminalClosedAccounted (state : CourtState) : Prop :=
   state.case.status = "closed" ∧
     ∀ roles maxSteps,
@@ -82,3 +86,5 @@ theorem acceptedReplayCertificate_terminal_facts
     TerminalCertificateFacts init transitions claimed :=
   acceptedReplayCertificate_status_closed_facts
     init transitions claimed hAccepted hStatus
+
+end ADCProofs.CertificateFacts

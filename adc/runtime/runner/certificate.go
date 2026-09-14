@@ -8,12 +8,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/agentcourt/adj/adc/runtime/lean"
 )
 
 const (
-	ReplayCertificateSchemaVersion = "adc.replay-certificate.v0"
+	ReplayCertificateSchemaVersion = "adc.replay-certificate.v1"
 	ReplayCertificateFileName      = "certificate.json"
 )
 
@@ -55,12 +56,13 @@ type ReplayStepTransition struct {
 }
 
 type ReplayApplyDecisionTransition struct {
-	StateVersion    int              `json:"state_version"`
-	OpportunityID   string           `json:"opportunity_id"`
-	Role            string           `json:"role"`
-	Decision        map[string]any   `json:"decision"`
-	Roles           []map[string]any `json:"roles"`
-	MaxStepsPerTurn int              `json:"max_steps_per_turn"`
+	StateVersion    int                   `json:"state_version"`
+	OpportunityID   string                `json:"opportunity_id"`
+	Role            string                `json:"role"`
+	Decision        map[string]any        `json:"decision"`
+	Roles           []map[string]any      `json:"roles"`
+	MaxStepsPerTurn int                   `json:"max_steps_per_turn"`
+	ExecutedStep    *ReplayStepTransition `json:"executed_step,omitempty"`
 }
 
 type VerifyReplayCertificateOptions struct {
@@ -121,6 +123,7 @@ func (r *Runner) recordApplyDecisionForCertificate(
 	decision map[string]any,
 	roles []map[string]any,
 	maxStepsPerTurn int,
+	executedStep *ReplayStepTransition,
 ) error {
 	decisionCopy, err := cloneMapJSON(decision)
 	if err != nil {
@@ -129,6 +132,18 @@ func (r *Runner) recordApplyDecisionForCertificate(
 	rolesCopy, err := cloneMapListJSON(roles)
 	if err != nil {
 		return fmt.Errorf("clone certificate roles: %w", err)
+	}
+	var executedStepCopy *ReplayStepTransition
+	if executedStep != nil {
+		payloadCopy, err := cloneMapJSON(executedStep.Payload)
+		if err != nil {
+			return fmt.Errorf("clone certificate executed step payload: %w", err)
+		}
+		executedStepCopy = &ReplayStepTransition{
+			ActionType: executedStep.ActionType,
+			ActorRole:  executedStep.ActorRole,
+			Payload:    payloadCopy,
+		}
 	}
 	r.certificateTransitions = append(r.certificateTransitions, ReplayTransition{
 		Kind: "apply_decision",
@@ -139,8 +154,41 @@ func (r *Runner) recordApplyDecisionForCertificate(
 			Decision:        decisionCopy,
 			Roles:           rolesCopy,
 			MaxStepsPerTurn: maxStepsPerTurn,
+			ExecutedStep:    executedStepCopy,
 		},
 	})
+	return nil
+}
+
+func (r *Runner) replaceLastStepWithApplyDecisionForCertificate(
+	stateVersion int,
+	opportunityID string,
+	role string,
+	decision map[string]any,
+	roles []map[string]any,
+	maxStepsPerTurn int,
+) error {
+	if len(r.certificateTransitions) == 0 {
+		return fmt.Errorf("accepted opportunity action has no recorded Lean step")
+	}
+	lastIndex := len(r.certificateTransitions) - 1
+	last := r.certificateTransitions[lastIndex]
+	if last.Kind != "step" || last.Step == nil {
+		return fmt.Errorf("accepted opportunity action did not end with one recorded Lean step")
+	}
+	r.certificateTransitions = r.certificateTransitions[:lastIndex]
+	if err := r.recordApplyDecisionForCertificate(
+		stateVersion,
+		opportunityID,
+		role,
+		decision,
+		roles,
+		maxStepsPerTurn,
+		last.Step,
+	); err != nil {
+		r.certificateTransitions = append(r.certificateTransitions, last)
+		return err
+	}
 	return nil
 }
 
@@ -338,14 +386,36 @@ func replayApplyDecisionTransition(engine lean.Engine, state map[string]any, ind
 		return nil, fmt.Errorf("certificate transition %d apply_decision rejected: %s", index, stringFromAny(resp["error"]))
 	}
 	resultKind := stringFromAny(resp["result_kind"])
-	if resultKind != "pass_recorded" {
+	switch resultKind {
+	case "pass_recorded":
+		if transition.ExecutedStep != nil {
+			return nil, fmt.Errorf("certificate transition %d pass includes an executed step", index)
+		}
+		next := mapFromAny(resp["state"])
+		if len(next) == 0 {
+			return nil, fmt.Errorf("certificate transition %d apply_decision returned empty state", index)
+		}
+		return next, nil
+	case "execute_tool":
+		if transition.ExecutedStep == nil {
+			return nil, fmt.Errorf("certificate transition %d tool decision has no executed step", index)
+		}
+		action := mapFromAny(resp["action"])
+		if len(action) == 0 {
+			return nil, fmt.Errorf("certificate transition %d apply_decision returned empty action", index)
+		}
+		recordedAction := map[string]any{
+			"action_type": transition.ExecutedStep.ActionType,
+			"actor_role":  transition.ExecutedStep.ActorRole,
+			"payload":     transition.ExecutedStep.Payload,
+		}
+		if !reflect.DeepEqual(action, recordedAction) {
+			return nil, fmt.Errorf("certificate transition %d executed step differs from the authorized action", index)
+		}
+		return replayStepTransition(engine, state, index, *transition.ExecutedStep)
+	default:
 		return nil, fmt.Errorf("certificate transition %d apply_decision returned unsupported result_kind: %s", index, resultKind)
 	}
-	next := mapFromAny(resp["state"])
-	if len(next) == 0 {
-		return nil, fmt.Errorf("certificate transition %d apply_decision returned empty state", index)
-	}
-	return next, nil
 }
 
 func canonicalJSONSHA256(value any) (string, error) {

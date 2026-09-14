@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.InitializeCase
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -115,3 +117,5 @@ theorem initializeCase_success_seeds_attachment_record :
     initHasAttachmentFile (initializeCase attachmentInitReq) "file-1" = true ∧
       initHasAttachmentDocket (initializeCase attachmentInitReq) = true := by
   native_decide
+
+end ADCProofs.InitializeCase

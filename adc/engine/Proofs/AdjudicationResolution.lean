@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.AdjudicationResolution
 
 def adjudicationResolutionClaim (declaratoryOnly : Bool := true) : Lean.Json :=
   Lean.Json.mkObj
@@ -158,3 +160,5 @@ theorem step_hung_jury_close_records_no_decision :
             hung_jury := some { claim_id := "claim-1", note := "No verdict." } })
         adjudicationHungCloseAction) = "no_decision" := by
   native_decide
+
+end ADCProofs.AdjudicationResolution

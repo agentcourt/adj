@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.PhaseTransitionPlan
 
 theorem canAdvance_none_to_openings :
     canAdvancePhaseV1 .none .openings = true := by
@@ -55,3 +57,5 @@ theorem cannot_advance_defenseCase_to_openings :
 theorem cannot_advance_trial_to_voirDire :
     canAdvancePhaseV1 .openings .voirDire = false := by
   simp [canAdvancePhaseV1, trialPhaseRankV1]
+
+end ADCProofs.PhaseTransitionPlan

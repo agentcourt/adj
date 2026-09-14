@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.StepInvariants
 
 def statusRank : String → Nat
   | "filed" => 0
@@ -135,17 +137,21 @@ theorem checkTransition_true_implies_statusRank_lt (current next : String) :
           rw [hfalse] at h
           cases h
 
-theorem allowedPhases_contains_implies_phaseOrder_le_twelve (phase : String) :
-    allowedPhases.contains phase = true -> phaseOrder phase ≤ 12 := by
+theorem allowedPhases_contains_implies_phaseOrder_le_sixteen (phase : String) :
+    allowedPhases.contains phase = true -> phaseOrder phase ≤ 16 := by
   intro h
   have hphase :
       phase = "none" ∨
       phase = "voir_dire" ∨
       phase = "openings" ∨
       phase = "plaintiff_case" ∨
+      phase = "plaintiff_evidence" ∨
       phase = "defense_case" ∨
+      phase = "defense_evidence" ∨
       phase = "plaintiff_rebuttal" ∨
+      phase = "plaintiff_rebuttal_evidence" ∨
       phase = "defense_surrebuttal" ∨
+      phase = "defense_surrebuttal_evidence" ∨
       phase = "charge_conference" ∨
       phase = "closings" ∨
       phase = "jury_charge" ∨
@@ -153,14 +159,18 @@ theorem allowedPhases_contains_implies_phaseOrder_le_twelve (phase : String) :
       phase = "verdict_return" ∨
       phase = "post_verdict" := by
     simpa [allowedPhases] using h
-  rcases hphase with hnone | hvd | hopen | hpl | hdef | hpr | hds | hcc | hcl | hjc | hdel | hvret | hpost
+  rcases hphase with hnone | hvd | hopen | hpl | hple | hdef | hdefe | hpr | hpre | hds | hdse | hcc | hcl | hjc | hdel | hvret | hpost
   · simp [phaseOrder, hnone]
   · simp [phaseOrder, hvd]
   · simp [phaseOrder, hopen]
   · simp [phaseOrder, hpl]
+  · simp [phaseOrder, hple]
   · simp [phaseOrder, hdef]
+  · simp [phaseOrder, hdefe]
   · simp [phaseOrder, hpr]
+  · simp [phaseOrder, hpre]
   · simp [phaseOrder, hds]
+  · simp [phaseOrder, hdse]
   · simp [phaseOrder, hcc]
   · simp [phaseOrder, hcl]
   · simp [phaseOrder, hjc]
@@ -171,7 +181,7 @@ theorem allowedPhases_contains_implies_phaseOrder_le_twelve (phase : String) :
 theorem allowedPhases_contains_implies_phaseOrder_ne_fallback (phase : String) :
     allowedPhases.contains phase = true -> phaseOrder phase ≠ 999 := by
   intro h
-  have hle : phaseOrder phase ≤ 12 := allowedPhases_contains_implies_phaseOrder_le_twelve phase h
+  have hle : phaseOrder phase ≤ 16 := allowedPhases_contains_implies_phaseOrder_le_sixteen phase h
   intro h999
   rw [h999] at hle
   omega
@@ -263,3 +273,5 @@ theorem checkTransition_true_implies_reverse_false (current next : String) :
     | true =>
         exfalso
         exact hrev hval
+
+end ADCProofs.StepInvariants

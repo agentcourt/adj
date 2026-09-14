@@ -26,14 +26,14 @@ graph TD
   Pretrial --> Juris
   Trial --> Juris
   Post --> Juris
-  Juris --> Finalize["assign ids and filter passed opportunities"]
+  Juris --> Finalize["finalize complete agenda and assign positional ids\nthen filter passed opportunities"]
   Finalize --> NextOut["lowest-priority open opportunity\nor terminal"]
   Agenda --> Finalize
 
   Apply --> ApplyCheck{"state_version\nopportunity_id\nrole\nallowed tool\npayload constraints"}
   ApplyCheck -->|no| ApplyErr["retryable StepErr\nwith actor_message"]
   ApplyCheck -->|yes| ApplyKind{"pass or tool"}
-  ApplyKind -->|pass| Pass["record pass\nclose Rule 56 window when applicable"]
+  ApplyKind -->|pass| Pass["apply declared pass effect\nincluding Rule 37 and Rule 56 closure"]
   ApplyKind -->|tool| Exec["emit accepted action\nfor runner execution"]
 
   StepIn --> SchemaCheck{"schema_version == v1"}
@@ -96,6 +96,7 @@ graph TD
   end
 
   P56 --> W56["Rule 56 window note:\none opportunity per party\npass closes window\namended complaint reopens"]
+  P37 --> W37["Rule 37 generation note:\none pass per party and discovery generation\nrelevant later discovery reopens"]
   P12b --> JNote["Jurisdiction note:\nSMJ dismissal only appears when\nthe court profile enables screening"]
   T18 --> GNote["Trial note:\nfor jury trials the result comes from\nindividual sworn-juror votes,\nnot a separate foreperson actor"]
 

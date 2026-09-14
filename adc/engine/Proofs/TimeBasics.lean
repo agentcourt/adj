@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.TimeBasics
 
 theorem elapsedDaysBetween_of_ordinalDay_ok
     (servedIso respondedIso : String)
@@ -59,3 +61,5 @@ theorem elapsedDaysBetween_self_of_ordinalDay_exists
     elapsedDaysBetween isoDate isoDate = .ok 0 := by
   rcases hexists with ⟨ord, hord⟩
   exact elapsedDaysBetween_self_of_ordinalDay_ok isoDate ord hord
+
+end ADCProofs.TimeBasics

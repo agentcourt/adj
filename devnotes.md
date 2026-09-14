@@ -71,7 +71,7 @@ run exercised that listener and the changed cleanup path.
 
 ## AAR Proof Strengthening
 
-The `aar-proof-strengthening` branch established the AAR authority, custody, replay, and record-integrity model and then applied it to AARD.  AAR binds every state-changing action to the exact current opportunity and proves record integrity, evidence-catalog preservation, and filing-time offer chronology as implications of the Lean certificate checker.  AARD now carries the corresponding authority, catalog, lineage, chronology, runtime transaction, and certificate facts while retaining its numeric answer model.  The remaining formal agenda includes ADC adaptation, constructive terminal-run existence, outcome stability, council symmetry, broader certificate consequences, and independent count-rule properties.  The [AAR record-integrity and runtime update](arb/docs/update.md) records the completed AAR and AARD designs and the pending ADC decisions.
+The `aar-proof-strengthening` branch established the AAR authority, custody, replay, and record-integrity model and then applied it to AARD.  AAR binds every state-changing action to the exact current opportunity and proves record integrity, evidence-catalog preservation, and filing-time offer chronology as implications of the Lean certificate checker.  AARD carries the corresponding authority, catalog, lineage, chronology, runtime transaction, and certificate facts while retaining its numeric answer model.  ADC now binds opportunity decisions to their executed actions through certificate replay, while its file and record-integrity adaptation remains open.  The remaining formal agenda includes that ADC record work, constructive terminal-run existence, outcome stability, council symmetry, broader certificate consequences, and independent count-rule properties.  The [AAR record-integrity and runtime update](arb/docs/update.md) records the completed AAR and AARD designs and the remaining ADC decisions.
 
 - [x] Bind actions to the current opportunity id, state version, role, phase, and council member.
 - [x] Make closed and failed states reject state-changing actions.
@@ -609,7 +609,7 @@ A complete ARB case used the real Lean engine, eight external Lawyer API filings
 
 A complete AARD case used the real Lean engine, eight external Lawyer API filings, and a five-member direct council containing all three endpoints.  The council returned 0, 30, 45, 0, and 10.  The new provider field recorded eight requests, 4,515 input, 631 output, 986 reasoning, and 6,037 total tokens.  Certificate replay passed with thirteen actions.
 
-The ADC proposition test stopped during pretrial before candidate-juror assignment.  `pretrialCandidates` in `adc/engine/Main.lean` emitted a required deterministic `import_case_file` action with `source_filename` set to `scenarios/assets/supply_chain_delay_notice.txt`.  That file does not exist in the repository.  The same engine function contains case-specific deterministic discovery about a disputed document, confidential package, transmission logs, written authorization, third-party disclosure, and damages, plus fixed monetary values.  Proposition-case generation added the generic Proposition Tribunal after this autopilot code and uses the same `autopilot_trial` loop.  The resulting generic case therefore received facts and actions from an unrelated example.
+The ADC proposition test stopped during pretrial before candidate-juror assignment.  `pretrialCandidates`, now in `adc/engine/ADC/Core.lean`, emitted a required deterministic `import_case_file` action with `source_filename` set to `scenarios/assets/supply_chain_delay_notice.txt`.  That file does not exist in the repository.  The same engine function contained case-specific deterministic discovery about a disputed document, confidential package, transmission logs, written authorization, third-party disclosure, and damages, plus fixed monetary values.  Proposition-case generation added the generic Proposition Tribunal after this autopilot code and used the same `autopilot_trial` loop.  The resulting generic case therefore received facts and actions from an unrelated example.
 
 The failed ADC run retained five completed non-juror model-response events but no terminal result or provider accounting.  The completed Quick, ARB, and AARD runs reported 24 requests and 16,765 tokens.  An earlier restricted-network ARB attempt recorded one failed request with no usage.
 
@@ -617,7 +617,7 @@ The failed ADC run retained five completed non-juror model-response events but n
 
 The generic `autopilot_trial` loop now reserves deterministic actions for values derived from case state or court policy.  Plaintiff, defendant, and judge models supply Rule 11 filings and rulings, discovery content and responses, Rule 37 motions and rulings, Rule 68 offers and acceptances, pretrial orders, settlements, partial judgments, and post-judgment filings and rulings.  Rule 68 cost-shift evaluation runs after judgment and compares the expired offer with the entered judgment amount.  Phase transitions, jury setup, skipped-voir-dire empanelment, and judgment entry remain deterministic.
 
-The docket now retains the substantive payloads for Rule 11 notices, corrections, and motions; Rule 37 motions; interrogatories and responses; production requests and responses; admission requests and responses; and Rules 59 and 60 motions.  The model tool schemas require those payloads.  Separate docket entries track each party's initial disclosures.
+The docket now retains the substantive payloads for Rule 11 notices, corrections, and motions; Rule 37 motions; interrogatories and responses; production requests and responses; admission requests and responses; and Rules 59 and 60 motions.  The participant tool schemas require those payloads.  Separate docket entries track each party's initial disclosures.
 
 The generic file-import opportunity was removed.  Proposition documents enter as complaint attachments before adjudication, and the internal actor had no source file from which to perform a later import.  A passed import opportunity otherwise returned after each state change because ordinary pass identifiers are transient.  Rule 37 passes now write a decision trace after discovery responses are complete, preventing repeated model calls on an unchanged discovery record.
 
@@ -629,7 +629,7 @@ One-fixture Rule 11 and Rule 37 production evals completed through `gpt-5.6-luna
 
 A complete proposition case at `/tmp/adj-direct-lab-e2e-20260912/adc-9` used the real Lean engine, web-enabled OpenAI litigation actors, six jurors selected from the direct OpenAI, Anthropic, and Google pool, and all three required candidate endpoints.  It reached `judgment_entered` after 65 turns and resolved the proposition as `not_demonstrated`.  The run recorded one Rule 37 opportunity, both initial disclosures, and the complete discovery payloads.  Certificate replay passed all 74 transitions.  The run reported 48 requests, 520,413 input tokens, 12,857 output tokens, 2,676 reasoning tokens, and 533,752 total tokens.  Completed procedure and eval records together report 74 requests and 565,320 tokens.  Several stopped ADC attempts contain successful requests that did not reach terminal provider accounting, so the experiment total exceeds the recorded total.  No completed record contains provider cost data.
 
-The complete Go test suite, `go vet -p=1 ./...`, `go build -p=1 ./...`, `gofmt`, and `git diff --check` passed.  `lake build Proofs adcengine` and the changed pretrial and post-judgment proof modules passed through `leanrunner`.  An exploratory build of every standalone file under `adc/engine/Proofs/` found older files outside the maintained `Proofs` target that refer to removed definitions.  Those files were not changed as part of the ADC autopilot work.
+The complete Go test suite, `go vet -p=1 ./...`, `go build -p=1 ./...`, `gofmt`, and `git diff --check` passed.  `lake build Proofs adcengine` and the changed pretrial and post-judgment proof modules passed through `leanrunner`.  A later proof audit found that eleven files excluded from the cleanup root contained useful coverage; the ADC Lean cleanup section records their restoration and repair.
 
 - [x] Replace case-specific deterministic ADC actions with state-derived or model-backed opportunities.
 - [x] Preserve substantive filing and discovery payloads in the docket.
@@ -637,3 +637,32 @@ The complete Go test suite, `go vet -p=1 ./...`, `go build -p=1 ./...`, `gofmt`,
 - [x] Complete a six-juror, three-endpoint ADC proposition case.
 - [x] Verify the live certificate and inspect the resulting record.
 - [x] Complete repository-wide tests, vet, build, documentation checks, and final review.
+
+## ADC Lean cleanup
+
+The formal state machine and procedure API now reside in `ADC/Core.lean`; `Main.lean` contains the JSON protocol and executable entry point.  Every proof module imports the reusable core through its dependency graph and uses a namespace below `ADCProofs`.  The maintained `Proofs.lean` root imports all 71 proof files.
+
+The cleanup originally removed eleven proof modules after treating their subjects as obsolete.  Review showed that those modules contained current coverage or coverage that needed adaptation to the current procedure.  The modules were restored.  Jury status and setup proofs now use candidate jurors, phase-completeness proofs cover the current action family, and role-guard proofs cover current juror-vote and empanelment actions.  The retired manual jury-verdict and hung-jury validators were replaced with proofs of `submit_juror_vote`, verdict derivation, split-jury continuation, final-round hung-jury derivation, and stored outcomes.  Voir dire now covers the staged question, ruling, answer, challenge, challenge decision, and peremptory-strike transitions.
+
+Opportunity identifiers use positions in the complete state agenda.  Fixed juror questionnaire items remain general qualification questions, while counsel supplies case-specific questions through the voir dire procedure.  A replay transition for an opportunity decision validates its state version, opportunity identifier, role, decision, allowed tool, and exact executed action.  Deterministic runtime actions remain direct replay transitions.
+
+Procedural docket entries now separate display descriptions from typed fields.  Discovery matching, Rule 37 generation tracking, Rule 56 motion-party and response matching, exhibit counts, and dispositive-motion counts use exact fields.  A decided Rule 37 motion blocks another motion for the same party and discovery generation.  Later discovery from that party creates a new generation.  Rule 56 opposition and reply checks use the pending motion index.  Focused computed proofs cover these cases and show that misleading description text does not affect the typed exhibit or motion counters.
+
+The runtime supplies RFC 3339 event times for `produce_case_file` and `offer_exhibit`.  Opportunity execution replaces participant-supplied event times; direct scenario actions retain an explicit time and receive the runtime time when the field is absent.
+
+The generated ADC inventory contains 71 proof files, 611 public theorem or lemma declarations, and 10,830 lines.  Every ADC proof target and every ARB proof target passed in a separate `leanrunner` invocation with one Lean job.  The ADC and ARB executables also passed separate builds.  The ARB audit found no deleted proof file or unimported proof source: `Reachability.lean` and `Samples.lean` enter the root through dependent modules.  Its Lean `step` validates exact current-opportunity authority before every accepted action, and Go certificate replay submits each recorded authority to that same transition function.  No ARB engine or runtime repair was required.
+
+The complete Go test suite, `go vet -p=1 ./...`, `go build -p=1 ./...`, focused race tests for the ADC runner and ARB proceeding, and `git diff --check` passed after the runtime, proof, and documentation repairs.  A source scan found no `sorry`, `axiom`, or `unsafe` declaration in the ADC, ARB, or AARD Lean proof trees.
+
+- [x] Replace hashed opportunity identifiers with state-agenda indices.
+- [x] Replace case-specific fixed juror questions with general qualification questions.
+- [x] Make Rule 37 pass closure depend on the party and discovery generation.
+- [x] Generate party-specific discovery, Rule 37, and Rule 56 opportunities for both parties.
+- [x] Bind accepted opportunity actions to their opportunity in replay certificates.
+- [x] Put every maintained proof in one namespace and one build target.
+- [x] Restore and update every proof module removed during cleanup.
+- [x] Update and regenerate the ADC proof documents.
+- [x] Split `Main.lean` at the core and executable boundary.
+- [x] Run focused Lean and Go tests, the complete test suites, and live ADC cases.
+
+The documentation describes opportunity decisions for both direct-model and external Role API execution.  The theorem catalog and proof statistics derive from the current proof files.

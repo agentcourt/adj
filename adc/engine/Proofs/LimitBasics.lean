@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.LimitBasics
 
 theorem enforceMeasuredLimit_ok_implies_attempted_le
     (s : CourtState) (actor phase nowIso limitKey detail : String)
@@ -34,3 +36,5 @@ theorem enforceMeasuredLimit_error_of_effectiveLimitValue_ok_gt
   refine ⟨limitViolationMessage limitKey actor phase attempted allowed detail, ?_⟩
   have hnotle : ¬ attempted ≤ allowed := Nat.not_le.mpr hgt
   simp [enforceMeasuredLimit, heff, hnotle]
+
+end ADCProofs.LimitBasics

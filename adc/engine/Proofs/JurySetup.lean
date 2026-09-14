@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.JurySetup
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -52,7 +54,7 @@ theorem step_set_jury_configuration_rejects_invalid_minimum :
   native_decide
 
 theorem step_add_juror_rejects_duplicate_id :
-    let c := { baseCase with jurors := [{ juror_id := "J1", name := "Juror One", status := "available", note := "" }] }
+    let c := { baseCase with jurors := [{ juror_id := "J1", name := "Juror One", status := "candidate", note := "" }] }
     stepErrorMessage (step (stateOf c) (addJurorAction "J1" "Duplicate")) =
       "duplicate juror id: J1" := by
   native_decide
@@ -62,23 +64,25 @@ theorem step_swear_jury_requires_configuration :
       "jury configuration required before swearing jury" := by
   native_decide
 
-theorem step_swear_jury_requires_enough_available_jurors :
+theorem step_swear_jury_requires_enough_candidate_jurors :
     let c := { baseCase with
       jury_configuration := some { juror_count := 6, unanimous_required := true, minimum_concurring := 6 },
-      jurors := [{ juror_id := "J1", name := "Juror One", status := "available", note := "" }] }
+      jurors := [{ juror_id := "J1", name := "Juror One", status := "candidate", note := "" }] }
     stepErrorMessage (step (stateOf c) swearJuryAction) =
-      "insufficient available jurors to swear jury" := by
+      "insufficient candidate jurors to swear jury" := by
   native_decide
 
 theorem step_swear_jury_marks_required_count_sworn :
     let c := { baseCase with
       jury_configuration := some { juror_count := 2, unanimous_required := true, minimum_concurring := 2 },
       jurors := [
-        { juror_id := "J1", name := "Juror One", status := "available", note := "" },
-        { juror_id := "J2", name := "Juror Two", status := "available", note := "" },
-        { juror_id := "J3", name := "Juror Three", status := "available", note := "" }
+        { juror_id := "J1", name := "Juror One", status := "candidate", note := "" },
+        { juror_id := "J2", name := "Juror Two", status := "candidate", note := "" },
+        { juror_id := "J3", name := "Juror Three", status := "candidate", note := "" }
       ] }
     (match step (stateOf c) swearJuryAction with
       | .ok s' => (s'.case.jurors.filter (fun j => j.status = "sworn")).length
       | .error _ => 0) = 2 := by
   native_decide
+
+end ADCProofs.JurySetup

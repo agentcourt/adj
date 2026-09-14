@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.LocalRuleOverrideStep
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -53,3 +55,5 @@ theorem step_enter_local_rule_override_respects_explicit_id :
       | .ok s' => (s'.case.local_rule_overrides.head?.map (fun o => o.override_id))
       | .error _ => none) = some "override-xyz" := by
   native_decide
+
+end ADCProofs.LocalRuleOverrideStep

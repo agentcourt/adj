@@ -1,5 +1,10 @@
 import Proofs.CertificateOutcomeFacts
 
+namespace ADCProofs.CertificateOutcomeExamples
+
+open ADCProofs.Reachability ADCProofs.Replay ADCProofs.CertificateFacts
+  ADCProofs.CertificateOutcomeFacts
+
 def certificateOutcomeSwornJuror (jurorId : String) : JurorRecord :=
   { juror_id := jurorId
   , name := jurorId
@@ -414,3 +419,5 @@ theorem sample_juror_timeout_hung_jury_certificate_outcome_facts :
       sampleJurorTimeoutHungJuryCertificateState := by
   exact OutcomeCertificateFacts.jurorFailureHungJury "J1"
     sample_juror_timeout_hung_jury_certificate_facts
+
+end ADCProofs.CertificateOutcomeExamples

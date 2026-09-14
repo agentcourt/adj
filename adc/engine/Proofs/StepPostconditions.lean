@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.StepPostconditions
 
 def mkAdvanceTrialPhaseJudgeAction (phase : String) : CourtAction :=
   { action_type := "advance_trial_phase"
@@ -51,7 +53,7 @@ theorem step_advance_trial_phase_propagates_validator_error
     (hSchema : s.schema_version = "v1")
     (msg : String)
     (hGet : getString payload "phase" = .ok decodedPhase)
-    (hValidate : validateAdvanceTrialPhase s.case decodedPhase = .error msg) :
+    (hValidate : validateAdvanceTrialPhase s.policy s.case decodedPhase = .error msg) :
     step s { action_type := "advance_trial_phase", actor_role := "judge", payload := payload } = .error msg := by
   unfold step
   simp [hSchema, requireRole]
@@ -61,3 +63,5 @@ theorem step_advance_trial_phase_propagates_validator_error
   unfold applyAdvanceTrialPhase
   rw [hValidate]
   rfl
+
+end ADCProofs.StepPostconditions

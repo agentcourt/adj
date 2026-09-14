@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.Rule11
 
 def baseRule11Case : CaseState :=
   { (default : CaseState) with
@@ -66,3 +68,5 @@ theorem step_decide_rule11_denied_without_sanction_records_order :
       | .ok s' => hasDocketTitle s'.case "Rule 11 Order"
       | .error _ => false) = true := by
   native_decide
+
+end ADCProofs.Rule11

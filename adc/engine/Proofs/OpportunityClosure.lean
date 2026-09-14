@@ -1,12 +1,17 @@
 import Proofs.ExecutionConfinement
 import Proofs.OpportunityConfinement
 
+namespace ADCProofs.OpportunityClosure
+
+open ADCProofs.DecisionConfinement ADCProofs.ExecutionConfinement
+  ADCProofs.OpportunityConfinement ADCProofs.OpportunitySelection
+
 /--
 If formal priority selects a current opportunity, then the engine partitions the
 roles at that boundary and, when the emitted action closes the case, seals the
 successor state against later decisions.
 
-The proof plan composes three existing generic theorems.  First,
+The proof composes three generic theorems.  First,
 `applyDecision_current_role_partition_when_append_last_target_is_current`
 states the present-tense partition: the owning role gets the exact executable
 action, and any different role gets `WRONG_ROLE`.  Second,
@@ -126,17 +131,4 @@ theorem append_last_current_opportunity_partitions_roles_and_seals_after_closure
         hstep
         hclosed).2
 
-/-
-This theorem is the best generic statement in the current proof suite of the
-overall architecture.  It keeps three distinct layers in one result:
-
-1. formal priority chooses the current opportunity;
-2. the public decision boundary partitions roles into one authorized actor and
-   everyone else;
-3. if the authorized action closes the case, the successor state is sealed
-   against later decisions.
-
-The theorem is still objective.  It says nothing about legal correctness.  It
-says that, once the engine's own objective preconditions are met, the resulting
-state machine behaves exactly as the architecture claims.
--/
+end ADCProofs.OpportunityClosure

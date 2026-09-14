@@ -6,6 +6,9 @@ defaultTargets = ["Main", "Proofs", "adcengine"]
 name = "Main"
 
 [[lean_lib]]
+name = "ADC"
+
+[[lean_lib]]
 name = "Proofs"
 
 [[lean_exe]]

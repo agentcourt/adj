@@ -1,4 +1,8 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.Reachability
+
+open Lean
 
 structure ReplayInitializeCaseRequest where
   complaint_summary : String
@@ -20,6 +24,7 @@ structure ReplayApplyDecisionTransition where
   decision : DecisionSpec
   roles : List RolePolicy
   max_steps_per_turn : Nat := 3
+  executed_step : Option CourtAction := none
   deriving Inhabited
 
 inductive ReplayTransition where
@@ -64,9 +69,19 @@ def replayApplyDecisionTransition
   | .error err => .error err.error
   | .ok resp =>
       if resp.result_kind = "pass_recorded" then
-        match resp.state with
-        | some next => .ok next
-        | none => .error "apply_decision returned empty state"
+        match resp.state, transition.executed_step with
+        | some next, none => .ok next
+        | none, _ => .error "apply_decision returned empty state"
+        | _, some _ => .error "pass transition includes an executed action"
+      else if resp.result_kind = "execute_tool" then
+        match resp.action, transition.executed_step with
+        | some authorized, some executed =>
+            if toJson authorized == toJson executed then
+              step state executed
+            else
+              .error "executed action differs from the authorized action"
+        | none, _ => .error "apply_decision returned empty action"
+        | _, none => .error "tool transition has no executed action"
       else
         .error "apply_decision returned unsupported result_kind"
 
@@ -84,3 +99,5 @@ inductive ReplayReachableFrom (start : CourtState) : CourtState → Prop where
       (hcurrent : ReplayReachableFrom start current)
       (htransition : replayTransition current transition = .ok next) :
       ReplayReachableFrom start next
+
+end ADCProofs.Reachability

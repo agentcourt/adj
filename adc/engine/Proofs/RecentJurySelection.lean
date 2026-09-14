@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.RecentJurySelection
 
 def jurorIdentityProjection (juror : JurorRecord) : String × String × String × String × String :=
   (juror.juror_id, juror.name, juror.note, juror.model, juror.persona_filename)
@@ -236,14 +238,6 @@ theorem empanelSelectedJurors_preserves_identity_projection_on_sample :
       sampleVoirDirePanel.map jurorIdentityProjection := by
   native_decide
 
-/-
-This sample theorem checks the exact list transformation the engine performs.
-
-It does not reason abstractly about all panels.  It proves the identity
-continuity claim on a panel that exercises the three status paths the current
-empanelment code can take.
--/
-
 /--
 Selected jurors become sworn on the sample panel.
 
@@ -271,8 +265,8 @@ theorem empanelSelectedJurors_marks_J4_sworn_on_sample :
 /--
 An unselected candidate becomes `excused_after_voir_dire` on the sample panel.
 
-This is the negative half of selection.  Empanelment records that a remaining
-candidate was left off the jury instead of dropping the juror from state.
+Empanelment records that a remaining candidate was left off the jury instead of
+dropping the juror from state.
 -/
 theorem empanelSelectedJurors_marks_J1_excused_on_sample :
     (jurorById? (empanelSelectedJurors sampleVoirDirePanel sampleSelectedJurors) "J1").map
@@ -284,11 +278,9 @@ theorem empanelSelectedJurors_marks_J1_excused_on_sample :
 Once every remaining candidate has a questionnaire response and one answered
 oral question from each side, the selection record is ready for empanelment.
 
-The theorem does not claim that empanelment is the only open action.  Counsel
-may still choose challenges or peremptories.  It proves the narrower boundary
-that matters for the current design: no candidate still needs questionnaire
-work or party questioning, and the judge's empanelment opportunity is now
-available.
+Counsel may still choose challenges or peremptories.  The theorem establishes
+that every candidate has completed questionnaire work and party questioning,
+and that the judge's empanelment opportunity is available.
 -/
 theorem ready_voir_dire_panel_exposes_empanelment_boundary :
     readyVoirDireBoundarySummary = true := by
@@ -297,14 +289,6 @@ theorem ready_voir_dire_panel_exposes_empanelment_boundary :
 theorem passing_last_voir_dire_question_still_leaves_next_opportunity :
     voirDireQuestionPassLeavesFurtherOpportunity = true := by
   native_decide
-
-/-
-This theorem captures the point at which the jury record is complete enough to
-seat the jury.
-
-It checks both halves of the claim: candidate-specific questioning is done,
-and the judge can now empanel the jury from the remaining candidate panel.
--/
 
 /--
 Granting a pending for-cause challenge removes exactly one candidate from the
@@ -316,14 +300,6 @@ and the targeted juror's status becomes `excused_for_cause`.
 theorem decide_juror_for_cause_challenge_granted_reduces_candidate_count_on_sample :
     grantedForCauseSummary = true := by
   native_decide
-
-/-
-This theorem makes the selection arithmetic explicit for for-cause rulings.
-
-The engine does not silently drop the juror or change unrelated jurors.  It
-records one specific status change, and that change reduces the candidate
-panel by one.
--/
 
 /--
 A peremptory strike removes exactly one candidate from the available panel on
@@ -337,17 +313,4 @@ theorem strike_juror_peremptorily_reduces_candidate_count_on_sample :
     peremptoryStrikeSummary = true := by
   native_decide
 
-/-
-This theorem states the peremptory effect in the same operational terms as the
-for-cause theorem.
-
-That parallel matters.  The two selection devices differ in legal basis, but
-both should change the remaining candidate panel in one clear, countable way.
--/
-
-/-
-Together, the sample theorems cover the core empanelment effects.
-
-They show that empanelment preserves identity, promotes selected candidates to
-sworn jurors, and records non-selection explicitly for remaining candidates.
--/
+end ADCProofs.RecentJurySelection

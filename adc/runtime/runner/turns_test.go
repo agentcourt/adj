@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	openaiapi "github.com/agentcourt/adj/common/openai"
 )
@@ -194,6 +195,45 @@ func TestApplyOpportunityPayloadDefaultsRequiresRule60Granted(t *testing.T) {
 				t.Fatalf("payload = %#v", payload)
 			}
 		})
+	}
+}
+
+func TestApplyOpportunityPayloadDefaultsUsesRuntimeEventTime(t *testing.T) {
+	r := &Runner{}
+	tests := []struct {
+		action string
+		field  string
+	}{
+		{action: "produce_case_file", field: "produced_at"},
+		{action: "offer_exhibit", field: "offered_at"},
+	}
+	for _, test := range tests {
+		t.Run(test.action, func(t *testing.T) {
+			payload, issue, err := r.applyOpportunityPayloadDefaults(test.action, map[string]any{
+				test.field: "1900-01-01T00:00:00Z",
+			}, leanOpportunity{})
+			if err != nil {
+				t.Fatalf("applyOpportunityPayloadDefaults error = %v", err)
+			}
+			if issue != nil {
+				t.Fatalf("issue = %#v", issue)
+			}
+			got, _ := payload[test.field].(string)
+			if got == "1900-01-01T00:00:00Z" {
+				t.Fatalf("%s retained participant value", test.field)
+			}
+			if _, err := time.Parse(time.RFC3339, got); err != nil {
+				t.Fatalf("%s = %q: %v", test.field, got, err)
+			}
+		})
+	}
+}
+
+func TestApplyActionEventTimePreservesDirectActionTime(t *testing.T) {
+	payload := map[string]any{"produced_at": "2026-09-13T12:00:00Z"}
+	got := applyActionEventTime("produce_case_file", payload, "2026-09-13T13:00:00Z", false)
+	if got["produced_at"] != payload["produced_at"] {
+		t.Fatalf("produced_at = %#v, want %#v", got["produced_at"], payload["produced_at"])
 	}
 }
 

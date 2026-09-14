@@ -6,4 +6,6 @@ The case policy defines jury size, unanimity, and minimum concurrence.  The comm
 
 Attorneys question candidates, raise challenges for cause, and exercise available peremptory strikes under [Rule 47](ARCP.md#rule-47-selecting-jurors).  The judge rules on cause challenges, and the engine enforces candidate and strike limits.  A case policy can skip voir dire and empanel candidates randomly after setup.
 
+The court's standard questionnaire contains eight general qualification questions covering attention, impartiality, service constraints, ability to apply instructions and the burden of proof, prior knowledge or relationships, evidence assessment, remedies, and other sources of bias.  Counsel supplies case-specific questions during voir dire, subject to judicial screening and the configured question limits.
+
 Jurors answer selection questions and vote from the trial record during deliberation.  Failure before deliberation can permit candidate replacement, while failure during deliberation removes the juror from the eligible body.  Verdict derivation applies the recorded jury policy to the sworn jurors who remain eligible.

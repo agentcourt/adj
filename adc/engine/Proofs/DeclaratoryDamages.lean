@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.DeclaratoryDamages
 
 def declaratoryDamagesClaim (declaratoryOnly : Bool) : Lean.Json :=
   Lean.Json.mkObj
@@ -264,3 +266,5 @@ theorem step_declaratory_status_transition_rejects_positive_jury_damages :
       (step (declaratoryDamagesState declaratoryPositiveJuryVerdictCase)
         declaratoryTransitionJudgmentAction) = declaratoryDamagesExpectedError := by
   native_decide
+
+end ADCProofs.DeclaratoryDamages

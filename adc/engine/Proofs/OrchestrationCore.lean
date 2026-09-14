@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.OrchestrationCore
 
 def closedCase : CaseState :=
   { (default : CaseState) with
@@ -53,10 +55,19 @@ theorem selectLowestPriorityOpportunity_prefers_lower_priority_value :
     (selectLowestPriorityOpportunity? [lowPriorityAction, highPriorityAction]).map (fun t => t.role) = some "judge" := by
   native_decide
 
+theorem assignOpportunityIdsFrom_preserves_length
+    (actions : List OpportunitySpec)
+    (index : Nat) :
+    (assignOpportunityIdsFrom actions index).length = actions.length := by
+  induction actions generalizing index with
+  | nil => rfl
+  | cons action rest ih =>
+      simp [assignOpportunityIdsFrom, ih]
+
 theorem assignOpportunityIds_preserves_length
     (actions : List OpportunitySpec) :
     (assignOpportunityIds actions).length = actions.length := by
-  simp [assignOpportunityIds]
+  exact assignOpportunityIdsFrom_preserves_length actions 0
 
 theorem nextOpportunity_opportunity_eq_currentOpenOpportunity
     (req : OpportunityRequest) :
@@ -84,12 +95,6 @@ theorem availableOpportunities_nil_when_case_closed
   unfold availableOpportunities
   simp [hclosed]
 
-/-
-This is the reusable closed-case theorem that the older concrete `closedReq`
-example was pointing at.  It is more useful than the concrete example because
-later proofs can apply it to any state that reaches `closed`.
--/
-
 /--
 A closed case has no current open opportunity.
 
@@ -105,12 +110,6 @@ theorem currentOpenOpportunity_none_when_case_closed
   rw [availableOpportunities_nil_when_case_closed req hclosed]
   simp [selectLowestPriorityOpportunity?]
 
-/-
-This theorem is the real bridge to later step-level results.  If a successful
-action closes the case, later orchestration proofs can stop at this lemma
-instead of re-unfolding the opportunity machinery.
--/
-
 /--
 A closed case makes `nextOpportunity` terminal.
 
@@ -125,8 +124,4 @@ theorem nextOpportunity_terminal_when_case_closed
   rw [nextOpportunity_terminal_iff_no_currentOpenOpportunity]
   exact currentOpenOpportunity_none_when_case_closed req hclosed
 
-/-
-This is the summary orchestration fact for closed cases.  It states the public
-effect of closure directly in terms of `nextOpportunity`, which is the boundary
-the Go runner actually uses.
--/
+end ADCProofs.OrchestrationCore

@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.DefaultJudgment
 
 def defaultCase : CaseState :=
   { (default : CaseState) with
@@ -44,3 +46,5 @@ theorem step_enter_default_judgment_success_records_docket :
       | .ok s' => hasDocketTitle s'.case "Default judgment entered"
       | .error _ => false) = true := by
   native_decide
+
+end ADCProofs.DefaultJudgment

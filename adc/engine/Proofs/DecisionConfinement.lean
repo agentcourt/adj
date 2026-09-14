@@ -1,5 +1,9 @@
 import Proofs.OrchestrationCore
 
+namespace ADCProofs.DecisionConfinement
+
+open ADCProofs.OrchestrationCore
+
 def applyDecisionErrorCode (r : Except StepErr ApplyDecisionOk) : String :=
   match r with
   | .error err => err.code
@@ -44,26 +48,13 @@ theorem applyDecision_closed_case_returns_no_current_opportunity
   rw [happly]
   rfl
 
-/-
-This theorem fills a real gap in the boundary story.  The suite already proved
-that closed cases have no available opportunities and make `nextOpportunity`
-terminal.  The public decision boundary should say the same thing from the
-other side once the request is not already stale: after closure, every later
-decision attempt fails before any role, tool, or payload logic matters.
-
-The proof is short because the API is well shaped.  That is a feature, not a
-problem.  A longer proof here would likely mean the boundary itself had become
-harder to reason about than it should be.
--/
-
 /--
 A pass decision at a fixed opportunity records a pass and returns no action.
 
 The proof plan unfolds `applyDecisionAtOpportunity` and rewrites the pass
 branch directly.  Once the decision kind is `pass` and the opportunity allows
 passing, the helper returns the `pass_recorded` result with an updated state and
-no action.  This is the first half of the decision-confinement boundary:
-accepted passes do not fabricate executable actions.
+no action.
 -/
 theorem applyDecisionAtOpportunity_pass_success_shape
     (state : CourtState)
@@ -76,15 +67,9 @@ theorem applyDecisionAtOpportunity_pass_success_shape
         { result_kind := "pass_recorded"
         , state := some (recordOpportunityPassFor state opportunity)
         , action := none } := by
+  change decision.kind.trimAscii.copy = "pass" at hpass
   simp [applyDecisionAtOpportunity, hpass, hmay]
   rfl
-
-/-
-This theorem states the exact successful pass behavior.  It is worth keeping
-because the helper is the point where an accepted decision becomes either a
-state update or an executable action.  A pass must stay on the state-update
-side only.
--/
 
 /--
 If a request names the current open opportunity and the request is a valid
@@ -117,13 +102,6 @@ theorem applyDecision_pass_success_shape
     applyDecisionAtOpportunity_pass_success_shape
       req.state opportunity req.decision hpass hmay
 
-/-
-This theorem lifts the exact helper pass result to the public boundary.  It is
-the companion to the tool-side theorem below.  Together they state the two
-shapes that a successful public decision may take: state-only pass recording,
-or a single confined executable action.
--/
-
 /--
 A valid tool decision at a fixed opportunity returns exactly the confined action
 for that opportunity.
@@ -132,7 +110,7 @@ The proof plan is again direct.  Unfold `applyDecisionAtOpportunity`, rewrite
 the decision kind to `tool`, rewrite the non-empty tool name and allowed-tool
 check, and rewrite the payload-constraint check to `none`.  The helper then
 reduces to a single `execute_tool` result whose action type, actor role, and
-payload are determined entirely by the opportunity and the defaulted payload.
+payload are determined by the opportunity and the defaulted payload.
 -/
 theorem applyDecisionAtOpportunity_tool_success_exact_action
     (state : CourtState)
@@ -159,29 +137,18 @@ theorem applyDecisionAtOpportunity_tool_success_exact_action
   cases hname : decision.tool_name with
   | none =>
       simp [hname] at hempty
-      cases hempty
   | some name =>
       simp [hname] at hempty hallowed
-      have hnotpass : decision.kind.trimAscii.toString ≠ "pass" := by
-        intro hpass
-        simp [htool] at hpass
+      change decision.kind.trimAscii.copy = "tool" at htool
       simp [applyDecisionAtOpportunity, htool, hname, hempty, hallowed, hviol]
       rfl
-
-/-
-This is the core positive confinement theorem.  Once the objective guards are
-satisfied, Lean emits exactly one executable action, and that action is
-confined to the current opportunity's role and allowed tool set.  The helper
-does not invent a different role, tool, or payload shape.
--/
 
 /--
 Any successful tool decision at a fixed opportunity returns an action confined
 to that opportunity's role and allowed tool set.
 
 The proof plan combines the exact-action theorem with the action fields
-themselves.  This is the compact public statement of the helper's
-confinement behavior.
+themselves.
 -/
 theorem applyDecisionAtOpportunity_tool_success_confined
     (state : CourtState)
@@ -206,12 +173,6 @@ theorem applyDecisionAtOpportunity_tool_success_confined
           , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) opportunity.constraints }
     | Except.error _ => False := by
   rw [applyDecisionAtOpportunity_tool_success_exact_action state opportunity decision hkind hempty hallowed hviol]
-
-/-
-This theorem is the short headline for the helper boundary.  A valid tool
-decision does not merely succeed.  It succeeds by producing the exact confined
-action that the current opportunity permits.
--/
 
 /--
 If a request names the current open opportunity and satisfies the helper's
@@ -256,14 +217,6 @@ theorem applyDecision_tool_success_exact_action
     applyDecisionAtOpportunity_tool_success_exact_action
       req.state opportunity req.decision htool hempty hallowed hviol
 
-/-
-This theorem lifts the exact helper result to the public `applyDecision`
-boundary.  It is the right statement for the current stage.  It keeps all
-semantic questions out of Lean and proves the formal boundary instead: once the
-objective preconditions are met, the public API returns exactly the confined
-action that the current opportunity permits.
--/
-
 /--
 Under the same objective preconditions, the executable action returned by
 `applyDecision` is confined to the current opportunity's role and allowed tool
@@ -304,12 +257,6 @@ theorem applyDecision_tool_success_confined
     | Except.error _ => False := by
   rw [applyDecision_tool_success_exact_action req opportunity hcurrent hversion hid hrole htool hempty hallowed hviol]
 
-/-
-This is the short public corollary.  The formal result is not merely that a
-request can succeed.  It succeeds by returning the exact action fixed by the
-current opportunity and the request payload defaults.
--/
-
 /--
 Under the same objective preconditions, a successful public tool decision does
 not update state inside `applyDecision`.
@@ -345,12 +292,6 @@ theorem applyDecision_tool_success_has_no_state_update
     | Except.error _ => False := by
   rw [applyDecision_tool_success_exact_action req opportunity hcurrent hversion hid hrole htool hempty hallowed hviol]
 
-/-
-This is the state-mutation half of the public boundary.  Successful tool
-validation does not mutate authoritative case state.  It emits an executable
-action for `step` to handle later.
--/
-
 /--
 Under the same objective preconditions, a successful public pass decision
 returns no executable action.
@@ -377,12 +318,6 @@ theorem applyDecision_pass_success_has_no_action
     | Except.ok ok => ok.action = none
     | Except.error _ => False := by
   rw [applyDecision_pass_success_shape req opportunity hcurrent hversion hid hrole hpass hmay]
-
-/-
-This is the action-side half of the public boundary for pass decisions.  A
-valid pass updates bookkeeping only.  It does not fabricate an executable
-action.
--/
 
 /--
 If a request names the current opportunity and the current opportunity belongs
@@ -440,14 +375,6 @@ theorem applyDecision_wrong_role_of_current_opportunity_returns_wrong_role
     rfl
   rw [hthrow]
   simp [mkStepErr]
-
-/-
-This theorem lifts the wrong-role guard to the public API in general form.  It
-is a stronger statement than the earlier concrete examples because it says the
-decision content is irrelevant.  Once the current opportunity belongs to a
-different role, the engine rejects the request before it examines the proposed
-act.
--/
 
 def defectiveJurisdictionCaseForDecision : CaseState :=
   { (default : CaseState) with
@@ -533,12 +460,6 @@ theorem applyDecision_defective_jurisdiction_emits_expected_action :
     jurisdictionDismissResultLooksRight (applyDecision jurisdictionDismissApplyReqForDecision) = true := by
   native_decide
 
-/-
-This theorem is the concrete public-boundary instance of the general
-confinement result.  It shows the emitted action fields for a real
-jurisdiction-screening case without re-proving the general boundary theorem.
--/
-
 /--
 For the same defective diversity complaint, the accepted dismissal decision and
 the resulting `step` close the case and make `nextOpportunity` terminal.
@@ -565,8 +486,4 @@ theorem applyDecision_defective_jurisdiction_then_step_stops :
       | .error _ => false) = true := by
   native_decide
 
-/-
-This is the end-to-end theorem for the current pass.  It starts at the public
-decision boundary, not at a local helper, and follows the accepted dismissal
-through `step` to a closed case with no later opportunity.
--/
+end ADCProofs.DecisionConfinement

@@ -1,42 +1,100 @@
-import Main
+import ADC.Core
 
-theorem validateDeclareHungJury_invalid_current_phase
-    (c : CaseState)
-    (msg : String)
-    (hPhase : parseCurrentPhaseV1 c = .error msg) :
-    validateDeclareHungJury c = .error msg := by
-  unfold validateDeclareHungJury
-  simp [hPhase]
+namespace ADCProofs.ValidateHungAndBench
 
-theorem validateDeclareHungJury_phase_gate_error
-    (c : CaseState)
-    (currentPhase : TrialPhaseV1)
-    (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
-    (hGate : phaseAllowsActionV1 .declareHungJury currentPhase = false) :
-    validateDeclareHungJury c =
-      .error s!"hung jury declaration requires deliberation or verdict_return phase; current phase is {c.phase}" := by
-  unfold validateDeclareHungJury
-  simp [hPhase, hGate]
+def noSwornJurorCase : CaseState :=
+  { (default : CaseState) with
+    deliberation_round := 1
+    jury_configuration := some {
+      juror_count := 6
+      unanimous_required := true
+      minimum_concurring := 6
+    }
+  }
 
-theorem validateDeclareHungJury_verdict_already_returned
-    (c : CaseState)
-    (currentPhase : TrialPhaseV1)
-    (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
-    (hGate : phaseAllowsActionV1 .declareHungJury currentPhase = true)
-    (hVerdict : c.jury_verdict.isSome = true) :
-    validateDeclareHungJury c = .error "cannot declare hung jury after verdict is returned" := by
-  unfold validateDeclareHungJury
-  simp [hPhase, hGate, hVerdict]
+def pendingJurorVoteCase : CaseState :=
+  { (default : CaseState) with
+    deliberation_round := 1
+    jury_configuration := some {
+      juror_count := 1
+      unanimous_required := true
+      minimum_concurring := 1
+    }
+    jurors := [{ juror_id := "J1", name := "Juror One", status := "sworn" }]
+  }
 
-theorem validateDeclareHungJury_ok
-    (c : CaseState)
-    (currentPhase : TrialPhaseV1)
-    (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
-    (hGate : phaseAllowsActionV1 .declareHungJury currentPhase = true)
-    (hNoVerdict : c.jury_verdict.isSome = false) :
-    validateDeclareHungJury c = .ok () := by
-  unfold validateDeclareHungJury
-  simp [hPhase, hGate, hNoVerdict]
+def splitJuryCase : CaseState :=
+  { (default : CaseState) with
+    deliberation_round := 1
+    jury_configuration := some {
+      juror_count := 2
+      unanimous_required := true
+      minimum_concurring := 2
+    }
+    jurors := [
+      { juror_id := "J1", name := "Juror One", status := "sworn" },
+      { juror_id := "J2", name := "Juror Two", status := "sworn" }
+    ]
+    juror_votes := [
+      {
+        juror_id := "J1"
+        round := 1
+        vote := "plaintiff"
+        damages := 100.0
+        confidence := "high"
+        explanation := "Plaintiff proved the claim."
+        submitted_at := "2026-01-01"
+      },
+      {
+        juror_id := "J2"
+        round := 1
+        vote := "defendant"
+        damages := 0.0
+        confidence := "high"
+        explanation := "Plaintiff did not prove the claim."
+        submitted_at := "2026-01-01"
+      }
+    ]
+  }
+
+theorem deriveVerdict_without_configuration_returns_none
+    (policy : CourtPolicy) (c : CaseState)
+    (hConfiguration : c.jury_configuration = none) :
+    deriveVerdictFromJurorVotes? policy c = none := by
+  simp [deriveVerdictFromJurorVotes?, hConfiguration]
+
+theorem deriveVerdict_without_sworn_jurors_returns_hung_jury :
+    (match deriveVerdictFromJurorVotes? (default : CourtPolicy) noSwornJurorCase with
+    | some (none, some _, none, none) => true
+    | _ => false) = true := by
+  native_decide
+
+theorem deriveVerdict_waits_for_each_sworn_juror :
+    deriveVerdictFromJurorVotes? (default : CourtPolicy) pendingJurorVoteCase = none := by
+  native_decide
+
+theorem applyDerivedDeliberationOutcome_stores_hung_jury
+    (policy : CourtPolicy) (c : CaseState) (hung : HungJury)
+    (hDerived :
+      deriveVerdictFromJurorVotes? policy c = some (none, some hung, none, none)) :
+    (applyDerivedDeliberationOutcome policy c).hung_jury = some hung := by
+  simp [applyDerivedDeliberationOutcome, hDerived, appendDocket, appendDocketWithFields]
+
+theorem applyDerivedDeliberationOutcome_stores_verdict
+    (policy : CourtPolicy) (c : CaseState) (verdict : JuryVerdict)
+    (hDerived :
+      deriveVerdictFromJurorVotes? policy c = some (some verdict, none, none, none)) :
+    (applyDerivedDeliberationOutcome policy c).jury_verdict = some verdict := by
+  simp [applyDerivedDeliberationOutcome, hDerived, appendDocket, appendDocketWithFields]
+
+theorem split_jury_advances_to_second_round :
+    (applyDerivedDeliberationOutcome (default : CourtPolicy) splitJuryCase).deliberation_round = 2 := by
+  native_decide
+
+theorem split_jury_at_final_round_returns_hung_jury :
+    let policy := { (default : CourtPolicy) with max_deliberation_rounds := 1 }
+    (applyDerivedDeliberationOutcome policy splitJuryCase).hung_jury.isSome = true := by
+  native_decide
 
 theorem validateBenchOpinion_requires_trial_status
     (c : CaseState)
@@ -88,7 +146,7 @@ theorem validateBenchOpinion_requires_nonempty_text
     (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
     (hGate : currentPhase = TrialPhaseV1.verdictReturn || currentPhase = TrialPhaseV1.postVerdict)
     (hBench : c.trial_mode = "bench")
-    (hEmpty : text.trimAscii.toString = "") :
+    (hEmpty : text.trimAscii.isEmpty = true) :
     validateBenchOpinion c text = .error "bench opinion text must be non-empty" := by
   unfold validateBenchOpinion
   simp [hTrial, hPhase, hGate, hBench, hEmpty]
@@ -101,58 +159,10 @@ theorem validateBenchOpinion_ok
     (hPhase : parseCurrentPhaseV1 c = .ok currentPhase)
     (hGate : currentPhase = TrialPhaseV1.verdictReturn || currentPhase = TrialPhaseV1.postVerdict)
     (hBench : c.trial_mode = "bench")
-    (hNonEmpty : text.trimAscii.toString ≠ "") :
+    (hNonEmpty : text.trimAscii.isEmpty = false) :
     validateBenchOpinion c text = .ok () := by
   unfold validateBenchOpinion
   simp [hTrial, hPhase, hGate, hBench, hNonEmpty]
-
-theorem validateDeclareHungJury_ok_implies_no_verdict
-    (c : CaseState)
-    (hOk : validateDeclareHungJury c = .ok ()) :
-    c.jury_verdict.isSome = false := by
-  unfold validateDeclareHungJury at hOk
-  cases hPhase : parseCurrentPhaseV1 c with
-  | error e =>
-      simp [hPhase] at hOk
-  | ok currentPhase =>
-      by_cases hGate : phaseAllowsActionV1 .declareHungJury currentPhase = false
-      · simp [hPhase, hGate] at hOk
-      · by_cases hVerdict : c.jury_verdict.isSome
-        · simp [hPhase, hGate, hVerdict] at hOk
-        · simp [hVerdict]
-
-theorem validateDeclareHungJury_ok_implies_phase_gate_true
-    (c : CaseState)
-    (hOk : validateDeclareHungJury c = .ok ()) :
-    ∃ currentPhase : TrialPhaseV1,
-      parseCurrentPhaseV1 c = .ok currentPhase ∧
-      phaseAllowsActionV1 .declareHungJury currentPhase = true := by
-  unfold validateDeclareHungJury at hOk
-  cases hPhase : parseCurrentPhaseV1 c with
-  | error e =>
-      simp [hPhase] at hOk
-  | ok currentPhase =>
-      by_cases hGate : phaseAllowsActionV1 .declareHungJury currentPhase = false
-      · simp [hPhase, hGate] at hOk
-      · have hGateTrue : phaseAllowsActionV1 .declareHungJury currentPhase = true := by
-          cases hGateBool : phaseAllowsActionV1 .declareHungJury currentPhase with
-          | false =>
-              exact (hGate hGateBool).elim
-          | true =>
-              rfl
-        exact ⟨currentPhase, rfl, hGateTrue⟩
-
-theorem validateDeclareHungJury_ok_implies_phase_is_delib_or_verdict_return
-    (c : CaseState)
-    (hOk : validateDeclareHungJury c = .ok ()) :
-    ∃ currentPhase : TrialPhaseV1,
-      parseCurrentPhaseV1 c = .ok currentPhase ∧
-      (currentPhase = TrialPhaseV1.deliberation ∨ currentPhase = TrialPhaseV1.verdictReturn) := by
-  rcases validateDeclareHungJury_ok_implies_phase_gate_true c hOk with
-    ⟨currentPhase, hPhase, hGate⟩
-  cases currentPhase <;> simp [phaseAllowsActionV1] at hGate
-  · exact ⟨TrialPhaseV1.deliberation, hPhase, Or.inl rfl⟩
-  · exact ⟨TrialPhaseV1.verdictReturn, hPhase, Or.inr rfl⟩
 
 theorem validateBenchOpinion_ok_implies_trial_status
     (c : CaseState) (text : String)
@@ -179,3 +189,5 @@ theorem validateBenchOpinion_ok_implies_bench_mode
           · exact hBench
           · simp [hTrial, hPhase, hGate, hBench] at hOk
   · simp [hTrial] at hOk
+
+end ADCProofs.ValidateHungAndBench

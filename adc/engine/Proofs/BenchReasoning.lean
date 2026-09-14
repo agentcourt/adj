@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.BenchReasoning
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -76,3 +78,5 @@ theorem step_file_bench_opinion_records_docket :
       | .ok s' => hasDocketTitle s'.case "Bench Opinion"
       | .error _ => false) = true := by
   native_decide
+
+end ADCProofs.BenchReasoning

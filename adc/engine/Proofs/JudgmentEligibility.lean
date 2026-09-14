@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.JudgmentEligibility
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -53,3 +55,5 @@ theorem judgmentEligible_jury_invalid_verdict_token_false :
       hung_jury := none }
     judgmentEligibleFromCaseStateV1 c = false := by
   native_decide
+
+end ADCProofs.JudgmentEligibility

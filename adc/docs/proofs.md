@@ -1,68 +1,42 @@
-# How to prove things
+# ADC Proofs
 
-Here's how to go about thinking up theorems and proving them.
+The ADC Lean package separates the reusable procedure from the executable protocol.  `engine/ADC/Core.lean` defines state, validation, opportunity generation, decisions, and transitions.  `engine/Main.lean` parses JSON requests, calls the core, and writes JSON responses.  Every proof module reaches `ADC.Core` through its import graph and belongs to a namespace under `ADCProofs`.
 
-First consider what sort of properties would be meaningful to
-demonstrate.  Review the code, the rules (ARCP), limits, overall
-goals, etc. But don't be too grandiose.  Much better to start with
-small, tractable, tactical results, which hopefully are useful on
-their own but can also play a role in larger results later.  We don't
-want proofs for their own sake.  We want at least a little meaning.  As
-you build up proofs, be more aggressive in pursuing non-trivial, deep
-results.
+`engine/Proofs.lean` imports every maintained proof module.  A successful build of that target checks the complete maintained proof tree.  Individual proof files remain buildable for focused work.
 
-Do not be too afraid to modify existing Lean code to make a proof
-easier; however, be cautious and be ready to backtrack.  If you break
-other proofs or any (other) tests, that's a serious situation. In
-those situations, you should consider if the tests themselves are
-incorrect.  You can't assume anything is really authoritative.  Give
-strong deference to the rules (ARCP), but even they can be adjusted if
-appropriate.  When in doubt about what must give, ask. You should also
-feel free to note a problem and defer/abandon that particular
-little effort for now.  You'll likely run into these sort of obstacles
-frequently.  Don't give up on a proof too soon. Work at the proof
-while holding everything else fixed.  Maybe work pretty hard; iterate
-a lot. But step back occasionally when facing real obstacles.
-
-It's okay to have a `sorry` very temporarily, but be *very*
-cautious. It's much better to avoid sorries completely in order to
-avoid a lot of effort which ultimately can't really be used.  Probably
-better to proceed without ever using a `sorry`.
-
-Once exception: You can leave a `sorry` either a critical but
-indefinitely deferred work in progress.  Ask for approval before doing
-that.
-
-Consider: When you have a theorem in mind, *first* think about it in
-English. Then think in English about how you might go about proving
-it.  Consider what lemmas and theorems -- existing or not -- might be
-useful. Comment on the use of induction or recursion or whatever.
-Only then start to formalize the theorem in Lean and begin trying to
-prove it.  Update your English description of the theorem and proof
-approach as you make progress.  Also keep notes about how this
-particular effort went.  These notes should discuss obstacles,
-opportunities, and any other observations relevant to your attempts at
-proving the theorem.  A narrative style is appropriate.  Leave notes
-for your future self to use in other tasks.
-
-Here's the desired template for Lean theorems and proofs.
-
-```Lean
-/--
-
-DESCRIPTION OF THEOREM
-
-DISCUSSION OF PROOF PLAN
-
--/
-
-THEOREM WITH PROOF
-
-/--
-AFTER-THE-FACT NOTES AND NARRATIVE ABOUT COMING UP WITH THE PROOF
--/
+```bash
+cd adc/engine
+lake build Proofs
+lake build Proofs.Rule56
 ```
 
-*It's critical to follow this literate style, with the comment above
-in the code itself.*  All of these comments should be detailed, clear,
-and helpful.  You are writing for an expert audience.
+## Proof boundary
+
+The proof tree establishes properties of the encoded procedure.  Its main subjects are validation, role and opportunity authority, state preservation, phase progression, docket effects, decision confinement, replay, certificate facts, and representative terminal outcomes.  The proofs establish consequences of the Lean definitions and the certificate input.  They do not authenticate a certificate, establish the truth of evidence, or prove that a participant reached a sound legal or factual judgment.
+
+The modules use three principal proof forms:
+
+| Form | Use |
+| --- | --- |
+| Symbolic theorem | Establish a property for arbitrary values satisfying stated hypotheses. |
+| Computed theorem using `native_decide` | Check an exact finite state, transition, validator result, or certificate example. |
+| Certificate theorem | Derive state and outcome facts from successful replay or certificate checking. |
+
+Computed theorems provide exact checks for concrete states.  They do not generalize beyond the values in their statements.  The theorem catalog identifies each declaration by its name and source file.
+
+## Organization
+
+The proof files group related results rather than reproduce the engine's source order.  The main groups cover foundational limits and time functions, procedural domains such as discovery and jury instructions, opportunity generation and decision application, transition invariants, replay, and certificate consequences.
+
+Every public declaration has a fully qualified name such as `ADCProofs.Rule56.step_decide_rule56_records_order`.  The [theorem catalog](theorems.md) lists all public theorem and lemma declarations.  [Proof statistics](proofstats.md) report counts by file and broad category.  The [ARCP matrix](ARCP-matrix.md) records executable rule coverage.  The [proving notes](proving.md) describe current proof-maintenance decisions, and the [Lean proving guide](provingguide.md) summarizes the available proof methods.
+
+## Maintenance
+
+Run the proof target after changing `ADC/Core.lean` or a proof module.  Regenerate the derived documents from the `adc/` directory after adding, renaming, moving, or deleting proof declarations.
+
+```bash
+../common/tools/proofstats.sh
+uv run python ../common/tools/gentheorems.py --sync-proofs engine/Proofs
+```
+
+The synchronization command removes catalog rows whose declarations no longer exist, adds current public declarations, qualifies each declaration with its module namespace, and preserves annotations attached to declarations that remain in the same file.

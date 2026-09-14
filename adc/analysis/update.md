@@ -63,7 +63,7 @@ After regeneration:
 
 1. Open each PNG and check for clipped labels, overlapping edges, and unreadable text.
 2. If you rendered PNGs locally, check that every `.mmd` still has a matching `.png`.
-3. If you changed Lean control-flow diagrams, compare the labels against the current request names and action families in `engine/Main.lean` and `runtime/runner`.
+3. If you changed Lean control-flow diagrams, compare the labels against the current request names and action families in `engine/ADC/Core.lean` and `runtime/runner`.
 4. If you changed agent or visibility diagrams, compare the labels against the current Role API operations in `runtime/runner/roleapi.go`.
 
 ## Downstream docs

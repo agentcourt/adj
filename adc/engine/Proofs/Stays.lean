@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.Stays
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -90,3 +92,5 @@ theorem step_lift_stay_records_lift_entry_when_valid :
       | .ok s' => hasDocketTitle s'.case "Stay Lifted"
       | .error _ => false) = true := by
   native_decide
+
+end ADCProofs.Stays

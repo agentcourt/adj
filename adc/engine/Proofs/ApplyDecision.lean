@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.ApplyDecision
 
 def filedComplaintCase : CaseState :=
   { (default : CaseState) with
@@ -29,9 +31,18 @@ def pretrialRule56Case : CaseState :=
       { action := "file_answer", outcome := "filed", citations := ["FRCP 8(b)"] }
     ],
     docket := [
-      { title := "Interrogatory Responses", description := "defendant: served" },
-      { title := "Responses to Requests for Production", description := "defendant: served" },
-      { title := "Responses to Requests for Admission", description := "defendant: served" }
+      docketEntryWithFields "Interrogatories Served" "defendant: served_on=plaintiff set_index=0 questions=[]"
+        [("served_by", "defendant"), ("served_on", "plaintiff"), ("set_index", "0")],
+      docketEntryWithFields "Interrogatory Responses" "plaintiff: responding_party=plaintiff set_index=0 answers=[]"
+        [("responding_party", "plaintiff"), ("set_index", "0")],
+      docketEntryWithFields "Requests for Production Served" "defendant: served_on=plaintiff set_index=0 requests=[]"
+        [("served_by", "defendant"), ("served_on", "plaintiff"), ("set_index", "0")],
+      docketEntryWithFields "Responses to Requests for Production" "plaintiff: responding_party=plaintiff set_index=0 responses=[]"
+        [("responding_party", "plaintiff"), ("set_index", "0")],
+      docketEntryWithFields "Requests for Admission Served" "defendant: served_on=plaintiff set_index=0 requests=[]"
+        [("served_by", "defendant"), ("served_on", "plaintiff"), ("set_index", "0")],
+      docketEntryWithFields "Responses to Requests for Admission" "plaintiff: responding_party=plaintiff set_index=0 responses=[]"
+        [("responding_party", "plaintiff"), ("set_index", "0")]
     ]
   }
 
@@ -328,3 +339,5 @@ theorem applyDecision_tool_applies_fixed_payload_defaults :
 theorem applyDecision_conflicting_required_payload_returns_constraint_code :
     applyErrorCode (applyDecision conflictingInstructionReq) = "PAYLOAD_CONSTRAINT_VIOLATION" := by
   native_decide
+
+end ADCProofs.ApplyDecision

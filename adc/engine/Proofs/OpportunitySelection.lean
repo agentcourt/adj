@@ -1,5 +1,9 @@
 import Proofs.OrchestrationCore
 
+namespace ADCProofs.OpportunitySelection
+
+open ADCProofs.OrchestrationCore
+
 /--
 If every opportunity in `actions` has strictly higher priority than `target`,
 then folding the selector from any `current` that also has strictly higher
@@ -21,8 +25,8 @@ private theorem foldl_select_some_current_append_target
       (fun acc action =>
         match acc with
         | none => some action
-        | some chosen =>
-            if action.priority < chosen.priority then some action else acc)
+        | some current =>
+            if action.priority < current.priority then some action else acc)
       (some current)
       (actions ++ [target]) = some target := by
   induction actions generalizing current with
@@ -61,18 +65,16 @@ theorem selectLowestPriorityOpportunity_append_last_if_strictly_lower
         intro a ha
         exact hlower a (by simp [ha])
       unfold selectLowestPriorityOpportunity?
-      simpa using foldl_select_some_current_append_target tail head target hhead htail
-
-/-
-This is the selector theorem worth keeping.  It states the engine's ordering
-rule directly, without reducing to a concrete case.  The helper theorem made
-the induction readable.  A direct proof against the full appended list kept
-producing awkward `foldl` goals with the accumulator hidden inside the term.
-
-The next useful step is to combine this theorem with candidate-generation
-results.  That would turn the pure selector fact into an orchestration theorem
-about the actual opportunity engine.
--/
+      change
+        List.foldl
+          (fun (acc : Option OpportunitySpec) (action : OpportunitySpec) =>
+            match acc with
+            | none => some action
+            | some current =>
+                if action.priority < current.priority then some action else acc)
+          (some head)
+          (tail ++ [target]) = some target
+      exact foldl_select_some_current_append_target tail head target hhead htail
 
 /--
 If `availableOpportunities` ends with a strictly lower-priority opportunity and
@@ -99,18 +101,6 @@ theorem currentOpenOpportunity_of_available_append_last_if_no_passes
   rw [hopen]
   exact
     selectLowestPriorityOpportunity_append_last_if_strictly_lower actions target hlower
-
-/-
-This theorem bridges the pure selector to the public opportunity API.  It is
-still objective.  It says nothing about which candidate should exist.  It says
-that once `availableOpportunities` has the right shape, the current-open
-opportunity boundary respects that shape exactly.
-
-The next useful theorem should consume a real candidate generator.  The best
-target is the filed-case jurisdiction path: ordinary defendant pleading
-opportunities remain in the open set, but the lower-priority judge dismissal
-opportunity becomes current.
--/
 
 /--
 Under the same hypotheses, `nextOpportunity` exposes the same selected target
@@ -145,8 +135,4 @@ theorem nextOpportunity_of_available_append_last_if_no_passes
       simp [hcurrent] at hnone
     · simp [hterm]
 
-/-
-This is the public selector corollary worth reusing outside the selector file.
-It is closer to the runner boundary than the previous theorem, while still
-remaining purely objective and purely about ordering.
--/
+end ADCProofs.OpportunitySelection

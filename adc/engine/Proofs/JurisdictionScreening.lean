@@ -1,4 +1,8 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.JurisdictionScreening
+
+open Lean
 
 def dismissalTool : List String :=
   ["dismiss_for_lack_of_subject_matter_jurisdiction"]
@@ -91,11 +95,6 @@ theorem subjectMatterJurisdictionFaciallyDefective_complete_diversity_false :
     completeDiversityState completeDiversityCase trimString
   native_decide
 
-/-
-This theorem fixes the baseline federal screen.  The selected court profile
-matters now, so the proof works over the full `CourtState`.
--/
-
 /--
 An otherwise complete diversity allegation is facially defective in the United
 States District profile when the amount-in-controversy allegation is blank.
@@ -114,11 +113,6 @@ theorem subjectMatterJurisdictionFaciallyDefective_missing_amount_true :
     missingAmountDiversityState missingAmountDiversityCase trimString
   native_decide
 
-/-
-This remains the smallest concrete federal defect worth proving.  The only
-missing fact is the amount allegation.
--/
-
 /--
 The International Claw District profile disables the federal jurisdiction
 screen, so the same defective diversity allegation is not facially defective.
@@ -128,11 +122,6 @@ theorem subjectMatterJurisdictionFaciallyDefective_no_screen_false :
   unfold subjectMatterJurisdictionFaciallyDefective courtUsesJurisdictionScreen
     courtProfileBoolD noScreenState
   native_decide
-
-/-
-This theorem captures the whole point of the second court profile.  The engine
-does not run a federal subject-matter screen there.
--/
 
 /--
 If the complaint is not facially defective under the active court profile, the
@@ -144,11 +133,6 @@ theorem jurisdictionDismissalCandidates_nil_of_not_defective
     jurisdictionDismissalCandidates req c maxSteps = [] := by
   unfold jurisdictionDismissalCandidates
   simp [hdef]
-
-/-
-This is the basic negative screen theorem after the court-profile split.  The
-candidate generator now depends on the court profile in `req.state`.
--/
 
 /--
 If a subject-matter-jurisdiction dismissal already appears in the trace, the
@@ -163,10 +147,6 @@ theorem jurisdictionDismissalCandidates_nil_of_prior_dismissal
     jurisdictionDismissalCandidates req c maxSteps = [] := by
   unfold jurisdictionDismissalCandidates
   simp [hjudgment, hclosed, hdef, htrace]
-
-/-
-This still isolates the idempotence guard on the dismissal path.
--/
 
 /--
 If the complaint is facially defective under the active court profile, no prior
@@ -191,11 +171,6 @@ theorem jurisdictionDismissalCandidates_singleton_when_enabled
     simpa [dismissalTool] using hallow]
   rfl
 
-/-
-This states the exact candidate emitted when the active court profile still
-uses the jurisdiction screen.
--/
-
 /--
 If the complaint is facially defective but the judge lacks the dismissal tool,
 the generator returns no candidate.
@@ -213,11 +188,6 @@ theorem jurisdictionDismissalCandidates_nil_when_judge_disabled
   rw [show roleAllowsAll req.roles "judge" ["dismiss_for_lack_of_subject_matter_jurisdiction"] = false by
     simpa [dismissalTool] using hallow]
   rfl
-
-/-
-This theorem still matters at the integration boundary.  The tool surface can
-disable the screen even when the complaint is defective.
--/
 
 /--
 A complete diversity complaint in the United States District profile yields no
@@ -252,11 +222,6 @@ theorem noScreenCase_has_no_jurisdictionDismissalCandidate :
     jurisdictionDismissalCandidates (judgeDismissReq noScreenState) missingAmountDiversityCase 3 = [] := by
   native_decide
 
-/-
-This is the concrete profile split: the federal court screens, the Claw court
-does not.
--/
-
 /--
 If the jurisdiction-dismissal generator produces a candidate, the complaint is
 facially defective under the active court profile.
@@ -270,11 +235,6 @@ theorem jurisdictionDismissalCandidates_nonempty_implies_defective
     apply hnonempty
     exact jurisdictionDismissalCandidates_nil_of_not_defective req c maxSteps hscreen
   · simp
-
-/-
-This is the soundness theorem after the court-profile split.  Any emitted
-candidate still implies a live defect.
--/
 
 /--
 If the generator produces a candidate, the case is not already closed.
@@ -353,7 +313,4 @@ theorem jurisdictionDismissalCandidates_nonempty_has_length_one
     (jurisdictionDismissalCandidates_nonempty_implies_judge_enabled req c maxSteps hnonempty)]
   simp
 
-/-
-This remains the endpoint theorem for the screen: when it fires, it emits one
-deterministic candidate, and when the court disables the screen, it emits none.
--/
+end ADCProofs.JurisdictionScreening

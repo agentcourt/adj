@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.CaseDisposition
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -88,3 +90,5 @@ theorem step_enter_settlement_consent_enters_judgment_even_zero :
       | .ok s' => s'.case.status
       | .error _ => "") = "judgment_entered" := by
   native_decide
+
+end ADCProofs.CaseDisposition

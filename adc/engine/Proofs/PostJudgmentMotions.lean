@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.PostJudgmentMotions
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -95,3 +97,5 @@ theorem step_resolve_rule60_records_order_when_valid :
       | .ok s' => hasDocketTitle s'.case "Rule 60 Order"
       | .error _ => false) = true := by
   native_decide
+
+end ADCProofs.PostJudgmentMotions

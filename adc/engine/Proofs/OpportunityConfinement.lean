@@ -1,18 +1,21 @@
 import Proofs.DecisionConfinement
 import Proofs.OpportunitySelection
 
+namespace ADCProofs.OpportunityConfinement
+
+open ADCProofs.DecisionConfinement ADCProofs.OpportunitySelection
+
 /--
 If `availableOpportunities` ends with a strictly lower-priority opportunity and
 the state has no passed opportunities, then any request from a different role
 against that current opportunity is rejected with `WRONG_ROLE`.
 
-The proof plan composes two existing boundaries.  First,
+The proof composes two boundaries.  First,
 `currentOpenOpportunity_of_available_append_last_if_no_passes` proves that the
 lower-priority trailing opportunity is current.  Then
 `applyDecision_wrong_role_of_current_opportunity_returns_wrong_role` applies at
-the public decision boundary.  The result is the generic confinement fact that
-matters for the overall architecture: opportunity ordering and role ownership
-work together, so another role cannot bypass the selected current move.
+the public decision boundary.  Opportunity ordering and role ownership then
+prevent another role from acting on the selected current opportunity.
 -/
 theorem applyDecision_wrong_role_when_append_last_target_is_current
     (req : OpportunityRequest)
@@ -48,15 +51,6 @@ theorem applyDecision_wrong_role_when_append_last_target_is_current
       decision
       hcurrent
       hrole
-
-/-
-This theorem is the first generic confinement result that actually spans the
-two relevant layers.  The selector alone only says which opportunity is
-current.  The decision boundary alone only says what happens if the current
-opportunity belongs to someone else.  Together they state the important system
-property: once formal priority makes an opportunity current, another role
-cannot seize that move.
--/
 
 /--
 If `availableOpportunities` ends with a strictly lower-priority opportunity and
@@ -131,26 +125,16 @@ theorem applyDecision_tool_success_when_append_last_target_is_current
       hallowed
       hviol
 
-/-
-This theorem is the positive counterpart to the wrong-role result above.  It
-shows the exact shape of the authorized path once a lower-priority opportunity
-is current: the matching role does not get arbitrary power.  Lean still emits
-only the exact tool action that the current opportunity allows, and it leaves
-authoritative state unchanged until `step` runs.
--/
-
 /--
 If `availableOpportunities` ends with a strictly lower-priority current
 opportunity, then the same tool decision succeeds for that opportunity's role
 and is rejected for any different role.
 
-The proof plan is to combine the two generic theorems above.  The positive
+The proof combines the two generic theorems above.  The positive
 theorem gives the exact successful `execute_tool` result for the owning role.
 The negative theorem gives `WRONG_ROLE` for a different role on the same
-opportunity id.  The value of this theorem is not the conjunction itself.  It
-is the architectural statement: once formal priority chooses the current
-opportunity, role ownership determines whether a proposed tool decision can
-cross the public boundary at all.
+opportunity id.  Role ownership therefore determines whether a proposed tool
+decision crosses the public boundary.
 -/
 theorem applyDecision_current_role_partition_when_append_last_target_is_current
     (req : OpportunityRequest)
@@ -207,11 +191,4 @@ theorem applyDecision_current_role_partition_when_append_last_target_is_current
       applyDecision_wrong_role_when_append_last_target_is_current
         req actions target otherRole decision havailable hpasses hlower hother
 
-/-
-This theorem is the clean generic statement of role partition at the public
-boundary.  The same opportunity and the same decision payload admit exactly two
-interesting outcomes: the owning role gets the confined action, and any other
-role gets `WRONG_ROLE`.  That is a strong statement of the system's design,
-and it builds directly on the smaller selector and confinement theorems rather
-than recomputing the opportunity machinery.
--/
+end ADCProofs.OpportunityConfinement

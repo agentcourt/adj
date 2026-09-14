@@ -258,6 +258,8 @@ Lean determines the legal tools permitted for each opportunity.  The Role API re
 
 Party tools cover pleadings, discovery, dispositive motions, evidence, trial presentation, objections, closing arguments, and post-verdict work.  Judge tools control motions, trial mode, voir dire rulings, jury instructions, judgment, and bench opinions.  Clerk tools record administrative acts, configure the jury, and advance procedural stages.
 
+During a party evidence phase, `offer_exhibit` records an exhibit and `rest_case` ends that presentation.  `offer_exhibit.file_id` is optional.  A nonempty identifier must name an existing case file and adds the corresponding file event, while an empty identifier records a non-file-backed exhibit without a file event.  The runtime supplies `offered_at` and `produced_at` timestamps when it executes exhibit offers and file productions.  Opportunity execution replaces participant-supplied values with the runtime event time; a direct scenario action retains an explicit value and receives the runtime event time when the field is absent.
+
 Jurors answer questionnaires, answer voir dire questions, and vote during deliberation.  A vote identifies the juror, prevailing party, damages, confidence, and explanation.  The engine derives a verdict from eligible jurors under the recorded jury policy.
 
 ## Record Utilities
@@ -296,7 +298,7 @@ Case preparation and adjudication share one output directory.  The prepared file
 | `digest.md` | Written case digest. |
 | `work-notes.ndjson` | Private work notes submitted by roles. |
 
-The replay certificate records engine-visible accepted transitions.  It omits rejected attempts, record reads, work notes, and model calls.  A successful replay establishes that the recorded transition sequence produces the claimed final state under the selected engine.
+The `adc.replay-certificate.v1` replay certificate records engine-visible accepted transitions.  It omits rejected attempts, record reads, work notes, and participant calls.  An opportunity pass records the decision and resulting pass state.  An opportunity tool transition records the decision and the exact executed Lean action; replay checks that `apply_decision` authorizes that action before applying it.  Deterministic runtime actions remain direct step transitions.  A successful replay establishes that the recorded transition sequence produces the claimed final state under the selected engine.
 
 The replay certificate carries no signature or execution attestation.  Any procedurally valid transition sequence can produce a valid replay result.  Authentication of the execution record requires evidence maintained outside this core replay check.
 

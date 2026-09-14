@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.AvailableActionsPostJudgment
 
 def judgmentCase : CaseState :=
   { (default : CaseState) with
@@ -65,3 +67,5 @@ theorem postJudgmentCandidates_offers_supersedeas_then_stay_then_lift :
       a1.any (fun t => t.allowed_tools = ["order_discretionary_stay"]) = true ∧
       a2.any (fun t => t.allowed_tools = ["lift_stay"]) = true := by
   native_decide
+
+end ADCProofs.AvailableActionsPostJudgment

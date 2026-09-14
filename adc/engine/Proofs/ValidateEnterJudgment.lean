@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.ValidateEnterJudgment
 
 theorem validateEnterJudgment_requires_trial_status
     (c : CaseState)
@@ -203,3 +205,5 @@ theorem validateEnterJudgment_ok_jury_implies_not_pending_or_hung
       cases hHung
     · cases hDef
       cases hHung
+
+end ADCProofs.ValidateEnterJudgment

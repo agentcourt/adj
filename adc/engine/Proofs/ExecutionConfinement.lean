@@ -1,9 +1,13 @@
 import Proofs.DecisionConfinement
 
+namespace ADCProofs.ExecutionConfinement
+
+open ADCProofs.DecisionConfinement
+
 /--
 If a valid current tool decision emits an action whose execution closes the
-case, then the engine seals itself against later decisions on the successor
-state.
+case, later decisions on the successor state fail with
+`NO_CURRENT_OPPORTUNITY`.
 
 The proof plan composes the existing public-boundary theorems instead of
 recomputing the whole flow.  First, `applyDecision_tool_success_exact_action`
@@ -73,21 +77,9 @@ theorem tool_execution_closing_case_blocks_followup_decisions
   · exact
       applyDecision_tool_success_exact_action
         req opportunity hcurrent hversion hid hrole htool hempty hallowed hviol
-  · simp [hstep]
+  · rw [hstep]
     apply applyDecision_closed_case_returns_no_current_opportunity
     · exact hclosed
     · rfl
 
-/-
-This theorem is the generic closure-seal result the proof suite needed.  The
-earlier concrete jurisdiction theorem already showed the pattern in one filed
-case.  This theorem states it at the public boundary without mentioning any
-particular rule.  Once a valid current tool decision emits an action and that
-action steps to a closed case, later decisions cannot cross the boundary on the
-successor state.
-
-The theorem still stays on the objective side.  It does not say that the
-underlying legal decision was correct.  It says that the formal engine confines
-what follows from a closing execution.  That is one of the central claims of
-the whole approach.
--/
+end ADCProofs.ExecutionConfinement

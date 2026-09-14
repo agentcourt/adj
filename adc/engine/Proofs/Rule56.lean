@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.Rule56
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -28,8 +30,29 @@ def decideRule56Action (disposition : String) : CourtAction :=
   { action_type := "decide_rule56_motion"
   , actor_role := "judge"
   , payload := Lean.Json.mkObj
-      [ ("disposition", Lean.Json.str disposition)
+      [ ("motion_index", Lean.Json.num 0)
+      , ("disposition", Lean.Json.str disposition)
       , ("reasoning", Lean.Json.str "The Rule 56 disposition follows from the summary-judgment record.")
+      ]
+  }
+
+def opposeRule56Action (motionIndex : Nat) (party : String) : CourtAction :=
+  { action_type := "oppose_rule56_motion"
+  , actor_role := party
+  , payload := Lean.Json.mkObj
+      [ ("motion_index", Lean.Json.num motionIndex)
+      , ("party", Lean.Json.str party)
+      , ("summary", Lean.Json.str "The record contains a genuine dispute.")
+      ]
+  }
+
+def replyRule56Action (motionIndex : Nat) (party : String) : CourtAction :=
+  { action_type := "reply_rule56_motion"
+  , actor_role := party
+  , payload := Lean.Json.mkObj
+      [ ("motion_index", Lean.Json.num motionIndex)
+      , ("party", Lean.Json.str party)
+      , ("summary", Lean.Json.str "The opposition does not establish a genuine dispute.")
       ]
   }
 
@@ -53,9 +76,18 @@ def closedRule56Case : CaseState :=
       { action := "file_answer", outcome := "filed", citations := ["FRCP 8(b)"] }
     ],
     docket := [
-      { title := "Interrogatory Responses", description := "defendant: served" },
-      { title := "Responses to Requests for Production", description := "defendant: served" },
-      { title := "Responses to Requests for Admission", description := "defendant: served" }
+      docketEntryWithFields "Interrogatories Served" "defendant: served_on=plaintiff set_index=0 questions=[]"
+        [("served_by", "defendant"), ("served_on", "plaintiff"), ("set_index", "0")],
+      docketEntryWithFields "Interrogatory Responses" "plaintiff: responding_party=plaintiff set_index=0 answers=[]"
+        [("responding_party", "plaintiff"), ("set_index", "0")],
+      docketEntryWithFields "Requests for Production Served" "defendant: served_on=plaintiff set_index=0 requests=[]"
+        [("served_by", "defendant"), ("served_on", "plaintiff"), ("set_index", "0")],
+      docketEntryWithFields "Responses to Requests for Production" "plaintiff: responding_party=plaintiff set_index=0 responses=[]"
+        [("responding_party", "plaintiff"), ("set_index", "0")],
+      docketEntryWithFields "Requests for Admission Served" "defendant: served_on=plaintiff set_index=0 requests=[]"
+        [("served_by", "defendant"), ("served_on", "plaintiff"), ("set_index", "0")],
+      docketEntryWithFields "Responses to Requests for Admission" "plaintiff: responding_party=plaintiff set_index=0 responses=[]"
+        [("responding_party", "plaintiff"), ("set_index", "0")]
     ],
     rule56_window_closed_for := ["defendant"]
   }
@@ -89,7 +121,7 @@ def reopenedRule56OpportunityMatches : Bool :=
       opportunity.step_budget = 3 &&
       opportunity.allowed_tools = ["file_rule56_motion"] &&
       opportunity.actor_message = "Current pretrial opportunity for defendant: consider this objective and either act now or pass." &&
-      opportunity.objective = "For case 0, optionally file Rule 56 motion if no genuine dispute of material fact."
+      opportunity.objective = "For case 0, file a Rule 56 motion only if the record establishes that no genuine dispute of material fact requires trial. Otherwise pass."
   | none => false
 
 theorem step_file_rule56_requires_pretrial :
@@ -98,25 +130,35 @@ theorem step_file_rule56_requires_pretrial :
       "rule 56 motion requires pretrial status" := by
   native_decide
 
-theorem step_file_rule56_rejects_when_already_decided :
-    let c := { baseCase with docket := [{ title := "Rule 56 Order", description := "disposition=denied" }] }
+theorem step_file_rule56_rejects_second_motion_by_party :
+    let c := { baseCase with docket := [
+      docketEntryWithFields "Rule 56 Motion"
+        "defendant: motion_index=0 scope=liability statement_of_undisputed_facts=record"
+        [("movant", "defendant"), ("motion_index", "0")],
+      docketEntryWithFields "Rule 56 Order" "motion_index=0 disposition=denied"
+        [("motion_index", "0"), ("disposition", "denied")]
+    ] }
     stepErrorMessage (step (stateOf c) fileRule56Action) =
-      "rule 56 motion already decided" := by
+      "rule 56 motion already filed by defendant" := by
   native_decide
 
 theorem step_decide_rule56_requires_prior_motion :
     stepErrorMessage (step (stateOf) (decideRule56Action "denied")) =
-      "cannot decide rule 56 motion before filing" := by
+      "rule 56 motion is not the pending motion" := by
   native_decide
 
 theorem step_decide_rule56_rejects_invalid_disposition :
-    let c := { baseCase with docket := [{ title := "Rule 56 Motion", description := "defendant: filed" }] }
+    let c := { baseCase with docket := [docketEntryWithFields "Rule 56 Motion"
+      "defendant: motion_index=0 scope=liability statement_of_undisputed_facts=record"
+      [("movant", "defendant"), ("motion_index", "0")]] }
     stepErrorMessage (step (stateOf c) (decideRule56Action "vacated")) =
       "invalid rule 56 disposition: vacated" := by
   native_decide
 
 theorem step_decide_rule56_records_order :
-    let c := { baseCase with docket := [{ title := "Rule 56 Motion", description := "defendant: filed" }] }
+    let c := { baseCase with docket := [docketEntryWithFields "Rule 56 Motion"
+      "defendant: motion_index=0 scope=liability statement_of_undisputed_facts=record"
+      [("movant", "defendant"), ("motion_index", "0")]] }
     (match step (stateOf c) (decideRule56Action "denied") with
       | .ok s' => hasDocketTitle s'.case "Rule 56 Order"
       | .error _ => false) = true := by
@@ -135,13 +177,6 @@ theorem amendedComplaint_clears_closed_rule56_windows :
     amendedComplaintRule56WindowClosedFor = [] := by
   native_decide
 
-/-
-This theorem started as a weaker state-field check.  That was still
-useful, but the public consequence matters more than the internal list
-update.  The supporting definition therefore checks the exact reopened
-opportunity rather than stopping at the cleared field.
--/
-
 /--
 An amended complaint reopens the defendant's Rule 56 opportunity when the
 ordinary pretrial prerequisites remain satisfied.
@@ -158,10 +193,39 @@ theorem amendedComplaint_reopens_rule56_window :
     reopenedRule56OpportunityMatches = true := by
   native_decide
 
-/-
-The first version of this theorem failed because it compared against the
-pre-finalization shape from `mkTurn`.  `currentOpenOpportunity?` returns
-finalized opportunities, so the theorem had to be stated against the
-actual public API surface: `o1`, phase `pretrial`, the generic actor
-message, and the Rule 56 objective string.
--/
+def secondRule56MotionCase : CaseState :=
+  { baseCase with docket := [
+      docketEntryWithFields "Rule 56 Motion" "defendant: motion_index=0"
+        [("movant", "defendant"), ("motion_index", "0")],
+      docketEntryWithFields "Rule 56 Order" "motion_index=0 disposition=denied"
+        [("motion_index", "0"), ("disposition", "denied")],
+      docketEntryWithFields "Rule 56 Motion" "plaintiff: motion_index=1"
+        [("movant", "plaintiff"), ("motion_index", "1")]
+    ] }
+
+theorem second_rule56_motion_accepts_one_opposition_and_rejects_duplicate :
+    (match step (stateOf secondRule56MotionCase) (opposeRule56Action 1 "defendant") with
+    | .error _ => "first opposition rejected"
+    | .ok opposed => stepErrorMessage (step opposed (opposeRule56Action 1 "defendant"))) =
+      "rule 56 opposition already filed" := by
+  native_decide
+
+theorem rule56_reply_requires_opposition_for_same_motion :
+    let c := { secondRule56MotionCase with docket := secondRule56MotionCase.docket ++ [
+      docketEntryWithFields "Rule 56 Opposition" "plaintiff: motion_index=0"
+        [("party", "plaintiff"), ("motion_index", "0")]
+    ] }
+    stepErrorMessage (step (stateOf c) (replyRule56Action 1 "plaintiff")) =
+      "cannot reply before the rule 56 opposition is filed" := by
+  native_decide
+
+theorem dispositive_motion_count_uses_movant_field :
+    let c := { baseCase with docket := [
+      docketEntryWithFields "Rule 56 Motion" "plaintiff: misleading description"
+        [("movant", "defendant"), ("motion_index", "0")]
+    ] }
+    countDispositiveMotionsByParty c "plaintiff" = 0 ∧
+      countDispositiveMotionsByParty c "defendant" = 1 := by
+  native_decide
+
+end ADCProofs.Rule56

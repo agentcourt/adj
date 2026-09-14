@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.StatusBasics
 
 theorem canTransitionStatusV1_true_implies_current_not_closed
     (current next : CaseStatusV1) :
@@ -23,3 +25,5 @@ theorem canTransitionStatusV1_true_implies_current_ne_next
   intro heq
   rw [heq] at h
   cases next <;> simp [canTransitionStatusV1] at h
+
+end ADCProofs.StatusBasics

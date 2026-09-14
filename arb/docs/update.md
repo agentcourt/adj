@@ -1,6 +1,6 @@
 # AAR Record-Integrity and Runtime Update
 
-This document records the AAR work completed in commit `eec612a` (`Strengthen AAR record integrity`), built on the exact-opportunity authority work in `7061d30`.  It explains the failure modes that led to each change, the resulting engine and runtime rules, and the verification performed on the final source.  It also defines an adaptation plan that treats the distinct AARD and ADC state models and runtimes explicitly.
+This document records the AAR work completed in commit `eec612a` (`Strengthen AAR record integrity`), built on the exact-opportunity authority work in `7061d30`.  It explains the failure modes that led to each change, the resulting engine and runtime rules, and the verification performed on the final source.  It also records the completed AARD adaptation and the remaining ADC record-integrity work.
 
 | Reference | Value |
 |---|---|
@@ -60,7 +60,7 @@ The preceding authority change supplies the source-state identity used by every 
 
 Lean compares the action authority with `authorityForOpportunity state opportunity` and checks that the opportunity allows the requested action type.  A stale version, wrong phase, wrong role, wrong opportunity, or wrong scheduled council member rejects the action before its body runs.  The same authority object is stored with every `ReplayAction`, so the Lean replay theorems derive both state evolution and the authorization of each accepted action.
 
-`AuthorityConformingReplay` records the source opportunity, exact authority equality, operation authorization, accepted step, and conforming remainder.  The runtime's `authorityForOpportunity` also checks that the cached opportunity version equals the current state version before it invokes Lean.  AARD needs this authority model before it can expose the same certificate facts, while ADC must reconcile it with the version, opportunity, and role fields already carried by `apply_decision`.
+`AuthorityConformingReplay` records the source opportunity, exact authority equality, operation authorization, accepted step, and conforming remainder.  The runtime's `authorityForOpportunity` also checks that the cached opportunity version equals the current state version before it invokes Lean.  AARD carries the same authority model.  ADC uses its own `apply_decision` authority fields and records the resulting exact executed action in `adc.replay-certificate.v1`.
 
 ## Lean engine
 
@@ -292,9 +292,9 @@ These limits describe the completed AAR implementation and should remain visible
 | Mutex availability during Lean | The case mutex remains held during a bounded engine call. | Add in-flight transition reservations only if measured engine latency requires concurrent reads during evaluation. |
 | Output-directory crash residue | An abrupt exit can leave `.aar-output-claim`, and later startup rejects the nonempty directory. | Define claim recovery only with an ownership and stale-process rule. |
 
-## AARD implementation and ADC adaptation
+## AARD implementation and ADC record work
 
-The completed AARD port preserves the AAR invariants and failure boundaries while retaining AARD's record vocabulary and numeric council answers.  Its engine, runtime, certificate, custody, and proof changes now provide the comparison point recorded below.  ADC has a larger state model, separate `step` and `apply_decision` paths, existing attachment commitments, and one multi-role API, so its record definition must precede runtime edits.
+The completed AARD port preserves the AAR invariants and failure boundaries while retaining AARD's record vocabulary and numeric council answers.  Its engine, runtime, certificate, custody, and proof changes provide the comparison point recorded below.  ADC now binds opportunity decisions to their executed actions during replay.  Its broader record-integrity work still requires a definition covering its file, exhibit, report, and docket records.
 
 ### Shared sequence
 
@@ -344,7 +344,7 @@ Keeping the answer model unchanged isolated record work from substantive judgmen
 
 ### ADC mapping
 
-ADC already records attachment identifiers, SHA-256 digests, and sizes, and `common/documents` verifies complaint attachment bytes.  Its [Lean `CaseState`](../../adc/engine/Main.lean) stores `case_files`, `file_events`, and `technical_reports`, while [Go initialization](../../adc/runtime/runner/state_init.go) adds presentation and runtime fields such as `filing_documents` outside that typed Lean state.  The first ADC task is a domain decision that classifies complaint attachments, `import_case_file`, `produce_case_file`, `offer_exhibit`, and report file references within the formal court record.
+ADC records attachment identifiers, SHA-256 digests, and sizes, and `common/documents` verifies complaint attachment bytes.  Its [Lean `CaseState`](../../adc/engine/ADC/Core.lean) stores `case_files`, `file_events`, and `technical_reports`, while [Go initialization](../../adc/runtime/runner/state_init.go) adds presentation and runtime fields such as `filing_documents` outside that typed Lean state.  The remaining record work begins by classifying complaint attachments, `import_case_file`, `produce_case_file`, `offer_exhibit`, and report file references within the formal court record.
 
 | ADC operation | Current record effect | Record-integrity treatment |
 |---|---|---|
@@ -352,38 +352,34 @@ ADC already records attachment identifiers, SHA-256 digests, and sizes, and `com
 | `import_case_file` | Creates a byte-bearing `case_files` entry and an `import_case_file` event. | Treat as dynamic admission with freshness, origin, byte custody, and optional lineage. |
 | `produce_case_file` | Appends a visibility event for an existing `file_id`. | Preserve the existing commitment rather than creating a second submitted item. |
 | Go `offer_case_file_as_exhibit` | Requires an existing nonempty `file_id`, emits `offer_exhibit`, and records the file-backed offer. | Prove that the emitted reference existed in the source-state record. |
-| Raw Lean `offer_exhibit` | Permits an empty `file_id`.  That branch does not append a file event. | Decide whether the empty form is a distinct non-file exhibit or an invalid participant action, then align Go, Lean, replay, and proofs. |
+| Lean `offer_exhibit` | Permits an empty `file_id` as a non-file-backed exhibit.  That branch does not append a file event. | State the separate integrity rule for non-file-backed exhibits and the reference rule for file-backed exhibits. |
 | `submit_technical_report` | Appends a typed report whose `file_id` may be empty or unchecked. | Require every nonempty source identifier to resolve in the source-state record. |
 | File read operations | Read an existing attachment or dynamic case file without a court-state transition. | Retain `common/documents` for initial attachments and add digest-and-size verification for later dynamic files. |
 
 | AAR source | ADC target | Adaptation |
 |---|---|---|
-| `EvidenceCommitment` and initialization catalog | `adc/engine/Main.lean`, `adc/runtime/runner/state_init.go` | Reuse complaint attachment commitments or define a broader `RecordCommitment`.  Make the committed catalog part of `CourtState` rather than an initialization-only argument. |
-| Submitted-evidence history | `adc/engine/Main.lean` and filing or exhibit actions | Define append-only admitted exhibits, generated filings, and derivations using ADC's docket and filing vocabulary. |
+| `EvidenceCommitment` and initialization catalog | `adc/engine/ADC/Core.lean`, `adc/runtime/runner/state_init.go` | Reuse complaint attachment commitments or define a broader `RecordCommitment`.  Make the committed catalog part of `CourtState` rather than an initialization-only argument. |
+| Submitted-evidence history | `adc/engine/ADC/Core.lean` and filing or exhibit actions | Define append-only admitted exhibits, generated filings, and derivations using ADC's docket and filing vocabulary. |
 | Filing-time offer chronology | `adc/engine/Proofs/Replay.lean` and a new record proof unit | State the property over ADC actions that cite files, exhibits, reports, or docket entries, using each replay source state. |
-| Exact action authority | `adc/engine/Main.lean`, `adc/runtime/lean/engine.go`, `adc/runtime/runner/opportunity_*` | Reconcile direct `step` actions with the existing `apply_decision` request, which already carries version, opportunity, and role outside the action payload. |
-| Candidate replay action | `adc/runtime/runner/certificate.go` | Stop appending a successful `step` transition before the surrounding state or file operation commits.  Handle `step` and `apply_decision` through one publication rule. |
+| Exact action authority | `adc/engine/ADC/Core.lean`, `adc/engine/Proofs/Reachability.lean`, `adc/runtime/runner/certificate.go` | Implemented for opportunity decisions.  Certificate replay reruns `applyDecision`, compares the authorized action with the recorded executed step, and applies the step after equality succeeds.  Deterministic runtime actions remain direct steps. |
+| Candidate replay action | `adc/runtime/runner/certificate.go` | The runtime replaces the successful raw opportunity step with one `apply_decision` transition containing the executed step.  Ordered publication of file, manifest, state, and replay data remains part of the record-integrity work. |
 | Shared mutable state | `adc/runtime/runner/runner.go`, `roleapi.go`, state and turn helpers | Replace the separate runner/API ownership model with one documented mutex or an actor model chosen before edits. |
-| Bounded engine calls | `adc/runtime/lean/engine.go`, `runtime_limits.go`, command flags, certificate verifier | Add contexts and the explicit engine-call limit to initialization, views, opportunity queries, steps, decisions, and replay. |
+| Bounded engine calls | `adc/runtime/lean/engine.go`, `runtime_limits.go`, command flags, certificate verifier | Context-aware engine methods exist, and live opportunity execution passes its case or turn context.  Add one explicit engine-call limit and process-group cleanup to every request path, including certificate replay. |
 | Byte custody | `adc/runtime/runner/attachment_reader.go`, `local_actions.go`, `adc/runtime/store`, `adc/runtime/casepacket` | Retain `common/documents` for complaint attachments.  Snapshot inline and host-path `import_case_file` bytes into owned storage before commit, then verify recorded digest and size during later reads. |
 | Strict Role API | `adc/runtime/runner/roleapi.go`, tool and validation files | Enforce exact request shapes, one JSON value, trusted identity insertion, error ownership, bounded bodies, and response writes outside the case lock. |
 
-ADC's multi-role and juror flows require procedure-specific authority rather than AAR's plaintiff-defendant-council cases.  Court actions include deterministic local steps, external-role decisions, juror actions, and `apply_decision` transitions, so the authority and commit abstraction must cover each state-changing route.  The proof should name ADC's record categories before it claims catalog disjointness, parent ordering, or temporal citation validity.
+ADC's multi-role and juror flows use procedure-specific authority.  `applyDecision` validates the state version, opportunity identifier, role, allowed tool, and decision constraints.  A pass records an `apply_decision` transition.  A tool result emits a `CourtAction`; `adc.replay-certificate.v1` records the decision together with that exact action.  Runtime and Lean replay rerun `applyDecision`, require the emitted and recorded actions to match, and then call `step`.  This structure retains participant authority while direct deterministic actions remain raw step transitions.
 
-ADC's `applyDecision` already validates state version, opportunity identifier, role, allowed tool, and decision constraints.  A pass mutates state through `apply_decision` and records that transition.  An `execute_tool` result emits a `CourtAction`, after which `step` performs the mutation and the certificate records only that raw step.  This split loses the authority that produced a participant tool action, so the certificate design must either record a combined decision-plus-step transition that reruns `applyDecision` and compares the emitted action exactly, or carry and verify equivalent authority on the emitted step.  Accepted-state validation then applies to the complete `CourtState` and the version relation of the chosen replay form.
+ADC still stores `case_files` and `file_events` as `List Json`, which leaves identifier, digest, size, origin, and lineage facts behind repeated decoders or untyped predicates.  The representation decision precedes record-integrity proofs because it determines serialized-state compatibility and the proof obligations for every record-changing action.
 
-ADC currently stores `case_files` and `file_events` as `List Json`, which leaves identifier, digest, size, origin, and lineage facts behind repeated decoders or untyped predicates.  The representation decision belongs before proof implementation because it determines serialized-state compatibility and the size of every preservation proof.  The pending ADC decisions are collected below so the port does not select them through incidental implementation choices.
-
-| ADC decision | Options and consequences |
+| Remaining ADC decision | Scope |
 |---|---|
-| Record representation | The options are (a) replace the JSON lists with typed records, which creates one formal source of truth and changes serialized state, (b) prove total predicates over the existing lists, which preserves the format and adds decoder obligations, or (c) add a typed sidecar, which reduces the initial conversion and creates synchronization proofs. |
-| Participant replay authority | Record a combined decision-plus-step transition, which preserves the existing raw action and adds a replay form, or add authority to the emitted step, which changes the action and certificate formats. |
-| Other replay classes | Give deterministic scenario actions and system failures distinct constructors, which makes replay authority explicit, or retain one raw-step constructor with a classifier and proof that participant actions cannot enter it. |
-| Empty exhibit identifier | Treat it as a non-file exhibit with separate semantics, or reject it and change the Lean action rule. |
-| Arbitrary replay start | Add an executable engine validator for the supplied start, which expands the protocol and keeps certificate acceptance self-contained, or require `RecordIntegrity start` as a theorem premise supplied outside the certificate, which leaves the protocol unchanged and enlarges the trusted boundary. |
-| Runtime ownership | Use one runner mutex, which keeps commits serialized, or use one actor loop, which changes request and timeout dispatch. |
+| Record representation | Choose typed records, predicates over the existing JSON lists, or a synchronized typed sidecar. |
+| File-reference chronology | Define source-state rules for file-backed exhibits and technical reports while retaining the separate non-file exhibit form. |
+| Arbitrary replay start | Choose an executable validator for a supplied start or an explicit `RecordIntegrity start` theorem premise. |
+| Runtime ownership and publication | Define one serialization rule for state, file, manifest, event, and replay publication across direct and Role API execution. |
 
-`offer_exhibit` currently permits an empty `file_id`, and `submit_technical_report` can name a source file.  ADC must decide whether an empty exhibit reference represents a non-file-backed exhibit or invalid record data, then state the report reference rule in the same source-state chronology.  Its report limits currently use characters and support local-rule overrides, so the chronology predicate must calculate the applicable limit from the action's source state unless a separate approved design adds an effective-limit field to serialized state.
+`offer_exhibit` permits an empty `file_id` for a non-file-backed exhibit, while a nonempty identifier must name an existing case file.  `submit_technical_report` can name a source file without the same check.  The record-integrity work must state the report reference rule and filing-time chronology.  Report limits use characters and support local-rule overrides, so a chronology predicate must calculate the applicable limit from the action's source state unless a separate approved design adds an effective-limit field to serialized state.
 
 ADC replay supports both an initialization request and an arbitrary supplied starting state.  Catalog preservation therefore needs one theorem for a successful `initialize_case` request and another theorem relating a replay target to an arbitrary replay start.  Certificate facts should select the theorem that matches the certificate's initialization form.
 

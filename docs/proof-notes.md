@@ -1,10 +1,16 @@
 # Proof Work Status
 
-This note records the proof agenda after the July 2026 certificate and ARB proof work.  It supersedes the earlier ARB proof review that treated realisability, maximal-run terminal accounting, opportunity agreement, and certificate replay as open items.  The current branch has those results in Lean, so the current theorem surface is the starting point for the next proof pass.
+This note records the maintained proof trees and their operational boundaries.  The current ARB results cover realisability, maximal-run terminal accounting, opportunity agreement, and certificate replay.  ADC and AARD provide smaller procedure-specific proof trees.
 
-## Current ARB Surface
+## Current proof surfaces
 
-ARB is the most complete proof target.  Its proof library has 39 proof files, 721 theorem or lemma declarations, and 22,858 lines.  A targeted scan found no `sorry`, no `axiom` declarations, and no `unsafe` declarations in the ARB, ADC, or AARD engine proof trees.  The word `admit` appears only in prose.
+| Procedure | Proof files | Theorem or lemma declarations | Lines |
+| --- | ---: | ---: | ---: |
+| ARB | 39 | 721 | 22,858 |
+| AARD | 10 | 98 | 2,800 |
+| ADC | 71 | 611 | 10,830 |
+
+The maintained roots contain no `sorry`, `axiom`, or `unsafe` declaration.  ARB has the broadest theorem surface:
 
 | Area | Anchor theorem or file | Status |
 | --- | --- | --- |
@@ -26,12 +32,12 @@ ARB is the most complete proof target.  Its proof library has 39 proof files, 72
 
 The term "certificate" in these systems names a package of a run's input, its accepted-action record, and its claimed final state, bound together by hashes.  The package carries no signature and no endorsement, and verification is recomputation: the verifier replays the recorded actions through the engine and compares the result with the claim.  The word is borrowed from complexity theory, where a certificate is a witness that makes a claim checkable without search.  The check here re-executes every engine transition and saves work because the recorded actions remove search and the model calls are not repeated.  Readers who expect the ordinary sense of an authority's attestation will be misled.  A passing package shows that the claimed outcome follows from the recorded history under the rules.  Attested execution addresses whether the recorded history corresponds to the execution that produced it.
 
-The certificate plan covers all three formal procedures.  ARB remains the reference implementation because its proof package is deepest, while ADC and AARD also have runtime certificates, explicit verifier commands, service artifact exposure, and Lean replay facts.  Services list and fetch certificate artifacts.  They do not run replay verification during case creation, listing, polling, or artifact reads.
+All three formal procedures write runtime certificates and provide explicit verifier commands.  ARB remains the reference implementation for record-integrity proofs.  Services list and fetch certificate artifacts without running replay verification during case creation, listing, polling, or artifact reads.
 
 | System | Runtime boundary | Proof boundary |
 | --- | --- | --- |
 | ARB | Writes `certificate.json`; `aar verify-certificate` replays against `state.json`. | Accepted terminal certificates expose exact replay, exact opportunity authority, filing-time evidence chronology, reachability, record integrity, a fixed initial evidence catalog, bounded length, decision-summary replay, and either closed outcome and due-process facts or failed-opportunity facts. |
-| ADC | Writes `state.json` and `certificate.json`; `adc verify-certificate` checks final-state hashes and replays accepted transitions. | Accepted certificates expose exact replay, replay-start reachability, closed-terminal accounting, verdict facts, juror-failure verdict facts, juror-failure hung-jury facts, judgment facts, a combined outcome package, and concrete replayed examples. |
+| ADC | Writes `state.json` and `certificate.json` using `adc.replay-certificate.v1`; `adc verify-certificate` checks final-state hashes and replays deterministic steps and opportunity decisions.  An opportunity tool transition reruns `apply_decision`, compares its authorized action with the recorded executed step, and applies that step only after equality succeeds. | Accepted certificates expose exact replay, replay-start reachability, closed-terminal accounting, verdict facts, juror-failure verdict facts, juror-failure hung-jury facts, judgment facts, a combined outcome package, and concrete replayed examples.  The Lean replay relation includes direct steps and authority-checked `applyDecision` transitions. |
 | AARD | Writes `state.json` and `certificate.json`; `aard verify-certificate` replays initialization and accepted actions. | Accepted terminal certificates expose exact replay, reachability, terminal accounting, closed answer-pair replay, failed-case failure-record replay, and checked closed and failed examples. |
 
 ## Remaining Direction

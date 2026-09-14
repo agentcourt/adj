@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.OverrideBasics
 
 theorem overrideSpecificity_le_two (o : LocalRuleOverrideV1) :
     overrideSpecificity o ≤ 2 := by
@@ -65,3 +67,5 @@ theorem chooseOverride_tie_prefers_existing_when_candidate_older
     rw [heq]
     exact Nat.lt_irrefl _
   simp [chooseOverride, hnotgt, hnotlt, hold]
+
+end ADCProofs.OverrideBasics

@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.Contempt
 
 theorem sumContemptCounts_incrementContemptCount (counts : List ContemptCounter) (targetRole : String) :
     sumContemptCounts (incrementContemptCount counts targetRole) = sumContemptCounts counts + 1 := by
@@ -142,3 +144,5 @@ theorem sumContemptCounts_incrementContemptCount_gt
     sumContemptCounts_incrementContemptCount counts targetRole
   rw [hsum]
   omega
+
+end ADCProofs.Contempt

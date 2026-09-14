@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.Rule56Eligibility
 
 /--
 A closed Rule 56 window makes Rule 56 ineligible for that party.
@@ -15,13 +17,6 @@ theorem rule56WindowEligible_false_when_window_closed
   rw [hclosed]
   simp
 
-/-
-This theorem is the bridge between the helper lemmas in
-`Rule56WindowBasics.lean` and the higher-level opportunity machinery.  It
-states the exact semantic role of the closed-window predicate in the
-eligibility test.
--/
-
 /--
 If every other Rule 56 prerequisite holds and the window is open, Rule 56
 is eligible.
@@ -33,23 +28,15 @@ reduces to `true`.
 -/
 theorem rule56WindowEligible_true_when_prerequisites_hold
     (c : CaseState) (facts : TurnFacts) (party : String)
-    (hmotion : facts.hasRule56Motion = false)
-    (horder : facts.hasRule56Order = false)
     (hpretrial : facts.hasPretrialOrder = false)
-    (hint : facts.hasInterrogatoryResponses = true)
-    (hrfp : facts.hasRfpResponses = true)
-    (hrfa : facts.hasRfaResponses = true)
-    (hrule37 : !facts.hasRule37Motion || facts.hasRule37Order)
+    (hrule56 : pendingMotionIndex? c "Rule 56 Motion" "Rule 56 Order" = none)
+    (hrule37 : pendingMotionIndex? c "Rule 37 Motion" "Rule 37 Order" = none)
+    (hprior : countDocketTitleByField c "Rule 56 Motion" "movant" party = 0)
+    (hdiscovery : discoveryCompleteFor c party = true)
     (hclosed : rule56WindowClosedFor c party = false) :
     rule56WindowEligible c facts party = true := by
   unfold rule56WindowEligible
-  simp [hmotion, horder, hpretrial, hint, hrfp, hrfa, hrule37, hclosed]
-
-/-
-This theorem states the positive side of the same eligibility rule.  It
-gives later proofs a clean target when they need to show that reopening
-the window actually matters.
--/
+  simp [hpretrial, hrule56, hrule37, hprior, hdiscovery, hclosed]
 
 /--
 Reopening a closed Rule 56 window restores Rule 56 eligibility when the
@@ -62,30 +49,25 @@ preconditions on `facts`.
 -/
 theorem reopenRule56Windows_restores_eligibility
     (c : CaseState) (facts : TurnFacts) (party : String)
-    (hmotion : facts.hasRule56Motion = false)
-    (horder : facts.hasRule56Order = false)
     (hpretrial : facts.hasPretrialOrder = false)
-    (hint : facts.hasInterrogatoryResponses = true)
-    (hrfp : facts.hasRfpResponses = true)
-    (hrfa : facts.hasRfaResponses = true)
-    (hrule37 : !facts.hasRule37Motion || facts.hasRule37Order) :
+    (hrule56 : pendingMotionIndex? c "Rule 56 Motion" "Rule 56 Order" = none)
+    (hrule37 : pendingMotionIndex? c "Rule 37 Motion" "Rule 37 Order" = none)
+    (hprior : countDocketTitleByField c "Rule 56 Motion" "movant" party = 0)
+    (hdiscovery : discoveryCompleteFor c party = true) :
     rule56WindowEligible (reopenRule56Windows c) facts party = true := by
   have hclosed : rule56WindowClosedFor (reopenRule56Windows c) party = false := by
     unfold rule56WindowClosedFor reopenRule56Windows
     simp
   apply rule56WindowEligible_true_when_prerequisites_hold
-  · exact hmotion
-  · exact horder
   · exact hpretrial
-  · exact hint
-  · exact hrfp
-  · exact hrfa
-  · exact hrule37
+  · change pendingMotionIndex? c "Rule 56 Motion" "Rule 56 Order" = none
+    exact hrule56
+  · change pendingMotionIndex? c "Rule 37 Motion" "Rule 37 Order" = none
+    exact hrule37
+  · change countDocketTitleByField c "Rule 56 Motion" "movant" party = 0
+    exact hprior
+  · change discoveryCompleteFor c party = true
+    exact hdiscovery
   · exact hclosed
 
-/-
-This is the better theorem to keep at this stage.  It avoids overfitting to
-the full pretrial opportunity pipeline, but it still captures the legal
-consequence of reopening: with the same discovery record, Rule 56 becomes
-available again because the window itself is no longer closed.
--/
+end ADCProofs.Rule56Eligibility

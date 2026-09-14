@@ -1,5 +1,9 @@
 import Proofs.Reachability
 
+namespace ADCProofs.Replay
+
+open ADCProofs.Reachability
+
 def replayTransitions :
     CourtState → List ReplayTransition → Except String CourtState
   | state, [] => .ok state
@@ -129,3 +133,5 @@ theorem acceptedReplayCertificate_reachableFrom
       replayInitial init = .ok start ∧
         ReplayReachableFrom start claimed := by
   exact replayCertificate_success_reachableFrom init transitions claimed hAccepted
+
+end ADCProofs.Replay

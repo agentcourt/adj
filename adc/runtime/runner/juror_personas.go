@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	adcprompts "github.com/agentcourt/adj/adc/runtime/prompts"
 	"github.com/agentcourt/adj/common/councilsample"
@@ -162,6 +163,7 @@ func (p *jurorPersonaPool) sampleAvailablePair(ctx context.Context, check func(c
 }
 
 func (r *Runner) prepareActionPayload(ctx context.Context, actionType string, payload map[string]any) (map[string]any, error) {
+	payload = applyActionEventTime(actionType, payload, time.Now().UTC().Format(time.RFC3339), false)
 	if actionType != "add_juror" {
 		return payload, nil
 	}

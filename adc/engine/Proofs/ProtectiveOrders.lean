@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.ProtectiveOrders
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -78,3 +80,5 @@ theorem step_lift_protective_order_records_docket :
       | .ok s' => hasDocketTitle s'.case "Protective Order po-1 lifted"
       | .error _ => false) = true := by
   native_decide
+
+end ADCProofs.ProtectiveOrders

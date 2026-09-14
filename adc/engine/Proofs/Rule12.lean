@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.Rule12
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -16,7 +18,9 @@ def stateOf (c : CaseState := baseCase) : CourtState :=
 
 def filedRule12Case (ground : String) : CaseState :=
   { baseCase with
-    docket := [{ title := "Rule 12 Motion", description := s!"defendant: ground={ground} summary=Complaint lacks plausible allegations." }]
+    docket := [docketEntryWithFields "Rule 12 Motion"
+      s!"defendant: ground={ground} summary=Complaint lacks plausible allegations."
+      [("movant", "defendant"), ("ground", ground)]]
   }
 
 def fileRule12Action (ground : String := "failure_to_state_a_claim") : CourtAction :=
@@ -110,3 +114,5 @@ theorem step_decide_rule12_granted_failure_to_state_a_claim_closes_case :
       | .ok s' => s'.case.status
       | .error _ => "") = "closed" := by
   native_decide
+
+end ADCProofs.Rule12

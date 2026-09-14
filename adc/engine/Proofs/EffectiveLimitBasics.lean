@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.EffectiveLimitBasics
 
 theorem effectiveLimitValue_no_overrides_eq_policy
     (s : CourtState) (limitKey actor phase nowIso : String) (n : Nat)
@@ -104,3 +106,5 @@ theorem effectiveLimitValue_two_overrides_first_kept_when_second_lower_specifici
     Nat.not_lt.mpr (Nat.le_of_lt hSpec)
   simp [hOverrides, hKey1, hApplies1, hKey2, hApplies2, chooseOverride, hSpec, hnotgt]
   rfl
+
+end ADCProofs.EffectiveLimitBasics

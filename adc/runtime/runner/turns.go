@@ -617,7 +617,7 @@ func (r *Runner) executeOpportunityTurn(
 			if state == nil {
 				return TurnLog{}, fmt.Errorf("lean apply_decision pass_recorded missing state")
 			}
-			if err := r.recordApplyDecisionForCertificate(stateVersion, opportunity.OpportunityID, role.Name, decision, rolesPayload, opportunity.StepBudget); err != nil {
+			if err := r.recordApplyDecisionForCertificate(stateVersion, opportunity.OpportunityID, role.Name, decision, rolesPayload, opportunity.StepBudget, nil); err != nil {
 				return TurnLog{}, err
 			}
 			r.state = mergeLocalCaseExtensions(r.state, state)
@@ -673,6 +673,16 @@ func (r *Runner) executeOpportunityTurn(
 				return TurnLog{}, err
 			}
 			continue
+		}
+		if err := r.replaceLastStepWithApplyDecisionForCertificate(
+			stateVersion,
+			opportunity.OpportunityID,
+			role.Name,
+			decision,
+			rolesPayload,
+			opportunity.StepBudget,
+		); err != nil {
+			return TurnLog{}, err
 		}
 		if err := recordCompletionResult(resp, "accepted", nil, 0); err != nil {
 			return TurnLog{}, err
@@ -788,7 +798,26 @@ func (r *Runner) applyOpportunityPayloadDefaults(toolName string, arguments map[
 			return nil, &correctionIssue{Tool: toolName, Error: "required field granted must be a Boolean"}, nil
 		}
 	}
+	merged = applyActionEventTime(toolName, merged, time.Now().UTC().Format(time.RFC3339), true)
 	return merged, nil, nil
+}
+
+func applyActionEventTime(actionType string, payload map[string]any, timestamp string, overwrite bool) map[string]any {
+	var field string
+	switch actionType {
+	case "produce_case_file":
+		field = "produced_at"
+	case "offer_exhibit":
+		field = "offered_at"
+	default:
+		return payload
+	}
+	if !overwrite && strings.TrimSpace(stringOrDefault(payload[field], "")) != "" {
+		return payload
+	}
+	cloned := clonePayload(payload)
+	cloned[field] = timestamp
+	return cloned
 }
 
 func clonePayload(arguments map[string]any) map[string]any {

@@ -1,4 +1,6 @@
-import Main
+import ADC.Core
+
+namespace ADCProofs.Rule68
 
 def baseCase : CaseState :=
   { (default : CaseState) with
@@ -113,3 +115,5 @@ theorem step_evaluate_rule68_records_cost_shift_docket :
       | .ok s' => hasDocketTitle s'.case "Rule 68 Cost Shift Evaluation"
       | .error _ => false) = true := by
   native_decide
+
+end ADCProofs.Rule68

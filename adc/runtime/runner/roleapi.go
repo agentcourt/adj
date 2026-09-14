@@ -921,7 +921,7 @@ func (api *roleAPIServer) submitDecisionLocked(turn *externalOpportunityTurn, ar
 		if state == nil {
 			return nil, map[string]any{"ok": false, "case_id": api.caseID(), "error": roleAPIError("bad_lean_response", "pass_recorded missing state")}
 		}
-		if err := api.r.recordApplyDecisionForCertificate(turn.stateVersion, turn.opportunity.OpportunityID, turn.role.Name, decision, turn.rolesPayload, turn.opportunity.StepBudget); err != nil {
+		if err := api.r.recordApplyDecisionForCertificate(turn.stateVersion, turn.opportunity.OpportunityID, turn.role.Name, decision, turn.rolesPayload, turn.opportunity.StepBudget, nil); err != nil {
 			return nil, map[string]any{"ok": false, "case_id": api.caseID(), "error": roleAPIError("certificate_record_failed", err.Error())}
 		}
 		api.r.state = mergeLocalCaseExtensions(api.r.state, state)
@@ -951,6 +951,16 @@ func (api *roleAPIServer) submitDecisionLocked(turn *externalOpportunityTurn, ar
 		turn.transcript = append(turn.transcript, map[string]any{"action": actionType, "arguments": payload, "result": res})
 		if ok, _ := res["ok"].(bool); !ok {
 			return nil, api.rejectDecisionLocked(turn, fmt.Errorf("%s", issueText(issueFromResult(actionType, res))))
+		}
+		if err := api.r.replaceLastStepWithApplyDecisionForCertificate(
+			turn.stateVersion,
+			turn.opportunity.OpportunityID,
+			turn.role.Name,
+			decision,
+			turn.rolesPayload,
+			turn.opportunity.StepBudget,
+		); err != nil {
+			return nil, map[string]any{"ok": false, "case_id": api.caseID(), "error": roleAPIError("certificate_record_failed", err.Error())}
 		}
 		log := TurnLog{Role: turn.role.Name, Prompt: turn.opportunity.Objective, Steps: turn.stepsUsed, Transcript: turn.transcript}
 		api.finishTurnLocked(turn, log, nil)
