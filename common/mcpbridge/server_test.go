@@ -130,6 +130,16 @@ func TestTransportSessionLifecycleAndProfile(t *testing.T) {
 	}()
 	addr := <-ready
 	baseURL := "http://" + addr + "/mcp"
+	clientResult, err := CallHTTPTool(ctx, baseURL, token, "inspect", map[string]any{"text": "Résumé × 2\n\u0000"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clientResult["principal_id"] != "plaintiff" || clientResult["arguments"].(map[string]any)["text"] != "Résumé × 2\n\u0000" {
+		t.Fatalf("HTTP client result: %#v", clientResult)
+	}
+	if _, err := CallHTTPTool(ctx, baseURL, token, "missing", nil); err == nil || !strings.Contains(err.Error(), "unknown tool") {
+		t.Fatalf("HTTP client tool error: %v", err)
+	}
 
 	queried := postRPC(t, baseURL+"?case_id=case-7&role_id=plaintiff", token, "", "", "initialize", map[string]any{})
 	if queried.status != http.StatusBadRequest {

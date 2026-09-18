@@ -23,7 +23,7 @@ const (
 	DefaultSessionTTL             = 30 * time.Minute
 	DefaultSessionCleanupInterval = time.Minute
 	defaultServerVersion          = "0.1.0"
-	maxRequestBytes               = 4 << 20
+	MaxRequestBytes               = 4 << 20
 )
 
 type Profile struct {
@@ -333,7 +333,7 @@ func (s *server) originAllowed(origin string) bool {
 }
 
 func (s *server) handlePost(w http.ResponseWriter, req *http.Request, assignment Assignment) {
-	body := http.MaxBytesReader(w, req.Body, maxRequestBytes)
+	body := http.MaxBytesReader(w, req.Body, MaxRequestBytes)
 	var message rpcMessage
 	decoder := json.NewDecoder(body)
 	decoder.UseNumber()

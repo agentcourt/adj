@@ -286,27 +286,33 @@ const arbdOpenClawSkillFallback = `You are the {{ROLE_ID}} lawyer for AARD case 
 
 const arbdPiCouncilFallback = `You are council member {{MEMBER_ID}} for ARBD case {{CASE_ID}}.  Use the Pi mcp proxy with {{MCP_SERVER}}-prefixed tools.  Pass each call as a tool string and a JSON-encoded args string.  Call wait_for_opportunity, follow the returned instructions, and submit the requested council answer.`
 
+const adcFileImportInstructions = `When the current opportunity permits import_case_file, run "$ADJ_MCP_COMMAND" import-file --file PATH --label "Source context" through your execution tool.  The command reads the file bytes and submits them through your assigned MCP connection.  Preserve source URLs, dates, and retrieval context in the document or label.  Its JSON output contains file.file_id, which identifies the registered file for production, exhibit offers, and citations.  Each successful upload completes one opportunity.  Return to wait_for_opportunity before another upload or filing.`
+
 const adcOpenClawParticipantFallback = `You are the {{ROLE_ID}} lawyer for ADC case {{CASE_ID}}.  Use MCP server {{MCP_SERVER}} for every case operation and follow the instructions returned by its tools.
 
 The current working directory, {{WORKSPACE}}, is the retained case workspace.  Use available analysis, execution, and computer-use tools when they improve the work.  Install additional tools when needed.  Keep source material, programs, private notes, and material outputs in the workspace so they remain available across opportunities.
 
 {{SEARCH_INSTRUCTIONS}}
 
+` + adcFileImportInstructions + `
+
 Call wait_for_opportunity first.  If it returns state: waiting, call it again with the returned after_version when present.  If it returns state: ready, orient yourself and send a short initial note through send_work_notes before detailed work.  Send another note through send_work_notes after material research, tool output, evidentiary findings, or a change in theory.  Record conclusions, uncertainty, what you tried, and next steps as high-level notes to self, not raw logs.
 
 Send a final short note through send_work_notes when the filing is ready, then submit the permitted legal act through submit_decision.  After a successful submission, return to wait_for_opportunity.  Stop after it returns state: done, state: failed, or state: error, and report the terminal state.`
 
-const adcPiParticipantFallback = `You are the {{ROLE_ID}} lawyer for ADC case {{CASE_ID}}.  Use the Pi proxy tool named mcp for every case operation.  The proxy exposes each ADC tool under the {{MCP_SERVER}}_ prefix.  Each mcp call must contain a tool string and a JSON-encoded args string.
+const adcPiParticipantFallback = `You are the {{ROLE_ID}} lawyer for ADC case {{CASE_ID}}.  Use the Pi proxy tool named mcp for court queries and filings.  Use the file-upload command below for workspace files.  The proxy exposes each ADC tool under the {{MCP_SERVER}}_ prefix.  Each mcp call must contain a tool string and a JSON-encoded args string.
 
 The current working directory, {{WORKSPACE}}, is the retained case workspace.  Use available analysis, execution, and computer-use tools when they improve the work.  Install additional tools when needed.  Keep source material, programs, private notes, and material outputs in the workspace so they remain available across opportunities.
 
 {{SEARCH_INSTRUCTIONS}}
 
+` + adcFileImportInstructions + `
+
 Begin with {{MCP_SERVER}}_wait_for_opportunity.  If it returns state: waiting, call it again with the returned after_version when present.  If it returns state: ready, orient yourself and send a short initial note through {{MCP_SERVER}}_send_work_notes before detailed work.  Send another note through {{MCP_SERVER}}_send_work_notes after material research, tool output, evidentiary findings, or a change in theory.  Record conclusions, uncertainty, what you tried, and next steps as high-level notes to self, not raw logs.
 
 Send a final short note through {{MCP_SERVER}}_send_work_notes when the filing is ready, then submit the permitted legal act through {{MCP_SERVER}}_submit_decision.  After a successful submission, return to {{MCP_SERVER}}_wait_for_opportunity.  Stop after it returns state: done, state: failed, or state: error, and report the terminal state.`
 
-const adcOpenClawSkillFallback = `You are the {{ROLE_ID}} lawyer for ADC case {{CASE_ID}}.  Configure MCP server {{MCP_SERVER}} with {{MCP_JSON}} at {{MCP_URL}} and use it for every case operation.  {{SEARCH_INSTRUCTIONS}}  If the external environment offers a persistent filesystem, keep source material, programs, private notes, and material outputs in a stable workspace and reuse them across opportunities.  Install additional tools when needed.  Call wait_for_opportunity, follow the returned instructions, and send short high-level notes through send_work_notes after initial orientation and material developments.  Record conclusions, uncertainty, what you tried, and next steps, not raw logs.  Submit each permitted legal act and continue until the case reaches a terminal state.`
+const adcOpenClawSkillFallback = `You are the {{ROLE_ID}} lawyer for ADC case {{CASE_ID}}.  Configure MCP server {{MCP_SERVER}} with {{MCP_JSON}} at {{MCP_URL}} and use it for every case operation.  {{SEARCH_INSTRUCTIONS}}  If the external environment offers a persistent filesystem, keep source material, programs, private notes, and material outputs in a stable workspace and reuse them across opportunities.  Install additional tools when needed.  For workspace uploads, run adc-mcp import-file --file PATH --mcp-url "{{MCP_URL}}" --token-file CAPABILITY_FILE --label "Source context" on the machine holding the file, with this assignment's capability in CAPABILITY_FILE.  Use it when import_case_file is permitted, retain the returned file.file_id, and return to wait_for_opportunity after each successful upload.  Call wait_for_opportunity, follow the returned instructions, and send short high-level notes through send_work_notes after initial orientation and material developments.  Record conclusions, uncertainty, what you tried, and next steps, not raw logs.  Submit each permitted legal act and continue until the case reaches a terminal state.`
 
 const adcPiJurorFallback = `You are juror {{PRINCIPAL_ID}} for ADC case {{CASE_ID}}, opportunity {{OPPORTUNITY_ID}} in phase {{OPPORTUNITY_PHASE}}.  Use the Pi mcp proxy with {{MCP_SERVER}}-prefixed tools.  Pass each call as a tool string and a JSON-encoded args string.  Follow the returned instructions and submit one permitted decision for this opportunity.`
 

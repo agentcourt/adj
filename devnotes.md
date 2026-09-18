@@ -894,3 +894,27 @@ The retry exited with status zero after two imports, a technical report, both pr
 The retry recorded 22 completed lawyer responses with `$1.051705` in token-price estimates, making `$1.626496` across these two attempts.  The digest request used 903 input tokens and 214 output tokens without a dollar-cost observation.  The failed and successful runs occupy 2.5 MiB and 3.2 MiB.  No case process, container, or staged authentication or MCP configuration file remains.
 
 Review also found that the digest's external-activity and Bash sections omit Pi activity.  They read `custom_method` and `agent_tool_call` entries in core turn transcripts, whereas these MCP lawyer turns contain decision acceptance and legal actions.  The Pi session and process logs retain the tool calls.  The resulting "No external role activity recorded" statement is misleading for this run.  This reporting issue remains open separately from evidence-status wording.
+
+## ADC participant file-upload command: 2026-09-18
+
+The user approved `adc-mcp import-file --file PATH`.  It reads the participant's file, base64-encodes its bytes, and submits the existing `import_case_file` decision through that participant's MCP capability.  The command returns registered file metadata as JSON.  It supports an optional label, an explicit MCP URL and capability file, environment-provided connection settings, and a configurable timeout.  The existing 4 MiB MCP request limit includes the encoded file and JSON overhead.
+
+The client follows the MCP 2025-06-18 [HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports) and [initialization sequence](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle) used by adj's JSON-response server.  It initializes a session, sends the initialized notification, calls one tool, and deletes the session.  Errors return to the caller.  The client sends each request once.  After an interrupted upload response, the caller must inspect the case before deciding whether another submission is needed.
+
+The ADC launcher supplies its configured MCP executable to automatic lawyers.  Native processes receive its absolute path.  Pi and OpenClaw receive a read-only executable mount.  `ADJ_MCP_COMMAND`, `ADJ_MCP_URL`, and `ADJ_MCP_BEARER_TOKEN` provide the command path and existing assignment credentials.  The local participant prompts, remote-lawyer instructions, import descriptions, compiled fallbacks, manual, and prompt-authoring guide describe the command and opportunity sequence.  No dependency was added.
+
+- [x] Implement the command and launcher support.
+- [x] Update prompts and documentation.
+- [x] Test MCP client calls against the shared server, including a tool error, and test Pi command mounting and environment delivery.
+- [x] Run ADC Go tests, all formal local-runner tests, shared launcher tests, and affected vet checks.
+- [x] Complete the live Pi/MCP upload test and compare each stored file with its workspace original.
+- [x] Verify the certificate, inspect process and credential cleanup, and record usage.
+- [x] Commit and push on `main`.
+
+The live test uses the unchanged invoice scenario and Pi lawyer settings with output under `adc/out/import-live-20260918-07/`.  The summary generator's separate Pi-activity omission remains outside this file-transfer change.
+
+The test exited with status zero.  The lawyer invoked the command twice through Bash, importing a CSV calculation table and a Markdown explanation.  Both stored files match their workspace originals byte for byte.  The two upload clients deleted their MCP sessions.  The lawyer then filed its report and produced both files, and the court advanced to trial and generated its digest.  Certificate verification passed all nine transitions through local leanrunner: 4 GiB memory high, 6 GiB maximum, 1 GiB swap, 100% CPU, and a 900-second timeout.  The command was `adc/.bin/adc verify-certificate --dir adc/out/import-live-20260918-07/adc-output`, run from the repository root.  It used the existing compiled engine.  No Lean source or proof changed.
+
+The run recorded 22 completed lawyer responses and `$0.705226` in token-price estimates.  Its digest request used 979 input tokens and 266 output tokens without a dollar-cost observation.  The retained directory occupies 2.7 MiB.  No case process, container, or staged authentication or MCP configuration file remains.
+
+Live model testing covered Pi.  The shared launcher supplies the command to the other runners, with unit coverage for the container mount and environment.  The installed Codex CLI is 0.155.0.  Its [documented shell environment policy](https://developers.openai.com/codex/config-advanced#shell-environment-policy) preserves token-named variables by default, so this implementation leaves its settings unchanged.

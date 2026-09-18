@@ -874,6 +874,9 @@ func TestPiContainerPassesOnlySelectedProviderKey(t *testing.T) {
 	baseEnv := []string{
 		"HOME=" + dir,
 		"SELECTED_PI_KEY=selected",
+		"ADJ_MCP_COMMAND=/usr/local/bin/adc-mcp",
+		"ADJ_MCP_URL=http://127.0.0.1:19000/mcp",
+		"ADJ_MCP_BEARER_TOKEN=court-secret",
 		"OPENROUTER_API_KEY=unselected",
 		"OPENAI_API_KEY=unselected-openai",
 		"EXA_API_KEY=unselected-exa",
@@ -913,6 +916,10 @@ func TestPiContainerPassesOnlySelectedProviderKey(t *testing.T) {
 		"\x00--name\x00aar-case-1-plaintiff-pi\x00",
 		"\x00--user\x000:0\x00",
 		"\x00-e\x00OPENROUTER_API_KEY\x00",
+		"\x00-v\x00/usr/local/bin/adc-mcp:/opt/adj/mcp:ro\x00",
+		"\x00-e\x00ADJ_MCP_COMMAND=/opt/adj/mcp\x00",
+		"\x00-e\x00ADJ_MCP_URL\x00",
+		"\x00-e\x00ADJ_MCP_BEARER_TOKEN\x00",
 		"\x00-v\x00" + invocation.StateDir + ":/home/user/state\x00",
 		"\x00-v\x00" + invocation.Dir + ":/home/user/work\x00",
 		"\x00-v\x00" + invocation.EvidenceDir + ":/home/user/evidence:ro\x00",
@@ -928,6 +935,9 @@ func TestPiContainerPassesOnlySelectedProviderKey(t *testing.T) {
 	}
 	if got, ok := environmentValue(processEnv, "OPENROUTER_API_KEY"); !ok || got != "selected" {
 		t.Fatalf("selected provider key = %q, %v", got, ok)
+	}
+	if got, ok := environmentValue(processEnv, "ADJ_MCP_BEARER_TOKEN"); !ok || got != "court-secret" || strings.Contains(joined, "court-secret") {
+		t.Fatal("MCP capability must pass through the environment")
 	}
 	for _, name := range []string{"SELECTED_PI_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "EXA_API_KEY", "PI_ALLOW_BROWSER_COOKIES", "FEYNMAN_ALLOW_BROWSER_COOKIES"} {
 		if value, ok := environmentValue(processEnv, name); ok {

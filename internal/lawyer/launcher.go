@@ -99,6 +99,7 @@ type Assignment struct {
 	Profile     string
 	Prompt      string
 	MCP         headless.MCPServer
+	MCPCommand  string
 	WebSearch   *bool
 	Environment []string
 	StateDir    string
@@ -411,10 +412,27 @@ func (s *Supervisor) resolveAssignmentDirs(assignment Assignment) (stateDir, wor
 }
 
 func (s *Supervisor) assignmentEnvironment(assignment Assignment) []string {
-	if assignment.Environment == nil {
-		return s.runtime.BaseEnvironment
+	env := s.runtime.BaseEnvironment
+	if assignment.Environment != nil {
+		env = assignment.Environment
 	}
-	return assignment.Environment
+	for _, name := range []string{"ADJ_MCP_COMMAND", "ADJ_MCP_URL", "ADJ_MCP_BEARER_TOKEN"} {
+		env = removeEnvironmentValue(env, name)
+	}
+	if assignment.MCPCommand != "" {
+		env = setEnvironmentValue(env, "ADJ_MCP_COMMAND", assignment.MCPCommand)
+		env = setEnvironmentValue(env, "ADJ_MCP_URL", assignment.MCP.URL)
+		env = setEnvironmentValue(env, "ADJ_MCP_BEARER_TOKEN", assignment.MCP.BearerToken)
+	}
+	return env
+}
+
+func mcpCommandContainerArgs(args, env []string) []string {
+	if command, ok := environmentValue(env, "ADJ_MCP_COMMAND"); ok && command != "" {
+		args = append(args, "-v", command+":/opt/adj/mcp:ro",
+			"-e", "ADJ_MCP_COMMAND=/opt/adj/mcp", "-e", "ADJ_MCP_URL", "-e", "ADJ_MCP_BEARER_TOKEN")
+	}
+	return args
 }
 
 func piContainer(invocation *headless.Invocation, name, image string, baseEnv []string) ([]string, []string, error) {
@@ -466,6 +484,7 @@ func piContainer(invocation *headless.Invocation, name, image string, baseEnv []
 	if invocation.EvidenceDir != "" {
 		args = append(args, "-v", invocation.EvidenceDir+":"+PiEvidencePath+":ro")
 	}
+	args = mcpCommandContainerArgs(args, baseEnv)
 	args = append(args, image)
 	args = append(args, innerArgs...)
 	processEnv := filterProviderEnvironment(baseEnv)
@@ -516,6 +535,7 @@ func (s *Supervisor) startOpenClaw(ctx context.Context, profile OpenClawProfile,
 	hostGID := os.Getegid()
 	args := openClawContainerArgs(profile, name, workDir, evidenceDir)
 	args = append(args, authArgs...)
+	args = mcpCommandContainerArgs(args, baseEnvironment)
 	for _, variable := range []string{"AAR_MCP_NAME", "AAR_MCP_JSON", "AAR_SESSION_KEY", "AAR_ASSIGNMENT", "AAR_PRINCIPAL"} {
 		args = append(args, "-e", variable)
 	}

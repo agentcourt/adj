@@ -29,10 +29,10 @@ func main() {
 }
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
-	mode, modeArgs, err := mcpcli.SplitMode("adc-mcp", args)
-	if err != nil {
-		return err
+	if len(args) == 0 {
+		return fmt.Errorf("usage: adc-mcp {serve|keygen|issue|import-file} [options]")
 	}
+	mode, modeArgs := args[0], args[1:]
 	switch mode {
 	case "serve":
 		return runServe(ctx, modeArgs, stderr)
@@ -40,6 +40,8 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 		return mcpcli.RunKeygen("adc-mcp", modeArgs, stderr)
 	case "issue":
 		return runIssue(modeArgs, stdout, stderr)
+	case "import-file":
+		return runImportFile(ctx, modeArgs, stdout, stderr)
 	default:
 		return fmt.Errorf("unknown adc-mcp mode %q", mode)
 	}

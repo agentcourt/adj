@@ -140,7 +140,7 @@ var fixedDefinitions = []definition{
 	def(RuntimeCorrectionSupportID, "runtime/correction/support-budget-exhausted.md", "You have inspected enough record material for this opportunity. Submit a legal decision now, or pass if passing is allowed.", nil),
 	def(RuntimeCorrectionFixedID, "runtime/correction/fixed-fields.md", "This opportunity fixes {{FIXED_FIELDS}}. Keep those values and supply only the remaining fields.", []string{"{{FIXED_FIELDS}}"}),
 	def(RuntimeCorrectionMalformedID, "runtime/correction/malformed-arguments.md", "Your previous tool-call arguments were malformed. Call the tool again with valid JSON arguments.", nil),
-	def(RuntimeResultImportUploadID, "runtime/result/import-upload-fields.md", "To import a new file, submit original_name and base64-encoded content in content_base64. Do not refer to a host path.", nil),
+	def(RuntimeResultImportUploadID, "runtime/result/import-upload-fields.md", "Use the assigned adc-mcp import-file command for workspace files when available. Programmatic clients can submit original_name and file bytes encoded as content_base64.", nil),
 	def(RuntimeResultUnknownFileID, "runtime/result/unknown-case-file.md", "Use a case file identifier, not a filename. {{FILE_ID}} is not a known file_id. Available file_id values: {{AVAILABLE_FILE_IDS}}.", []string{"{{FILE_ID}}", "{{AVAILABLE_FILE_IDS}}"}),
 	def(RuntimeResultTextExtensionID, "runtime/result/unsupported-case-text-extension.md", "read_case_text_file only supports .md, .txt, .pem, and .b64 files. {{CASE_FILE}} has extension {{EXTENSION}}.", []string{"{{CASE_FILE}}", "{{EXTENSION}}"}),
 	def(RuntimeResultUnreadableID, "runtime/result/case-file-missing-readable-path.md", "This case file has no stored path and cannot be read.", nil),
@@ -156,7 +156,7 @@ var fixedDefinitions = []definition{
 	def(ReportSummaryUserID, "report/summary/user.md", "Return strict JSON with plaintiff_summary and defendant_summary. Cite supplied docket titles in square brackets. For a side whose courtroom text is (none), return an empty string for that side.\n\nCourtroom context:\n{{COURTROOM_CONTEXT}}\n\nEvidence context:\n{{EVIDENCE_CONTEXT}}\n\nPlaintiff text:\n{{PLAINTIFF_TEXT}}\n\nDefendant text:\n{{DEFENDANT_TEXT}}", []string{"{{COURTROOM_CONTEXT}}", "{{EVIDENCE_CONTEXT}}", "{{PLAINTIFF_TEXT}}", "{{DEFENDANT_TEXT}}"}),
 	def(ReportRepairSystemID, "report/repair/system.md", "Convert the supplied text to strict JSON with no outside prose.", nil),
 	def(ReportRepairUserID, "report/repair/user.md", "Return strict JSON with plaintiff_summary and defendant_summary. Preserve citation anchors in square brackets.\n\n{{MODEL_OUTPUT}}", []string{"{{MODEL_OUTPUT}}"}),
-	def(ImportSourceFilenameID, "tool-descriptions/direct/import_case_file/properties/source_filename.md", "Path readable by the court process on its host. For a file in a lawyer's container or remote workspace, upload its bytes using original_name and content_base64.", nil),
+	def(ImportSourceFilenameID, "tool-descriptions/direct/import_case_file/properties/source_filename.md", "Path readable by the court process on its host. For a lawyer's workspace file, use the assigned adc-mcp import-file command when available. Programmatic clients can upload bytes using original_name and content_base64.", nil),
 	def(ImportOriginalNameID, "tool-descriptions/direct/import_case_file/properties/original_name.md", "Original filename when uploading file content", nil),
 	def(ImportContentBase64ID, "tool-descriptions/direct/import_case_file/properties/content_base64.md", "Base64-encoded file content", nil),
 	def(RoleAPICaseStatusID, "tool-descriptions/role-api/case-status.md", "Report the current case status and active opportunity.", nil),
@@ -237,7 +237,7 @@ func buildDefinitions() map[string]definition {
 		out[id] = def(id, "tool-descriptions/direct/"+toolName+".md", "Execute `"+toolName+"` with a payload matching its schema.", nil)
 	}
 	id := DirectToolDescriptionPrefix + "import_case_file"
-	out[id] = def(id, "tool-descriptions/direct/import_case_file.md", "Register a source document or analysis file in the case. Upload a workspace file using original_name, content_base64, and an optional descriptive label. Preserve source URLs, dates, and retrieval context in the document or label. Use the returned file_id for production, exhibit offers, and citations. Importing a file does not offer it as an exhibit.", nil)
+	out[id] = def(id, "tool-descriptions/direct/import_case_file.md", "Register a source document or analysis file in the case. Use the assigned adc-mcp import-file command for workspace files when available. Programmatic clients can submit original_name, file bytes encoded as content_base64, and an optional descriptive label. Preserve source URLs, dates, and retrieval context in the document or label. Use the returned file_id for production, exhibit offers, and citations. Exhibit admission requires a separate offer.", nil)
 	return out
 }
 

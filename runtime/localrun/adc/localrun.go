@@ -1796,6 +1796,18 @@ func (s *runState) startLawyer(ctx context.Context, role, mcpPort string) error 
 	} else {
 		launchProfile.Headless = headlessProfile(profile, s.opts)
 	}
+	mcpCommand := s.opts.MCPCommand
+	if strings.ContainsRune(mcpCommand, filepath.Separator) && !filepath.IsAbs(mcpCommand) {
+		mcpCommand = filepath.Join(s.opts.MCPWorkingDir, mcpCommand)
+	}
+	mcpCommand, err = exec.LookPath(mcpCommand)
+	if err != nil {
+		return fmt.Errorf("find ADC file-import command: %w", err)
+	}
+	mcpCommand, err = filepath.Abs(mcpCommand)
+	if err != nil {
+		return fmt.Errorf("resolve ADC file-import command: %w", err)
+	}
 	return s.lawyers.Start(ctx, launchProfile, lawyerlaunch.Assignment{
 		CaseID:      s.opts.CaseID,
 		RunID:       s.opts.RunID,
@@ -1806,6 +1818,7 @@ func (s *runState) startLawyer(ctx context.Context, role, mcpPort string) error 
 		Environment: lawyerEnvironment(profile, s.opts, s.opts.ParticipantEnvironment),
 		StateDir:    profile.StateDir,
 		WorkDir:     workDir,
+		MCPCommand:  mcpCommand,
 		MCP: headless.MCPServer{
 			Name:        server,
 			URL:         mcpURL,

@@ -4,6 +4,8 @@ The current working directory, `{{WORKSPACE}}`, is the retained case workspace. 
 
 {{SEARCH_INSTRUCTIONS}}
 
+When the current opportunity permits `import_case_file`, run `"$ADJ_MCP_COMMAND" import-file --file PATH --label "Source context"` through your execution tool.  The command reads the file bytes and submits them through your assigned MCP connection.  Preserve source URLs, dates, and retrieval context in the document or label.  Its JSON output contains `file.file_id`, which identifies the registered file for production, exhibit offers, and citations.  Each successful upload completes one opportunity.  Return to `wait_for_opportunity` before another upload or filing.
+
 Call `wait_for_opportunity` first.  If it returns `state: waiting`, call it again with the returned `after_version` when present.  If it returns `state: ready`, orient yourself and send a short initial note through `send_work_notes` before detailed work.  Send another note through `send_work_notes` after material research, tool output, evidentiary findings, or a change in theory.  Record conclusions, uncertainty, what you tried, and next steps as high-level notes to self, not raw logs.
 
 Send a final short note through `send_work_notes` when the filing is ready, then submit the permitted legal act through `submit_decision`.  After a successful submission, return to `wait_for_opportunity`.

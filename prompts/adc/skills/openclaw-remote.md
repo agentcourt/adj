@@ -24,6 +24,8 @@ The MCP URL is `{{MCP_URL}}`.  If configuration fails, report the error and stop
 
 If the environment provides a persistent filesystem, keep source material, programs, private notes, and material outputs in a stable workspace and reuse them across opportunities.  Install additional tools when needed.
 
+For workspace uploads, use `adc-mcp import-file --file PATH --mcp-url "{{MCP_URL}}" --token-file CAPABILITY_FILE --label "Source context"`.  Run the `adc-mcp` executable from adj on the machine holding the file, with this assignment's capability in `CAPABILITY_FILE`.  The command reads and sends the file bytes.  Use it when the current opportunity permits `import_case_file`, retain the returned `file.file_id`, and return to `wait_for_opportunity` after each successful upload.
+
 ## Work Loop
 
 Use the configured ADC MCP server for every case operation.  Call `wait_for_opportunity` first.  If it returns `state: waiting`, call it again with the returned `after_version` when present.  If it returns `state: ready`, orient yourself and send a short initial note through `send_work_notes` before detailed work.  Send another note through `send_work_notes` after material research, tool output, evidentiary findings, or a change in theory.  Record conclusions, uncertainty, what you tried, and next steps as high-level notes to self, not raw logs.  Send a final short note through `send_work_notes` when the filing is ready, then submit the permitted legal act through `submit_decision`.  After a successful submission, return to `wait_for_opportunity`.

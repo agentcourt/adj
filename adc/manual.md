@@ -260,7 +260,25 @@ Party tools cover pleadings, discovery, dispositive motions, evidence, trial pre
 
 Lawyer opportunities include `import_case_file` alongside the pending legal actions when the scenario permits import for that role.  An import registers one document, then the runtime requests the next opportunity.  The pending filing remains available.  Counsel may import further files or complete the filing.  After a production request, each registered file has its own production opportunity until that party produces it to the opponent.  Counsel may pass on files that are not responsive.
 
-An external lawyer uploads a workspace file by submitting `original_name`, `content_base64`, and an optional `label` through `submit_decision` with `tool_name: "import_case_file"`.  The runtime stores the bytes under `uploaded-case-files/` beside the core run output and assigns the file identifier and metadata before Lean authorizes the decision.  A local scenario may instead supply `source_filename`, resolved on the court host.  Import registers the document.  Production records disclosure to the opponent.  `offer_exhibit` records its admission or exclusion.  Counsel must cite registered files and exhibits in filings so other participants can inspect the supporting material.
+An external lawyer can upload a workspace file with `adc-mcp import-file`.  The command reads and base64-encodes the file on the participant's machine, then calls `submit_decision` with `tool_name: "import_case_file"` through the assigned MCP connection.  The runtime stores the bytes under `uploaded-case-files/` beside the core run output and assigns the file identifier and metadata before Lean authorizes the decision.  A local scenario may instead supply `source_filename`, resolved on the court host.  Import registers the document.  Production records disclosure to the opponent.  `offer_exhibit` records its admission or exclusion.  Counsel must cite registered files and exhibits in filings so other participants can inspect the supporting material.
+
+The ADC launcher provides the command to Pi, OpenClaw, Codex, and Claude lawyers.  It sets `ADJ_MCP_COMMAND` to the executable path and supplies `ADJ_MCP_URL` and `ADJ_MCP_BEARER_TOKEN` in the child environment.  Pi and OpenClaw receive a read-only executable mount.  During an opportunity that permits import, a lawyer runs:
+
+```bash
+"$ADJ_MCP_COMMAND" import-file --file analysis.pdf --label "Calculation and source references"
+```
+
+A caller-owned lawyer runs the command on the machine holding its files.  `--token-file` reads the assignment capability from a private file:
+
+```bash
+adc-mcp import-file \
+  --file analysis.pdf \
+  --label "Calculation and source references" \
+  --mcp-url http://HOST:PORT/mcp \
+  --token-file lawyer.capability
+```
+
+Successful output is JSON with `ok: true` and a `file` object containing `file_id` and registered metadata.  Each upload completes one opportunity, so the lawyer obtains the next opportunity before uploading another file or filing an argument.  The command has a 90-second default timeout, configurable through `--timeout`.  The existing MCP request limit is 4 MiB, including base64 and JSON overhead.  A rejected import or transport failure produces a nonzero exit status.  After an interrupted response, inspect `list_case_files` before retrying because the court may have accepted the upload.
 
 During a party evidence phase, `offer_exhibit` records an exhibit and `rest_case` ends that presentation.  `offer_exhibit.file_id` is optional.  A nonempty identifier must name an existing case file and adds the corresponding file event, while an empty identifier records a non-file-backed exhibit without a file event.  The runtime supplies `offered_at` and `produced_at` timestamps when it executes exhibit offers and file productions.  Opportunity execution replaces participant-supplied values with the runtime event time; a direct scenario action retains an explicit value and receives the runtime event time when the field is absent.
 

@@ -1,1 +1,1 @@
-Path readable by the court process on its host.  For a file in a lawyer's container or remote workspace, upload its bytes using original_name and content_base64.
+Path readable by the court process on its host.  For a lawyer's workspace file, use the assigned `adc-mcp import-file` command when available.  Programmatic clients can upload bytes using `original_name` and `content_base64`.
