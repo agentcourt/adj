@@ -253,15 +253,16 @@ type sideSummaryResult struct {
 	Source    string
 }
 
+const noSideArguments = "No courtroom argument text was available for summary."
+
 func summarizeArgumentsBySide(caseObj map[string]any, docket []any, model string, client *openai.Client, promptCatalog *adcprompts.Catalog) (sideSummaryResult, error) {
 	plaintiffText, defendantText := collectSideArguments(docket)
 	courtroomContext := collectCourtroomContext(docket)
 	evidenceContext := collectEvidenceContext(caseObj, docket)
 	if strings.TrimSpace(plaintiffText) == "" && strings.TrimSpace(defendantText) == "" {
-		msg := "No courtroom argument text was available for summary."
 		return sideSummaryResult{
-			Plaintiff: msg,
-			Defendant: msg,
+			Plaintiff: noSideArguments,
+			Defendant: noSideArguments,
 			Source:    "none",
 		}, nil
 	}
@@ -421,18 +422,29 @@ func summarizeArgumentsBySideLLM(plaintiffText, defendantText, courtroomContext,
 			return "", "", fmt.Errorf("summary parse failed after repair: %w", err)
 		}
 	}
-	out.PlaintiffSummary = strings.TrimSpace(out.PlaintiffSummary)
-	out.DefendantSummary = strings.TrimSpace(out.DefendantSummary)
-	if out.PlaintiffSummary == "" || out.DefendantSummary == "" {
-		return "", "", fmt.Errorf("empty side summary fields")
+	plaintiffSummary, err := sideArgumentSummary("plaintiff", plaintiffText, out.PlaintiffSummary)
+	if err != nil {
+		return "", "", err
 	}
-	if !strings.Contains(out.PlaintiffSummary, "[") || !strings.Contains(out.PlaintiffSummary, "]") {
-		return "", "", fmt.Errorf("plaintiff summary missing citation anchors")
+	defendantSummary, err := sideArgumentSummary("defendant", defendantText, out.DefendantSummary)
+	if err != nil {
+		return "", "", err
 	}
-	if !strings.Contains(out.DefendantSummary, "[") || !strings.Contains(out.DefendantSummary, "]") {
-		return "", "", fmt.Errorf("defendant summary missing citation anchors")
+	return plaintiffSummary, defendantSummary, nil
+}
+
+func sideArgumentSummary(side, source, summary string) (string, error) {
+	if strings.TrimSpace(source) == "" {
+		return noSideArguments, nil
 	}
-	return out.PlaintiffSummary, out.DefendantSummary, nil
+	summary = strings.TrimSpace(summary)
+	if summary == "" {
+		return "", fmt.Errorf("%s summary is empty", side)
+	}
+	if !strings.Contains(summary, "[") || !strings.Contains(summary, "]") {
+		return "", fmt.Errorf("%s summary missing citation anchors", side)
+	}
+	return summary, nil
 }
 
 func promptReportValue(value string) string {

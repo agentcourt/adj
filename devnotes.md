@@ -856,3 +856,22 @@ The second live run received the full import description and revised source-file
 The second run also exposed a model-side copying error: the explanation document contained `independently` in the workspace, while the model-submitted base64 decoded to `indepently`.  The stored file matches those submitted bytes.  The lawyer noticed the typo when reading the imported file but retained it.  The first document matches its workspace original.  The two original documents in the first live run also match their uploads.  This observation requires attention before using model-constructed base64 for larger evidentiary files.  No file-transfer design change has been made.
 
 The second test recorded 26 completed lawyer responses with `$1.081359` in token-price estimates, for `$2.304685` across the two live tests.  These figures exclude the direct digest-model requests.  Its retained directory occupies 3.6 MiB.  No staged authentication or MCP configuration file remains, and Podman reports zero running containers.  The final ADC Go tests, runner and prompt vet checks, and `git diff --check` passed.  The two outstanding observations above remain unresolved.
+
+## ADC absent-side digest correction: 2026-09-18
+
+The user approved correcting digest generation for a side with no recorded argument text.  The [report generator](adc/runtime/report/report.go) now checks each side's source text before validating its summary.  An empty source produces the existing sentence, "No courtroom argument text was available for summary."  A nonempty source requires a nonempty summary with citation brackets.  The check uses the record even if the model returns prose for an absent side.  The existing path for two absent sides still avoids a summary-model request.
+
+The checked-in summary prompt and its fallback ask for an empty JSON string for an absent side.  The manual describes the generated absence statement and citation requirement.  The focused test covers absent source text, model text returned for an absent side, a cited summary, an empty summary for an existing argument, and an uncited summary for an existing argument.
+
+- [x] Implement and document absent-side handling.
+- [x] Run the focused report, prompt, and CLI tests.
+- [x] Complete the live Pi/MCP test, inspect its digest, and verify the certificate.
+- [x] Commit and push the correction on `main`.
+
+The live run uses the unchanged invoice scenario and participant settings from the preceding tests, with a fresh output directory at `adc/out/import-live-20260918-04/`.  The model-side file-copying observation remains separate and unresolved.
+
+The live test exited with status zero after two imports, a technical report, two productions, the transition to trial, and digest generation.  The digest contains a cited plaintiff summary and the fixed absence statement for the defendant.  All nine certificate transitions verified.  Both uploaded files match their retained workspace originals.  The ADC runtime and launcher Go tests, report and prompt vet checks, and `git diff --check` passed.  This correction changes no Lean source or proof.
+
+The lawyer recorded 32 completed responses and `$1.354129` in token-price estimates.  The digest request recorded 819 input tokens and 300 output tokens without a dollar-cost observation.  The retained directory occupies 4.1 MiB.  Staged authentication and MCP configuration files are absent, and Podman reports zero running containers.
+
+Digest review found a separate wording error: the plaintiff summary calls the two imported documents "exhibits," while the same digest records zero admitted exhibits.  The absent-side correction leaves that model-generated wording unchanged.  This observation and the earlier model-side file-copying error remain open before the Israel–Syria rerun.

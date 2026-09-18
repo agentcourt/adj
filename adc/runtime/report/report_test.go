@@ -10,6 +10,31 @@ import (
 	"github.com/agentcourt/adj/adc/runtime/runner"
 )
 
+func TestSideArgumentSummary(t *testing.T) {
+	for _, tc := range []struct {
+		name, source, summary, want, wantError string
+	}{
+		{name: "absent", want: noSideArguments},
+		{name: "absent with model text", source: " \n", summary: "An unsupported account [Closing argument - defendant]", want: noSideArguments},
+		{name: "cited", source: "Recorded argument", summary: " Supported account [Closing argument - defendant] ", want: "Supported account [Closing argument - defendant]"},
+		{name: "empty", source: "Recorded argument", wantError: "defendant summary is empty"},
+		{name: "uncited", source: "Recorded argument", summary: "An account without a citation", wantError: "defendant summary missing citation anchors"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := sideArgumentSummary("defendant", tc.source, tc.summary)
+			if tc.wantError != "" {
+				if err == nil || err.Error() != tc.wantError {
+					t.Fatalf("error = %v, want %q", err, tc.wantError)
+				}
+				return
+			}
+			if err != nil || got != tc.want {
+				t.Fatalf("summary = %q, error = %v; want %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
 func TestRenderJurorRoundsIncludesRoundSummaries(t *testing.T) {
 	t.Parallel()
 
