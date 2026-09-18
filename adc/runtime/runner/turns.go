@@ -643,7 +643,7 @@ func (r *Runner) executeOpportunityTurn(
 		if payload == nil {
 			payload = map[string]any{}
 		}
-		execRes, err := r.executeActionContext(ctx, turnIndex, 1, actorRole, actionType, payload)
+		execRes, err := r.executePreparedActionContext(ctx, turnIndex, 1, actorRole, actionType, payload)
 		if err != nil {
 			return TurnLog{}, err
 		}
@@ -765,7 +765,21 @@ func appendOpportunityAllowedTools(allowed []string, reference []string, mayPass
 }
 
 func (r *Runner) applyOpportunityPayloadDefaults(toolName string, arguments map[string]any, opportunity leanOpportunity) (map[string]any, *correctionIssue, error) {
-	defaults := mapOrEmpty(opportunity.Constraints["payload_defaults"])
+	if toolName == "import_case_file" {
+		if !contains(opportunity.AllowedTools, toolName) {
+			return nil, &correctionIssue{Tool: toolName, Error: "import_case_file is not allowed at this opportunity"}, nil
+		}
+		prepared, issue, err := r.prepareCaseFileImport(opportunity.Role, arguments)
+		if err != nil || issue != nil {
+			return nil, issue, err
+		}
+		arguments = prepared
+	}
+	constraints := opportunity.Constraints
+	if scoped, exists := mapOrEmpty(constraints["by_tool"])[toolName]; exists {
+		constraints = mapOrEmpty(scoped)
+	}
+	defaults := mapOrEmpty(constraints["payload_defaults"])
 	merged := clonePayload(arguments)
 	conflicts := make([]string, 0)
 	for key, want := range defaults {

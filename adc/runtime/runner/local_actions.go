@@ -113,6 +113,53 @@ func uploadedCaseFilePayload(payload map[string]any) (string, string, []byte, er
 	return originalName, strings.TrimSpace(stringOrDefault(payload["label"], "")), raw, nil
 }
 
+func (r *Runner) prepareCaseFileImport(actorRole string, payload map[string]any) (map[string]any, *correctionIssue, error) {
+	label := strings.TrimSpace(stringOrDefault(payload["label"], ""))
+	sourcePath := strings.TrimSpace(stringOrDefault(payload["source_filename"], ""))
+	var raw []byte
+	var originalName string
+	if sourcePath != "" {
+		if !filepath.IsAbs(sourcePath) {
+			sourcePath = resolveScenarioRelativePath(sourcePath, r.cfg.ScenarioBaseDir)
+		}
+		info, err := os.Stat(sourcePath)
+		if err != nil || !info.Mode().IsRegular() {
+			return nil, &correctionIssue{Tool: "import_case_file", Error: "source_filename must identify a readable regular file on the court host"}, nil
+		}
+		raw, err = os.ReadFile(sourcePath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("read source file: %w", err)
+		}
+		originalName = filepath.Base(sourcePath)
+	} else {
+		var err error
+		originalName, label, raw, err = uploadedCaseFilePayload(payload)
+		if err != nil {
+			message, promptErr := r.prompts.Text(adcprompts.RuntimeResultImportUploadID)
+			if promptErr != nil {
+				return nil, nil, promptErr
+			}
+			return nil, &correctionIssue{Tool: "import_case_file", Error: err.Error(), ActorMessage: message}, nil
+		}
+	}
+	caseObj, _ := r.state["case"].(map[string]any)
+	caseFiles, _ := caseObj["case_files"].([]any)
+	fileID := fmt.Sprintf("file-%04d", len(caseFiles)+1)
+	if sourcePath == "" {
+		storedPath, _, err := r.storeUploadedCaseFile(fileID, originalName, raw)
+		if err != nil {
+			return nil, nil, err
+		}
+		sourcePath = storedPath
+	}
+	digest := sha256.Sum256(raw)
+	return map[string]any{
+		"file_id": fileID, "imported_at": time.Now().UTC().Format(time.RFC3339),
+		"imported_by": actorRole, "label": label, "original_name": originalName,
+		"storage_relpath": sourcePath, "sha256": hex.EncodeToString(digest[:]), "size_bytes": len(raw),
+	}, nil, nil
+}
+
 func (r *Runner) visibleCaseForRole(actorRole string) (map[string]any, error) {
 	return r.visibleCaseForRoleContext(context.Background(), actorRole)
 }
@@ -437,67 +484,7 @@ func (r *Runner) executeLocalActionContext(ctx context.Context, actorRole, actio
 		traces, _ := caseObj["decision_traces"].([]any)
 		return ActionExecution{Result: map[string]any{"ok": true, "decision_traces": traces}}, true, nil
 	case "import_case_file":
-		importedBy := actorRole
-		label, _ := payload["label"].(string)
-		sourceFilename, _ := payload["source_filename"].(string)
-		var (
-			raw          []byte
-			sourcePath   string
-			originalName string
-		)
-		if strings.TrimSpace(sourceFilename) != "" {
-			sourcePath = sourceFilename
-			if !filepath.IsAbs(sourcePath) {
-				sourcePath = resolveScenarioRelativePath(sourceFilename, r.cfg.ScenarioBaseDir)
-			}
-			info, err := os.Stat(sourcePath)
-			if err != nil || info.IsDir() {
-				return ActionExecution{Result: map[string]any{"ok": false, "error": "source filename must be a regular file"}}, true, nil
-			}
-			raw, err = os.ReadFile(sourcePath)
-			if err != nil {
-				return ActionExecution{}, true, fmt.Errorf("read source file: %w", err)
-			}
-			originalName = filepath.Base(sourcePath)
-		} else {
-			name, uploadLabel, uploadRaw, err := uploadedCaseFilePayload(payload)
-			if err != nil {
-				actorMessage, promptErr := r.prompts.Text(adcprompts.RuntimeResultImportUploadID)
-				if promptErr != nil {
-					return ActionExecution{}, true, promptErr
-				}
-				return ActionExecution{Result: map[string]any{
-					"ok":            false,
-					"error":         err.Error(),
-					"actor_message": actorMessage,
-				}}, true, nil
-			}
-			originalName = name
-			raw = uploadRaw
-			if strings.TrimSpace(label) == "" {
-				label = uploadLabel
-			}
-		}
-		digest := sha256.Sum256(raw)
-		caseFiles, _ := caseObj["case_files"].([]any)
-		fileID := fmt.Sprintf("file-%04d", len(caseFiles)+1)
-		if strings.TrimSpace(sourcePath) == "" {
-			storedPath, _, err := r.storeUploadedCaseFile(fileID, originalName, raw)
-			if err != nil {
-				return ActionExecution{}, true, err
-			}
-			sourcePath = storedPath
-		}
-		record := map[string]any{
-			"file_id":         fileID,
-			"imported_at":     time.Now().UTC().Format(time.RFC3339),
-			"imported_by":     importedBy,
-			"label":           strings.TrimSpace(label),
-			"original_name":   originalName,
-			"storage_relpath": sourcePath,
-			"sha256":          hex.EncodeToString(digest[:]),
-			"size_bytes":      len(raw),
-		}
+		record := payload
 		leanRes, err := r.stepForCertificateContext(ctx, "import_case_file", actorRole, record)
 		if err != nil {
 			return ActionExecution{}, true, err

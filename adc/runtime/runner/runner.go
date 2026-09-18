@@ -464,6 +464,20 @@ func (r *Runner) executeAction(turnIndex, stepIndex int, actorRole, actionType s
 }
 
 func (r *Runner) executeActionContext(ctx context.Context, turnIndex, stepIndex int, actorRole, actionType string, payload map[string]any) (ActionExecution, error) {
+	if actionType == "import_case_file" {
+		prepared, issue, err := r.prepareCaseFileImport(actorRole, payload)
+		if err != nil {
+			return ActionExecution{}, err
+		}
+		if issue != nil {
+			return ActionExecution{Result: map[string]any{"ok": false, "error": issue.Error, "actor_message": issue.ActorMessage}}, nil
+		}
+		payload = prepared
+	}
+	return r.executePreparedActionContext(ctx, turnIndex, stepIndex, actorRole, actionType, payload)
+}
+
+func (r *Runner) executePreparedActionContext(ctx context.Context, turnIndex, stepIndex int, actorRole, actionType string, payload map[string]any) (ActionExecution, error) {
 	preparedPayload, err := r.prepareActionPayload(ctx, actionType, payload)
 	if err != nil {
 		return ActionExecution{}, err

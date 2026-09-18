@@ -210,7 +210,7 @@ The Role API listens when `--caseapi-addr` supplies an address.  Every role requ
 | `POST` | `/roleapi/v1/do` | Execute a support operation, work-note submission, or legal decision. |
 | `POST` | `/roleapi/v1/fail` | Report failure for the active external opportunity. |
 
-An opportunity response identifies its id, phase, kind, time remaining, attempts remaining, and support-operation budget.  It also supplies the role prompt, role-visible case view, permitted legal tools, legal-tool schemas, and support-operation schemas.  A submission must use the opportunity id from that response.
+An opportunity response identifies its id, phase, kind, time remaining, attempts remaining, and support-operation budget.  It also supplies the role prompt, role-visible case view, permitted legal tools, tool descriptions, legal-tool schemas, and support-operation schemas.  A submission must use the opportunity id from that response.  For a tool listed in `constraints.by_tool`, that entry supplies its payload constraints.  Other tools use the opportunity-level `payload_defaults` and `required_payload` fields.  An empty per-tool object imposes no fixed payload fields.
 
 ```bash
 curl -sS \
@@ -257,6 +257,10 @@ Start a case with two external lawyers by naming both roles.  The same case proc
 Lean determines the legal tools permitted for each opportunity.  The Role API returns those names and their schemas with the current opportunity.  The scenario role definition provides the broad role capability, while the current Lean state selects the permitted subset.
 
 Party tools cover pleadings, discovery, dispositive motions, evidence, trial presentation, objections, closing arguments, and post-verdict work.  Judge tools control motions, trial mode, voir dire rulings, jury instructions, judgment, and bench opinions.  Clerk tools record administrative acts, configure the jury, and advance procedural stages.
+
+Lawyer opportunities include `import_case_file` alongside the pending legal actions when the scenario permits import for that role.  An import registers one document, then the runtime requests the next opportunity.  The pending filing remains available.  Counsel may import further files or complete the filing.  After a production request, each registered file has its own production opportunity until that party produces it to the opponent.  Counsel may pass on files that are not responsive.
+
+An external lawyer uploads a workspace file by submitting `original_name`, `content_base64`, and an optional `label` through `submit_decision` with `tool_name: "import_case_file"`.  The runtime stores the bytes under `uploaded-case-files/` beside the core run output and assigns the file identifier and metadata before Lean authorizes the decision.  A local scenario may instead supply `source_filename`, resolved on the court host.  Import registers the document.  Production records disclosure to the opponent.  `offer_exhibit` records its admission or exclusion.  Counsel must cite registered files and exhibits in filings so other participants can inspect the supporting material.
 
 During a party evidence phase, `offer_exhibit` records an exhibit and `rest_case` ends that presentation.  `offer_exhibit.file_id` is optional.  A nonempty identifier must name an existing case file and adds the corresponding file event, while an empty identifier records a non-file-backed exhibit without a file event.  The runtime supplies `offered_at` and `produced_at` timestamps when it executes exhibit offers and file productions.  Opportunity execution replaces participant-supplied values with the runtime event time; a direct scenario action retains an explicit value and receives the runtime event time when the field is absent.
 

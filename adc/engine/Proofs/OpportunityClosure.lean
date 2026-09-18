@@ -44,13 +44,13 @@ theorem append_last_current_opportunity_partitions_roles_and_seals_after_closure
         (match decision.tool_name with | some name => name.trimAscii.toString | none => "") = true)
     (hviol :
       firstRequiredPayloadViolation?
-        (applyPayloadDefaults (decision.payload.getD Lean.Json.null) target.constraints)
-        target.constraints = none)
+        (applyPayloadDefaults (decision.payload.getD Lean.Json.null) (decisionConstraints target decision))
+        (decisionConstraints target decision) = none)
     (hstep :
       step req.state
         { action_type := (match decision.tool_name with | some name => name.trimAscii.toString | none => "")
         , actor_role := target.role
-        , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) target.constraints } =
+        , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) (decisionConstraints target decision) } =
           Except.ok closedState)
     (hclosed : closedState.case.status = "closed") :
     let applyReqGood : ApplyDecisionRequest :=
@@ -74,7 +74,7 @@ theorem append_last_current_opportunity_partitions_roles_and_seals_after_closure
     let emittedAction : CourtAction :=
       { action_type := (match decision.tool_name with | some name => name.trimAscii.toString | none => "")
       , actor_role := target.role
-      , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) target.constraints }
+      , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) (decisionConstraints target decision) }
     applyDecision applyReqGood =
       Except.ok
         { result_kind := "execute_tool"

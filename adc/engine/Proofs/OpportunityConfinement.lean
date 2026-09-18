@@ -82,8 +82,8 @@ theorem applyDecision_tool_success_when_append_last_target_is_current
         (match decision.tool_name with | some name => name.trimAscii.toString | none => "") = true)
     (hviol :
       firstRequiredPayloadViolation?
-        (applyPayloadDefaults (decision.payload.getD Lean.Json.null) target.constraints)
-        target.constraints = none) :
+        (applyPayloadDefaults (decision.payload.getD Lean.Json.null) (decisionConstraints target decision))
+        (decisionConstraints target decision) = none) :
     let applyReq : ApplyDecisionRequest :=
       { state := req.state
       , state_version := req.state.state_version
@@ -100,7 +100,7 @@ theorem applyDecision_tool_success_when_append_last_target_is_current
         , action := some
             { action_type := (match decision.tool_name with | some name => name.trimAscii.toString | none => "")
             , actor_role := target.role
-            , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) target.constraints } } := by
+            , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) (decisionConstraints target decision) } } := by
   have hcurrent :
       currentOpenOpportunity? req = some target :=
     currentOpenOpportunity_of_available_append_last_if_no_passes
@@ -154,8 +154,8 @@ theorem applyDecision_current_role_partition_when_append_last_target_is_current
         (match decision.tool_name with | some name => name.trimAscii.toString | none => "") = true)
     (hviol :
       firstRequiredPayloadViolation?
-        (applyPayloadDefaults (decision.payload.getD Lean.Json.null) target.constraints)
-        target.constraints = none) :
+        (applyPayloadDefaults (decision.payload.getD Lean.Json.null) (decisionConstraints target decision))
+        (decisionConstraints target decision) = none) :
     let applyReqGood : ApplyDecisionRequest :=
       { state := req.state
       , state_version := req.state.state_version
@@ -181,7 +181,7 @@ theorem applyDecision_current_role_partition_when_append_last_target_is_current
         , action := some
             { action_type := (match decision.tool_name with | some name => name.trimAscii.toString | none => "")
             , actor_role := target.role
-            , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) target.constraints } } ∧
+            , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) (decisionConstraints target decision) } } ∧
     applyDecisionErrorCode (applyDecision applyReqBad) = "WRONG_ROLE" := by
   constructor
   · exact

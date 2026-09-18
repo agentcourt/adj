@@ -943,7 +943,7 @@ func (api *roleAPIServer) submitDecisionLocked(turn *externalOpportunityTurn, ar
 		if payload == nil {
 			payload = map[string]any{}
 		}
-		execRes, err := api.r.executeAction(turn.turnIndex, turn.stepsUsed, actorRole, actionType, payload)
+		execRes, err := api.r.executePreparedActionContext(context.Background(), turn.turnIndex, turn.stepsUsed, actorRole, actionType, payload)
 		if err != nil {
 			return nil, map[string]any{"ok": false, "case_id": api.caseID(), "error": roleAPIError("execute_action_failed", err.Error())}
 		}
@@ -1177,7 +1177,7 @@ func simpleToolSpec(name string, description string, properties map[string]any) 
 }
 
 func (r *Runner) legalToolSpecs(allowedTools []string) ([]map[string]any, error) {
-	specs := make([]map[string]any, 0, len(allowedTools))
+	names := make([]string, 0, len(allowedTools))
 	seen := map[string]bool{}
 	for _, name := range allowedTools {
 		name = strings.TrimSpace(name)
@@ -1185,14 +1185,14 @@ func (r *Runner) legalToolSpecs(allowedTools []string) ([]map[string]any, error)
 			continue
 		}
 		seen[name] = true
-		schema, err := r.toolSchema(name)
-		if err != nil {
-			return nil, err
-		}
-		if schema == nil {
-			continue
-		}
-		specs = append(specs, map[string]any{"name": name, "parameters": schema})
+		names = append(names, name)
+	}
+	specs, err := r.buildTools(names)
+	if err != nil {
+		return nil, err
+	}
+	for _, tool := range specs {
+		delete(tool, "type")
 	}
 	return specs, nil
 }

@@ -15,6 +15,8 @@ ADC divides formal procedure from runtime work.  [`engine/ADC/Core.lean`](../eng
 
 Opportunity generation constructs the complete agenda, assigns the positional identifiers `o1`, `o2`, and so on, and then removes passed opportunities.  Each opportunity states its role, phase, priority, pass behavior, allowed tools, payload constraints, and optional deterministic action.  The identifiers remain stable when pass filtering removes an earlier entry from the same agenda.
 
+Lawyer opportunities include file import as an additional choice when the role permits it.  Importing leaves the pending legal action available.  `constraints.by_tool` supplies payload constraints for named tools, replacing the opportunity-level constraints for those tools.  Import uses an empty entry so fixed fields for the pending filing apply only to that filing.
+
 `apply_decision` checks the supplied state version, opportunity identifier, role, decision kind, tool name, and fixed payload constraints.  A pass changes state according to the opportunity's `pass_effect`.  A tool decision returns the exact `CourtAction` that the runtime may execute.  `step` checks that action against the state and returns either an updated state or a structured rejection.  A docket entry separates its display description from typed fields.  Procedural matching and limits use the typed fields for parties, discovery generations, and motion indexes.
 
 ## Runtime execution

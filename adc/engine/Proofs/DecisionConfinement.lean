@@ -124,8 +124,8 @@ theorem applyDecisionAtOpportunity_tool_success_exact_action
         (match decision.tool_name with | some name => name.trimAscii.toString | none => "") = true)
     (hviol :
       firstRequiredPayloadViolation?
-        (applyPayloadDefaults (decision.payload.getD Lean.Json.null) opportunity.constraints)
-        opportunity.constraints = none) :
+        (applyPayloadDefaults (decision.payload.getD Lean.Json.null) (decisionConstraints opportunity decision))
+        (decisionConstraints opportunity decision) = none) :
     applyDecisionAtOpportunity state opportunity decision =
       Except.ok
         { result_kind := "execute_tool"
@@ -133,7 +133,7 @@ theorem applyDecisionAtOpportunity_tool_success_exact_action
         , action := some
             { action_type := (match decision.tool_name with | some name => name.trimAscii.toString | none => "")
             , actor_role := opportunity.role
-            , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) opportunity.constraints } } := by
+            , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) (decisionConstraints opportunity decision) } } := by
   cases hname : decision.tool_name with
   | none =>
       simp [hname] at hempty
@@ -162,15 +162,15 @@ theorem applyDecisionAtOpportunity_tool_success_confined
         (match decision.tool_name with | some name => name.trimAscii.toString | none => "") = true)
     (hviol :
       firstRequiredPayloadViolation?
-        (applyPayloadDefaults (decision.payload.getD Lean.Json.null) opportunity.constraints)
-        opportunity.constraints = none) :
+        (applyPayloadDefaults (decision.payload.getD Lean.Json.null) (decisionConstraints opportunity decision))
+        (decisionConstraints opportunity decision) = none) :
     let result := applyDecisionAtOpportunity state opportunity decision
     match result with
     | Except.ok ok =>
         ok.action = some
           { action_type := (match decision.tool_name with | some name => name.trimAscii.toString | none => "")
           , actor_role := opportunity.role
-          , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) opportunity.constraints }
+          , payload := applyPayloadDefaults (decision.payload.getD Lean.Json.null) (decisionConstraints opportunity decision) }
     | Except.error _ => False := by
   rw [applyDecisionAtOpportunity_tool_success_exact_action state opportunity decision hkind hempty hallowed hviol]
 
@@ -203,8 +203,8 @@ theorem applyDecision_tool_success_exact_action
         (match req.decision.tool_name with | some name => name.trimAscii.toString | none => "") = true)
     (hviol :
       firstRequiredPayloadViolation?
-        (applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) opportunity.constraints)
-        opportunity.constraints = none) :
+        (applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) (decisionConstraints opportunity req.decision))
+        (decisionConstraints opportunity req.decision) = none) :
     applyDecision req =
       Except.ok
         { result_kind := "execute_tool"
@@ -212,7 +212,7 @@ theorem applyDecision_tool_success_exact_action
         , action := some
             { action_type := (match req.decision.tool_name with | some name => name.trimAscii.toString | none => "")
             , actor_role := opportunity.role
-            , payload := applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) opportunity.constraints } } := by
+            , payload := applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) (decisionConstraints opportunity req.decision) } } := by
   simpa [applyDecision, hcurrent, hversion, hid, hrole] using
     applyDecisionAtOpportunity_tool_success_exact_action
       req.state opportunity req.decision htool hempty hallowed hviol
@@ -245,15 +245,15 @@ theorem applyDecision_tool_success_confined
         (match req.decision.tool_name with | some name => name.trimAscii.toString | none => "") = true)
     (hviol :
       firstRequiredPayloadViolation?
-        (applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) opportunity.constraints)
-        opportunity.constraints = none) :
+        (applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) (decisionConstraints opportunity req.decision))
+        (decisionConstraints opportunity req.decision) = none) :
     let result := applyDecision req
     match result with
     | Except.ok ok =>
         ok.action = some
           { action_type := (match req.decision.tool_name with | some name => name.trimAscii.toString | none => "")
           , actor_role := opportunity.role
-          , payload := applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) opportunity.constraints }
+          , payload := applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) (decisionConstraints opportunity req.decision) }
     | Except.error _ => False := by
   rw [applyDecision_tool_success_exact_action req opportunity hcurrent hversion hid hrole htool hempty hallowed hviol]
 
@@ -284,8 +284,8 @@ theorem applyDecision_tool_success_has_no_state_update
         (match req.decision.tool_name with | some name => name.trimAscii.toString | none => "") = true)
     (hviol :
       firstRequiredPayloadViolation?
-        (applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) opportunity.constraints)
-        opportunity.constraints = none) :
+        (applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) (decisionConstraints opportunity req.decision))
+        (decisionConstraints opportunity req.decision) = none) :
     let result := applyDecision req
     match result with
     | Except.ok ok => ok.state = none

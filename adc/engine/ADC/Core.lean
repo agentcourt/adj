@@ -905,6 +905,15 @@ def constraintObjectPairs (constraints : Json) (field : String) : List (String Ã
   | .ok value => jsonObjectPairs value
   | .error _ => []
 
+def decisionConstraints (opportunity : OpportunitySpec) (decision : DecisionSpec) : Json :=
+  let toolName := (decision.tool_name.getD "").trimAscii.toString
+  match opportunity.constraints.getObjVal? "by_tool" with
+  | .ok byTool =>
+      match byTool.getObjVal? toolName with
+      | .ok constraints => constraints
+      | .error _ => opportunity.constraints
+  | .error _ => opportunity.constraints
+
 def applyPayloadDefaults (payload constraints : Json) : Json :=
   let payloadPairs := jsonObjectPairs payload
   let payloadJson := Json.mkObj payloadPairs
@@ -1922,9 +1931,10 @@ def caseFileOfferedByParty (c : CaseState) (party fileId : String) : Bool :=
     jsonFieldEqString entry "file_id" fileId &&
     normalizePartyToken (jsonStringFieldD entry "actor" "") = party)
 
-def hasFileProductionByTo (c : CaseState) (producedBy producedTo : String) : Bool :=
+def hasFileProductionByTo (c : CaseState) (producedBy producedTo : String) (fileId : String := "") : Bool :=
   c.file_events.any (fun entry =>
     jsonFieldEqString entry "action" "produce_case_file" &&
+    (fileId = "" || jsonFieldEqString entry "file_id" fileId) &&
     normalizePartyToken (jsonStringFieldD entry "actor" "") = normalizePartyToken producedBy &&
     (jsonStringFieldD entry "details" "").contains s!"to={normalizePartyToken producedTo}")
 
@@ -2676,16 +2686,19 @@ def pretrialCandidates (req : OpportunityRequest) (c : CaseState) (facts : TurnF
     let servedBy := (opposingParty? responding).getD ""
     match firstDiscoveryRequestIndexBy? c "rfp" servedBy with
     | some setIndex =>
-        if facts.hasCaseFileImported && !hasFileProductionByTo c responding servedBy &&
-            roleAllowsAll req.roles responding ["produce_case_file"] then
-          actions := actions.concat
-            ({ (mkTurn responding s!"For case 0, produce any imported case file responsive to request-for-production set_index {setIndex}. Select the file from the case record and identify the request. Otherwise pass." ["produce_case_file"] false maxSteps) with
-                constraints := fixedPayloadConstraints [
-                  ("produced_by", toJson responding),
-                  ("produced_to", toJson servedBy),
-                  ("request_ref", toJson s!"rfp:{setIndex}")
-                ]
-             })
+        if roleAllowsAll req.roles responding ["produce_case_file"] then
+          for file in c.case_files do
+            let fileId := jsonStringFieldD file "file_id" ""
+            if fileId != "" && !hasFileProductionByTo c responding servedBy fileId then
+              actions := actions.concat
+                ({ (mkTurn responding s!"For case 0, produce case file {fileId} if it is responsive to request-for-production set_index {setIndex}. Otherwise pass." ["produce_case_file"] false maxSteps) with
+                    constraints := fixedPayloadConstraints [
+                      ("file_id", toJson fileId),
+                      ("produced_by", toJson responding),
+                      ("produced_to", toJson servedBy),
+                      ("request_ref", toJson s!"rfp:{setIndex}")
+                    ]
+                 })
         if !discoveryResponseExists c "rfp" setIndex responding &&
             roleAllowsAll req.roles responding ["respond_request_for_production"] then
           actions := actions.concat
@@ -3342,6 +3355,17 @@ def availableOpportunities (req : OpportunityRequest) : List OpportunitySpec := 
       postJudgmentCandidates req c facts maxSteps
     else
       []
+  let actions := actions.map fun opportunity =>
+    if (opportunity.role = "plaintiff" || opportunity.role = "defendant") &&
+        opportunity.deterministic_action.isNone &&
+        roleAllowsAll req.roles opportunity.role ["import_case_file"] then
+      { opportunity with
+        allowed_tools := opportunity.allowed_tools ++ ["import_case_file"]
+        constraints := Json.mkObj (jsonObjectPairs opportunity.constraints ++ [
+          ("by_tool", Json.mkObj [("import_case_file", Json.mkObj [])])
+        ])
+      }
+    else opportunity
   let allActions := actions ++ jurisdictionDismissalCandidates req c maxSteps
   return assignOpportunityIds (finalizeOpportunities c allActions)
 
@@ -3416,8 +3440,9 @@ def applyDecisionAtOpportunity
         Json.null
         true
         s!"Tool {toolName} is not allowed here.  Choose one of the allowed tools."
-    let payload := applyPayloadDefaults (decision.payload.getD Json.null) opportunity.constraints
-    if let some (field, expected) := firstRequiredPayloadViolation? payload opportunity.constraints then
+    let constraints := decisionConstraints opportunity decision
+    let payload := applyPayloadDefaults (decision.payload.getD Json.null) constraints
+    if let some (field, expected) := firstRequiredPayloadViolation? payload constraints then
       throw <| mkStepErr
         s!"payload field {field} does not satisfy opportunity requirement"
         "PAYLOAD_CONSTRAINT_VIOLATION"

@@ -1,1 +1,1 @@
-Execute `import_case_file` with a payload that matches its schema.
+Register a source document or analysis file in the case.  Upload a workspace file using `original_name`, `content_base64`, and an optional descriptive `label`.  Preserve source URLs, dates, and retrieval context in the document or label.  Use the returned `file_id` for production, exhibit offers, and citations.  Importing a file does not offer it as an exhibit.

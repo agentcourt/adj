@@ -42,19 +42,19 @@ theorem tool_execution_closing_case_blocks_followup_decisions
         (match req.decision.tool_name with | some name => name.trimAscii.toString | none => "") = true)
     (hviol :
       firstRequiredPayloadViolation?
-        (applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) opportunity.constraints)
-        opportunity.constraints = none)
+        (applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) (decisionConstraints opportunity req.decision))
+        (decisionConstraints opportunity req.decision) = none)
     (hstep :
       step req.state
         { action_type := (match req.decision.tool_name with | some name => name.trimAscii.toString | none => "")
         , actor_role := opportunity.role
-        , payload := applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) opportunity.constraints } =
+        , payload := applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) (decisionConstraints opportunity req.decision) } =
           Except.ok closedState)
     (hclosed : closedState.case.status = "closed") :
     let emittedAction : CourtAction :=
       { action_type := (match req.decision.tool_name with | some name => name.trimAscii.toString | none => "")
       , actor_role := opportunity.role
-      , payload := applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) opportunity.constraints }
+      , payload := applyPayloadDefaults (req.decision.payload.getD Lean.Json.null) (decisionConstraints opportunity req.decision) }
     applyDecision req =
       Except.ok
         { result_kind := "execute_tool"
