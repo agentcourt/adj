@@ -23,6 +23,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/agentcourt/adj/adc/runtime/report"
 	"github.com/agentcourt/adj/common/modelgateway"
 	"github.com/agentcourt/adj/common/modelrequest"
 	"github.com/agentcourt/adj/internal/launcherprompt"
@@ -428,6 +429,9 @@ func Run(ctx context.Context, opts Options) (result Result, err error) {
 		modelServerErr := state.closeModelServer()
 		secretErr := state.cleanupSecrets()
 		err = errors.Join(err, completionErr, lawyerErr, agentErr, modelServerErr, secretErr)
+		if err == nil {
+			err = state.appendPiToolActivity()
+		}
 	}()
 
 	caseAPIAddr, err := resolveListenAddr(opts.CaseAPIAddr, "127.0.0.1")
@@ -623,6 +627,24 @@ func (s *runState) startModelServer() error {
 	}
 	s.modelServer = server
 	return nil
+}
+
+func (s *runState) appendPiToolActivity() error {
+	var logs []report.PiToolLog
+	for _, role := range []string{"plaintiff", "defendant"} {
+		if autoLawyerEnabled(s.opts.AutoLawyers, role) && lawyerProfile(s.opts, role).Runner == LawyerPi {
+			logs = append(logs, report.PiToolLog{Participant: role, Path: filepath.Join(s.logDir, "pi-"+role+".stdout")})
+		}
+	}
+	for _, proc := range s.processes {
+		if proc.jurorTarget != nil {
+			logs = append(logs, report.PiToolLog{
+				Participant: proc.jurorTarget.principalID + " / " + proc.jurorTarget.opportunityID,
+				Path:        proc.stdoutPath,
+			})
+		}
+	}
+	return report.AppendPiToolActivity(filepath.Join(s.opts.CoreOutputDir, "digest.md"), logs)
 }
 
 func (s *runState) closeModelServer() error {

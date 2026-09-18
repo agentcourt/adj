@@ -43,6 +43,7 @@ type Config struct {
 }
 
 type TurnLog struct {
+	External           bool             `json:"external,omitempty"`
 	Source             string           `json:"source,omitempty"`
 	ActionID           string           `json:"action_id,omitempty"`
 	OpportunityID      string           `json:"opportunity_id,omitempty"`

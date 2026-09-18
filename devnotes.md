@@ -918,3 +918,21 @@ The test exited with status zero.  The lawyer invoked the command twice through 
 The run recorded 22 completed lawyer responses and `$0.705226` in token-price estimates.  Its digest request used 979 input tokens and 266 output tokens without a dollar-cost observation.  The retained directory occupies 2.7 MiB.  No case process, container, or staged authentication or MCP configuration file remains.
 
 Live model testing covered Pi.  The shared launcher supplies the command to the other runners, with unit coverage for the container mount and environment.  The installed Codex CLI is 0.155.0.  Its [documented shell environment policy](https://developers.openai.com/codex/config-advanced#shell-environment-policy) preserves token-named variables by default, so this implementation leaves its settings unchanged.
+
+## ADC Pi activity reporting: 2026-09-18
+
+The report read legacy tool events from core turn transcripts, while Pi's native tool events remained in process logs.  External and direct-model opportunity turns also shared the same decision-acceptance shape.  External Role API turns now carry an explicit `external` field, allowing reports to identify their submissions without misclassifying direct-model decisions.
+
+After successful execution and participant shutdown, the ADC launcher appends a Pi activity section to the existing digest.  The report parses `tool_execution_start` and `tool_execution_end` events from closed logs, identifies each source, counts results by tool, and renders Bash excerpts.  It excludes thinking, work-note contents, and MCP response bodies.  It makes no additional model request and assigns no inferred court turn.  The parser returns read and format errors.  Native tool activity remains outside the Lean state and replay certificate.
+
+- [x] Add external-turn identification and Pi activity reporting.
+- [x] Document report contents and limits.
+- [x] Run affected Go tests and review the changes.
+- [x] Run the live Pi/MCP case, inspect its reports, and verify its certificate.
+- [x] Record usage, cleanup, and results.
+
+The live Pi/MCP test under `adc/out/import-live-20260918-08/` completed two imports, a report, two productions, the transition to trial, and digest generation.  The transcript and digest identify the five external filing turns.  The digest's native activity counts match all 21 tool calls in the Pi log: two Bash calls, three writes, and sixteen MCP calls.  Its Bash excerpts contain the arithmetic program's output and both upload commands.  The final `wait_for_opportunity` returned `fetch failed` after the final production.  The report counts that failed result.  The launcher cancels MCP on case completion.  Both uploaded documents match their workspace originals byte for byte.
+
+Certificate verification passed all nine transitions using the existing compiled engine through local leanrunner, from the repository root: `adc/.bin/adc verify-certificate --dir adc/out/import-live-20260918-08/adc-output`.  Limits were 4 GiB memory high, 6 GiB maximum, 1 GiB swap, 100% CPU, and a 900-second timeout.  ADC runtime, local-runner, and command Go tests passed, as did affected vet checks.  No Lean source or proof changed.
+
+The test recorded 21 completed lawyer responses and `$0.750207` in token-price estimates.  The digest request used 1,172 input tokens and 252 output tokens without a dollar-cost observation.  The retained directory occupies 2.8 MiB.  No test process, container, or staged authentication or MCP configuration file remains.  Live coverage used one Pi lawyer.  Juror log selection is implemented but has not received a live jury test in this change.

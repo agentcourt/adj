@@ -116,8 +116,10 @@ func WriteDigestWithOptions(path string, result runner.Result, opts DigestOption
 	b.WriteString("\n## External Agent Activity\n\n")
 	b.WriteString(renderExternalActivityTable(result.TurnLogs))
 
-	b.WriteString("\n## Important Agent Bash Executions\n\n")
-	b.WriteString(renderImportantAgentBashExecutions(result.TurnLogs))
+	if len(collectAgentBashExecutions(result.TurnLogs)) > 0 {
+		b.WriteString("\n## Important Agent Bash Executions\n\n")
+		b.WriteString(renderImportantAgentBashExecutions(result.TurnLogs))
+	}
 
 	b.WriteString("\n## Complaint and Background\n\n")
 	b.WriteString(complaintAndBackground(caseObj, docket))
@@ -525,8 +527,12 @@ func collectExternalActivities(turnLogs []runner.TurnLog) []externalTurnActivity
 		methods := make([]string, 0)
 		containerTools := make([]string, 0)
 		legalResult := ""
-		hasExternal := false
+		hasExternal := log.External
 		for _, raw := range log.Transcript {
+			if log.External && len(getMap(raw["decision"])) > 0 && !methodsSeen["submit_decision"] {
+				methodsSeen["submit_decision"] = true
+				methods = append(methods, "submit_decision")
+			}
 			if method := strings.TrimSpace(strOr(raw["custom_method"], "")); method != "" {
 				hasExternal = true
 				if !methodsSeen[method] {
@@ -549,12 +555,14 @@ func collectExternalActivities(turnLogs []runner.TurnLog) []externalTurnActivity
 				continue
 			}
 			if action == "pass_turn" {
-				hasExternal = true
 				legalResult = action
 				continue
 			}
 			if isExternalReferenceAction(action) {
-				hasExternal = true
+				if !methodsSeen[action] {
+					methodsSeen[action] = true
+					methods = append(methods, action)
+				}
 				continue
 			}
 			legalResult = action
@@ -577,7 +585,7 @@ func collectExternalActivities(turnLogs []runner.TurnLog) []externalTurnActivity
 func renderExternalActivityTable(turnLogs []runner.TurnLog) string {
 	activities := collectExternalActivities(turnLogs)
 	if len(activities) == 0 {
-		return "No external role activity recorded.\n"
+		return "No turns are identified as external in the court record.\n"
 	}
 	var b strings.Builder
 	b.WriteString("| Turn | Role | Phase | API methods | Agent tools | Legal result |\n")
@@ -589,7 +597,7 @@ func renderExternalActivityTable(turnLogs []runner.TurnLog) string {
 		}
 		containerTools := strings.Join(item.ContainerTools, ", ")
 		if strings.TrimSpace(containerTools) == "" {
-			containerTools = "none"
+			containerTools = "not recorded in turn"
 		}
 		legalResult := item.LegalResult
 		if strings.TrimSpace(legalResult) == "" {
@@ -869,7 +877,7 @@ func isImportantBashExecution(command string, output string) bool {
 
 func isExternalReferenceAction(action string) bool {
 	switch strings.TrimSpace(action) {
-	case "get_case", "list_case_files", "read_case_text_file", "request_case_file", "explain_decisions":
+	case "get_case", "list_case_files", "read_case_text_file", "read_case_file_bytes", "request_case_file", "explain_decisions", "get_juror_context":
 		return true
 	default:
 		return false

@@ -999,6 +999,7 @@ func (api *roleAPIServer) finishTurnLocked(turn *externalOpportunityTurn, log Tu
 		return
 	}
 	turn.completed = true
+	log.External = true
 	api.signalChangedLocked()
 	select {
 	case turn.done <- externalOpportunityResult{log: log, err: err}:

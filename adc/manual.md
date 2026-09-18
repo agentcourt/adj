@@ -324,6 +324,12 @@ The digest summarizes each side's recorded courtroom arguments, including techni
 
 The summary model receives registered-file statuses, production events, exhibit entries, and admission counts.  Its instructions distinguish those stages and attribute verification claims to the participant who reported them.
 
+External Role API turns carry `external: true` in `run.json`.  The transcript and digest use that field to identify external submissions, including file imports and productions.
+
+After a successful local run stops its participants, the launcher appends Pi tool activity to the digest from their closed process logs.  This covers automatic Pi lawyers and Pi jurors.  Each participant's section identifies its source log, counts successful, failed, and unresolved calls by tool name, and lists Bash command and output excerpts in execution order.  Outcomes reflect Pi's reported tool status.  Calls without a result remain unresolved.  The report assigns no court turn to these calls because the logs lack that association.
+
+The Pi section excludes thinking events, work-note text, and MCP response bodies.  Bash excerpts can contain participant work or private material printed by a command.  The full logs remain under the launcher's `logs/` directory.  Direct core invocations and remote participants supply no local Pi logs, and this section does not cover other harnesses.
+
 The `adc.replay-certificate.v1` replay certificate records engine-visible accepted transitions.  It omits rejected attempts, record reads, work notes, and participant calls.  An opportunity pass records the decision and resulting pass state.  An opportunity tool transition records the decision and the exact executed Lean action; replay checks that `apply_decision` authorizes that action before applying it.  Deterministic runtime actions remain direct step transitions.  A successful replay establishes that the recorded transition sequence produces the claimed final state under the selected engine.
 
 The replay certificate carries no signature or execution attestation.  Any procedurally valid transition sequence can produce a valid replay result.  Authentication of the execution record requires evidence maintained outside this core replay check.
