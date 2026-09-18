@@ -35,6 +35,36 @@ func TestSideArgumentSummary(t *testing.T) {
 	}
 }
 
+func TestCollectEvidenceContextDistinguishesFilesAndExhibits(t *testing.T) {
+	caseObj := map[string]any{
+		"case_files": []any{map[string]any{"file_id": "file-0001", "original_name": "source.txt"}},
+		"file_events": []any{
+			map[string]any{"action": "import_case_file", "file_id": "file-0001"},
+			map[string]any{"action": "produce_case_file", "file_id": "file-0001", "actor": "plaintiff", "details": "to=defendant request_ref=rfp:0"},
+		},
+	}
+	context := collectEvidenceContext(caseObj, nil)
+	for _, want := range []string{
+		"Registered case files: 1. Exhibit entries: 0. Admitted exhibits: 0.",
+		"case_file file-0001:  (source.txt); status=imported",
+		"production file-0001: by=plaintiff to=defendant request_ref=rfp:0",
+	} {
+		if !strings.Contains(context, want) {
+			t.Fatalf("context missing %q: %s", want, context)
+		}
+	}
+	docket := []any{
+		map[string]any{"title": "Exhibit PX-1 - excluded", "description": "First offer excluded."},
+		map[string]any{"title": "Exhibit PX-2 - admitted", "description": "Second offer admitted."},
+	}
+	context = collectEvidenceContext(caseObj, docket)
+	for _, want := range []string{"Exhibit entries: 2. Admitted exhibits: 1.", "Exhibit PX-1 - excluded: First offer excluded.", "Exhibit PX-2 - admitted: Second offer admitted."} {
+		if !strings.Contains(context, want) {
+			t.Fatalf("context missing %q: %s", want, context)
+		}
+	}
+}
+
 func TestRenderJurorRoundsIncludesRoundSummaries(t *testing.T) {
 	t.Parallel()
 

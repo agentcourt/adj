@@ -875,3 +875,22 @@ The live test exited with status zero after two imports, a technical report, two
 The lawyer recorded 32 completed responses and `$1.354129` in token-price estimates.  The digest request recorded 819 input tokens and 300 output tokens without a dollar-cost observation.  The retained directory occupies 4.1 MiB.  Staged authentication and MCP configuration files are absent, and Podman reports zero running containers.
 
 Digest review found a separate wording error: the plaintiff summary calls the two imported documents "exhibits," while the same digest records zero admitted exhibits.  The absent-side correction leaves that model-generated wording unchanged.  This observation and the earlier model-side file-copying error remain open before the Israel–Syria rerun.
+
+## ADC digest evidence status and file transfer: 2026-09-18
+
+The digest's summary input now includes registered-file statuses, production events, exhibit entries, and explicit file and admission counts.  Its system prompt distinguishes registration, disclosure, and exhibit rulings, and attributes verification work to the reporting participant.  The fallback prompt carries the same instructions.  A focused test checks imported and produced files with no exhibits, then admitted and excluded exhibit entries.  The manual describes the summary input.
+
+- [x] Update the summary input, prompts, documentation, and focused test.
+- [x] Run ADC runtime, launcher, and CLI Go tests, and report and prompt vet checks.
+- [x] Complete the live Pi/MCP test and inspect its digest.
+- [x] Commit and push the digest correction.
+
+The live test at `adc/out/import-live-20260918-05/` stopped after both imports and the technical report.  Pi returned `Codex error: Unable to verify Daybreak Blue access. Please try again.`  Six court actions were recorded, including the three deterministic setup actions.  The lawyer log contains 16 successful assistant responses and one error response, with `$0.574791` in token-price estimates.  Both uploaded files match their workspace originals.  No case container or staged authentication or MCP configuration file remains.  The [official authentication documentation](https://developers.openai.com/codex/auth) does not explain the provider's error.  One unchanged retry uses `adc/out/import-live-20260918-06/`.
+
+Inspection of the installed Pi MCP adapter, version 2.27.0, found that its script interface exposes MCP calls but no filesystem access.  It therefore cannot read and upload workspace bytes through that interface.  File transfer still requires a design choice.  The proposed `adc-mcp import-file --file PATH` command would read the file on the participant's machine and submit the existing import decision through MCP.  A court-side workspace mapping would cover locally launched participants only.  The user has been asked to choose.  No transfer mechanism has changed.
+
+The retry exited with status zero after two imports, a technical report, both productions, the trial transition, and digest generation.  The plaintiff summary identifies the documents as case files.  The digest records zero admitted exhibits and the absence of defense argument text.  Both uploads match their workspace originals byte for byte.  All nine certificate transitions verified under local leanrunner limits: 4 GiB memory high, 6 GiB maximum, 1 GiB swap, 100% CPU, and a 900-second timeout.  The command was `adc/.bin/adc verify-certificate --dir adc/out/import-live-20260918-06/adc-output`, run from the repository root.  It used the existing compiled engine.  No Lean source or proof changed.
+
+The retry recorded 22 completed lawyer responses with `$1.051705` in token-price estimates, making `$1.626496` across these two attempts.  The digest request used 903 input tokens and 214 output tokens without a dollar-cost observation.  The failed and successful runs occupy 2.5 MiB and 3.2 MiB.  No case process, container, or staged authentication or MCP configuration file remains.
+
+Review also found that the digest's external-activity and Bash sections omit Pi activity.  They read `custom_method` and `agent_tool_call` entries in core turn transcripts, whereas these MCP lawyer turns contain decision acceptance and legal actions.  The Pi session and process logs retain the tool calls.  The resulting "No external role activity recorded" statement is misleading for this run.  This reporting issue remains open separately from evidence-status wording.

@@ -304,6 +304,8 @@ Case preparation and adjudication share one output directory.  The prepared file
 
 The digest summarizes each side's recorded courtroom arguments, including technical reports.  For a side with no such text, it records: "No courtroom argument text was available for summary."  Summaries of recorded arguments require citation anchors in square brackets.  When neither side has argument text, the digest records that absence without a summary-model request.
 
+The summary model receives registered-file statuses, production events, exhibit entries, and admission counts.  Its instructions distinguish those stages and attribute verification claims to the participant who reported them.
+
 The `adc.replay-certificate.v1` replay certificate records engine-visible accepted transitions.  It omits rejected attempts, record reads, work notes, and participant calls.  An opportunity pass records the decision and resulting pass state.  An opportunity tool transition records the decision and the exact executed Lean action; replay checks that `apply_decision` authorizes that action before applying it.  Deterministic runtime actions remain direct step transitions.  A successful replay establishes that the recorded transition sequence produces the claimed final state under the selected engine.
 
 The replay certificate carries no signature or execution attestation.  Any procedurally valid transition sequence can produce a valid replay result.  Authentication of the execution record requires evidence maintained outside this core replay check.

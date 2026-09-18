@@ -331,7 +331,9 @@ func collectCourtroomContext(docket []any) string {
 }
 
 func collectEvidenceContext(caseObj map[string]any, docket []any) string {
-	var lines []string
+	files, admitted := countFileAndExhibitEvents(caseObj, docket)
+	lines := []string{fmt.Sprintf("Registered case files: %d. Exhibit entries: %d. Admitted exhibits: %d.", files, countExhibitRows(docket), admitted)}
+	statuses := caseFileStatuses(caseObj)
 	for _, raw := range getSlice(caseObj, "case_files") {
 		f := getMap(raw)
 		fileID := strings.TrimSpace(strOr(f["file_id"], ""))
@@ -340,7 +342,17 @@ func collectEvidenceContext(caseObj map[string]any, docket []any) string {
 		if fileID == "" {
 			continue
 		}
-		lines = append(lines, fmt.Sprintf("case_file %s: %s (%s)", fileID, label, orig))
+		status := statuses[fileID]
+		if status == "" {
+			status = "recorded"
+		}
+		lines = append(lines, fmt.Sprintf("case_file %s: %s (%s); status=%s", fileID, label, orig, status))
+	}
+	for _, raw := range getSlice(caseObj, "file_events") {
+		event := getMap(raw)
+		if strOr(event["action"], "") == "produce_case_file" {
+			lines = append(lines, fmt.Sprintf("production %s: by=%s %s", strOr(event["file_id"], ""), strOr(event["actor"], ""), strOr(event["details"], "")))
+		}
 	}
 	for _, raw := range docket {
 		entry := getMap(raw)
