@@ -83,7 +83,7 @@ The 1974 Disengagement Agreement defines an area of separation between Line A an
 
 The initial document contains both those rules and the supplied rationale for Polymarket's Yes resolution.  That rationale connects the reported December 8 arrival of Israeli forces at the Syrian summit of Mount Hermon with Benjamin Netanyahu's December 17 statement that forces would remain until an arrangement guaranteed Israel's security.  It also distinguishes the Syrian peak from the Golan Heights.  Both lawyers therefore begin with an account favoring Yes already present.  The proceeding tests the advocates' and court's handling of that supplied account and any subsequently developed evidence.
 
-The ADC run uses fresh participant sessions and receives none of the earlier ARB filings, work notes, or verdict.  Both runs use the same proposition, initial document, lawyer model configuration, enabled search, installed pool, and 25-minute turn timeouts.  The ADC scenario permits up to 500 autopilot turns.  ADC uses its required minimum of six concurring votes, approved by the operator for the nine-member jury.  It retains its default judge, clerk, voir dire, policies, and checked-in prompts.  Procedural differences and fresh model responses prevent attribution of any difference between the runs to ADC alone.
+The ADC run uses fresh participant sessions and receives none of the earlier ARB filings, work notes, or verdict.  Both runs use the same proposition, initial document, lawyer model configuration, enabled search, installed pool, and 25-minute turn timeouts.  The ADC scenario permits up to 500 autopilot turns.  ADC uses its required minimum of six concurring votes, approved by the operator for the nine-member jury.  It retains its default judge, clerk, voir dire, policies, and checked-in prompts~\cite[input settings and generated scenario]{record}.  Procedural differences and fresh model responses prevent attribution of any difference between the runs to ADC alone.
 
 \section{The ADC Proceeding}
 
@@ -195,7 +195,17 @@ On this record, deciding between those inferences would go beyond Rule 56 and wo
 \end{quote}
 The surviving issues were offensive character, intent at commencement, and whether the record established the proposition by a preponderance after trial.  The ruling retained those questions for factfinding without determining the eventual verdict~\cite[event 41]{record}.
 
-The proceeding remains in progress.  Jury selection, trial, and judgment will be described from the completed record.
+\subsection{Jury selection and tool-call failures}
+
+The defense declined a cross-motion because the same competing inferences permitted a reasonable verdict for the plaintiff.  The judge's pretrial order carried the admissions forward as established matters, preserved the disputed purpose and characterization questions, and confined trial to the submitted proposition.  It identified the four case files as proposed exhibits, subject to ordinary objections, and required specific identification of any item offered separately from the source archive.  The clerk then configured nine jurors with six concurring votes and added thirteen prospective jurors from the installed pool~\cite[events 43--62]{record}.
+
+The juror launcher instructed Pi to call the ADC tools through the single \code{mcp} proxy, supplying each tool's arguments as a JSON-encoded string.  The installed adapter's schema also permitted an object.  The first candidate, Kimi K2.6 through SiliconFlow, took about five minutes to complete the standard questionnaire.  Its initial MCP wait call succeeded.  It then made 23 work-note calls that omitted the required argument, receiving an explicit error each time.  The recorded argument strings already lacked the argument before MCP execution, and the gateway preserved the returned string.  Kimi eventually read the MCP scripting instructions and used that tool to send its note and submit all eight answers.  The court accepted the questionnaire after 27 completed model responses, with no operator change to the prompt or running process~\cite[event 63 and J1 tool log]{record}.
+
+Ling 3.0 Flash completed the next questionnaire.  During Qwen Plus 2025-07-28's turn through Alibaba, Pi received an empty-name tool call and then an HTTP 400 response rejecting that name in the conversation history.  Its process exited without a questionnaire.  ADC recorded the failed candidate and added Qwen3 VL 235B A22B Thinking as a replacement under its existing selection rules.  The event name \code{process\_juror\_timeout} covered that exit even though the 25-minute deadline had not elapsed.  Qwen 3.5 27B completed the following questionnaire in two model responses~\cite[events 64--68 and J2--J4 logs]{record}.
+
+GPT-4 Turbo failed after 29 rejected JSON strings.  It repeatedly appended an extra closing brace to the encoded submission, causing the Pi adapter to reject the string before ADC received a decision.  Those calls therefore did not consume ADC's invalid-decision attempts.  The model eventually stopped, describing the server's rejection as occurring ``for unclear reasons,'' despite the parse errors in the returned results.  ADC replaced it with DeepSeek V4 Flash.  That failure, like Qwen Plus's earlier exit, occurred before the turn deadline~\cite[events 79--81 and J12 tool log]{record}.
+
+The proceeding remains in progress.  The remaining selection, trial, and judgment will be described from the completed record.
 
 \section{Verification and Limitations}
 
