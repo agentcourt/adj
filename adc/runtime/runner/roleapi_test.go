@@ -224,6 +224,93 @@ func TestWorkNotesStayOutOfTurnTranscript(t *testing.T) {
 	}
 }
 
+func TestRoleAPIExhaustedDecisionAttempts(t *testing.T) {
+	for _, tc := range []struct {
+		name, role, phase, tool, jurorID string
+		wantError                        bool
+	}{
+		{"questionnaire", "juror", "voir_dire", "answer_juror_questionnaire", "J1", false},
+		{"follow-up", "juror", "voir_dire", "answer_voir_dire_question", "J1", false},
+		{"vote", "juror", "deliberation", "submit_juror_vote", "J1", false},
+		{"replacement-error", "juror", "voir_dire", "answer_voir_dire_question", "missing", true},
+		{"lawyer", "plaintiff", "trial", "record_opening_statement", "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			api, turn := testRoleAPIWithActiveTurn(t)
+			api.r = newTimeoutTestRunner(t)
+			turn.role.Name = tc.role
+			turn.principalID = tc.jurorID
+			turn.opportunity.Phase = tc.phase
+			turn.opportunity.AllowedTools = []string{tc.tool}
+			turn.opportunity.Constraints = map[string]any{"required_payload": map[string]any{"juror_id": tc.jurorID}}
+			caseObj := api.r.state["case"].(map[string]any)
+			caseObj["status"], caseObj["trial_mode"], caseObj["phase"] = "trial", "jury", tc.phase
+			caseObj["jury_configuration"] = map[string]any{"juror_count": 6, "unanimous_required": true, "minimum_concurring": 6}
+			jurors, votes := []any{}, []any{}
+			for _, id := range []string{"J1", "J2", "J3", "J4", "J5", "J6"} {
+				status := "candidate"
+				if tc.phase == "deliberation" {
+					status = "sworn"
+					if id != "J1" {
+						votes = append(votes, map[string]any{"juror_id": id, "round": 1, "vote": "plaintiff", "damages": 0.0, "confidence": "high", "explanation": "The record supports the claim.", "submitted_at": "2026-09-19"})
+					}
+				}
+				jurors = append(jurors, map[string]any{"juror_id": id, "name": id, "status": status, "note": "", "model": "", "persona_filename": ""})
+			}
+			caseObj["jurors"], caseObj["juror_votes"] = jurors, votes
+			for attempt := 1; attempt <= 3; attempt++ {
+				response, code := api.doLocked(roleAPIRequest{
+					RoleID: tc.role, PrincipalID: tc.jurorID, OpportunityID: "opp-1",
+					Tool: "submit_decision", Arguments: map[string]any{},
+				})
+				if code != http.StatusOK || response["ok"] != false || response["attempts_remaining"] != 3-attempt {
+					t.Fatalf("attempt %d: %d %#v", attempt, code, response)
+				}
+				if turn.completed != (attempt == 3) {
+					t.Fatalf("attempt %d: completed=%v", attempt, turn.completed)
+				}
+				if attempt == 3 {
+					apiError := response["error"].(map[string]any)
+					if response["status"] != "failed" || apiError["code"] != "attempts_exhausted" {
+						t.Fatalf("exhausted response = %#v", response)
+					}
+				}
+			}
+			var result externalOpportunityResult
+			select {
+			case result = <-turn.done:
+			default:
+				t.Fatal("no turn result")
+			}
+			if (result.err != nil) != tc.wantError {
+				t.Fatalf("turn error = %v, wantError=%v", result.err, tc.wantError)
+			}
+			if tc.wantError {
+				return
+			}
+			caseObj = api.r.state["case"].(map[string]any)
+			jurors = caseObj["jurors"].([]any)
+			if jurors[0].(map[string]any)["status"] != "timed_out" || !result.log.External {
+				t.Fatalf("failed juror=%#v, external=%v", jurors[0], result.log.External)
+			}
+			if tc.phase == "voir_dire" {
+				if len(jurors) != 7 || result.log.Steps != 2 {
+					t.Fatalf("replacement: jurors=%d, steps=%d", len(jurors), result.log.Steps)
+				}
+				replacement := jurors[6].(map[string]any)
+				if replacement["juror_id"] != "J7" || replacement["status"] != "candidate" {
+					t.Fatalf("replacement=%#v", replacement)
+				}
+			} else {
+				verdict, _ := caseObj["jury_verdict"].(map[string]any)
+				if len(jurors) != 6 || result.log.Steps != 1 || verdict["verdict_for"] != "plaintiff" || toInt(verdict["required_votes"]) != 5 {
+					t.Fatalf("remaining jury: jurors=%d, steps=%d, verdict=%#v", len(jurors), result.log.Steps, verdict)
+				}
+			}
+		})
+	}
+}
+
 func TestJurorRoleAPISpecsIncludeRecordReaders(t *testing.T) {
 	r := &Runner{prompts: testPromptCatalog(t)}
 	specs, err := r.roleAPIToolSpecs(spec.RoleSpec{Name: "juror"}, leanOpportunity{})

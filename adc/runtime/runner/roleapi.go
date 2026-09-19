@@ -997,9 +997,16 @@ func (api *roleAPIServer) rejectDecisionLocked(turn *externalOpportunityTurn, er
 	}
 	if turn.attemptsRemaining <= 0 {
 		limitErr := formatInvalidAttemptLimitError(fmt.Sprintf("role API role=%s", turn.role.Name), turn.invalidReasons)
-		api.finishTurnLocked(turn, TurnLog{}, limitErr)
 		response["status"] = "failed"
 		response["error"] = roleAPIError("attempts_exhausted", limitErr.Error())
+		if turn.role.Name == "juror" {
+			log, handled, handleErr := api.r.handleOpportunityResponseError(turn.turnIndex, turn.role, turn.opportunity, "", limitErr)
+			if handled {
+				api.finishTurnLocked(turn, log, handleErr)
+				return response
+			}
+		}
+		api.finishTurnLocked(turn, TurnLog{}, limitErr)
 	}
 	return response
 }
