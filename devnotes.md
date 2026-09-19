@@ -1077,3 +1077,15 @@ The case stopped before that defense strike was submitted.  The defense session 
 The wall-clock timestamps for J11 and J5 exceed their advertised deadlines by approximately ten and fourteen minutes.  The deadline code compares wall-clock nanoseconds on a ticker.  Both outstanding gateway requests ended with cancellation when ADC replaced the candidates.  The cause of the late processing remains unresolved.  A system-journal read, including an approved unsandboxed invocation, could not access system messages under this account.  These observations do not establish whether the host paused, its clock changed, or runtime execution was delayed.  The cause of the defense's unfinished final interaction also remains unresolved.
 
 The manuscript and its README now describe the stopped case.  They remain an incomplete, unsubmitted draft.  The retained case occupies 355 MiB.  The lawyer logs contain 1,003 completed assistant response events, seven completed compactions, and a $417.19 token-price estimate, excluding court, juror, and search-subrequest costs.  The estimate does not establish subscription charges.  No case container or staged authentication or MCP capability file remains.  The runtime, prompts, pool, and source inputs were unchanged throughout the run.
+
+### Clock differences in the retained process record
+
+The user could not confirm whether the host or VM paused.  The existing process records provide a second time measurement: `runtime/runstate/process_instance_linux.go` records field 22 of `/proc/PID/stat` beside the boot identifier.  The [Linux process-stat documentation](https://man7.org/linux/man-pages/man5/proc_pid_stat.5.html) defines that field as the process start time since boot in clock ticks.  `getconf CLK_TCK` reports 100 on this machine.  All compared processes have the same boot identifier.
+
+| Process starts, UTC | Wall-clock interval | Kernel start-time interval |
+| --- | --- | --- |
+| J11 at 09:21:39 to J12 at 09:56:53 | 2,113.65 seconds | 65.69 seconds |
+| J5 follow-up at 10:00:34 to J19 at 10:39:11 | 2,316.96 seconds | 200.09 seconds |
+| J9 follow-up at 10:42:59 to J1 follow-up at 11:50:26 | 4,047.35 seconds | 508.99 seconds |
+
+These differences establish that the recorded wall clock advanced far more than the kernel's time-since-boot counter during these intervals.  A VM pause with wall-clock correction, or another wall-clock adjustment, is consistent with the observations.  Host records are needed to distinguish those causes.  ADC's `turnDeadlineExpired` compares `UnixNano` values, so a forward wall-clock jump can expire a turn at the next deadline check.  The retained process starts end at 11:53, limiting this comparison to the earlier timeouts and gaps.  The final defense timeout remains subject to that limitation.  Runtime settings and code remain unchanged.
