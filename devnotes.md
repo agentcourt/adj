@@ -1021,7 +1021,7 @@ The user approved the correction, live testing, and another fresh nine-juror/six
 
 - [x] Run focused and affected Go tests.
 - [x] Test failed juror decisions through live MCP and Pi execution, then verify the record.
-- [ ] Commit and push the correction.
+- [x] Commit and push the correction.
 - [ ] Run the fresh full case, verify its result, and complete the marXiv report.
 
 The focused test and ADC runtime, launcher, and command tests passed.  Go vet, gofmt, and `git diff --check` passed.  Go tests that execute the compiled engine ran through local leanrunner with 4 GiB memory high, 6 GiB maximum, 1 GiB swap, 100% CPU, a 900-second timeout, and one job.
@@ -1029,3 +1029,9 @@ The focused test and ADC runtime, launcher, and command tests passed.  Go vet, g
 The live test uses Sonnet 4.6 through Pi, the model gateway, and MCP.  Its test-only launcher prompt instructs J1 to submit three empty decisions on its follow-up turn.  Its scenario, pool, and prompt are retained in `tmp/adc-invalid-decision-live/`.  The first launch failed before a model request because the scenario's relative persona name differed from the pool's absolute name.  The scenario was corrected to use the same path.  That failed setup remains under `adc/out/invalid-decision-live-20260919-01/`.
 
 The second launch completed under `adc/out/invalid-decision-live-20260919-02/`.  J1 completed its questionnaire, then submitted three empty decisions through MCP.  ADC recorded `attempts_exhausted`, marked J1 failed, and added J7.  J7 completed its questionnaire, and J2 completed its follow-up answer.  The process exited with status zero.  The digest includes all nine juror process logs.  `adc/.bin/adc verify-certificate --dir adc/out/invalid-decision-live-20260919-02/adc-output` verified 26 transitions through local leanrunner with the same limits.  The test's retained files occupy 4.9 MiB, and no case container or staged credential remains.  Its juror log records 29 model requests, 169,850 input tokens, and 4,627 output tokens without dollar-cost figures.  The core records $0.005004 for its one accounted request.
+
+## Fresh Israel–Syria ADC case: 2026-09-19, 07:56 UTC
+
+Revision `dbde6f0` was committed and pushed to `origin/main`.  The new run, `ex04-20260919-03`, began at 07:56:08 UTC with rebuilt commands and fresh lawyer directories under `adc/out/ex04-20260919-03/`.  Both session records confirm `openai-codex`, `gpt-5.6-sol`, and `xhigh`.  The generated scenario confirms nine jurors, six required votes, and 500 turns.  Runtime deadlines remain 1,500 seconds, with three invalid attempts.  The initial document matches the original example.  The pool and production prompts are unchanged.  The prior manuscript is retained at `adc/out/ex04-20260919-02/report-draft.tex`.
+
+The defense passed Rule 12 and filed its answer.  It accepted the governing criteria and declaratory jurisdiction, denied that Polymarket's supplied rationale established the facts, and preserved merits defenses.  The plaintiff began source research during its initial-disclosure opportunity.  The lawyer token-price estimate was $0.48 at 07:57 UTC.
