@@ -1,0 +1,543 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\setlength{\emergencystretch}{2em}
+
+\title{Adjudicating a Prediction-Market Resolution:\\An ARB Case Study of Israel's December 2024 Entry into Syria}
+\author{Jamie Stephens}
+\date{September 18, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report examines one completed Agent Arbitration (ARB) proceeding over the resolution of a prediction market asking whether Israel invaded Syria in 2024.  It first describes the adjudication procedures in the AgentCourt \code{adj} repository, including Agent District Court, the construction and sampling of model pools, the division between model judgment and Lean-enforced procedure, and the records available for review.  In the reported case, two Pi lawyers using GPT-5.6-sol with \code{xhigh} reasoning investigated the proposition, submitted five source exhibits, exchanged eight filings, and recorded 24 work notes.  Nine council members were sampled from an installed 97-configuration pool, with five votes required.  Eight voted that the proposition was demonstrated by a preponderance of the evidence.  One failed before voting.  The proceeding lasted 47 minutes and 22 seconds, and certificate replay accepted its 22 recorded actions.  The narrative follows the defense's narrowing position, an evidentiary correction prompted by rebuttal, the use of primary and secondary sources, and the council's treatment of defensive purpose and intended control.  The starting record included the market's supplied Yes resolution.  Source-attribution weaknesses, a provenance-timestamp inconsistency, tool failures, incomplete cost accounting, and the limits of a single case qualify the findings.
+\end{abstract}
+
+\section{Adjudication in adj}
+\label{sec:system}
+
+The \code{adj} repository implements procedures in which language-model participants investigate a dispute, submit arguments or other authorized acts, and reach a recorded decision~\cite{adjrepo,procedures}.  The repository owns the commands, model-request components, participant launchers, Model Context Protocol (MCP) adapters, prompts, evidence handling, and case records needed to execute a case.  A separate repository, \code{adjservices}, supplies optional services for deployment, managed cases, and presentation.  The case reported here ran through \code{adj}'s local ARB launcher.
+
+The word ``lawyer'' identifies an assigned advocate in the software.  ``Council member'' identifies an assigned decision-maker.  Both lawyers and all council members in the reported run were model agents.  A proposition, evidence standard, procedural policy, and participant configuration define what the run will decide.  The output records how those participants acted under those settings.
+
+\subsection{The five procedures}
+
+The repository offers five procedures with different decision structures.  Simple sends the proposition, evidence standard, and available documents to one model, which returns a binary decision and rationale through a designated tool.  Quick obtains one argument from each of two opposed lawyers, then asks a council for binary votes and explanations.  Its sequence is fixed and short.
+
+Agent Arbitration (ARB) gives each side several opportunities to investigate and respond before a council decides whether a proposition has been demonstrated.  Agent Arbitration Degree (AARD, in the \code{arbd} directory) uses the same eight-opportunity advocacy sequence but asks each council member for an integer answer from 0 through 100.  Its output is a distribution of degree judgments.  ARB instead uses a strict-majority threshold and can permit additional ballot rounds when neither substantive answer reaches the threshold.
+
+Agent District Court (ADC) implements a more extensive civil procedure.  A case can proceed through pleadings, motions, discovery, trial preparation, bench or jury trial, verdict, judgment, and post-judgment requests.  Its actors include plaintiff, defendant, judge, clerk, and jurors.  A judge can decide motions, resolve evidentiary issues, direct trial procedure, give jury instructions, or make bench findings.  The clerk performs administrative acts and advances stages.  The sequence depends on earlier authorized decisions, rather than consisting solely of a fixed exchange of arguments~\cite{adc}.
+
+ADC accepts a prepared scenario or can prepare a one-claim case from a complaint.  The preparation path can produce a normalized claim and private party strategies before adjudication.  The unified \code{adjudicate} command also supports proposition input.  ADC stores its procedural record in files and a SQLite court database.  Its judge-evaluation suites test controlled decision opportunities through the production prompting, tool, validation, and transition path~\cite{evalpaper}.  That evaluation answers a different question from this report's examination of one complete ARB case.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{The procedures relevant to this report.  A council size is configurable.}
+\label{tab:procedures}
+\begin{tabularx}{\textwidth}{@{}L{0.12\textwidth}Y Y@{}}
+\toprule
+Procedure & Decision structure & Principal record and rule enforcement \\
+\midrule
+Simple & One model decides one proposition. & Request, documents, decision, and rationale. \\
+Quick & Two arguments precede one council ballot. & Accepted arguments, votes, failures, and threshold result. \\
+AARD & Eight lawyer opportunities precede degree answers. & Evidence, filings, answers, Lean state, and replay certificate. \\
+ARB & Eight lawyer opportunities precede thresholded binary deliberation. & Evidence, filings, round-indexed votes, Lean state, and replay certificate. \\
+ADC & Court and party decisions determine a civil case's later opportunities. & Pleadings, motions, discovery, trial acts, rulings, judgment, database, Lean state, and replay certificate. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{ARB's actors, opportunities, and decision rule}
+
+ARB decides one proposition under a supplied standard of evidence.  Its executable names use \code{aar}: the launcher is \code{aar-run}, the case command is \code{aar}, and the participant adapter is \code{aar-mcp}.  This report uses ARB for the procedure and preserves command names when describing execution.
+
+The plaintiff argues that the proposition satisfies the standard.  The defendant presents the strongest supported opposing position.  The eight lawyer opportunities occur in order: plaintiff opening, defendant opening, plaintiff argument, defendant argument, plaintiff rebuttal, defendant surrebuttal, plaintiff closing, and defendant closing.  Each side therefore has an opening, a principal argument, one responsive filing, and a closing.  The rebuttal and surrebuttal opportunities permit a pass.  Neither side passed in this run.
+
+A case begins with an immutable catalog of supplied evidence.  Lawyers can submit new evidence during arguments, rebuttal, and surrebuttal.  They can then offer admitted items in a filing.  Openings and closings cannot add evidence.  A lawyer can also submit a bounded technical report explaining an analysis, with its source evidence admitted separately.  ARB's admission operation establishes a record item and checks procedural conditions.  It does not resolve the item's credibility through a separate judge's ruling.  The council assesses the evidence when deciding the proposition.
+
+The council acts after the lawyers finish.  Each member submits a binary vote and a rationale.  The vote values are \code{demonstrated} and \code{not\_demonstrated}.  A valid policy requires more than half the constituted council for either substantive result.  The engine waits for every remaining seated member to vote in the round.  It then applies the threshold.  A failure removes the affected member from the seated count while leaving the original required-vote number unchanged.  If neither answer reaches the threshold, further rounds may follow within the configured maximum.  The procedure can terminate with \code{no\_majority} when its rules preclude a substantive resolution~\cite{councils}.
+
+The evidentiary standard and the voting threshold serve different functions.  ``Preponderance of the evidence'' tells each decision-maker how to judge the proposition.  The lawyers in this run applied that standard by asking whether the proposition was more likely than not on the evidence.  The five-vote requirement tells the engine how many agreeing decisions close this nine-member case.  The standard remains a natural-language instruction to the models.  Lean checks the vote arithmetic and procedural conditions.
+
+\subsection{Research tools, workspaces, and work notes}
+
+The formal procedures expose participant opportunities through case-owned APIs and MCP adapters.  MCP carries structured calls such as obtaining the current opportunity, reading evidence, sending work notes, submitting evidence, and filing a decision.  Each opportunity identifies the assigned actor, phase, permitted operations, deadline, and remaining attempts.  A model request and a procedural action are different units: one opportunity can involve many model requests and tool calls before the runtime accepts a filing.
+
+The lawyer's harness supplies investigative capabilities.  Depending on configuration, those capabilities can include web search, page retrieval, local execution, document extraction, programming, and computer use.  The general lawyer instructions allow installation of tools when needed and direct the lawyer to keep sources, programs, notes, drafts, and results in its retained workspace.  The workspace persists across the lawyer's opportunities.  The court's evidence permissions determine when research material enters the record.  A downloaded file in a private workspace does not become council evidence automatically.
+
+Both lawyers in this case used Pi.  Their ordinary model sessions used Codex-subscription authentication, while Pi's web-access extension supplied search and retrieval tools.  The session records confirm the primary model and reasoning setting.  Search-extension activity has its own request path and accounting, so its internal calls cannot all be attributed to the primary lawyer model.
+
+Work notes provide a separate record of the lawyer's progress.  The prompt asks for a short note after orientation, further notes after material research or a change in theory, and a final note before filing.  It asks the lawyer to explain findings, uncertainty, unsuccessful approaches, and next steps at a high level.  Detailed command output belongs in workspace files.  Work notes remain outside the evidentiary record and outside the replay certificate.  The quotations in this report come from those intentionally submitted notes and accepted filings.  They expose the lawyer's reported assessment and subsequent conduct, rather than establishing access to every internal model computation.
+
+Council members have a narrower assignment.  In this run, Pi council agents accessed the Council API through MCP, received the filed record and offered evidence text, and could inspect admitted evidence through read-only tools.  Their instructions prohibited web research and new evidence.  Lawyers developed the record.  Council members decided from it.
+
+\subsection{Pool generation and case-time sampling}
+\label{sec:pool}
+
+A model configuration identifies more than a model name.  It can specify the model, service endpoint, exact provider route, request parameters, quantization metadata, and persona.  The pool-generation procedure evaluates provider-endpoint configurations because routes for the same named model can differ in supported tools, limits, availability, and observed responses.  The installed pool used here routed council requests through OpenRouter.  The repository also supports explicitly configured direct service endpoints~\cite{endpoints}.
+
+The pool pipeline begins with a provider inventory and required capabilities.  A runtime screen then checks two submission paths for each candidate: Quick-style direct use of \code{submit\_council\_vote}, and a Pi/MCP interaction following the ARB council tool sequence.  Passing candidates receive repeated scored questions.  The scoring and error criteria select configurations for behavioral sampling.  These stages establish recorded performance under the screening conditions.  Availability and correct tool use remain subject to later failures.
+
+The evaluation's Core20 set contains four questions in each of five categories: general knowledge, science and quantitative reasoning, reasoning, instruction following, and tool-based evidence use.  The pool's deliberation score uses the twelve questions in the first three categories.  It computes a fraction of correct completed answers per trial, excluding rows with response-metadata errors, then averages over trials with at least one such answer.  Instruction following and evidence-tool use receive separate measurements.  Thus, a threshold of 0.70 refers to this defined question-set score, rather than an estimated probability of deciding an arbitrary case correctly~\cite{poolpaper}.
+
+Behavioral sampling uses prompts called ``genes'' in the implementation.  Each is an ordinary prompt selected to elicit variation in responses, on subjects such as justice, values, social issues, leadership, or training provenance.  The recorded pool build used 14 prompts and five responses per configuration and prompt, with a common generic persona.  It embedded the responses, fitted principal component analysis separately for each prompt, and clustered the reduced vectors with K-means.  The run retained eight principal components and selected a cluster count from 2 through 20 by silhouette score~\cite{poolpaper}.
+
+For each configuration and prompt, aggregation selects a representative cluster label from the repeated samples.  A unique modal label wins.  A tie uses the sample nearest its assigned cluster center among the tied labels.  The resulting 14-label vector describes the configuration's observed response grouping across the prompts.  The sampler first groups equivalent model endpoints and selects representatives.  It then samples an available cluster vector uniformly and a representative within that vector uniformly.  The recorded build sampled without replacement and allowed one selected row per model identifier.  Consequently, configurations in rare observed groups can receive more weight than their catalog frequency would give them.
+
+The earlier pool report documents the counts~\cite{poolpaper}: 419 screened configurations were evaluated, 283 passed a strict score threshold greater than 0.70 with zero counted provider errors, and 265 completed every selected gene sample without request or embedding errors.  Endpoint-equivalence grouping produced 148 representatives.  Sampling selected 100 model identifiers across 30 provider names and 69 observed cluster vectors.  Subsequent removal of three unavailable configurations left the 97-entry installed pool used for this case.  The reported 0.70 threshold belongs to that build.  The current general pipeline documentation describes a different default threshold, 0.90~\cite{poolmanual}.
+
+Pool construction and seating a council are separate sampling operations.  At case time, the shared selector chooses a least-used eligible service endpoint, then a least-used configuration at that endpoint, breaking ties with cryptographic randomness.  In this selector, a service endpoint means, for example, OpenRouter or a directly configured lab service.  It does not mean each provider route inside OpenRouter.  Because this case used an OpenRouter-only pool, that endpoint-balancing step could not diversify the service intermediary.  Selection among the pool's configurations supplied the model and provider-route variation.
+
+Selected configurations undergo availability checks before a seat is accepted.  Failed configurations become ineligible for that draw.  Successful configurations remain eligible for later seats, so duplicate configurations are supported.  They receive distinct member identifiers and make separate responses.  The least-used rule prefers unused eligible configurations before repeating one.  This case seated nine distinct model identifiers.  It imposed no separate family quota, and four seats belonged to Qwen models.
+
+Statistical independence requires a separate assessment from behavioral clustering or counting different model names.  Models can share training material, sources, and response tendencies.  Every member in this case also saw the same advocacy record and used the same generic persona.  The pool supplies variation in tested configurations.  The relation between that variation and adjudicative accuracy requires measurements beyond this one proceeding.
+
+\subsection{Lean engines and the scope of verification}
+\label{sec:lean}
+
+ARB, AARD, and ADC use executable Lean rule engines.  The Go runtime obtains model responses, manages processes and deadlines, checks request form, stores evidence, and asks the engine to apply authorized actions.  Lean determines procedural state and the next opportunity.  Its checks bind an accepted actor action to the required role, phase, opportunity identifier, state version, and, where relevant, council member.
+
+The maintained ARB proof library covers phase order, the allocation of merits opportunities, fixed case data, evidence-reference chronology, permitted council votes, outcome arithmetic, and replay.  It also proves progress properties: a reachable active state exposes a next opportunity, at least one permitted action can succeed, and successful action paths have a procedural length bound.  These are statements about the executable rules.  An external model can still fail, exceed a deadline, or submit invalid arguments, which the runtime records through the procedure's failure actions~\cite{proofs}.
+
+The outcome-soundness theorems establish that a closed substantive result follows from the recorded votes and threshold under the engine's rules.  The word ``soundness'' here concerns that relationship.  It does not supply a proof that historical events occurred or that a council's interpretation of market language is correct.  The evidence-standard string has no formal semantic model in the proof.
+
+Each formal procedure writes a replay certificate containing initialization, accepted actions, and the claimed final state.  Verification re-executes those actions through the selected engine and compares the result with the claim and recorded state.  ARB's certificate properties cover exact opportunity authority and require offered evidence to have existed in the source state of its filing.  The Go evidence store maintains the relationship between recorded evidence identifiers and stored bytes.  Certificate replay does not fetch the cited websites or verify the truth of a lawyer-supplied retrieval timestamp.
+
+ADC and AARD have their own proof trees and replay schemas.  ADC includes results concerning verdicts, judgment, and outcomes following juror failure.  AARD includes the ordered advocacy record, permitted degree answers, termination, and replay.  These engines share a procedural approach while enforcing their respective rules.  Simple and Quick record their decisions without a Lean transition engine.
+
+The certificate for this case passed verification over 22 accepted actions using the existing ARB engine binary.  No Lean compilation was required for that check.  The available source checkout was revision \code{7016150}.  The executable's manifest separately reported build version \code{v0.0.0-20260914172037-266a503d5b64+dirty}.  Those identities do not establish that the executable was built from the reviewed checkout.  The run result is therefore tied to the recorded executable and its successful replay, while the architectural account cites the maintained source documentation at the identified checkout.
+
+\section{The Case and Its Initial Record}
+\label{sec:case}
+
+The example concerns the Polymarket question ``Will Israel invade Syria in 2024?''  The supplied rule defines the relevant event as commencement of a military offensive intended to establish control over any portion of Syria between September 12 and December 31, 2024, at 11:59 p.m. Eastern Time.  For this market, the Golan Heights count as Israeli territory.  The permitted resolution sources include official confirmation by Syria, Israel, the United Nations, or any permanent member of the UN Security Council, as well as a consensus of credible reporting~\cite{example}.
+
+The distinction between the short market question and its operative definition shaped the proceeding.  A finding of cross-border entry would establish only part of the proposition.  The lawyers also had to address territory under the market's stipulated geography, the character of the military operation, intended control, and the time window.  The role labels ``plaintiff'' and ``defendant'' denoted proponents of the two resolution positions.  Neither advocate represented a state or a market participant.
+
+The initial evidence file contained the rules and a supplied account of Polymarket's Yes resolution.  That account connected the reported December 8 arrival of Israeli forces at the Syrian summit of Mount Hermon with Prime Minister Benjamin Netanyahu's December 17 statement about remaining until a security arrangement.  It also explained why the Syrian peak fell outside the market's Golan exclusion.  Thus, the initial record already proposed the factual and interpretive path to Yes.  The run tested adversarial adjudication with that conclusion present.  It cannot establish what the same participants would have concluded without it.
+
+The defendant recognized that distinction in its opening:
+\begin{quote}
+That conclusion is part of the history of this disputed resolution, not a substitute for this Council's application of the preponderance standard.
+\end{quote}
+The report treats historical assertions as assertions in the supplied record, retrieved exhibits, or participants' filings.  It examines how the proceeding handled those assertions.  It does not add a new historical investigation to the completed case.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Executed case configuration.}
+\label{tab:config}
+\begin{tabularx}{\textwidth}{@{}L{0.27\textwidth}Y@{}}
+\toprule
+Setting & Value \\
+\midrule
+Case and run & \code{israel-syria-ex04}, \code{ex04-20260918T144715Z} \\
+Lawyers & Two Pi agents, each using \code{openai-codex/gpt-5.6-sol}, with \code{xhigh} reasoning and Codex-subscription authentication \\
+Investigation & Enabled web search, page retrieval, local execution, and separate retained workspaces \\
+Council & Nine configurations sampled from the installed 97-entry OpenRouter pool \\
+Decision rule & Five votes under preponderance of the evidence.  Maximum three rounds. \\
+Turn deadlines & 1,500 seconds for each lawyer and council turn \\
+Filing caps & 5,000 characters per opening or closing, 6,000 per principal argument, and 4,000 per rebuttal or surrebuttal \\
+Prompts & Existing \code{prompts/arb/} catalog, unchanged for this case \\
+Execution & September 18, 2026, 14:47:54--15:35:16 UTC \\
+Outcome & \code{demonstrated}: eight supporting votes, zero opposing votes, one member failure \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Investigation and the Opening Positions}
+
+\subsection{The plaintiff's control theory}
+
+The plaintiff began by separating the ground deployment from other military activity.  Its first work note, at 14:48:39 UTC, proposed a sourced chronology beyond the Golan exclusion and a distinction between control-oriented conduct, airstrikes, and temporary raids.  Search queries pursued Israeli government statements, UN reporting, Associated Press accounts, and the location and intended retention of the Syrian summit.
+
+The investigative activity was observable in tool calls.  One early search asked for ``site:gov.il Netanyahu December 17 2024 Mount Hermon Syria remain until arrangement guarantees security.''  Later queries narrowed to the UN's descriptions of positions and construction.  The lawyer retrieved an Israeli letter to the Security Council, a UN briefing, and AP reporting carried by PBS.  It kept notes and draft filings in its workspace and used local programs to check filing length.
+
+At 14:55:36, its next work note identified the factual focus:
+\begin{quote}
+Research supports a narrow, high-confidence theory: the decisive event is the Dec. 8 IDF ground deployment to Syria's Mount Hermon peak and positions beyond the disengagement lines, not airstrikes or action within the deemed-Israeli Golan.
+\end{quote}
+The same note acknowledged Israel's description of the deployment as temporary and defensive.  The plaintiff's proposed answer was that a security motive could coexist with an intention to hold territory.  That distinction became the principal argument through closing.
+
+The opening introduced three connected propositions: entry onto the Syrian summit, control through positions and construction, and announced retention until a future security arrangement.  It anticipated the defense's reliance on temporary duration and defensive purpose.  It also stated that the market required neither annexation nor a firefight.  The opening was accepted at 14:57:10.
+
+During openings, the plaintiff tried to submit evidence.  The runtime rejected the call because the phase did not allow it and charged one invalid attempt.  The lawyer later admitted its sources in the arguments phase.  The record therefore distinguishes research already performed from evidence admitted at the permitted stage.
+
+\subsection{The defendant's adverse research}
+
+The defendant began with the strongest factual theory presented by the plaintiff, rather than disputing all reported entry.  Its first note proposed testing the two conjunctive requirements: a military offensive and intent to establish control.  Its searches examined the contemporaneous Israeli explanation, UN Disengagement Observer Force (UNDOF) reports, the summit's location, the later retention statements, and discussion of the market dispute.
+
+The lawyer downloaded three UN PDFs into its retained \code{sources/} directory: Israel's December 9 letter, S/2024/887, Syria's corresponding letter, S/2024/888, and a later Secretary-General report, S/2025/154.  Its local calls used HTTP retrieval and file inspection.  Other tool calls extracted source text and searched it.  These files remained research material unless separately submitted.  The five eventual exhibits were text items, not the original PDFs.
+
+At 15:07:14, the defendant recorded a finding that directly limited its available case:
+\begin{quote}
+Research materially sharpens but weakens the defense.
+\end{quote}
+The note contrasted Israel's temporary, defensive account with the adverse Syrian letter and AP reporting.  It then stated:
+\begin{quote}
+Best truthful theory is therefore narrow: entry and a disengagement violation are conceded, while claimant must prove the operation was an offensive with intent to establish control at commencement; later conditional retention does not automatically prove that intent.
+\end{quote}
+The note is evidence of the advocate's reported assessment at that point.  Its subsequent opening implemented the narrower position.
+
+The defendant conceded that Israeli personnel crossed Line A on December 8 and occupied positions including the Syrian summit.  It argued that the contemporaneous Israeli account described a response to armed groups threatening UN positions and a temporary security deployment after Syrian governmental collapse.  In its view, evidence of continued occupation nine days later did not establish the required purpose at commencement.  It distinguished violation of the disengagement agreement from satisfaction of the market's definition.
+
+That position left an interpretive dispute over agreed or substantially conceded conduct.  The defense did not need to deny every fact to contest the proposition.  Its burden-focused argument instead asked whether those facts made the defined operation more likely than the protective deployment it proposed.
+
+The defendant also made an opening-phase procedural error.  It attached an \code{offered\_evidence} field to its first filing attempt.  The runtime rejected the offer because openings cannot offer evidence.  The lawyer's next note identified the error, observed that two attempts remained, and stated that it would resubmit the same text without the field.  The corrected opening was accepted at 15:09:26.  Both lawyers therefore completed their openings after one rejected evidence-related action each.
+
+\section{The Evidentiary Record and Principal Arguments}
+
+\subsection{Five exhibits and their retrieval limits}
+
+During the arguments phase, the plaintiff admitted three exhibits.  P-1 reproduced text from Israel's December 9 Security Council letter, including its temporary and defensive characterizations~\cite{p1}.  P-2 reproduced selected portions of the December 17 UN spokesperson's briefing about IDF positions, construction, and restrictions on UN movement~\cite{p2}.  P-3 reproduced AP reporting carried by PBS concerning the summit's location, Netanyahu's retention statement, and Defense Minister Israel Katz's direction to establish fortifications~\cite{p3}.
+
+The defense admitted the December 13 UNDOF press statement as D-1~\cite{d1}.  During surrebuttal it added D-2, a Times of Israel report of a December 9 U.S. State Department briefing~\cite{d2}.  Table~\ref{tab:evidence} identifies the five new record items.  Together with the supplied market-rules file, they formed a six-item evidence record at the end of the case.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Submitted exhibits.  The descriptions distinguish publication authority from the route used to obtain the text.}
+\label{tab:evidence}
+\begin{tabularx}{\textwidth}{@{}L{0.055\textwidth}L{0.30\textwidth}Y@{}}
+\toprule
+Item & Source and date & Evidentiary use and retrieval qualification \\
+\midrule
+P-1 & Israeli letter S/2024/887, December 9, 2024 & Official admission of deployment east of Line A, with limited, temporary, and defensive language included.  Text extracted from the UN PDF. \\
+P-2 & UN spokesperson's briefing, December 17, 2024 & Positions, construction, movement restrictions, and occupation characterization.  Text obtained from a disclosed transcript mirror after difficulty extracting the official page. \\
+P-3 & AP report carried by PBS, December 17, 2024 & Summit geography, announced retention, and fortifications.  Credible reporting rather than an official transcript. \\
+D-1 & UNDOF press statement, December 13, 2024 & The December 7 looting incident, increased IDF movement, continued presence, and disengagement violation.  Official UN Peacekeeping page. \\
+D-2 & Times of Israel account of the U.S. briefing, December 9, 2024 & The security-vacuum explanation, expected temporariness, and eventual return.  The lawyer disclosed that the archived State Department transcript was access-blocked. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The retrieval record contains HTTP access failures and failed page extraction.  For P-2, the submitted metadata named the official UN briefing and disclosed the GlobalSecurity transcript mirror used to obtain it.  D-2 likewise disclosed reliance on a secondary report when the archived primary transcript could not be accessed.  These qualifications let a reviewer distinguish an official statement's reported contents from direct retrieval of that statement's publication.
+
+The defense's research files also contained the Syrian letter and later UN report, but neither entered the admitted evidence.  Its notes explicitly described the Syrian letter as adverse and said it would not offer it.  The council's record therefore reflected the parties' selections from their research.  The full research archive and the admitted record serve different review purposes.
+
+The exhibit metadata had one observable chronology defect.  D-2 claimed retrieval at 15:28:00 UTC, although the runtime recorded submission at 15:27:08.126.  The supplied retrieval time was approximately 52 seconds later than the submission.  That inconsistency concerns provenance metadata.  Certificate replay accepted the submission action because the procedural transition was valid.  It did not establish the correctness of the supplied retrieval time.
+
+\subsection{Motive, means, and intent at commencement}
+
+The plaintiff's principal argument used the defense's concession to narrow the dispute.  It treated entry, occupation, location, and timing as established, then connected the Israeli letter's selected positions with the later UN observations and leadership statements.  Its central formulation was:
+\begin{quote}
+Respondent conflates ultimate motive with intended means. Israel's stated end was security; its chosen means was taking, excluding others from, building on, fortifying, and retaining Syrian positions. A military that occupies commanding terrain to prevent armed groups from using it intends to control that terrain.
+\end{quote}
+The paragraph separated why Israel wanted the positions from whether it intended to control them.  It also distinguished scale from duration: the market's reference to any portion made limited territorial extent compatible with satisfaction, and establishing control did not require keeping it permanently.
+
+The defense had raised a temporal objection.  The plaintiff answered that intent could be inferred from the contemporaneous selection and occupation of positions, with later conduct supporting that inference about an ongoing operation.  Its argument also noted that the later statements still fell within the market window.  This left the council to decide the evidentiary weight of later retention and fortification, rather than treating their timing as automatically dispositive.
+
+The defendant sought additional support for its distinction.  It searched official military-doctrine sources for definitions of offensive operations.  One query combined ``offensive operation,'' ``defeat and destroy enemy forces,'' and seizure of terrain.  At 15:19:50, it reported the consequence:
+\begin{quote}
+Additional research did not produce a clean doctrinal escape: formal military doctrine commonly includes seizing terrain within offensive operations, so I will not offer it.
+\end{quote}
+The filing did not cite that unsuccessful line of research as favorable authority.  Instead, the defendant offered UNDOF's statement and emphasized the contemporaneous security incident.
+
+Its accepted argument said that soldiers exercising immediate custody over their positions could be conducting a rescue, evacuation, patrol, peacekeeping deployment, or attack.  It therefore challenged an inference from every instance of physical custody to the market's specific operation.  The argument acknowledged that a defensive motive can coexist with an offensive intended to control terrain, while maintaining that coexistence had to be proved in this case.
+
+This was a substantive disagreement over the relation between facts and terms.  The plaintiff relied on the combination of advance, seizure, exclusion, construction, and retention to distinguish the operation from transient presence.  The defendant sought to preserve independent meaning for ``military offensive'' and the required intent.  Neither side presented a stipulated military definition binding the council.  The eventual resolution depended on interpreting the market's ordinary language in light of the admitted conduct.
+
+\section{Rebuttal, Correction, and the Final Dispute}
+
+\subsection{The construction comparison}
+
+The defendant's principal argument used D-1's reference to counter-mobility obstacles under construction since July 2024 to challenge an inference from construction to a December offensive.  The plaintiff's rebuttal identified a difference in both location and activity.  D-1 concerned obstacles along the ceasefire line.  P-2 concerned later construction at four Mount Hermon locations after the ground entry.  The plaintiff wrote:
+\begin{quote}
+Its July reference does not undercut P-2. D-1 describes earlier obstacles ``along the ceasefire line''; P-2 separately reports IDF movement and construction at four Mount Hermon locations after entry. Respondent merges different places and activities.
+\end{quote}
+
+At the start of surrebuttal, the defendant accepted the correction in its 15:25:08 work note:
+\begin{quote}
+Plaintiff's rebuttal correctly identifies the defense's hardest point: area denial entails immediate physical control, and D-1's July-obstacle clause concerns the line rather than the four later Mount Hermon construction sites. I will not repeat that overbroad construction comparison.
+\end{quote}
+The accepted surrebuttal began by acknowledging that the July obstacles differed from the later construction.  The correction therefore appears in both the private progress record and the public filing.  The responsive phase produced an identifiable change in the advocate's stated position.
+
+The plaintiff also argued that intentional area denial was an instance of control: excluding other forces from selected terrain required holding it.  It answered the rescue and patrol analogies with the combination of summit occupation, multiple positions, construction, restrictions on UN movement, and announced retention.  The defendant's revised position increasingly conceded intended temporary control while preserving the separate question of offensive character.
+
+\subsection{The U.S. account and its adverse wording}
+
+During surrebuttal, the defendant found the Times of Israel account of State Department spokesman Matthew Miller's December 9 explanation.  That account described abandoned Syrian positions, the risk of armed groups filling the vacuum, the United States' understanding of protective action, and its expectation that the move would remain temporary.  It also called the Israeli action a takeover.  The lawyer's 15:26:54 work note recognized both aspects:
+\begin{quote}
+This does not deny immediate custody (`takeover'), but independently corroborates the defense's operational characterization and directly answers the claim that it rests only on Israel's labels.
+\end{quote}
+The same note disclosed the access-blocked State Department page and the choice to offer the report as a secondary account.  The surrebuttal used D-2 to support the security explanation while acknowledging the possession it described.
+
+The plaintiff then used that adverse wording in closing.  An expectation that a takeover would end presupposed present control, in its argument.  The defense's source supported the stated security rationale and supplied language consistent with the plaintiff's account of possession.  The same exhibit could support different propositions while leaving the contested characterization unresolved.
+
+\subsection{Closings after the concessions}
+
+The plaintiff closed by applying each element to the record: commencement within the window, Syrian territory outside the stipulated exclusion, an armed advance and seizure, and intended control shown by selection, construction, exclusion, fortification, and retention.  It summarized its distinction as ``Security was the ultimate motive; control was the chosen means.''  The conclusion asked the council to judge the combined acts rather than accept defensive terminology as conclusive.
+
+The defendant's last work note, at 15:32:33, stated the extent of its concessions:
+\begin{quote}
+It makes the narrowest candid defense: timely entry, occupation, temporary control intent, and area denial are conceded; only the separately required `military offensive' characterization remains contested.
+\end{quote}
+Its accepted closing preserved that position.  It expressly acknowledged that neither permanent control nor resistance was necessary, while arguing that the nearest contemporaneous accounts better supported an emergency protective deployment.  The defense described the remaining burden this way:
+\begin{quote}
+``Any portion'' makes one position enough; ``temporary'' control can be control; an unopposed advance can be offensive. But none of those propositions eliminates claimant's burden to prove that this deployment was a military offensive.
+\end{quote}
+The original filing emphasized ``this'' with Markdown bold.  The quotation retains the words without that markup.
+
+The plaintiff's closing at points described the defense as denying an offensive because no battle had been shown.  The defense's own closing made a narrower claim: absence of ground combat or displacement was evidence bearing on classification, while lack of resistance did not categorically prevent an offensive.  A fair account of the exchange must retain that qualification.  The council ultimately rejected the defense's inference, but the disagreement was more specific than whether an invasion requires a firefight.
+
+\section{Council Review and Resolution}
+
+\subsection{The constituted council}
+
+Before the first lawyer turn, availability checks replaced two drawn configurations.  A GLM-5.2 route restricted to Mistral returned HTTP 404 for the unavailable route.  A Llama 3.1 70B route through DeepInfra returned HTTP 429 and exhausted the availability-check deadline during retry backoff.  These were pre-constitution replacements.  They differ from C3's later failure after the case had begun.
+
+The resulting roster appears in Table~\ref{tab:council}.  Provider tags describe the requested routes preserved in the configurations.  They do not independently attest the infrastructure that processed a request.  All seats used the generic persona and the OpenRouter intermediary.  The \code{xhigh} setting applied to both lawyers.  The record does not establish a common \code{xhigh} setting for the council models.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Council seats, requested OpenRouter routes, and recorded outcomes.}
+\label{tab:council}
+\begin{tabularx}{\textwidth}{@{}L{0.04\textwidth}Y L{0.25\textwidth}L{0.17\textwidth}@{}}
+\toprule
+Seat & Model identifier & Requested provider route & Outcome \\
+\midrule
+C1 & google/gemini-3.6-flash & google-ai-studio/flex & Demonstrated \\
+C2 & moonshotai/kimi-k2-thinking & google-vertex & Demonstrated \\
+C3 & qwen/qwen-plus-2025-07-28 & alibaba & Failed before voting \\
+C4 & qwen/qwen3-vl-8b-instruct & alibaba & Demonstrated \\
+C5 & qwen/qwen3.7-plus & alibaba & Demonstrated \\
+C6 & z-ai/glm-4.5v & z-ai/fp8 & Demonstrated \\
+C7 & google/gemini-2.5-flash & google-ai-studio & Demonstrated \\
+C8 & qwen/qwen3-coder-next & parasail/bf16 & Demonstrated \\
+C9 & openai/gpt-4-turbo & openai & Demonstrated \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Council opportunities ran in seat order.  Each prompt contained the filed arguments and offered exhibit text.  Seven successful members obtained their opportunity and submitted a vote without separate evidence reads.  C8 additionally listed the evidence and read the exact byte ranges of all five new exhibits before voting.  For example, its P-1 read requested offset zero and length 2,675 bytes.  These additional reads demonstrate use of the evidence API.  The other members already had the exhibit text in their prompts, so an absence of separate reads does not establish that they lacked the source material.
+
+The stored council case views include earlier votes, and the \code{get\_case} tool can expose that view.  The supplied vote prompts did not reproduce those votes.  None of the eight successful agents called \code{get\_case}; C8's additional calls concerned the evidence catalog and bytes.  The observed tool sequence therefore supplies no evidence that a successful member consulted earlier votes.  The shared filings, sources, persona, and possible model dependencies still limit claims of independent judgment.
+
+\subsection{A failed tool call}
+
+C3 first called the MCP opportunity tool.  Its next response, as recorded by Pi, contained a tool call with an empty name and empty arguments.  Pi reported that the tool could not be found.  The subsequent provider request returned HTTP 400 with the message:
+\begin{quote}
+\small
+\code{tool\_calls[0].function.name must be a non-empty string (got empty string)}
+\end{quote}
+ARB recorded an opportunity failure at 15:33:16 and removed C3 from the seated council.  Its result is a failure, not an opposing vote or an abstention on the merits.  The five-vote requirement remained unchanged.
+
+Source inspection after the run found that the shared response parser accepted a parsed function name without rejecting an empty string and that the local model server forwarded the name to Pi.  The saved logs preserve the translated response, request metadata, and an upstream response identifier.  They omit the raw upstream response body.  Consequently, the record establishes the failure sequence but leaves unresolved whether the empty name originated in upstream output or response decoding.  No runtime repair was made during this case.
+
+\subsection{Council rationales}
+
+C1 cast the first vote at 15:33:00.  Its explanation combined official Israeli statements, UN reporting, fortification, restrictions on peacekeepers, and intended retention.  C2 made the defense's disputed distinction explicit:
+\begin{quote}
+These actions constitute a military offensive intended to establish control, regardless of the stated defensive rationale.
+\end{quote}
+C4 and C5 likewise treated the ground deployment, seizure of positions, and leadership statements as sufficient under the preponderance standard.  Their conclusions were concise.  They did not develop a separate doctrinal definition of an offensive.
+
+C6 cast the fifth supporting vote at 15:34:34.  Its explanation addressed motive and operational conduct in the most detail:
+\begin{quote}
+Israel's `defensive' characterization describes its motive, not the nature of the operation; a coordinated ground advance to seize, build on, fortify, and retain foreign strategic terrain is a military offensive intended to establish control regardless of why it was undertaken.
+\end{quote}
+The rationale closely followed the distinction developed by the plaintiff.  It identified the acts the member regarded as sufficient rather than treating the adjective ``defensive'' as resolving the question.
+
+C6 also compressed source attribution.  It associated the words ``takeover'' and ``seizure'' with ``the U.S.''  D-2 was a news report about the State Department briefing, and its possession language appeared in the report's narration rather than an admitted verbatim official transcript.  That distinction limits how precisely the rationale can be read as attributing particular words to the United States.  The defendant had disclosed the secondary source.  The council explanation did not preserve that qualification.
+
+C7 gave a one-sentence rationale listing deployment, occupation, construction, and stated retention.  C8, after its additional evidence reads, connected the contemporaneous letter to intent and the later statements to duration.  C9 returned the final supporting vote at 15:35:16.  Its rationale identified deployment beyond Line A, strategic positions, and intent evidenced by statements and construction.
+
+ARB waited for the remaining seated members after the fifth vote.  The first round closed with eight \code{demonstrated} votes and no \code{not\_demonstrated} votes.  The ninth constituted member had failed.  No second round occurred.  Appendix~\ref{app:votes} preserves the complete accepted explanations so that their detail and omissions can be assessed without relying on selected excerpts.
+
+\section{Research, Revision, and Procedural Limits}
+
+\subsection{Research, revision, and visible advocacy}
+
+The two lawyers made 19 web-search calls containing 56 queries and 27 page-retrieval calls.  The plaintiff made seven search calls and the defendant twelve.  Both used retained files and local execution.  Their commands included HTTP downloads, source inspection, draft editing, and programs to measure filing length.  The record contains no admitted technical report.  General computer-use permission existed in the prompts, but the observed work in this case consisted of search, retrieval, filesystem operations, and command execution.  The count of tool calls measures activity rather than evidentiary value.
+
+Several parts of that activity had identifiable consequences.  The Israeli letter supplied evidence for both sides: an admission of deployment and a contemporaneous security explanation.  The defense's doctrine search discouraged a proposed supporting citation.  The UNDOF statement supplied a construction comparison that the plaintiff challenged and the defense corrected.  The search for a U.S. statement yielded a disclosed secondary account whose wording the opponent then used.  These connections allow review of how research changed the filings.
+
+The 24 work notes covered all eight lawyer opportunities.  They recorded adverse findings, the reasons for selecting a narrower theory, the abandonment of an unsuccessful source strategy, an evidentiary correction, and readiness to file.  Their correspondence with later accepted filings is more informative than a note considered alone.  In particular, the construction correction appears in the note and the surrebuttal, and the final concession of intended temporary control appears in the note and the closing.
+
+The notes did not provide continuous reporting.  Between the first and second opening notes, the plaintiff was silent for 6 minutes and 56 seconds and the defendant for 9 minutes and 46 seconds.  Later phases had shorter intervals.  The notes support a reconstruction of major developments, while detailed timing of research depends on the tool logs.
+
+The record also shows the limits of an advocate's selection.  The defense found adverse Syrian material but did not admit it.  Both sides cited the initial market account, and the plaintiff repeatedly used its geographic and resolution conclusions.  Neither side supplied a binding definition of ``military offensive.''  The case thus combined external factual investigation with an interpretive contest that the council resolved from the developed record.
+
+\subsection{Procedural errors and explanation limits}
+
+The opening-phase evidence errors occurred despite explicit prompt restrictions.  The runtime rejected the actions, exposed the reason, and accepted corrected filings.  Those events show enforced phase boundaries and successful corrections.  They also show that the instructions did not prevent the initial mistakes.
+
+The council's rationales ranged from one sentence to five.  The council prompt requested at most three sentences, which C6 and C8 exceeded.  All eight successful members submitted valid vote values and nonempty rationales.  None made another tool call after its vote was accepted.  Each made a model continuation after the vote tool returned, and the final member's continuation was canceled after its accepted vote when the case closed.  The general MCP-session instruction to stop after a terminal wait response coexisted with the council-specific instruction to stop after an accepted vote.  This run did not resolve that prompt inconsistency.
+
+The explanations consistently accepted the plaintiff's relation between security motive and intended control.  Their common result should not be converted into a numerical probability that the proposition is true.  A ballot is a procedural decision.  It supplies neither calibrated confidence nor an estimate from independent, identically distributed trials.  The explanations vary in specificity, and several largely summarize the supporting conduct without examining the defense's final distinction at length.
+
+The strongest process observations concern recorded behavior: retrieval of sources carrying adverse language, explicit narrowing of a position, correction after rebuttal, and a decision explanation tied to the disputed issue.  The same record supports criticism of imprecise attribution, repetition across filings, the inconsistent provenance time, and a failed council protocol exchange.  A description of process quality requires both kinds of observation.
+
+\subsection{Time, requests, and incomplete cost accounting}
+
+The full case lasted 47 minutes and 22 seconds.  The first accepted opening occurred about nine minutes after the case started.  The defendant's opening took roughly twelve further minutes.  The remaining filings developed and narrowed the dispute over the next twenty-three minutes.  Council voting then completed in approximately two and a half minutes.  Table~\ref{tab:timeline} gives the accepted filing times.  All times in the report's case chronology are UTC on September 18, 2026.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Accepted filings and terminal events.  Fractional seconds are omitted.}
+\label{tab:timeline}
+\begin{tabularx}{\textwidth}{@{}L{0.15\textwidth}Y@{}}
+\toprule
+Time & Event \\
+\midrule
+14:47:54 & Case starts. \\
+14:57:10 & Plaintiff opening accepted. \\
+15:09:26 & Defendant opening accepted. \\
+15:15:10 & Plaintiff argument accepted, offering P-1 through P-3. \\
+15:22:45 & Defendant argument accepted, offering D-1. \\
+15:25:02 & Plaintiff rebuttal accepted. \\
+15:29:05 & Defendant surrebuttal accepted, correcting the construction comparison and offering D-2. \\
+15:31:20 & Plaintiff closing accepted. \\
+15:32:50 & Defendant closing accepted. \\
+15:33:00 & C1 casts the first supporting vote. \\
+15:33:16 & C3's opportunity fails. \\
+15:34:34 & C6 supplies the fifth supporting vote. \\
+15:35:16 & C9 supplies the eighth supporting vote, and the case closes. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The lawyer sessions recorded 264 model calls and 18,818,642 processed tokens.  Cached-input accounting contributed 18,415,744 of that total.  Uncached input contributed 337,930 tokens and output 64,968.  Repeated cached context therefore dominates the reported total.  It should not be read as eighteen million tokens of newly generated analysis.
+
+The sessions estimated lawyer usage at \$12.846562.  Both lawyers authenticated through a subscription, so that estimate is separate from a subscription bill.  The core recorded 11 availability requests and \$0.000623665 in observed cost.  The council model-server log recorded 33 requests and 417,207 observed tokens, without dollar amounts.  Its two request errors were C3's malformed-history rejection and C9's cancellation after vote acceptance.  Search-extension model and service usage falls outside these totals.  The available accounting does not establish a complete billed cost for the case.
+
+\section{Interpretation and Limits}
+
+The resolution follows a specific reading of the admitted conduct.  The voting members treated deliberate ground movement onto foreign positions, exclusion of others, construction, fortification, and conditional retention as a military offensive intended to establish control.  The defensive security explanation could describe the reason for that conduct without defeating the market's control requirement.  The defendant accepted much of the conduct but disputed the operational classification.  The council's explanations rejected that remaining distinction.
+
+The adversarial sequence made the disagreement more precise.  The final defense no longer disputed entry, timing, location, occupation, or intended temporary custody.  Rebuttal removed one overbroad use of construction evidence.  A later defense exhibit added another contemporaneous account while creating an additional point for the plaintiff.  Those developments are visible in the ordered filings and work notes, which allow a reader to assess what the additional phases contributed.
+
+Several limits constrain generalization.  This was one run, with one configuration for both lawyers, one sampled council, one prompt catalog, and a supplied Yes rationale in the starting evidence.  The council contained repeated model families and shared an intermediary.  No comparison removed the initial resolution, changed the advocates, varied the interpretation instructions, or repeated the council draw.  The eight agreeing votes establish the recorded result under this procedure.  They do not isolate the effects of advocacy, model selection, or the initial resolution.
+
+The source record also has distinct levels of assurance.  Some material came from official publications.  Some came from a mirror or a secondary report.  Lawyers selected and submitted text extracts, while other research stayed in their workspaces.  The timestamp inconsistency and the council's compressed attribution illustrate errors that remain possible after procedurally valid submission.  Replay establishes the accepted action sequence under the selected engine.  Assessing faithful extraction, adequate investigation, source credibility, and interpretation requires examination of the retained material.
+
+The report therefore supports a case-specific conclusion about process: ARB produced a reviewable progression from a broad market question to a narrowed dispute, with identifiable source use, concessions, correction, and explanations for the final vote.  It also preserved operational failures and sufficient detail to identify several unresolved weaknesses.  Measuring accuracy or the comparative value of this procedure would require additional cases and specified comparisons.
+
+\appendix
+\section{Complete Council Explanations}
+\label{app:votes}
+
+The following are the complete accepted rationales in seat order.  All eight votes were \code{demonstrated}.  Typographic quotation marks are normalized for typesetting.  C3 submitted no accepted rationale.
+
+\paragraph{C1: Gemini 3.6 Flash.}
+The admitted record, including official Israeli statements and United Nations reporting, establishes by a preponderance of evidence that Israeli forces commenced a military advance into Syrian territory beyond the Golan Heights between September 12 and December 31, 2024. Israel seized key strategic positions, constructed fortifications, restricted UN peacekeeper movement, and declared an intention to maintain physical control over these positions until new security arrangements were met.
+
+\paragraph{C2: Kimi K2 Thinking.}
+The IDF crossed into Syrian territory on December 8, seized the Syrian summit of Mount Hermon and multiple other positions, constructed fortifications, and announced indefinite retention until security arrangements were made. These actions constitute a military offensive intended to establish control, regardless of the stated defensive rationale. The physical seizure and occupation of foreign territory satisfies the rule's requirements.
+
+\paragraph{C4: Qwen3 VL 8B Instruct.}
+The record shows Israel commenced a military offensive by deploying ground forces into Syrian territory, establishing control over key positions including Mount Hermon, and announcing intent to retain that control. The evidence meets the preponderance standard for the proposition.
+
+\paragraph{C5: Qwen3.7 Plus.}
+Israel's deliberate seizure and occupation of the Syrian summit of Mount Hermon and multiple other positions beyond Line A, confirmed by Israel's own admission, UNDOF documentation of construction and exclusion, and leadership statements ordering fortifications and announcing retention until a future arrangement, establishes by preponderance that Israel commenced a military offensive intended to establish control over Syrian territory within the market window.
+
+\paragraph{C6: GLM-4.5V.}
+The record establishes by a preponderance that Israel commenced a military offensive intended to establish control over Syrian territory.  IDF forces deliberately advanced across the disengagement line, seized the Syrian summit of Mount Hermon and at least ten other positions, constructed fortifications, severely restricted UNDOF movement, and Israeli leaders announced indefinite retention `until another arrangement' is found.  Independent sources --- the UN (`occupation is occupation'), AP (`seized,' `captured,' `moved to control'), and the U.S. (`takeover,' `seizure') --- corroborate that this was more than a temporary security patrol.  Israel's `defensive' characterization describes its motive, not the nature of the operation; a coordinated ground advance to seize, build on, fortify, and retain foreign strategic terrain is a military offensive intended to establish control regardless of why it was undertaken.
+
+\paragraph{C7: Gemini 2.5 Flash.}
+Israel's deployment, occupation, construction, and stated intent to remain in Syrian territory until security arrangements are made, despite being called defensive, demonstrate a military offensive intended to establish control.
+
+\paragraph{C8: Qwen3 Coder Next.}
+Israel's ground forces entered Syrian territory on December 8, seized and held the Syrian summit of Mount Hermon, deployed at multiple positions east of Line A, constructed facilities, and restricted UN movement. By December 17, Netanyahu announced forces would remain until a future security arrangement and Katz ordered fortifications for an extended stay. The UN Spokesperson confirmed the IDF presence as ``occupation'' and stated that duration does not negate control. The contemporaneous Israeli letter admitted deployment at specific locations to prevent threats, establishing intent to control territory during the December 8-31 window. The proposition is demonstrated by a preponderance.
+
+\paragraph{C9: GPT-4 Turbo.}
+The weight of evidence shows that by December 31, Israel commenced a military offensive intended to establish control over Syrian territory. Crucial points include the acknowledged deployment beyond Line A, the strategic location control, and the intent as demonstrated by official statements and construction activities. These satisfy the criteria of a military offensive with intent to control, as stipulated by the protocol.
+
+\section{Record Locations and Review Method}
+\label{app:record}
+
+The retained run is \code{arb/out/ex04-20260918T144715Z/} in the \code{adj} repository.  That generated-output directory is ignored by Git.  The paper's source and PDF are maintained separately under \code{reports/marxiv/israel-syria-arb/}.  The full execution record remains local unless published separately.
+
+The report was prepared from the accepted transcript, event stream, submitted work notes, evidence manifest and text, council opportunity snapshots, participant tool logs, request accounting, and the prior certificate-verification result.  Architectural descriptions were checked against the repository documentation and relevant implementation at revision \code{7016150}.  No case was rerun and no prompt, runtime, or pool was changed to prepare the report.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Sources within the retained run.  Paths are relative to its root.}
+\begin{tabularx}{\textwidth}{@{}L{0.43\textwidth}Y@{}}
+\toprule
+Artifact & Use in this report \\
+\midrule
+\code{aar-output/transcript.md} & Accepted filings, exhibits, and vote explanations \\
+\code{aar-output/work-notes.ndjson} & Timestamped high-level lawyer notes \\
+\code{aar-output/events.ndjson} & Submission, read, vote, failure, and replacement chronology \\
+\path{aar-output/evidence-manifest.json} and \path{aar-output/evidence-store/} & Submitted metadata and admitted text \\
+\code{aar-output/council-turns/} & Prompts, policy, runtime settings, and per-seat snapshots \\
+\code{aar-output/run.json} & Roster, final state, and core provider accounting \\
+\code{aar-output/certificate.json} & Initialization and accepted replay actions \\
+\code{logs/} & Participant calls, errors, and council request accounting \\
+\code{agents/} & Lawyer sessions and retained research workspaces \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Quoted lawyer notes are identified by phase and time in the narrative.  Filings are identified by role and phase, each of which has a single accepted filing in this case.  Council rationales are identified by member.  Quotations preserve the participants' claims, including claims that the report qualifies.  The cited source URLs below identify the publications named in the record.  Retrieval qualifications come from the case's metadata and logs.  They do not imply a fresh source check during report preparation.
+
+\begingroup
+\small
+\setlength{\emergencystretch}{3em}
+\begin{thebibliography}{99}
+\raggedright
+
+\bibitem{adjrepo}
+AgentCourt, ``Adjudication procedures,'' repository revision \code{7016150}, 2026.  \href{https://github.com/agentcourt/adj/tree/7016150f2ddc286e6079f1a99b616ac52d09057d}{Source repository}.
+
+\bibitem{procedures}
+J. Stephens, ``Five Adjudication Procedures by Procedural Complexity,'' 2026.  \href{https://github.com/agentcourt/adj/blob/7016150f2ddc286e6079f1a99b616ac52d09057d/reports/marxiv/procedure-complexity/paper.pdf}{Technical report}.
+
+\bibitem{adc}
+AgentCourt, ``Agent District Court'' and ``Agent Rules for Civil Procedure,'' revision \code{7016150}, 2026.  \href{https://github.com/agentcourt/adj/blob/7016150f2ddc286e6079f1a99b616ac52d09057d/adc/README.md}{ADC overview}.  \href{https://github.com/agentcourt/adj/blob/7016150f2ddc286e6079f1a99b616ac52d09057d/adc/docs/ARCP.md}{Rules}.
+
+\bibitem{evalpaper}
+J. Stephens, ``Evaluating Judge Actions Through a Production Adjudication Runtime,'' marXiv:2608.00053, 2026.  \href{https://github.com/agentcourt/adj/blob/7016150f2ddc286e6079f1a99b616ac52d09057d/reports/marxiv/evaluation-methods/paper.pdf}{Repository copy}.
+
+\bibitem{councils}
+AgentCourt, ``Council Constitution,'' revision \code{7016150}, 2026.  \href{https://github.com/agentcourt/adj/blob/7016150f2ddc286e6079f1a99b616ac52d09057d/arb/docs/councils.md}{ARB council documentation}.  \href{https://github.com/agentcourt/adj/blob/7016150f2ddc286e6079f1a99b616ac52d09057d/common/councilsample/selector.go}{Shared selector}.
+
+\bibitem{endpoints}
+AgentCourt, ``Model Endpoints,'' revision \code{7016150}, 2026.  \href{https://github.com/agentcourt/adj/blob/7016150f2ddc286e6079f1a99b616ac52d09057d/docs/model-endpoints.md}{Endpoint documentation}.
+
+\bibitem{poolpaper}
+J. Stephens, ``Generating Tool-Capable, Behavior-Stratified Model Pools for Adjudication,'' marXiv:2608.00051, 2026.  \href{https://github.com/agentcourt/adj/blob/7016150f2ddc286e6079f1a99b616ac52d09057d/reports/marxiv/model-pool-generation/paper.pdf}{Repository copy}.
+
+\bibitem{poolmanual}
+AgentCourt, ``Sampling Runbook,'' revision \code{7016150}, 2026.  \href{https://github.com/agentcourt/adj/blob/7016150f2ddc286e6079f1a99b616ac52d09057d/model-pool/docs/sampling-runbook.md}{Pool-generation procedure}.
+
+\bibitem{proofs}
+AgentCourt, ``Verification'' and ``Proof Work Status,'' revision \code{7016150}, 2026.  \href{https://github.com/agentcourt/adj/blob/7016150f2ddc286e6079f1a99b616ac52d09057d/arb/docs/verification.md}{ARB verification}.  \href{https://github.com/agentcourt/adj/blob/7016150f2ddc286e6079f1a99b616ac52d09057d/docs/proof-notes.md}{Cross-procedure proof status}.
+
+\bibitem{example}
+AgentCourt, ``Israel--Syria prediction-market example,'' supplied complaint and market-rules file, revision \code{7016150}, 2026.  \href{https://github.com/agentcourt/adj/tree/7016150f2ddc286e6079f1a99b616ac52d09057d/examples/ex04}{Example inputs}.  The file identifies \href{https://polymarket.com/event/will-israel-invade-syria-in-2024}{the Polymarket event} as its source.
+
+\bibitem{p1}
+Permanent Representative of Israel to the United Nations, identical letters dated December 9, 2024, S/2024/887.  Exhibit P-1.  \href{https://documents.un.org/doc/undoc/gen/n24/386/65/pdf/n2438665.pdf}{UN document}.
+
+\bibitem{p2}
+United Nations, noon briefing by the spokesman for the Secretary-General, December 17, 2024.  Exhibit P-2.  \href{https://press.un.org/en/2024/db241217.doc.htm}{Official publication}.  \href{https://www.globalsecurity.org/military/library/news/2024/12/mil-241217-unbrief01.htm}{Disclosed retrieval mirror}.
+
+\bibitem{p3}
+Associated Press, report on Netanyahu's visit to the Syrian summit and the retention of Israeli positions, December 17, 2024, carried by PBS NewsHour.  Exhibit P-3.  \href{https://www.pbs.org/newshour/world/netanyahu-enters-syrian-territory-to-tour-buffer-zone-seized-by-israel}{PBS publication}.
+
+\bibitem{d1}
+United Nations Peacekeeping, ``UNDOF Press Statement,'' December 13, 2024.  Exhibit D-1.  \href{https://peacekeeping.un.org/en/news/undof-press-statement}{Official publication}.
+
+\bibitem{d2}
+J. Magid, ``US backs Israel's seizure of Syrian side of Golan, says it'll ensure it is temporary,'' Times of Israel, December 9, 2024.  Exhibit D-2.  \href{https://www.timesofisrael.com/liveblog_entry/us-backs-israels-seizure-of-syrian-side-of-golan-says-itll-ensure-it-is-temporary/}{News report}.
+
+\end{thebibliography}
+\endgroup
+\end{document}
