@@ -18,7 +18,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-Incomplete working draft.  This report examines an ADC adjudication of the Israel--Syria prediction-market proposition, using two research-capable Pi lawyers, nine jurors, six required votes, and the preponderance standard.  The proceeding began at 07:56 UTC on September 19, 2026, and remains in progress.
+Incomplete working draft.  This report examines an ADC proceeding concerning the Israel--Syria prediction-market proposition, configured for two research-capable Pi lawyers, nine jurors, six required votes, and the preponderance standard.  The proceeding began at 07:56 UTC on September 19, 2026, and stopped during jury selection after the defendant exceeded a turn deadline.  It produced no verdict.
 \end{abstract}
 
 \section{Agent District Court and the adj Procedures}
@@ -189,9 +189,33 @@ The defense reached the corresponding conclusion at 09:09.  It described competi
 
 The judge entered the pretrial order at 09:11.  It preserved the single declaratory claim and the plaintiff's burden, adopted the recorded admissions as established for trial subject to their qualifications, and identified the questions left for decision.  Those questions included offensive classification, intent at commencement, the weight of the Israeli and Syrian characterizations, the significance of the December 17 evidence, and the sufficiency of the combined official sources.  It listed all ten registered files as potential exhibits subject to objections and later rulings.  The order confined trial to those issues~\cite[event 148]{record}.
 
+\subsection{Questionnaires and individual examination}
+
+The court entered the trial phase at 09:15 and configured a nine-member jury with six required votes.  The clerk assembled thirteen candidates from the installed pool.  The questionnaire asked about attention, impartiality, hardship, the burden of proof, prior knowledge, reliance on admitted evidence, source preferences, remedies, and other possible conflicts~\cite[events 155--171]{record}.
+
+Five candidates failed during the questionnaire stage.  Seed 1.6 Flash returned a prose case summary after reading its opportunity.  Qwen3 VL 8B Thinking and Aion 2.0 ended their responses without completing the required act.  MiniMax M3 made malformed MCP calls and exited without a completed questionnaire.  Qwen3.5 27B exceeded its deadline while a model request remained outstanding.  ADC recorded each failure and supplied a replacement.  Fourteen candidates eventually completed questionnaires, including the later replacement for MiMo V2.5, which answered its questionnaire but timed out on a follow-up question~\cite[events 172--215 and juror process logs]{record}.
+
+The plaintiff's questions concentrated on circumstantial proof and independent assessment of reported conduct.  Its first question asked whether J1 could infer intent from circumstantial evidence and weigh acts independently of source labels.  J1 accepted that instruction.  Similar questions to J6, J7, J8, and J9 received assurances that the candidates could follow it.  J5 had described a professional background in council work.  The plaintiff asked whether it could set aside any conflicting assumptions from that claimed experience, but J5 supplied no completed answer before replacement~\cite[events 202--236]{record}.  The claimed professional background came from the model's questionnaire response and had no independent verification.
+
+The defense varied its questions across the conjunctive elements, allocation of the burden, source assessment, time-specific intent, and geopolitical bias.  Asked about the defense's burden, J6 answered:
+\begin{quote}
+I understand that the Opponent bears no burden to prove an alternative explanation or to disprove the proposition, and that if the Proponent's evidence does not make every required element more likely than not, I must find the proposition not proved.
+\end{quote}
+The other completed answers accepted the proposed distinctions.  Both advocates declined further questioning of later candidates as cumulative.  The record contains twelve proposed questions and eleven completed answers, with J5's unanswered question accounting for the difference~\cite[events 254--287]{record}.
+
+Both parties declined challenges for cause because the questionnaires and answers supplied no stated disqualification.  The plaintiff then used a peremptory strike against J1.  J1's questionnaire had promised to give weight to ``reliable sources and direct evidence.''  Although J1 later accepted circumstantial proof, the plaintiff identified that preference as a strategic concern for its intent theory.  ADC accepted the strike at 12:34~\cite[events 172, 205, and 294--296]{record}.
+
+\subsection{The unfinished defense strike}
+
+The defendant compared the remaining candidates and recorded its intended strike against J9 at 12:51.  Its note preferred candidates who had supplied express answers about the defense's lack of a burden, source scrutiny, timing, and separate elements.  It described J9's short assurances as giving comparatively less confidence in those subjects.  This was a reported strategic assessment, with no finding that J9 was disqualified~\cite[defense work note at 12:51:43]{record}.
+
+The defense never submitted that strike.  Its session recorded a model response with the error ``terminated'' at 12:51:06, followed by successful tool calls and the final work-note acknowledgment.  No later decision reached ADC.  The core stopped at turn 225 with \code{defendant opportunity timed out after 25m0s}, and the launcher recorded failure at 13:08:33.  The evidence available here establishes an unfinished model interaction and the resulting court timeout.  It does not identify the cause of the unfinished interaction~\cite[defense session, process logs, and launcher result]{record}.
+
 \section{Verification and Limitations}
 
-The adjudication and its final verification remain in progress.
+The proceeding ended before jury empanelment, evidence presentation, verdict, or judgment.  The retained event database ends at event 309.  The core did not write its normal final case state or replay certificate, so this draft reports no final certificate verification.  The launcher retained the source files, filings, work notes, sessions, and process logs~\cite{record}.
+
+The lawyer process logs contain 1,003 completed assistant response events, seven completed Pi compactions, and a cumulative token-price estimate of \$417.19.  These Codex subscription-session estimates do not establish charges and exclude court, juror, and search subrequests.  The record therefore supports analysis of research, discovery, jury selection, and execution failures, while the requested adjudicative result remains unavailable.
 
 \begin{thebibliography}{99}
 \bibitem{adj} AgentCourt.  \emph{Adjudication Core}.  Repository documentation at source revision \code{dbde6f0}, September 2026.  \url{https://github.com/agentcourt/adj}.
