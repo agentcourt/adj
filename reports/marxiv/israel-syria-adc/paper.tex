@@ -105,9 +105,9 @@ The plaintiff's technical-report investigation began with searches for Israeli a
 
 Source collection required several methods.  The search extension returned page summaries and readable text, while some official pages returned incomplete extraction or JavaScript-rendering errors.  A local download script initially failed because the Python \code{requests} package was unavailable.  The lawyer replaced it with standard-library HTTP calls, retained downloaded files in its workspace, and encountered HTTP 403 responses from further sources.  Its separate \code{source\_check} request about UNDOF's reported positions returned ``unclear,'' with some irrelevant dated pages among its results.  That tool response provided no resolved verification of the claim.
 
-The plaintiff obtained a Syrian letter to the United Nations, installed \code{poppler-utils} in its container, and extracted the PDF's text with \code{pdftotext}.  After reading it, the lawyer corrected its filename from S/2024/887 to A/79/687--S/2024/888.  The letter, dated December 9 and distributed December 11, 2024, attributed incursions in Jabal al-Shaykh and Qunaytirah to Israeli forces, alleged contemporaneous shelling, and demanded withdrawal from recently invaded areas.  The plaintiff imported the PDF as \code{file-0002} at 04:43.  The document supplied a contemporaneous Syrian governmental account from a source category named in the market rules.  Its allegations and the weight they deserved remained questions for the parties and court~\cite[event 9 and file-0002]{record}.
+The plaintiff obtained a Syrian letter to the United Nations, installed \code{poppler-utils} in its container, and extracted the PDF's text with \code{pdftotext}.  After reading it, the lawyer corrected its filename from S/2024/887 to A/79/687--S/2024/888.  The letter, dated December 9 and distributed December 11, 2024, attributed incursions in Jabal al-Shaykh and Qunaytirah to Israeli forces, alleged contemporaneous shelling, and demanded withdrawal from recently invaded areas~\cite{syrialetter}.  The plaintiff imported the PDF as \code{file-0002} at 04:43.  The document supplied a contemporaneous Syrian governmental account from a source category named in the market rules.  Its allegations and the weight they deserved remained questions for the parties and court~\cite[event 9 and file-0002]{record}.
 
-The plaintiff's work note at 04:42:55 described the letter as stronger official confirmation than it had anticipated and identified corroborating UNDOF and press accounts.  That note followed its research-plan note by eleven minutes and fifty-six seconds.  The tool log records research throughout the interval, but the submitted notes provide no intermediate account of the findings or failed approaches during it.
+The plaintiff's work note at 04:42:55 described the letter as stronger official confirmation than it had anticipated and identified corroborating UNDOF and press accounts.  That note followed its research-plan note by nearly twelve minutes.  The tool log records research throughout the interval, but the submitted notes provide no intermediate account of the findings or failed approaches during it.
 
 \subsection{The plaintiff's technical report}
 
@@ -123,7 +123,7 @@ The filing disclosed limits on both its sources and its methods.  It described S
 
 \subsection{The defense's technical report}
 
-The defense retrieved Israel's letter of December 9, S/2024/887, extracted its text locally, and imported the PDF as \code{file-0003} at 04:48.  The letter acknowledged deployment east of Line A and described attacks on UNDOF posts by armed groups as the precipitating event.  It characterized Israel's measures as limited, temporary, and defensive, stated a sole focus on security, and reaffirmed commitment to the disengagement framework.  The defense also downloaded and read the Syrian letter.  Its work note said the Israeli account supported its purpose argument while leaving physical presence and the inference of control intact~\cite[event 12, file-0003, and work note at 04:48:04]{record}.
+The defense retrieved Israel's letter of December 9, S/2024/887, extracted its text locally, and imported the PDF as \code{file-0003} at 04:48.  The letter acknowledged deployment east of Line A and described attacks on UNDOF posts by armed groups as the precipitating event.  It characterized Israel's measures as limited, temporary, and defensive, stated a sole focus on security, and reaffirmed commitment to the disengagement framework~\cite{israelletter}.  The defense also downloaded and read the Syrian letter.  Its work note said the Israeli account supported its purpose argument while leaving physical presence and the inference of control intact~\cite[event 12, file-0003, and work note at 04:48:04]{record}.
 
 TR-D1, accepted at 04:50, compared the two letters dated the same day.  It conceded timely deployment east of Line A in qualifying Syrian territory and evidence of tactical holding.  The dispute concerned the interpretation of those facts and the sources' competing accounts of purpose.  The report explained its treatment of the market's authority rule:
 \begin{quote}
@@ -133,7 +133,7 @@ That distinction accepted Syria as a permitted source while contesting the plain
 
 The defense identified two inferential disputes.  First, the Syrian letter placed army incursions and shelling together without describing an operational link between strikes and a territorial-control campaign.  Second, the defense distinguished tactical control used for force protection from control as the intended object of the operation.  It read the December 17 statement as evidence of expected persistence, while questioning what the later statement established about intent at commencement.  The report acknowledged that the same statement reasonably supported the plaintiff and that the defense could not exclude a later change in purpose.  Both national letters, it stated, were interested accounts~\cite[event 13, summary and limitations]{record}.
 
-The defense's substantive notes followed its initial research note by two minutes thirty-seven seconds and then two minutes eight seconds.  They recorded the discovery of the Israeli letter, its adverse as well as favorable implications, and the intended scope of the report.  The private source files and extracted text remained available for later turns.
+The defense supplied substantive notes at intervals of about two to three minutes during its research.  They recorded the discovery of the Israeli letter, its adverse as well as favorable implications, and the intended scope of the report.  The private source files and extracted text remained available for later turns.
 
 \subsection{Interrogatories and the narrowing of the dispute}
 
@@ -157,7 +157,45 @@ At 05:00, the plaintiff imported and produced \code{file-0004}, an archive conta
 
 The response identified the substitutes and omissions.  The plaintiff had obtained republications where original pages blocked retrieval, had no original \code{gov.il} capture or separate recording, and had not downloaded remotely embedded media.  It possessed no separate GIS analysis, satellite imagery, operational order, internal assessment, or mission-change record.  It identified the Israeli letter and the archive's temporary-and-defensive language as responsive contrary evidence.  The response made the limits of counsel's source collection available for examination by the defense~\cite[event 26]{record}.
 
-The proceeding remains in progress.  The remaining production, admissions, motion practice, trial, and judgment will be described from the completed record.
+The defense produced the same four registered files and answered the plaintiff's eight requests at 05:04.  It likewise identified the absence of separate operational and geospatial material, distinguished its access from that of Israel or the IDF, and claimed work-product protection for private research notes, draft analysis, and litigation strategy.  It expressly limited that objection to counsel's work and supplied the underlying public sources.  Production left both parties with the same registered source record and explicit statements of what each had failed to obtain~\cite[events 27--31]{record}.
+
+\subsection{Admissions and the remaining inference}
+
+The plaintiff served 25 admission requests, and the defense served 21.  The plaintiff asked separately about authenticity, entry, holding, location, duration, purpose, factual control, the permitted source categories, and the ultimate proposition.  The defense concentrated on the documents' wording, the limits of the available evidence, and the timing of the December 17 statement~\cite[events 32--33]{record}.
+
+The plaintiff admitted all 21 defense requests, qualifying admissions about source content and collection completeness.  It accepted that Israel's letter used the limited, temporary, defensive, and non-intervention descriptions, that Syria's letter supplied no coordinates or operational orders, and that UNDOF's statement supplied neither an ``invasion'' label nor a statement of Israel's subjective intent.  It also accepted that the December 17 statement followed commencement of the deployment.  Its work note described those concessions as compatible with its inference from occupation, holding, and condition-based duration~\cite[event 34 and plaintiff work note at 05:07:09]{record}.
+
+The defense admitted or qualified the first 23 plaintiff requests and denied the final two, which stated the ultimate application of the rule and the preponderance conclusion.  It accepted Syrian location, presence at the Syrian summit by December 8, continued presence on December 17, deliberate and coordinated military activity, and tactical control.  Its answer to the request about occupation and exclusion preserved the distinction on which its defense depended:
+\begin{quote}
+such occupation and exclusion constitute factual or tactical control during the occupation; this admission does not establish that control was the operation's intended object under file-0001.
+\end{quote}
+It also agreed that temporary duration and defensive motivation could coexist with factual control.  The remaining denial concerned the combined requirement of an offensive and intent to establish control, assessed against the contemporaneous limited-security account~\cite[event 35, answers 17--25]{record}.
+
+\subsection{The summary-judgment dispute}
+
+Both parties declined Rule 37 discovery-enforcement motions.  The plaintiff distinguished the defense's denials of the ultimate proposition from a failure to answer discovery, and the defense distinguished disclosed gaps in possession from withheld documents.  The plaintiff then moved for summary judgment on the entire declaratory claim at 05:12, relying on the admissions to argue that no predicate material fact remained disputed~\cite[events 36--38]{record}.
+
+The motion characterized the admitted cross-boundary movement, seizure, and holding as a military offensive.  It treated control as the intended operational means even if security supplied the ultimate motive:
+\begin{quote}
+A force cannot deliberately seize, exclude others from, and hold terrain until its condition is met without intending the control it consciously creates.
+\end{quote}
+The plaintiff argued that temporary duration, limited capacity, and a defensive rationale could coexist with every required element.  It maintained that the final two denied admission requests concerned application of the definition to agreed conduct~\cite[event 38]{record}.
+
+The defense's opposition accepted the historical admissions but insisted that their qualifications preserved a dispute about purpose and offensive character.  It relied on Israel's December 9 letter to support an emergency response to attacks on peacekeepers and a temporary security deployment.  It argued that choosing between that account and Syria's account required weighing evidence, and that the later December 17 statement supported competing accounts of continuity or changed purpose.  Its conclusion distinguished resisting summary judgment from establishing the defense at trial:
+\begin{quote}
+The evidentiary record is substantial for Plaintiff, and Opponent does not ask the Court to resolve it in Opponent's favor now.
+\end{quote}
+The defense asked for a jury to assess whether the admitted conduct satisfied the combined functional requirement under the preponderance standard~\cite[event 39]{record}.
+
+The plaintiff replied that an actor can intend both an end and its chosen means, making control an intended operational objective even where security remains the ultimate aim.  It argued that statements from December 8 and 9 supported condition-based holding from the outset, with the December 17 statement corroborating continuity.  It also argued that missing coordinates and operational orders added no material uncertainty once the defense had admitted location and deliberate conduct~\cite[event 40]{record}.
+
+At 05:16, the judge denied the motion.  The ruling described the admissions as ``strong evidence for Plaintiff'' but found that their express qualifications preserved a dispute over the intended object.  It held that the two December 9 letters supported competing reasonable inferences and that the later statement could describe continuing temporary security measures as well as the plaintiff's condition-based-control account:
+\begin{quote}
+On this record, deciding between those inferences would go beyond Rule 56 and would effectively resolve the core characterization issue in Plaintiff's favor.
+\end{quote}
+The surviving issues were offensive character, intent at commencement, and whether the record established the proposition by a preponderance after trial.  The ruling retained those questions for factfinding without determining the eventual verdict~\cite[event 41]{record}.
+
+The proceeding remains in progress.  Jury selection, trial, and judgment will be described from the completed record.
 
 \section{Verification and Limitations}
 
@@ -178,6 +216,8 @@ Verification and final assessment await the completed case.
 \bibitem{proofs} AgentCourt.  \emph{ADC Proofs}.  \code{adc/docs/proofs.md}, adj, revision \code{cfdd312}.
 \bibitem{example} AgentCourt.  \emph{Israel--Syria prediction-market example}.  \code{examples/ex04/complaint.md} and \code{market-rules.md}, adj, revision \code{cfdd312}.
 \bibitem{disengagement} Israel and Syria.  \emph{Agreement on Disengagement}, May 31, 1974, section B.  United Nations text, S/11302/Add.1.  \url{https://www.un.org/unispal/document/auto-insert-179522/}.
+\bibitem{syrialetter} Koussay Aldahhak.  \emph{Identical letters dated 9 December 2024 from the Permanent Representative of the Syrian Arab Republic to the United Nations addressed to the Secretary-General and the President of the Security Council}.  A/79/687--S/2024/888, distributed December 11, 2024.  \url{https://documents.un.org/doc/undoc/gen/n24/395/41/pdf/n2439541.pdf}.
+\bibitem{israelletter} Danny Danon.  \emph{Identical letters dated 9 December 2024 from the Permanent Representative of Israel to the United Nations addressed to the Secretary-General and the President of the Security Council}.  S/2024/887, December 9, 2024.  \url{https://documents.un.org/doc/undoc/gen/n24/386/65/pdf/n2438665.pdf}.
 \bibitem{record} AgentCourt.  \emph{Israel--Syria ADC case record}, run \code{ex04-20260919-02}.  Retained under \path{adc/out/ex04-20260919-02/} in the execution checkout.  The \code{case/core/} directory contains the event database, work notes, and court files.  The \code{case/logs/} and \code{case/work/} directories retain participant tool activity and research.  Generated case records are outside the versioned report.
 \end{thebibliography}
 \end{document}
