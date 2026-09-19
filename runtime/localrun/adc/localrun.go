@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -249,17 +250,21 @@ func (e processExit) finalizationErr() error {
 	return errors.Join(e.stdoutErr, e.stderrErr, e.recordErr)
 }
 
-type jurorProcessTarget struct {
+type jurorTurn struct {
 	principalID   string
 	opportunityID string
-	modelToken    string
+	stateVersion  int
+}
+
+type jurorProcessTarget struct {
+	jurorTurn
+	modelToken string
 }
 
 type activeJurorOpportunity struct {
-	principalID   string
-	opportunityID string
-	phase         string
-	requestSpec   *modelrequest.Spec
+	jurorTurn
+	phase       string
+	requestSpec *modelrequest.Spec
 }
 
 type lawyerStatusResponse struct {
@@ -306,7 +311,8 @@ type runState struct {
 	processes        []*processRecord
 	secretFiles      []string
 	jurorProcesses   map[string]*processRecord
-	failedJurorTurns map[string]bool
+	jurorLogs        []report.PiToolLog
+	failedJurorTurns map[jurorTurn]bool
 	modelServer      *modelgateway.Server
 	agentErrs        chan error
 
@@ -400,7 +406,7 @@ func Run(ctx context.Context, opts Options) (result Result, err error) {
 		launcherPrompts:  launcherPrompts,
 		logDir:           logDir,
 		jurorProcesses:   map[string]*processRecord{},
-		failedJurorTurns: map[string]bool{},
+		failedJurorTurns: map[jurorTurn]bool{},
 		agentErrs:        make(chan error, 32),
 	}
 	state.lawyers, err = lawyerlaunch.New(lawyerlaunch.Runtime{
@@ -636,14 +642,7 @@ func (s *runState) appendPiToolActivity() error {
 			logs = append(logs, report.PiToolLog{Participant: role, Path: filepath.Join(s.logDir, "pi-"+role+".stdout")})
 		}
 	}
-	for _, proc := range s.processes {
-		if proc.jurorTarget != nil {
-			logs = append(logs, report.PiToolLog{
-				Participant: proc.jurorTarget.principalID + " / " + proc.jurorTarget.opportunityID,
-				Path:        proc.stdoutPath,
-			})
-		}
-	}
+	logs = append(logs, s.jurorLogs...)
 	return report.AppendPiToolActivity(filepath.Join(s.opts.CoreOutputDir, "digest.md"), logs)
 }
 
@@ -2004,18 +2003,18 @@ func (s *runState) updateJurorProcesses(ctx context.Context, mcpPort string) err
 		return err
 	}
 	if active == nil {
-		return s.stopInactiveJurorProcesses("", "")
+		return s.stopInactiveJurorProcesses(jurorTurn{})
 	}
-	if err := s.stopInactiveJurorProcesses(active.principalID, active.opportunityID); err != nil {
+	if err := s.stopInactiveJurorProcesses(active.jurorTurn); err != nil {
 		return err
 	}
 	s.mu.Lock()
 	proc := s.jurorProcesses[active.principalID]
-	failed := s.failedJurorTurns[active.opportunityID]
+	failed := s.failedJurorTurns[active.jurorTurn]
 	s.mu.Unlock()
 	if proc != nil {
 		if procMatchesJurorOpportunity(proc, *active) && proc.isExited() && !failed {
-			return s.reportJurorFailure(ctx, active.principalID, active.opportunityID, jurorFailureAgentExited, fmt.Sprintf("Juror %s agent process exited before completing opportunity %s.", active.principalID, active.opportunityID), map[string]any{"process_name": proc.name})
+			return s.reportJurorFailure(ctx, active.jurorTurn, jurorFailureAgentExited, fmt.Sprintf("Juror %s agent process exited before completing opportunity %s.", active.principalID, active.opportunityID), map[string]any{"process_name": proc.name})
 		}
 		if procMatchesJurorOpportunity(proc, *active) {
 			return nil
@@ -2031,10 +2030,10 @@ func procMatchesJurorOpportunity(proc *processRecord, active activeJurorOpportun
 	if proc == nil || proc.jurorTarget == nil {
 		return false
 	}
-	return proc.jurorTarget.principalID == active.principalID && proc.jurorTarget.opportunityID == active.opportunityID
+	return proc.jurorTarget.jurorTurn == active.jurorTurn
 }
 
-func (s *runState) stopInactiveJurorProcesses(activePrincipalID string, activeOpportunityID string) error {
+func (s *runState) stopInactiveJurorProcesses(active jurorTurn) error {
 	type staleProcess struct {
 		principalID string
 		proc        *processRecord
@@ -2046,9 +2045,7 @@ func (s *runState) stopInactiveJurorProcesses(activePrincipalID string, activeOp
 			delete(s.jurorProcesses, principalID)
 			continue
 		}
-		if proc.jurorTarget != nil &&
-			proc.jurorTarget.principalID == activePrincipalID &&
-			proc.jurorTarget.opportunityID == activeOpportunityID {
+		if proc.jurorTarget != nil && proc.jurorTarget.jurorTurn == active {
 			continue
 		}
 		if proc.isExited() {
@@ -2103,6 +2100,14 @@ func (s *runState) activeJurorOpportunity(ctx context.Context) (*activeJurorOppo
 		return nil, err
 	}
 	opportunity, _ := detail["opportunity"].(map[string]any)
+	if strings.TrimSpace(mapString(detail["status"])) != "active" || opportunity == nil {
+		return nil, nil
+	}
+	opportunityID = strings.TrimSpace(mapString(opportunity["opportunity_id"]))
+	stateVersion, err := strconv.Atoi(mapString(opportunity["state_version"]))
+	if err != nil || stateVersion < 0 || opportunityID == "" {
+		return nil, fmt.Errorf("active juror %s has invalid state_version or opportunity_id", principalID)
+	}
 	agent, _ := opportunity["agent"].(map[string]any)
 	rawSpec, _ := agent["request_spec"].(map[string]any)
 	if rawSpec == nil {
@@ -2116,7 +2121,7 @@ func (s *runState) activeJurorOpportunity(ctx context.Context) (*activeJurorOppo
 	if phase == "" {
 		phase = strings.TrimSpace(mapString(currentTurn["phase"]))
 	}
-	return &activeJurorOpportunity{principalID: principalID, opportunityID: opportunityID, phase: phase, requestSpec: &spec}, nil
+	return &activeJurorOpportunity{jurorTurn: jurorTurn{principalID: principalID, opportunityID: opportunityID, stateVersion: stateVersion}, phase: phase, requestSpec: &spec}, nil
 }
 
 func getJSON(ctx context.Context, rawURL string) (out map[string]any, err error) {
@@ -2183,7 +2188,7 @@ func (s *runState) startPiJuror(ctx context.Context, active activeJurorOpportuni
 		return fmt.Errorf("juror model server is not running")
 	}
 	spec := active.requestSpec.WithFallbackMaxOutputTokens(DefaultJurorMaxOutputTokens)
-	binding, err := s.modelServer.Bind(active.principalID+":"+active.opportunityID, spec)
+	binding, err := s.modelServer.Bind(processName, spec)
 	if err != nil {
 		return fmt.Errorf("authorize juror model for %s: %w", active.principalID, err)
 	}
@@ -2197,9 +2202,8 @@ func (s *runState) startPiJuror(ctx context.Context, active activeJurorOpportuni
 	args := piRunArgs(s.opts, container, home, model, instructions)
 	environment := jurorModelEnvironment(s.opts.CoreEnvironment, binding.Token)
 	proc, err := s.startProcess(ctx, processName, "podman", s.opts.PodmanCommand, args, environment, container, &jurorProcessTarget{
-		principalID:   active.principalID,
-		opportunityID: active.opportunityID,
-		modelToken:    binding.Token,
+		jurorTurn:  active.jurorTurn,
+		modelToken: binding.Token,
 	})
 	if err != nil {
 		return errors.Join(err, s.modelServer.Unbind(binding.Token))
@@ -2207,12 +2211,16 @@ func (s *runState) startPiJuror(ctx context.Context, active activeJurorOpportuni
 	s.mu.Lock()
 	s.processes = append(s.processes, proc)
 	s.jurorProcesses[active.principalID] = proc
+	s.jurorLogs = append(s.jurorLogs, report.PiToolLog{
+		Participant: fmt.Sprintf("%s / state %d / %s", active.principalID, active.stateVersion, active.opportunityID),
+		Path:        proc.stdoutPath,
+	})
 	s.mu.Unlock()
 	return nil
 }
 
 func piContainerName(caseID string, active activeJurorOpportunity) string {
-	return containerName("adc-" + caseID + "-" + active.principalID + "-" + active.opportunityID)
+	return containerName("adc-" + caseID + "-" + jurorProcessName(active))
 }
 
 func piRunArgs(opts Options, name string, home string, model string, instructions string) []string {
@@ -2282,7 +2290,7 @@ func createOutputSubdir(outputDir string, name string, mode os.FileMode) (string
 }
 
 func jurorProcessName(active activeJurorOpportunity) string {
-	name := "pi-" + safeProcessNameComponent(active.principalID)
+	name := "pi-" + safeProcessNameComponent(active.principalID) + "-v" + strconv.Itoa(active.stateVersion)
 	if strings.TrimSpace(active.opportunityID) != "" {
 		name += "-" + safeProcessNameComponent(active.opportunityID)
 	}
@@ -2690,7 +2698,7 @@ func (s *runState) handleJurorProcessExit(ctx context.Context, proc *processReco
 	if err != nil {
 		return fmt.Errorf("check juror status after %s exit: %w", proc.name, err)
 	}
-	if active == nil || active.principalID != target.principalID || active.opportunityID != target.opportunityID {
+	if active == nil || active.jurorTurn != target.jurorTurn {
 		return nil
 	}
 	reason, forcedMessage, forcedDetails := proc.forcedFailure()
@@ -2711,23 +2719,25 @@ func (s *runState) handleJurorProcessExit(ctx context.Context, proc *processReco
 		}
 		details["process_error"] = waitErr.Error()
 	}
-	return s.reportJurorFailure(ctx, target.principalID, target.opportunityID, reason, message, details)
+	return s.reportJurorFailure(ctx, target.jurorTurn, reason, message, details)
 }
 
-func (s *runState) reportJurorFailure(ctx context.Context, principalID string, opportunityID string, reason string, message string, details map[string]any) (err error) {
+func (s *runState) reportJurorFailure(ctx context.Context, turn jurorTurn, reason string, message string, details map[string]any) (err error) {
+	principalID := turn.principalID
 	s.mu.Lock()
-	if s.failedJurorTurns[opportunityID] {
+	if s.failedJurorTurns[turn] {
 		s.mu.Unlock()
 		return nil
 	}
-	s.failedJurorTurns[opportunityID] = true
+	s.failedJurorTurns[turn] = true
 	s.mu.Unlock()
 
 	payload := map[string]any{
 		"case_id":        s.opts.CaseID,
 		"role_id":        "juror",
 		"principal_id":   principalID,
-		"opportunity_id": opportunityID,
+		"opportunity_id": turn.opportunityID,
+		"state_version":  turn.stateVersion,
 		"reason":         reason,
 		"message":        message,
 		"details":        details,
@@ -2755,14 +2765,21 @@ func (s *runState) reportJurorFailure(ctx context.Context, principalID string, o
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("report juror failure for %s returned HTTP %d: %s", principalID, resp.StatusCode, strings.TrimSpace(string(body)))
-	}
 	var response map[string]any
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.UseNumber()
 	if err := dec.Decode(&response); err != nil {
 		return fmt.Errorf("decode juror failure response for %s: %w", principalID, err)
+	}
+	if resp.StatusCode == http.StatusConflict {
+		apiError, _ := response["error"].(map[string]any)
+		switch apiError["code"] {
+		case "wrong_opportunity", "wrong_turn", "no_active_opportunity", "opportunity_expired":
+			return nil
+		}
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("report juror failure for %s returned HTTP %d: %s", principalID, resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 	if ok, _ := response["ok"].(bool); !ok {
 		message := ""
@@ -2831,7 +2848,7 @@ func stopContainerProcess(proc *processRecord) error {
 		var retryErr error
 		containerFound, retryErr = removeProcessContainer(proc)
 		removeErr = errors.Join(removeErr, retryErr)
-		if !containerFound {
+		if !containerFound && !alreadyExited {
 			removeErr = errors.Join(removeErr, fmt.Errorf("container ID for %s was not recorded before the runtime client exited", proc.name))
 		}
 	}

@@ -29,7 +29,9 @@ The Role API lives under `/roleapi/v1` on the address supplied through `--caseap
 | `POST /roleapi/v1/do` | Execute a support operation, submit work notes, or submit a decision. |
 | `POST /roleapi/v1/fail` | Report failure for the active opportunity. |
 
-An active response includes the current prompt, role-visible case view, opportunity identity, time remaining, attempts remaining, and support-operation budget.  It also reports the legal tools Lean permits for that turn and the schemas for legal and support operations.  The caller must return the active opportunity id with work notes, decisions, or failures.
+An active response includes the current prompt, role-visible case view, opportunity identity, time remaining, attempts remaining, and support-operation budget.  It also reports the legal tools Lean permits for that turn and the schemas for legal and support operations.  Opportunity IDs are local to a state and can recur.  The caller identifies a turn by its role, principal, `state_version`, and `opportunity_id`, returning both fields with work notes, decisions, or failures.  The MCP adapter supplies these fields.  The API rejects supplied fields that do not match the active turn.  Older clients can omit the state version, but then receive no protection against a reused opportunity ID.
+
+The local launcher starts a separate Pi process for each juror turn.  Its directory, process logs, and model binding include the principal, state version, and opportunity ID.  An early exit is recorded once for that turn.  A later turn with the same opportunity ID can start and fail independently.
 
 ## Prompt construction
 

@@ -136,6 +136,36 @@ func TestObserverCannotReportFailureForActiveTurn(t *testing.T) {
 	}
 }
 
+func TestRoleAPIRejectsStaleOpportunity(t *testing.T) {
+	for _, operation := range []string{"do", "fail"} {
+		for _, staleField := range []string{"state_version", "opportunity_id"} {
+			t.Run(operation+"/"+staleField, func(t *testing.T) {
+				api, turn := testRoleAPIWithActiveTurn(t)
+				turn.stateVersion = 2
+				version := 2
+				req := roleAPIRequest{CaseID: "case-1", RoleID: "plaintiff", OpportunityID: "opp-1", StateVersion: &version, Tool: "send_work_notes", Arguments: map[string]any{"notes": "stale"}}
+				if staleField == "state_version" {
+					version = 1
+				} else {
+					req.OpportunityID = "old"
+				}
+				call := api.doLocked
+				if operation == "fail" {
+					call = api.failLocked
+				}
+				response, code := call(req)
+				apiError, _ := response["error"].(map[string]any)
+				if code != http.StatusConflict || apiError["code"] != "wrong_opportunity" || turn.completed {
+					t.Fatalf("stale request: %d %#v, completed=%v", code, response, turn.completed)
+				}
+				if version := api.currentTurnPayloadLocked(turn)["state_version"]; version != 2 {
+					t.Fatalf("state_version = %v", version)
+				}
+			})
+		}
+	}
+}
+
 func TestRoleAPIRejectsMalformedRule60GrantedBeforeEngine(t *testing.T) {
 	api, turn := testRoleAPIWithActiveTurn(t)
 	turn.opportunity.AllowedTools = []string{"resolve_rule60_motion"}

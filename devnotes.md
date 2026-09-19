@@ -936,3 +936,29 @@ The live Pi/MCP test under `adc/out/import-live-20260918-08/` completed two impo
 Certificate verification passed all nine transitions using the existing compiled engine through local leanrunner, from the repository root: `adc/.bin/adc verify-certificate --dir adc/out/import-live-20260918-08/adc-output`.  Limits were 4 GiB memory high, 6 GiB maximum, 1 GiB swap, 100% CPU, and a 900-second timeout.  ADC runtime, local-runner, and command Go tests passed, as did affected vet checks.  No Lean source or proof changed.
 
 The test recorded 21 completed lawyer responses and `$0.750207` in token-price estimates.  The digest request used 1,172 input tokens and 252 output tokens without a dollar-cost observation.  The retained directory occupies 2.8 MiB.  No test process, container, or staged authentication or MCP configuration file remains.  Live coverage used one Pi lawyer.  Juror log selection is implemented but has not received a live jury test in this change.
+
+## Israel–Syria ADC study: 2026-09-18
+
+The full Israel–Syria case started at 22:28:34 UTC under `adc/out/ex04-20260918T223000Z/`, using source revision `0e2a080` and rebuilt Go commands.  The approved settings remain nine jurors, six required votes, preponderance of the evidence, 25-minute turn limits, default voir dire, and the installed 97-configuration pool.  Both Pi lawyers use `openai/gpt-5.6-sol` with `xhigh`, Codex subscription authentication, and enabled search.  Their separate state directories begin with fresh sessions.  The initial document matches `examples/ex04/market-rules.md`.  Earlier case filings and results are absent from the inputs.
+
+Both lawyers completed their first technical reports by 22:57 UTC, and interrogatories began at 22:58.  The plaintiff imported a source-analysis document as `file-0002`.  Its stored copy matches the workspace original.  The defendant imported the extracted text of Israel's UN letter S/2024/887 as `file-0003` and retained the official PDF in its workspace.  Research encountered blocked pages, empty downloads, and unavailable commands, but both lawyers obtained source text through subsequent tool calls.  No runtime or prompt changed during this case.  The report draft is under `reports/marxiv/israel-syria-adc/` and remains incomplete pending judgment and verification.
+
+Discovery produced six registered files, including both lawyers' source archives and the official Israeli letter PDF.  The plaintiff decoded and extracted the defense archive with local tools, obtaining Syria's contemporaneous letter and the later UNDOF report.  Both sides answered five interrogatories, their document requests, and all admission requests: 34 served by the plaintiff and 30 by the defense.  They declined Rule 37 motions.  At 23:27:53 UTC, the judge denied the plaintiff's Rule 56 motion because the record permitted competing reasonable inferences concerning offensive character and intent at commencement.  Those issues remain unresolved.  The current draft covers the proceeding through that ruling.
+
+- [ ] Observe the case through judgment and record failures as they occur.
+- [ ] Inspect the verdict, jury selection, research, filings, notes, and accounting.
+- [ ] Verify the replay certificate and participant cleanup.
+- [ ] Complete the standalone ADC technical report and review its quotations and claims.
+- [ ] Submit the PDF to marXiv and follow editorial review.
+- [ ] Commit and push the completed report and documentation.
+
+The case stopped at 23:33 UTC during jury selection.  J2 and J4 ended their Pi sessions without submitting questionnaire answers.  The launcher reported J2's exit but suppressed J4's because its failure map used only the state-local opportunity ID `o1`.  Process matching, model bindings, and directory names had the same identity defect.  The fix uses the existing state version together with principal and opportunity ID.  The Role API exposes the version and checks supplied identities on submissions and failure reports.  The MCP adapter sends both fields.  No Lean rule or proof changes are required.
+
+Shutdown also reported missing container ID files after completed Pi processes.  Podman removes those files when it removes the container, as documented under [`--cidfile`](https://docs.podman.io/en/stable/markdown/podman-run.1.html).  Cleanup now permits an absent ID file for an already exited client while retaining process and finalization errors.  No container remained after the stopped case.
+
+- [x] Test repeated opportunity IDs, stale submissions, and successive live Pi juror turns.
+- [ ] Commit the verified runtime correction and restart the full case with fresh lawyer sessions.
+
+The live Pi/MCP test `adc/out/juror-turns-20260918-08/` completed six questionnaires and two further answers by J1.  All eight opportunities used `o1`, while J1's three processes used state versions 16, 22, and 23.  Replay verification passed 24 transitions through local leanrunner with its default limits.  No container or staged secret remains.  Setup attempts exposed two fixture errors (missing court profile and insufficient candidate panel), an eight-turn limit that prevented finalization, and a runtime copy function that converted an empty string slice to JSON `null`.  That copy now preserves an empty list.  A focused test covers it.  ADC runtime, launcher, command tests, and affected vet checks pass.
+
+The successful test also exposed incomplete juror activity reporting: stopping a process removed the process record used to locate its log.  The launcher now retains the log metadata independently of live process records.  The full-case run will verify that all juror logs appear in the digest.  The stopped Israel–Syria case recorded 366 lawyer responses and about $134.71 in token-price estimates, excluding search subrequests and court-model requests.

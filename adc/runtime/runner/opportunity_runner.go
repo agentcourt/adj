@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/agentcourt/adj/adc/runtime/courts"
@@ -334,7 +335,7 @@ func cloneRunnerValue(value any) any {
 	case []map[string]any:
 		return cloneRunnerMapList(typed)
 	case []string:
-		return append([]string(nil), typed...)
+		return slices.Clone(typed)
 	case map[string]string:
 		return cloneStringMap(typed)
 	case courts.Profile:

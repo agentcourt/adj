@@ -26,6 +26,55 @@ import (
 var pairedCoreBinDir = flag.String("core-bin-dir", "", "Directory containing paired core executables")
 var pairedCoreRoot = flag.String("core-root", "", "Paired core checkout root")
 
+func TestJurorTurnsWithRepeatedOpportunityIDs(t *testing.T) {
+	var failures []jurorTurn
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			PrincipalID   string `json:"principal_id"`
+			OpportunityID string `json:"opportunity_id"`
+			StateVersion  int    `json:"state_version"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		failures = append(failures, jurorTurn{request.PrincipalID, request.OpportunityID, request.StateVersion})
+		if err := json.NewEncoder(w).Encode(map[string]any{"ok": true}); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+	state := &runState{caseBase: server.URL, opts: Options{CaseID: "test"}, failedJurorTurns: map[jurorTurn]bool{}}
+	turns := []jurorTurn{{"J2", "o1", 10}, {"J4", "o1", 12}, {"J2", "o1", 14}}
+	names := map[string]bool{}
+	for _, turn := range turns {
+		active := activeJurorOpportunity{jurorTurn: turn}
+		name := jurorProcessName(active)
+		if names[name] {
+			t.Fatalf("reused process directory: %s", name)
+		}
+		names[name] = true
+		for range 2 {
+			if err := state.reportJurorFailure(context.Background(), turn, jurorFailureAgentExited, "exited", nil); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if len(failures) != len(turns) {
+		t.Fatalf("failures = %#v", failures)
+	}
+	for i, turn := range turns {
+		if failures[i] != turn {
+			t.Fatalf("failure %d = %#v, want %#v", i, failures[i], turn)
+		}
+	}
+	old := &processRecord{jurorTarget: &jurorProcessTarget{jurorTurn: turns[0]}}
+	if procMatchesJurorOpportunity(old, activeJurorOpportunity{jurorTurn: turns[2]}) {
+		t.Fatal("old process matched a later turn for the same juror")
+	}
+}
+
 func mustADCLauncherPrompts(t *testing.T, overrides map[string]string) launcherprompt.Sources {
 	t.Helper()
 	prompts, err := launcherprompt.Resolve("adc", "", overrides)
@@ -83,7 +132,7 @@ func TestWriteRemoteLawyerSkillReturnsLogFailure(t *testing.T) {
 func TestStartPiJurorRejectsExistingHome(t *testing.T) {
 	outputDir := t.TempDir()
 	outside := t.TempDir()
-	active := activeJurorOpportunity{principalID: "C1", opportunityID: "opportunity-1", phase: "deliberation"}
+	active := activeJurorOpportunity{jurorTurn: jurorTurn{principalID: "C1", opportunityID: "opportunity-1", stateVersion: 1}, phase: "deliberation"}
 	home := filepath.Join(outputDir, jurorProcessName(active))
 	if err := os.Symlink(outside, home); err != nil {
 		t.Fatalf("create Pi home symlink: %v", err)
@@ -464,7 +513,7 @@ func TestProcessExitPreservesFinalizationErrors(t *testing.T) {
 }
 
 func TestPiContainerOwnership(t *testing.T) {
-	active := activeJurorOpportunity{principalID: "J1@" + strings.Repeat("x", 100), opportunityID: "opportunity-1"}
+	active := activeJurorOpportunity{jurorTurn: jurorTurn{principalID: "J1@" + strings.Repeat("x", 100), opportunityID: "opportunity-1", stateVersion: 1}}
 	name := piContainerName("case with spaces", active)
 	if len(name) > 63 || strings.ContainsAny(name, "/ @") {
 		t.Fatalf("container name = %q", name)
@@ -867,7 +916,7 @@ func TestWritePiConfigUsesBoundGatewayModel(t *testing.T) {
 	home := t.TempDir()
 	spec = spec.WithFallbackMaxOutputTokens(DefaultJurorMaxOutputTokens)
 	model, err := writePiConfig(home, activeJurorOpportunity{
-		principalID: "J1",
+		jurorTurn:   jurorTurn{principalID: "J1"},
 		requestSpec: &spec,
 	}, spec, "http://127.0.0.1:18888/v1", modelgateway.Binding{Token: "local-token", Model: "adj-model-1"}, "adc", "http://host/mcp", "adjmcp1.test.signature")
 	if err != nil {

@@ -86,6 +86,7 @@ type roleAPIRequest struct {
 	RoleID        string         `json:"role_id"`
 	PrincipalID   string         `json:"principal_id,omitempty"`
 	OpportunityID string         `json:"opportunity_id,omitempty"`
+	StateVersion  *int           `json:"state_version,omitempty"`
 	Tool          string         `json:"tool,omitempty"`
 	Arguments     map[string]any `json:"arguments,omitempty"`
 	TimeoutMS     int            `json:"timeout_ms,omitempty"`
@@ -693,6 +694,7 @@ func (api *roleAPIServer) currentTurnPayloadLocked(turn *externalOpportunityTurn
 		"role_id":             turn.role.Name,
 		"principal_id":        turn.principalID,
 		"opportunity_id":      turn.opportunity.OpportunityID,
+		"state_version":       turn.stateVersion,
 		"phase":               turn.opportunity.Phase,
 		"kind":                turn.opportunity.Kind,
 		"deadline_at":         turn.deadline.UTC().Format(time.RFC3339),
@@ -784,8 +786,8 @@ func (api *roleAPIServer) doLocked(req roleAPIRequest) (map[string]any, int) {
 	if !api.turnMatchesActor(turn, req) {
 		return map[string]any{"ok": false, "case_id": api.caseID(), "status": "waiting", "current_turn": api.currentTurnPayloadLocked(turn), "error": roleAPIError("wrong_turn", "current opportunity belongs to another role or principal")}, http.StatusConflict
 	}
-	if req.OpportunityID != "" && req.OpportunityID != turn.opportunity.OpportunityID {
-		return map[string]any{"ok": false, "case_id": api.caseID(), "error": roleAPIError("wrong_opportunity", "opportunity_id does not match the active opportunity")}, http.StatusConflict
+	if !turnMatchesOpportunity(turn, req) {
+		return map[string]any{"ok": false, "case_id": api.caseID(), "error": roleAPIError("wrong_opportunity", "opportunity_id or state_version does not match the active opportunity")}, http.StatusConflict
 	}
 	switch req.Tool {
 	case "send_work_notes":
@@ -829,6 +831,9 @@ func (api *roleAPIServer) failLocked(req roleAPIRequest) (map[string]any, int) {
 	if !api.turnMatchesActor(turn, req) {
 		return map[string]any{"ok": false, "case_id": api.caseID(), "error": roleAPIError("wrong_turn", "current opportunity belongs to another role or principal")}, http.StatusConflict
 	}
+	if !turnMatchesOpportunity(turn, req) {
+		return map[string]any{"ok": false, "case_id": api.caseID(), "error": roleAPIError("wrong_opportunity", "opportunity_id or state_version does not match the active opportunity")}, http.StatusConflict
+	}
 	message := strings.TrimSpace(req.Message)
 	if message == "" {
 		message = "external agent reported failure"
@@ -843,6 +848,11 @@ func (api *roleAPIServer) failLocked(req roleAPIRequest) (map[string]any, int) {
 	}
 	api.finishTurnLocked(turn, TurnLog{}, fmt.Errorf("external role %s failed: %s", turn.role.Name, message))
 	return map[string]any{"ok": true, "case_id": api.caseID(), "status": "failed_recorded"}, http.StatusOK
+}
+
+func turnMatchesOpportunity(turn *externalOpportunityTurn, req roleAPIRequest) bool {
+	return (req.OpportunityID == "" || req.OpportunityID == turn.opportunity.OpportunityID) &&
+		(req.StateVersion == nil || *req.StateVersion == turn.stateVersion)
 }
 
 func (api *roleAPIServer) executeSupportToolLocked(turn *externalOpportunityTurn, tool string, args map[string]any) (map[string]any, int) {

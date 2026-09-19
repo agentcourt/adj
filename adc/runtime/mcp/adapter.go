@@ -152,12 +152,9 @@ func (a *adapter) CallTool(ctx context.Context, profile mcpbridge.Profile, name 
 	case waitToolName:
 		return a.waitForOpportunity(ctx, profile, arguments)
 	case "case_status":
-		return a.callRoleTool(ctx, profile, "", "case_status", map[string]any{})
+		return a.callRoleTool(ctx, profile, nil, "case_status", map[string]any{})
 	case "get_case_result":
 		return a.postRoleAPI(ctx, "/result", body)
-	case "report_failure":
-		body["message"] = strings.TrimSpace(mcpbridge.String(arguments["message"]))
-		return a.postRoleAPI(ctx, "/fail", body)
 	default:
 		status, err := a.client.Post(ctx, roleAPIPath+"/get", body)
 		if err != nil {
@@ -166,7 +163,8 @@ func (a *adapter) CallTool(ctx context.Context, profile mcpbridge.Profile, name 
 		if ok, exists := status["ok"].(bool); exists && !ok {
 			return mcpbridge.CallResult{StructuredContent: status, IsError: true}, nil
 		}
-		return a.callRoleTool(ctx, profile, currentOpportunityID(status), name, arguments)
+		opportunity, _ := status["opportunity"].(map[string]any)
+		return a.callRoleTool(ctx, profile, opportunity, name, arguments)
 	}
 }
 
@@ -215,15 +213,21 @@ func (a *adapter) waitForOpportunity(ctx context.Context, profile mcpbridge.Prof
 	return mcpbridge.CallResult{StructuredContent: value, IsError: state == "error"}, nil
 }
 
-func (a *adapter) callRoleTool(ctx context.Context, profile mcpbridge.Profile, opportunityID, name string, arguments map[string]any) (mcpbridge.CallResult, error) {
+func (a *adapter) callRoleTool(ctx context.Context, profile mcpbridge.Profile, opportunity map[string]any, name string, arguments map[string]any) (mcpbridge.CallResult, error) {
 	body, err := baseBody(profile)
 	if err != nil {
 		return mcpbridge.CallResult{}, err
 	}
 	body["tool"] = name
 	body["arguments"] = arguments
-	if opportunityID != "" {
-		body["opportunity_id"] = opportunityID
+	for _, key := range []string{"opportunity_id", "state_version"} {
+		if value, ok := opportunity[key]; ok {
+			body[key] = value
+		}
+	}
+	if name == "report_failure" {
+		body["message"] = strings.TrimSpace(mcpbridge.String(arguments["message"]))
+		return a.postRoleAPI(ctx, "/fail", body)
 	}
 	return a.postRoleAPI(ctx, "/do", body)
 }

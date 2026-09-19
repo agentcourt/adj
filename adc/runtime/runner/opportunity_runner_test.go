@@ -18,6 +18,13 @@ import (
 	openaiapi "github.com/agentcourt/adj/common/openai"
 )
 
+func TestCloneRunnerMapPreservesEmptyStringList(t *testing.T) {
+	value := map[string]any{"allowed_tools": []string{}}
+	if copied := cloneRunnerMap(value); !reflect.DeepEqual(copied, value) {
+		t.Fatalf("copy changed empty array: %#v", copied)
+	}
+}
+
 type opportunityTestRequest struct {
 	model              string
 	requestSpec        *modelrequest.Spec
