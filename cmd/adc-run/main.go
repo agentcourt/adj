@@ -76,6 +76,7 @@ func runLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 	timeoutSeconds := fs.Int("timeout-seconds", localrun.DefaultLLMTimeoutSeconds, "Internal LLM HTTP timeout seconds")
 	maxResponseBytes := fs.Int("max-response-bytes", localrun.DefaultMaxResponseBytes, "Maximum bytes allowed in one direct-runtime model response")
 	invalidAttemptLimit := fs.Int("invalid-attempt-limit", localrun.DefaultInvalidAttemptLimit, "Maximum invalid submissions before an opportunity fails")
+	courtSubmissionErrorLimit := fs.Int("court-submission-error-limit", localrun.DefaultCourtSubmissionErrorLimit, "Maximum Pi court submission errors before an opportunity fails")
 	enginePath := fs.String("engine", "", "Optional Lean engine command string passed to the core case")
 	runID := fs.String("run-id", "", "Run ID override")
 	caseID := fs.String("case-id", "", "Case ID")
@@ -173,6 +174,7 @@ func runLocal(ctx context.Context, args []string, stdout io.Writer, stderr io.Wr
 		TimeoutSeconds:            *timeoutSeconds,
 		MaxResponseBytes:          *maxResponseBytes,
 		InvalidAttemptLimit:       *invalidAttemptLimit,
+		CourtSubmissionErrorLimit: *courtSubmissionErrorLimit,
 		EnginePath:                strings.TrimSpace(*enginePath),
 		RunID:                     strings.TrimSpace(*runID),
 		CaseID:                    strings.TrimSpace(*caseID),

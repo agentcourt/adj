@@ -25,6 +25,7 @@ func TestADCRunnerBuildsJuryRequest(t *testing.T) {
 		return adcTestResult("judgment_entered", "closed", "demonstrated"), nil
 	}}
 	request := adcTestRequest()
+	request.Settings.Procedure.ADC.CourtSubmissionErrorLimit = 7
 	outcome, err := runner.Run(context.Background(), request)
 	if err != nil {
 		t.Fatal(err)
@@ -55,6 +56,9 @@ func TestADCRunnerBuildsJuryRequest(t *testing.T) {
 	}
 	if received.TrialMode != "jury" || received.LawyerTimeoutSeconds != 30 || received.JurorTimeoutSeconds != 30 || received.TimeoutSeconds != 30 {
 		t.Fatalf("runtime options = %#v", received)
+	}
+	if received.CourtSubmissionErrorLimit != 7 {
+		t.Fatalf("court submission error limit = %d", received.CourtSubmissionErrorLimit)
 	}
 	if received.LauncherPromptDir != "/launcher/adc" || received.LauncherPromptFiles["juror.pi"] != "/launcher/juror.md" {
 		t.Fatalf("launcher prompt options = %#v", received)

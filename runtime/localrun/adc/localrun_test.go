@@ -693,6 +693,9 @@ func TestApplyDefaultsUsesSelectedEnvironmentsAndLawyers(t *testing.T) {
 	if opts.PiImage != "selected-pi" {
 		t.Fatalf("Pi image = %q", opts.PiImage)
 	}
+	if opts.CourtSubmissionErrorLimit != 10 || applyDefaults(Options{CourtSubmissionErrorLimit: 4}).CourtSubmissionErrorLimit != 4 {
+		t.Fatal("court submission limit default or override was lost")
+	}
 	if got, _ := environmentValue(opts.ParticipantEnvironment, "HOME"); got != "/selected/home" {
 		t.Fatalf("copied HOME = %q", got)
 	}

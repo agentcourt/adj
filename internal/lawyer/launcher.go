@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/agentcourt/adj/internal/pievent"
 	headless "github.com/agentcourt/adj/runtime/agent"
 	"github.com/agentcourt/adj/runtime/runstate"
 )
@@ -93,19 +94,20 @@ type Runtime struct {
 }
 
 type Assignment struct {
-	CaseID      string
-	RunID       string
-	RoleID      string
-	Profile     string
-	Prompt      string
-	MCP         headless.MCPServer
-	MCPCommand  string
-	WebSearch   *bool
-	Environment []string
-	StateDir    string
-	WorkDir     string
-	EvidenceDir string
-	VerifyExit  func(context.Context, string, string) error
+	CaseID         string
+	RunID          string
+	RoleID         string
+	Profile        string
+	Prompt         string
+	MCP            headless.MCPServer
+	MCPCommand     string
+	WebSearch      *bool
+	Environment    []string
+	StateDir       string
+	WorkDir        string
+	EvidenceDir    string
+	VerifyExit     func(context.Context, string, string) error
+	ObservePiEvent func([]byte)
 }
 
 type Supervisor struct {
@@ -177,6 +179,7 @@ type processStartOptions struct {
 	participant      *runstate.ParticipantStart
 	readUsage        func(string) (*runstate.TokenUsage, error)
 	stateDir         string
+	observePiEvent   func([]byte)
 }
 
 func New(runtime Runtime) (*Supervisor, error) {
@@ -359,7 +362,8 @@ func (s *Supervisor) startHeadless(ctx context.Context, profile Profile, assignm
 			}
 			return usage, err
 		},
-		stateDir: invocation.StateDir,
+		stateDir:       invocation.StateDir,
+		observePiEvent: assignment.ObservePiEvent,
 	})
 	if err != nil {
 		return nil, err
@@ -935,6 +939,11 @@ func (s *Supervisor) startProcess(ctx context.Context, name, kind, command strin
 		cmd.Dir = options.dir
 	}
 	cmd.Stdout = stdout
+	var piEvents *pievent.Writer
+	if strings.HasPrefix(name, "pi-") && options.observePiEvent != nil {
+		piEvents = pievent.NewWriter(stdout, options.observePiEvent)
+		cmd.Stdout = piEvents
+	}
 	cmd.Stderr = stderr
 	record := &processRecord{
 		name:          name,
@@ -1013,6 +1022,9 @@ func (s *Supervisor) startProcess(ctx context.Context, name, kind, command strin
 	}
 	go func() {
 		exit := processExit{waitErr: cmd.Wait()}
+		if piEvents != nil {
+			piEvents.Flush()
+		}
 		if stop != nil {
 			exit.stopErr = stop.result()
 		}

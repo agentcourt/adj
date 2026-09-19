@@ -33,6 +33,8 @@ The installed default council and juror pool uses OpenRouter and requires `OPENR
 
 A Pi lawyer profile selects its own provider and authentication.  OpenAI lawyers can use Codex subscription credentials from `~/.codex/auth.json`.  API-key profiles name their source environment variable.  The launcher passes that lawyer's selected credential to its container.  The [participant profile reference](../../adjudication-cli.md#participant-profiles) defines these settings.
 
+ADC observes Pi's streamed execution events to enforce its per-opportunity court-submission error limit.  The default is 10, configurable through `adc-run --court-submission-error-limit` or `procedures.adc.court_submission_error_limit`.  The [ADC manual](../../adc/manual.md#local-pi-submission-errors) defines which failures count.
+
 ## Lawyer Web Search
 
 Quick, AAR, AARD, and ADC enable lawyer search by default through their procedure settings.  For a Pi lawyer, the launcher loads the exact Pi Web Access entry point and preserves extension and skill discovery from the retained Pi state.  An explicit false setting omits Pi Web Access and records `enabled: false` for that participant.

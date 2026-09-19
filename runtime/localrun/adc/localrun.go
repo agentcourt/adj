@@ -31,6 +31,7 @@ import (
 	lawyerlaunch "github.com/agentcourt/adj/internal/lawyer"
 	"github.com/agentcourt/adj/internal/mcpcap"
 	"github.com/agentcourt/adj/internal/mcpchild"
+	"github.com/agentcourt/adj/internal/pievent"
 	"github.com/agentcourt/adj/internal/pimodel"
 	headless "github.com/agentcourt/adj/runtime/agent"
 	"github.com/agentcourt/adj/runtime/corehealth"
@@ -148,6 +149,7 @@ type Options struct {
 	TimeoutSeconds            int
 	MaxResponseBytes          int
 	InvalidAttemptLimit       int
+	CourtSubmissionErrorLimit int
 	EnginePath                string
 	RunID                     string
 	CaseID                    string
@@ -224,8 +226,9 @@ type processRecord struct {
 	stderrPath string
 	finished   chan struct{}
 
-	stdoutCounter *processOutputCounter
-	jurorTarget   *jurorProcessTarget
+	stdoutCounter        *processOutputCounter
+	jurorTarget          *jurorProcessTarget
+	courtSubmissionLimit <-chan string
 
 	mu            sync.Mutex
 	exited        bool
@@ -268,8 +271,12 @@ type activeJurorOpportunity struct {
 }
 
 type lawyerStatusResponse struct {
-	Status     string         `json:"status"`
-	CaseStatus map[string]any `json:"case_status"`
+	Status      string         `json:"status"`
+	CaseStatus  map[string]any `json:"case_status"`
+	CurrentTurn *struct {
+		OpportunityID string `json:"opportunity_id"`
+		StateVersion  int    `json:"state_version"`
+	} `json:"current_turn"`
 }
 
 type processOutputSize struct {
@@ -1033,6 +1040,9 @@ func applyDefaults(opts Options) Options {
 	if opts.InvalidAttemptLimit <= 0 {
 		opts.InvalidAttemptLimit = DefaultInvalidAttemptLimit
 	}
+	if opts.CourtSubmissionErrorLimit == 0 {
+		opts.CourtSubmissionErrorLimit = DefaultCourtSubmissionErrorLimit
+	}
 	if strings.TrimSpace(opts.PiImage) == "" {
 		if image, ok := environmentValue(opts.ParticipantEnvironment, "PI_CONTAINER_IMAGE"); ok && strings.TrimSpace(image) != "" {
 			opts.PiImage = image
@@ -1137,6 +1147,9 @@ func validateOptions(opts Options) error {
 	}
 	if opts.JurorOutputLimitBytes < 0 {
 		return fmt.Errorf("juror output limit bytes must be non-negative")
+	}
+	if opts.CourtSubmissionErrorLimit < 0 {
+		return fmt.Errorf("court submission error limit must be non-negative")
 	}
 	for _, path := range []string{opts.ComplaintPath, opts.DocumentsDir, opts.ScenarioPath, opts.JurorPersonasPath} {
 		if strings.TrimSpace(path) == "" {
@@ -1845,7 +1858,8 @@ func (s *runState) startLawyer(ctx context.Context, role, mcpPort string) error 
 			URL:         mcpURL,
 			BearerToken: capability,
 		},
-		VerifyExit: s.handleLawyerExit,
+		VerifyExit:     s.handleLawyerExit,
+		ObservePiEvent: s.lawyerCourtSubmissionObserver(ctx, role, server),
 	})
 }
 
@@ -2439,12 +2453,26 @@ func (s *runState) startProcess(ctx context.Context, name string, kind string, c
 	}
 	stdoutWriter := io.Writer(stdout)
 	var stdoutFilter *piTailLogWriter
+	var piEvents *pievent.Writer
+	var submissionLimit chan string
 	if jurorTarget != nil && strings.HasPrefix(name, "pi-") {
 		stdoutFilter = newPiTailLogWriter(stdout)
-		stdoutWriter = stdoutFilter
+		submissionLimit = make(chan string, 1)
+		count := 0
+		tracker := &courtSubmissionErrors{server: defaultPiMCPServer, onError: func(tool string) {
+			count++
+			if count == s.opts.CourtSubmissionErrorLimit {
+				submissionLimit <- tool
+			}
+		}}
+		piEvents = pievent.NewWriter(stdoutFilter, tracker.observe)
+		stdoutWriter = piEvents
 	}
 	stdoutCounter := newProcessOutputCounter(stdoutWriter)
 	closeStdout := func() error {
+		if piEvents != nil {
+			piEvents.Flush()
+		}
 		if stdoutFilter == nil {
 			return stdout.Close()
 		}
@@ -2498,18 +2526,19 @@ func (s *runState) startProcess(ctx context.Context, name string, kind string, c
 		targetCopy = &copyTarget
 	}
 	record := &processRecord{
-		name:            name,
-		kind:            kind,
-		command:         cmd,
-		done:            make(chan processExit, 1),
-		stopCommand:     command,
-		containerIDPath: containerIDPath,
-		containerIDDir:  containerIDDir,
-		stdoutPath:      stdoutPath,
-		stderrPath:      stderrPath,
-		finished:        make(chan struct{}),
-		stdoutCounter:   stdoutCounter,
-		jurorTarget:     targetCopy,
+		name:                 name,
+		kind:                 kind,
+		command:              cmd,
+		done:                 make(chan processExit, 1),
+		stopCommand:          command,
+		containerIDPath:      containerIDPath,
+		containerIDDir:       containerIDDir,
+		stdoutPath:           stdoutPath,
+		stderrPath:           stderrPath,
+		finished:             make(chan struct{}),
+		stdoutCounter:        stdoutCounter,
+		jurorTarget:          targetCopy,
+		courtSubmissionLimit: submissionLimit,
 	}
 	go func() {
 		exit := processExit{
@@ -2594,9 +2623,6 @@ func (p *processRecord) forcedFailure() (string, string, map[string]any) {
 }
 
 func (s *runState) monitorJurorOutput(ctx context.Context, proc *processRecord, target jurorProcessTarget, interval time.Duration) {
-	if s.opts.JurorOutputLimitBytes <= 0 {
-		return
-	}
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
@@ -2610,39 +2636,42 @@ func (s *runState) monitorJurorOutput(ctx context.Context, proc *processRecord, 
 				s.agentErrs <- fmt.Errorf("check juror output for %s: %w", proc.name, err)
 				return
 			}
-			if size.Total <= s.opts.JurorOutputLimitBytes {
+			if s.opts.JurorOutputLimitBytes <= 0 || size.Total <= s.opts.JurorOutputLimitBytes {
 				continue
 			}
 			message, details := jurorOutputLimitFailure(proc.name, target, size, s.opts.JurorOutputLimitBytes)
 			proc.setForcedFailure(jurorFailureOutputLimit, message, details)
-			var stopErr error
-			if strings.TrimSpace(proc.containerIDPath) != "" {
-				containerFound, err := removeProcessContainer(proc)
-				stopErr = err
-				if containerFound && stopErr == nil {
-					select {
-					case <-proc.finished:
-						return
-					case <-time.After(250 * time.Millisecond):
-					}
-				}
-			}
-			if err := proc.command.Process.Kill(); err != nil {
-				if proc.isExited() {
-					return
-				}
-				s.agentErrs <- errors.Join(stopErr, fmt.Errorf("kill %s after juror output limit exceeded: %w", proc.name, err))
-				return
-			}
-			if stopErr != nil {
-				s.agentErrs <- stopErr
-			}
-			return
+		case tool := <-proc.courtSubmissionLimit:
+			message, details := courtSubmissionFailure(s.opts.CourtSubmissionErrorLimit, s.opts.CourtSubmissionErrorLimit, tool)
+			proc.setForcedFailure(courtSubmissionErrorReason, message, details)
 		case <-proc.finished:
 			return
 		case <-ctx.Done():
 			return
 		}
+		var stopErr error
+		if strings.TrimSpace(proc.containerIDPath) != "" {
+			containerFound, err := removeProcessContainer(proc)
+			stopErr = err
+			if containerFound && stopErr == nil {
+				select {
+				case <-proc.finished:
+					return
+				case <-time.After(250 * time.Millisecond):
+				}
+			}
+		}
+		if err := proc.command.Process.Kill(); err != nil {
+			if proc.isExited() {
+				return
+			}
+			s.agentErrs <- errors.Join(stopErr, fmt.Errorf("kill %s after juror process limit reached: %w", proc.name, err))
+			return
+		}
+		if stopErr != nil {
+			s.agentErrs <- stopErr
+		}
+		return
 	}
 }
 
@@ -2723,7 +2752,6 @@ func (s *runState) handleJurorProcessExit(ctx context.Context, proc *processReco
 }
 
 func (s *runState) reportJurorFailure(ctx context.Context, turn jurorTurn, reason string, message string, details map[string]any) (err error) {
-	principalID := turn.principalID
 	s.mu.Lock()
 	if s.failedJurorTurns[turn] {
 		s.mu.Unlock()
@@ -2731,10 +2759,14 @@ func (s *runState) reportJurorFailure(ctx context.Context, turn jurorTurn, reaso
 	}
 	s.failedJurorTurns[turn] = true
 	s.mu.Unlock()
+	return s.reportParticipantFailure(ctx, "juror", turn, reason, message, details)
+}
 
+func (s *runState) reportParticipantFailure(ctx context.Context, role string, turn jurorTurn, reason string, message string, details map[string]any) (err error) {
+	principalID := turn.principalID
 	payload := map[string]any{
 		"case_id":        s.opts.CaseID,
-		"role_id":        "juror",
+		"role_id":        role,
 		"principal_id":   principalID,
 		"opportunity_id": turn.opportunityID,
 		"state_version":  turn.stateVersion,
@@ -2754,11 +2786,11 @@ func (s *runState) reportJurorFailure(ctx context.Context, turn jurorTurn, reaso
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("report juror failure for %s: %w", principalID, err)
+		return fmt.Errorf("report %s failure for %s: %w", role, principalID, err)
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			err = errors.Join(err, fmt.Errorf("close juror failure response: %w", closeErr))
+			err = errors.Join(err, fmt.Errorf("close participant failure response: %w", closeErr))
 		}
 	}()
 	body, err := io.ReadAll(resp.Body)
@@ -2769,7 +2801,7 @@ func (s *runState) reportJurorFailure(ctx context.Context, turn jurorTurn, reaso
 	dec := json.NewDecoder(bytes.NewReader(body))
 	dec.UseNumber()
 	if err := dec.Decode(&response); err != nil {
-		return fmt.Errorf("decode juror failure response for %s: %w", principalID, err)
+		return fmt.Errorf("decode %s failure response for %s: %w", role, principalID, err)
 	}
 	if resp.StatusCode == http.StatusConflict {
 		apiError, _ := response["error"].(map[string]any)
@@ -2779,7 +2811,7 @@ func (s *runState) reportJurorFailure(ctx context.Context, turn jurorTurn, reaso
 		}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("report juror failure for %s returned HTTP %d: %s", principalID, resp.StatusCode, strings.TrimSpace(string(body)))
+		return fmt.Errorf("report %s failure for %s returned HTTP %d: %s", role, principalID, resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 	if ok, _ := response["ok"].(bool); !ok {
 		message := ""
@@ -2789,7 +2821,7 @@ func (s *runState) reportJurorFailure(ctx context.Context, turn jurorTurn, reaso
 		if strings.TrimSpace(message) == "" {
 			message = strings.TrimSpace(string(body))
 		}
-		return fmt.Errorf("report juror failure for %s was rejected: %s", principalID, message)
+		return fmt.Errorf("report %s failure for %s was rejected: %s", role, principalID, message)
 	}
 	return nil
 }
@@ -3022,6 +3054,7 @@ func writeRunSummary(outDir string, result Result, opts Options) error {
 		"mcp_public_base_url":                 opts.MCPPublicBaseURL,
 		"openclaw_lawyer_start_delay_seconds": opts.OpenClawStartDelaySeconds,
 		"juror_output_limit_bytes":            opts.JurorOutputLimitBytes,
+		"court_submission_error_limit":        opts.CourtSubmissionErrorLimit,
 		"juror_default_max_output_tokens":     DefaultJurorMaxOutputTokens,
 		"assertion_count":                     len(result.Assertions),
 		"turn_count":                          len(result.TurnLogs),

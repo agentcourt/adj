@@ -196,6 +196,14 @@ This example uses direct model calls for every procedural role.  It requests a j
   --trial-mode jury
 ```
 
+## Local Pi Submission Errors
+
+`adc-run --court-submission-error-limit N` limits court-submission errors caught inside a locally launched Pi process.  The default is 10 per participant opportunity.  A positive value overrides the default, zero selects the default, and negative values are rejected.  Unified execution accepts the same setting as `procedures.adc.court_submission_error_limit`.
+
+The launcher counts malformed or non-object arguments and unknown or ambiguous court-submission tool names from Pi's execution events.  It excludes court reads, work notes, research tools, filesystem tools, and transport failures.  Decisions delivered to ADC retain the separate `--invalid-attempt-limit` counter, whose default is three.  Each new opportunity starts a new Pi submission-error count.
+
+Reaching the limit invokes the existing participant-failure procedure: a candidate juror is replaced during voir dire, a deliberating juror follows the deliberation failure rules, and a lawyer failure ends the run with an error.  The record includes the failure message and count.  Opportunity deadlines remain in force.  Externally managed harnesses must report their own local failures through the Role API.
+
 ## Role API
 
 The Role API listens when `--caseapi-addr` supplies an address.  Every role request includes `case_id`.  Lawyer requests identify `plaintiff` or `defendant`, and juror requests also include a `principal_id` such as `J1`.  The read-only observer uses `role_id=observer`.
