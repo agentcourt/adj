@@ -18,7 +18,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-Incomplete working draft.  This report examines an ADC proceeding concerning the Israel--Syria prediction-market proposition, configured for two research-capable Pi lawyers, nine jurors, six required votes, and the preponderance standard.  The proceeding began at 07:56 UTC on September 19, 2026, and stopped during jury selection after the defendant exceeded a turn deadline.  It produced no verdict.
+Incomplete working draft.  This report examines an ADC adjudication of the Israel--Syria prediction-market proposition, configured for two research-capable Pi lawyers, nine jurors, six required votes, and the preponderance standard.  The proceeding began at 14:32 UTC on September 19, 2026, and remains in progress.
 \end{abstract}
 
 \section{Agent District Court and the adj Procedures}
@@ -87,156 +87,38 @@ The ADC run uses fresh participant sessions and receives none of the earlier ARB
 
 \section{The ADC Proceeding}
 
-The case began at 07:56 UTC on September 19, 2026.  All times for the proceeding are UTC.  The defendant read the market-rules attachment and passed the preliminary dismissal opportunity.  Its work note distinguished the contested merits from a defect in the pleaded claim:
+The case began at 14:32 UTC on September 19, 2026.  All times for the proceeding are UTC.  The defendant read the market-rules attachment and declined the optional Rule 12 motion.  Its reason distinguished pleading sufficiency from disputed proof:
 \begin{quote}
-Whether the alleged December conduct met 'military offensive' and intent-to-control requirements is a merits/evidence dispute, not a Rule 12 defect.
+Any disagreement concerns proof, not standing, ripeness, mootness, or pleading sufficiency.
 \end{quote}
-The answer accepted the operative market criteria, the Tribunal's authority to decide the proposition, and the restriction to declaratory relief.  It denied that the attachment's recitation of Polymarket's rationale established the facts, required proof of every operative criterion by a preponderance, and preserved disputes over geography, timing, source reliability, offensive character, and intent~\cite[events 1--3 and defense work note at 07:56:29]{record}.
+Its answer admitted the governing market criteria, the present dispute, and the Tribunal's authority to issue a declaration.  It denied the compound proposition and required the plaintiff to prove the defined act, intent, location, timing, and source conditions.  It treated the supplied marketplace resolution as an assertion requiring evidence~\cite[events 1--3]{record}.
 
-The judge selected jury trial and advanced the case to pretrial proceedings.  At the initial-disclosure opportunity, the plaintiff read the attachment and began searching official Israeli and UN sources and contemporaneous reporting.  Its work note identified the initial document as the only material then in the case record and proposed collecting and importing a focused source packet~\cite[events 4--6 and plaintiff work note at 07:57:10]{record}.
-
-\subsection{Initial disclosures and public-source collection}
-
-The plaintiff imported Syria's December 9 letter to the United Nations as \code{file-0002}, then identified it in its initial disclosures alongside the market attachment.  Both lawyers named public officials and institutional custodians as potential information sources, including Netanyahu, Syrian representatives, Israeli government and military officials, and UN personnel.  Their disclosures distinguished those leads from collected documents, reported no retained expert, and specified zero damages.  The defense had collected no separate documents at that stage~\cite[events 7--9]{record}.
-
-The Syrian letter reports incursions into Jabal al-Shaykh and Qunaytirah together with shelling and demands withdrawal~\cite{syrialetter}.  Before importing it, the plaintiff recorded the remaining inferential question:
-\begin{quote}
-the letter establishes armed incursion/aggression more directly than the specific intent to establish control
-\end{quote}
-The note identified the December 17 statement and corroborating reporting as the next research targets~\cite[plaintiff work note at 07:59:37]{record}.
-
-The lawyer searched for official statements, fetched web pages, downloaded PDFs, and inspected publication metadata in retained HTML.  Calls to \code{source\_check} concerning UNDOF observations returned ``unclear.''  The lawyer continued source retrieval and installed Poppler to extract the PDFs with \code{pdftotext}.  Its workspace retained the downloaded documents, extracted text, and written analysis.  The two official PDFs stored by the court match the lawyer's files byte for byte~\cite[plaintiff tool log and registered files]{record}.
-
-At 08:05, the plaintiff imported the Secretary-General's UNDOF report S/2025/154 as \code{file-0003}.  Published on March 12, 2025, the report covers November 19, 2024 through February 18, 2025.  Paragraphs 2 and 6 date Israeli entry and the establishment of checkpoints, roadblocks, and positions to December.  Paragraph 7 records Israel's description of a temporary defensive measure and gives totals for constructed positions and occupied houses as of February 18~\cite{undofreport}.  The source therefore required the lawyer to distinguish dated December observations from later totals.
-
-\subsection{The plaintiff's technical report}
-
-ADC accepted TR-P1, \emph{Source Timeline, Geography, and Indicators of Military Control}, at 08:07.  Its attached analysis, \code{file-0004}, contains a dated source matrix, findings by market criterion, an assessment under the preponderance standard, and limitations.  The filing separates reported conduct, source characterizations, and the lawyer's inferences~\cite[events 11--12 and file-0004]{record}.
-
-The plaintiff relied on the Syrian letter and UNDOF's observations to establish armed entry within the market window.  It used UN distinctions between the Golan, the area of separation, and the Syrian side, together with Associated Press reporting about the Syrian summit, to place at least some conduct beyond the market's Golan exclusion.  It identified the absence of surveyed coordinates and a position-by-position boundary reconstruction.
-
-For offensive character, the report combined tanks, soldiers, an assessed air strike, seizure of positions, movement restrictions, and fortification.  It characterized application of the undefined term ``military offensive'' as an inference.  Its intent analysis treated checkpoints, roadblocks, occupied premises, and fortification as means of controlling territory and connected them to the reported condition for continued deployment:
-\begin{quote}
-The competing inference is that Israel intended only temporary threat prevention. On balance, that account still describes an intent to control the relevant ground until a condition was met.
-\end{quote}
-The report concluded that the combined record favored the proposition while preserving Israel's temporary-and-defensive description as contrary evidence~\cite[file-0004, sections 3--4]{record}.
-
-The limitations identified missing operational orders, rules of engagement, eyewitness interviews, satellite measurement, and surveyed coordinates.  They also identified the UN report's retrospective publication, unavailable observation logs, the market's undefined operative term, and the use of an archival reproduction of the prime minister's statement.  The report restricted its use of February persistence to corroboration of control measures begun in December~\cite[event 12 and file-0004, section 5]{record}.
-
-\subsection{The defense's technical report}
-
-The defense imported Israel's December 9 Security Council letter as \code{file-0005}.  The letter acknowledges deployments east of Line A and describes them as limited, temporary measures responding to threats after armed groups attacked UNDOF positions.  It states that Israel's purpose concerned security and disclaims intervention in the conflict between Syrian armed groups~\cite{israelletter}.  The defense compared that contemporaneous statement with the plaintiff's analysis and the full UNDOF report, then filed TR-D1, \emph{Element-by-Element Source and Intent Assessment}, at 08:13~\cite[events 13--18]{record}.
-
-TR-D1 accepted the timing of entry, the presence of troops and tanks, checkpoints, roadblocks, construction, occupied houses, and substantial support for at least some activity beyond the market's Golan exclusion.  Its source matrix separated observations, source characterizations, and the inferences needed to reach the compound proposition.  The report emphasized the attack on UNDOF, the withdrawal of Syrian authorities, and Israel's December 8--9 descriptions of its purpose.  It argued that the UN's observations established conduct without deciding the market's undefined term ``military offensive.''
-
-The defense's central interpretive distinction concerned the purpose of control:
-\begin{quote}
-A narrower reading gives effect to all words by asking whether establishing control was the operation's objective, rather than an incidental means of threat prevention.
-\end{quote}
-It treated the December 17 statement as evidence of conditional persistence compatible with the stated security purpose.  It questioned backward inferences from January and February, allowing the possibility of an evolving mission~\cite[file-0006, sections 3E--3F]{record}.  The contrast with TR-P1 was explicit: the plaintiff treated intended territorial control as sufficient even when security supplied the reason for exercising it, while the defense demanded that control constitute an objective distinguishable from threat prevention.
-
-The defense described the Israeli letter as denying the required offensive-control purpose.  The letter's text states a defensive security purpose, temporary deployment, and nonintervention in Syria's internal conflict.  Whether those statements exclude the market's required intent remains an inference.  TR-D1 acknowledged that government letters contain interested characterizations and that internal orders, observation logs, and surveyed coordinates were unavailable.  It also identified a record omission: the AP and prime-ministerial material cited in TR-P1 had yet to be imported as standalone sources~\cite[event 18 and file-0006]{record}.
-
-\subsection{Discovery and the disputed criteria}
-
-The plaintiff responded to the sourcing objection by importing the December 17 Associated Press article as published by PBS NewsHour.  Its work note identified the article's statements about the Syrian summit, continued deployment, fortifications, and anticipated duration.  ADC registered the retained HTML as \code{file-0007} at 08:14~\cite[event 19 and plaintiff work notes at 08:13:51--08:14:34]{record}.
-
-Each side then served five interrogatories.  The plaintiff requested specific admissions or denials of the UNDOF observations, the defense's definition of an offensive, its intent theory and any claimed change of mission, the location of each disputed position, and supporting records and knowledgeable persons.  The defendant asked for the plaintiff's operational definition, evidence of intent at commencement, non-Golan locations, exact official language supporting each criterion, and the source universe and method behind a claimed consensus of reporting~\cite[events 20--21]{record}.  These requests put the parties' interpretations and source-selection methods into discovery.
-
-Before answering, the plaintiff imported a December 8 BBC report as \code{file-0008}.  Its answers identified that report and the AP reporting, distinguished AP republication from independent reporting, and disclaimed an exhaustive media census or a numerical consensus test.  It relied primarily on official sources.  Its answer about official confirmation stated:
-\begin{quote}
-No single official document repeats the full compound market formula verbatim; Proponent relies on the convergent official confirmations and reasonable inferences from their recorded facts.
-\end{quote}
-The remaining answers defined offensive action to include a coordinated forward operation using armed personnel and coercive measures to seize, secure, or hold foreign objectives.  They distinguished reported security purposes from inferred control intent, identified missing coordinates and internal orders, and restricted later observations to corroboration~\cite[events 22--24]{record}.
-
-The defense's answers narrowed the factual disagreement.  It accepted the observations as reported, acknowledged the evidentiary force of fortifications and an extended stay, and made no affirmative claim that the identified Qunaytirah, Syrian summit, or east-of-Line-A sites fell within the market-deemed Golan.  It also made no affirmative claim that the mission changed on a particular date.  It defined an offensive as an organized attack or advance directed against an opposing force or objective, while excluding temporary defensive ground-holding based only on the presence of armed personnel.  Its intent answer described the claimed proof failure as distinct from inside knowledge of Israeli decision-makers.  Its objections concerned burden shifting and demands for unknown foreign-government records, with substantive answers following those objections~\cite[event 25]{record}.
-
-\subsection{Document production and context growth}
-
-The plaintiff served ten production requests, and the defense served eleven.  The requests addressed underlying observations, operational records, geography, reporting provenance, source authentication, and market history.  The plaintiff imported an archived reproduction of the December 17 prime-ministerial release as \code{file-0009}.  While preparing its itemized production response, it searched its retained workspace and found another cited but unfiled source: AP's December 9 article.  It imported and produced that capture as \code{file-0010}.  The same inspection identified a purported UNDOF web capture as a 403 error page.  The lawyer recorded that the file supplied no substantive source text~\cite[events 26--28, 44, and 47; plaintiff work note at 08:30:17]{record}.
-
-The plaintiff's itemized response identified eight produced files.  It disclosed that it held no internal orders, UNDOF source logs, surveyed coordinates, complete market or oracle history, or external authority for its operational definitions.  The defense produced seven files and made corresponding disclosures in its response.  Both distinguished available public sources from institutional records outside their possession or control.  ADC accepted their responses at 08:32 and 08:47, respectively~\cite[events 50 and 93]{record}.
-
-Production required repeated decisions about the same documents.  The engine clears its list of passed opportunities after a case update, making previously declined production candidates available again.  The lawyers repeatedly declined copies they regarded as excluded duplicates.  Between the first production and the defense's itemized response, the record contains fifteen production acts and forty-seven passes over twenty-three minutes~\cite[events 29--93]{record}.  The source identifies the mechanism in \code{updateCase}, \code{recordOpportunityPass}, and \code{openOpportunities}~\cite{adccore}.  The repetition increased the number of model calls and produced repetitive work notes even when the lawyers' reasons remained unchanged.
-
-Both lawyers also encountered provider context-window errors during production.  Pi completed its built-in compaction without operator intervention in each session, reporting reductions from approximately 925,000 tokens to estimated contexts of approximately 15,000 tokens.  The lawyers then continued filing, with the court state, registered files, and earlier work notes still available.  Recent plaintiff requests before compaction reported more than 750,000 cached input tokens~\cite[participant process logs and events 41 and 72]{record}.
-
-Work-note acknowledgments also add to the retained context.  The ADC role API returns the current opportunity, including the role-visible case view, after a successful note submission~\cite{roleapi}.  Two plaintiff acknowledgments inspected during admissions each contained approximately 51,000 characters.  Thus even a short note can receive a long response containing repeated case material~\cite[plaintiff process log]{record}.
-
-\subsection{Admissions and evidentiary limits}
-
-The plaintiff served twelve requests for admission, and the defense served fourteen.  Both sets sought source-authenticity admissions.  The plaintiff also isolated dated observations, non-Golan ground-holding, means of controlling access, and the December 17 statements before requesting admission of the compound proposition.  The defense asked about source language and limits already identified during discovery~\cite[events 99 and 105]{record}.
-
-The plaintiff admitted the documents' authenticity and the stated limitations, with qualifications about the inferences they supported.  It acknowledged that no single official document recited the complete market formula, that no produced operational order or contemporaneous statement expressly identified establishing territorial control as the purpose at commencement, and that no produced document connected the assessed aircraft fire operationally to the ground entry.  It admitted the absence of a surveyed position-by-position boundary record and an exhaustive media census.  It continued to rely on the combined official accounts and conduct as proof by inference~\cite[event 111]{record}.
-
-The defense admitted the authenticity of the official documents, the reported December observations, and in-window timing.  Its response to the ninth request stated:
-\begin{quote}
-Files 0003 and 0005 establish physical ground-holding at least at selected points on Syrian territory outside the Golan Heights deemed Israeli by file-0001.
-\end{quote}
-It qualified geography beyond the identified locations, admitted that checkpoints and fortifications can control access and use, and acknowledged the December 17 conditional-duration statement and reported fortification instruction.  It denied the final compound request, preserving the distinction between the admitted conduct and its contested offensive character and purpose~\cite[event 118]{record}.  The admissions therefore narrowed the dispute while leaving its decisive classification and intent questions contested.
-
-The plaintiff declined the Rule 37 opportunity to seek an order compelling discovery.  It stated that the defense had answered each request, produced identified controlled sources, and given specific possession-and-control limitations.  Its reason for passing concluded:
-\begin{quote}
-Merits disagreement should be resolved under Rule 56 or at trial, not through a motion to compel.
-\end{quote}
-The court recorded the pass at 09:02.  The defense also passed at 09:04, finding no identified responsive record withheld and describing the remaining disputes as questions of weight and inference~\cite[events 124 and 130]{record}.
-
-\subsection{The summary-judgment opportunities}
-
-The plaintiff also declined to seek summary judgment.  Although most historical facts were admitted, it identified offensive character and intended control as disputed material inferences.  It stated that Rule 56 required drawing those inferences for the defendant and that a reasonable jury could accept the defense's distinction between control as an objective and temporary defensive means.  It regarded partial relief on already admitted facts as redundant and selected trial at its 09:06 opportunity~\cite[event 136]{record}.
-
-The defense reached the corresponding conclusion at 09:09.  It described competing reasonable inferences about offensive character and purpose at commencement, acknowledged evidence on both sides, and reserved its burden-of-proof arguments for trial~\cite[event 142]{record}.
-
-The judge entered the pretrial order at 09:11.  It preserved the single declaratory claim and the plaintiff's burden, adopted the recorded admissions as established for trial subject to their qualifications, and identified the questions left for decision.  Those questions included offensive classification, intent at commencement, the weight of the Israeli and Syrian characterizations, the significance of the December 17 evidence, and the sufficiency of the combined official sources.  It listed all ten registered files as potential exhibits subject to objections and later rulings.  The order confined trial to those issues~\cite[event 148]{record}.
-
-\subsection{Questionnaires and individual examination}
-
-The court entered the trial phase at 09:15 and configured a nine-member jury with six required votes.  The clerk assembled thirteen candidates from the installed pool.  The questionnaire asked about attention, impartiality, hardship, the burden of proof, prior knowledge, reliance on admitted evidence, source preferences, remedies, and other possible conflicts~\cite[events 155--171]{record}.
-
-Five candidates failed during the questionnaire stage.  Seed 1.6 Flash returned a prose case summary after reading its opportunity.  Qwen3 VL 8B Thinking and Aion 2.0 ended their responses without completing the required act.  MiniMax M3 made malformed MCP calls and exited without a completed questionnaire.  Qwen3.5 27B exceeded its deadline while a model request remained outstanding.  ADC recorded each failure and supplied a replacement.  Fourteen candidates eventually completed questionnaires, including the later replacement for MiMo V2.5, which answered its questionnaire but timed out on a follow-up question~\cite[events 172--215 and juror process logs]{record}.
-
-The plaintiff's questions concentrated on circumstantial proof and independent assessment of reported conduct.  Its first question asked whether J1 could infer intent from circumstantial evidence and weigh acts independently of source labels.  J1 accepted that instruction.  Similar questions to J6, J7, J8, and J9 received assurances that the candidates could follow it.  J5 had described a professional background in council work.  The plaintiff asked whether it could set aside any conflicting assumptions from that claimed experience, but J5 supplied no completed answer before replacement~\cite[events 202--236]{record}.  The claimed professional background came from the model's questionnaire response and had no independent verification.
-
-The defense varied its questions across the conjunctive elements, allocation of the burden, source assessment, time-specific intent, and geopolitical bias.  Asked about the defense's burden, J6 answered:
-\begin{quote}
-I understand that the Opponent bears no burden to prove an alternative explanation or to disprove the proposition, and that if the Proponent's evidence does not make every required element more likely than not, I must find the proposition not proved.
-\end{quote}
-The other completed answers accepted the proposed distinctions.  Both advocates declined further questioning of later candidates as cumulative.  The record contains twelve proposed questions and eleven completed answers, with J5's unanswered question accounting for the difference~\cite[events 254--287]{record}.
-
-Both parties declined challenges for cause because the questionnaires and answers supplied no stated disqualification.  The plaintiff then used a peremptory strike against J1.  J1's questionnaire had promised to give weight to ``reliable sources and direct evidence.''  Although J1 later accepted circumstantial proof, the plaintiff identified that preference as a strategic concern for its intent theory.  ADC accepted the strike at 12:34~\cite[events 172, 205, and 294--296]{record}.
-
-\subsection{The unfinished defense strike}
-
-The defendant compared the remaining candidates and recorded its intended strike against J9 at 12:51.  Its note preferred candidates who had supplied express answers about the defense's lack of a burden, source scrutiny, timing, and separate elements.  It described J9's short assurances as giving comparatively less confidence in those subjects.  This was a reported strategic assessment, with no finding that J9 was disqualified~\cite[defense work note at 12:51:43]{record}.
-
-The defense never submitted that strike.  Its session recorded a model response with the error ``terminated'' at 12:51:06, followed by successful tool calls and the final work-note acknowledgment.  No later decision reached ADC.  The core stopped at turn 225 with \code{defendant opportunity timed out after 25m0s}, and the launcher recorded failure at 13:08:33.  The evidence available here establishes an unfinished model interaction and the resulting court timeout.  It does not identify the cause of the unfinished interaction~\cite[defense session, process logs, and launcher result]{record}.
+The court selected jury trial and advanced the case to pretrial.  The plaintiff inspected the initial attachment and prepared disclosures identifying public declarants and institutional custodians as potential sources.  Its work note distinguished the supplied rationale from independent proof and identified zero monetary damages~\cite[events 4--6 and plaintiff work notes at 14:33:51--14:34:10]{record}.
 
 \section{Verification and Limitations}
 
-The proceeding ended before jury empanelment, evidence presentation, verdict, or judgment.  The retained event database ends at event 309.  The core did not write its normal final case state or replay certificate, so this draft reports no final certificate verification.  The launcher retained the source files, filings, work notes, sessions, and process logs~\cite{record}.
-
-The lawyer process logs contain 1,003 completed assistant response events, seven completed Pi compactions, and a cumulative token-price estimate of \$417.19.  These Codex subscription-session estimates do not establish charges and exclude court, juror, and search subrequests.  The record therefore supports analysis of research, discovery, jury selection, and execution failures, while the requested adjudicative result remains unavailable.
+The adjudication and its final verification remain in progress.
 
 \begin{thebibliography}{99}
-\bibitem{adj} AgentCourt.  \emph{Adjudication Core}.  Repository documentation at source revision \code{dbde6f0}, September 2026.  \url{https://github.com/agentcourt/adj}.
+\bibitem{adj} AgentCourt.  \emph{Adjudication Core}.  Repository documentation at source revision \code{87de350}, September 2026.  \url{https://github.com/agentcourt/adj}.
 \bibitem{procedures} Jamie Stephens.  \emph{Five Adjudication Procedures by Procedural Complexity}.  \path{reports/marxiv/procedure-complexity/paper.pdf}, in the adj repository.
 \bibitem{arbpaper} Jamie Stephens.  \emph{Adjudicating a Prediction-Market Resolution: An ARB Case Study of Israel's December 2024 Entry into Syria}.  marXiv:2609.00009, 2026.
-\bibitem{adcmanual} AgentCourt.  \emph{Agent District Court Manual}.  \code{adc/manual.md}, adj, revision \code{dbde6f0}.
-\bibitem{practice} AgentCourt.  \emph{Agent District Court Practice Guide}.  \code{adc/docs/practice.md}, adj, revision \code{dbde6f0}.
-\bibitem{arcp} AgentCourt.  \emph{Agent Rules for Civil Procedure}.  \code{adc/docs/ARCP.md}, adj, revision \code{dbde6f0}.
-\bibitem{logic} AgentCourt.  \emph{Procedure Execution}.  \code{adc/docs/logic.md}, adj, revision \code{dbde6f0}.
-\bibitem{adccore} AgentCourt.  \emph{ADC Lean Engine}.  \path{adc/engine/ADC/Core.lean}, adj, revision \code{dbde6f0}.
-\bibitem{roleapi} AgentCourt.  \emph{ADC Role API}.  \path{adc/runtime/runner/roleapi.go}, adj, revision \code{dbde6f0}.
+\bibitem{adcmanual} AgentCourt.  \emph{Agent District Court Manual}.  \code{adc/manual.md}, adj, revision \code{87de350}.
+\bibitem{practice} AgentCourt.  \emph{Agent District Court Practice Guide}.  \code{adc/docs/practice.md}, adj, revision \code{87de350}.
+\bibitem{arcp} AgentCourt.  \emph{Agent Rules for Civil Procedure}.  \code{adc/docs/ARCP.md}, adj, revision \code{87de350}.
+\bibitem{logic} AgentCourt.  \emph{Procedure Execution}.  \code{adc/docs/logic.md}, adj, revision \code{87de350}.
+\bibitem{adccore} AgentCourt.  \emph{ADC Lean Engine}.  \path{adc/engine/ADC/Core.lean}, adj, revision \code{87de350}.
+\bibitem{roleapi} AgentCourt.  \emph{ADC Role API}.  \path{adc/runtime/runner/roleapi.go}, adj, revision \code{87de350}.
 \bibitem{poolpaper} Jamie Stephens.  \emph{Generating Tool-Capable, Behavior-Stratified Model Pools for Adjudication}.  marXiv:2608.00051, 2026.
-\bibitem{poolmanual} AgentCourt.  \emph{Model-Pool Tools}.  \code{model-pool/README.md}, adj, revision \code{dbde6f0}.
-\bibitem{runbook} AgentCourt.  \emph{Sampling Runbook}.  \path{model-pool/docs/sampling-runbook.md}, adj, revision \code{dbde6f0}.
-\bibitem{juries} AgentCourt.  \emph{Juries}.  \code{adc/docs/juries.md}, adj, revision \code{dbde6f0}.
-\bibitem{proofs} AgentCourt.  \emph{ADC Proofs}.  \code{adc/docs/proofs.md}, adj, revision \code{dbde6f0}.
-\bibitem{example} AgentCourt.  \emph{Israel--Syria prediction-market example}.  \path{examples/ex04/complaint.md} and \code{market-rules.md}, adj, revision \code{dbde6f0}.
+\bibitem{poolmanual} AgentCourt.  \emph{Model-Pool Tools}.  \code{model-pool/README.md}, adj, revision \code{87de350}.
+\bibitem{runbook} AgentCourt.  \emph{Sampling Runbook}.  \path{model-pool/docs/sampling-runbook.md}, adj, revision \code{87de350}.
+\bibitem{juries} AgentCourt.  \emph{Juries}.  \code{adc/docs/juries.md}, adj, revision \code{87de350}.
+\bibitem{proofs} AgentCourt.  \emph{ADC Proofs}.  \code{adc/docs/proofs.md}, adj, revision \code{87de350}.
+\bibitem{example} AgentCourt.  \emph{Israel--Syria prediction-market example}.  \path{examples/ex04/complaint.md} and \code{market-rules.md}, adj, revision \code{87de350}.
 \bibitem{disengagement} Israel and Syria.  \emph{Agreement on Disengagement}, May 31, 1974, section B.  United Nations text, S/11302/Add.1.  \url{https://www.un.org/unispal/document/auto-insert-179522/}.
 \bibitem{syrialetter} Koussay Aldahhak.  \emph{Identical letters dated 9 December 2024 from the Permanent Representative of the Syrian Arab Republic to the United Nations addressed to the Secretary-General and the President of the Security Council}.  A/79/687--S/2024/888, distributed December 11, 2024.  \url{https://documents.un.org/doc/undoc/gen/n24/395/41/pdf/n2439541.pdf}.
 \bibitem{undofreport} United Nations Secretary-General.  \emph{United Nations Disengagement Observer Force: Report of the Secretary-General}.  S/2025/154, March 12, 2025, paragraphs 2, 6--7, 13, and 20.  \url{https://documents.un.org/api/symbol/access?l=en&s=S%2F2025%2F154&t=pdf}.
 \bibitem{israelletter} Danny Danon.  \emph{Identical letters dated 9 December 2024 from the Permanent Representative of Israel to the United Nations addressed to the Secretary-General and the President of the Security Council}.  S/2024/887, December 9, 2024.  \url{https://documents.un.org/doc/undoc/gen/n24/386/65/pdf/n2438665.pdf}.
-\bibitem{record} AgentCourt.  \emph{Israel--Syria ADC case record}, run \code{ex04-20260919-03}.  Retained under \path{adc/out/ex04-20260919-03/} in the execution checkout.  The \code{case/core/} directory contains the event database, work notes, and court files.  The \code{case/logs/} and \code{case/work/} directories retain participant tool activity and research.  Generated case records are outside the versioned report.
+\bibitem{record} AgentCourt.  \emph{Israel--Syria ADC case record}, run \code{ex04-20260919-04}.  Retained under \path{adc/out/ex04-20260919-04/} in the execution checkout.  The \code{case/core/} directory contains the event database, work notes, and court files.  The \code{case/logs/} and \code{case/work/} directories retain participant tool activity and research.  Generated case records are outside the versioned report.
 \end{thebibliography}
 \end{document}
