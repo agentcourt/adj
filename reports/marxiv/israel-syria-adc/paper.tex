@@ -151,6 +151,8 @@ The remaining answers defined offensive action to include a coordinated forward 
 
 The defense's answers narrowed the factual disagreement.  It accepted the observations as reported, acknowledged the evidentiary force of fortifications and an extended stay, and made no affirmative claim that the identified Qunaytirah, Syrian summit, or east-of-Line-A sites fell within the market-deemed Golan.  It also made no affirmative claim that the mission changed on a particular date.  It defined an offensive as an organized attack or advance directed against an opposing force or objective, while excluding temporary defensive ground-holding based only on the presence of armed personnel.  Its intent answer described the claimed proof failure as distinct from inside knowledge of Israeli decision-makers.  Its objections concerned burden shifting and demands for unknown foreign-government records, with substantive answers following those objections~\cite[event 25]{record}.
 
+\subsection{Document production and context growth}
+
 The plaintiff served ten production requests, and the defense served eleven.  The requests addressed underlying observations, operational records, geography, reporting provenance, source authentication, and market history.  The plaintiff imported an archived reproduction of the December 17 prime-ministerial release as \code{file-0009}.  While preparing its itemized production response, it searched its retained workspace and found another cited but unfiled source: AP's December 9 article.  It imported and produced that capture as \code{file-0010}.  The same inspection identified a purported UNDOF web capture as a 403 error page.  The lawyer recorded that the file supplied no substantive source text~\cite[events 26--28, 44, and 47; plaintiff work note at 08:30:17]{record}.
 
 The plaintiff's itemized response identified eight produced files.  It disclosed that it held no internal orders, UNDOF source logs, surveyed coordinates, complete market or oracle history, or external authority for its operational definitions.  The defense produced seven files and made corresponding disclosures in its response.  Both distinguished available public sources from institutional records outside their possession or control.  ADC accepted their responses at 08:32 and 08:47, respectively~\cite[events 50 and 93]{record}.
@@ -158,6 +160,26 @@ The plaintiff's itemized response identified eight produced files.  It disclosed
 Production required repeated decisions about the same documents.  The engine clears its list of passed opportunities after a case update, making previously declined production candidates available again.  The lawyers repeatedly declined copies they regarded as excluded duplicates.  Between the first production and the defense's itemized response, the record contains fifteen production acts and forty-seven passes over twenty-three minutes~\cite[events 29--93]{record}.  The source identifies the mechanism in \code{updateCase}, \code{recordOpportunityPass}, and \code{openOpportunities}~\cite{adccore}.  The repetition increased the number of model calls and produced repetitive work notes even when the lawyers' reasons remained unchanged.
 
 Both lawyers also encountered provider context-window errors during production.  Pi completed its built-in compaction without operator intervention in each session, reporting reductions from approximately 925,000 tokens to estimated contexts of approximately 15,000 tokens.  The lawyers then continued filing, with the court state, registered files, and earlier work notes still available.  Recent plaintiff requests before compaction reported more than 750,000 cached input tokens~\cite[participant process logs and events 41 and 72]{record}.
+
+Work-note acknowledgments also add to the retained context.  The ADC role API returns the current opportunity, including the role-visible case view, after a successful note submission~\cite{roleapi}.  Two plaintiff acknowledgments inspected during admissions each contained approximately 51,000 characters.  Thus even a short note can receive a long response containing repeated case material~\cite[plaintiff process log]{record}.
+
+\subsection{Admissions and evidentiary limits}
+
+The plaintiff served twelve requests for admission, and the defense served fourteen.  Both sets sought source-authenticity admissions.  The plaintiff also isolated dated observations, non-Golan ground-holding, means of controlling access, and the December 17 statements before requesting admission of the compound proposition.  The defense asked about source language and limits already identified during discovery~\cite[events 99 and 105]{record}.
+
+The plaintiff admitted the documents' authenticity and the stated limitations, with qualifications about the inferences they supported.  It acknowledged that no single official document recited the complete market formula, that no produced operational order or contemporaneous statement expressly identified establishing territorial control as the purpose at commencement, and that no produced document connected the assessed aircraft fire operationally to the ground entry.  It admitted the absence of a surveyed position-by-position boundary record and an exhaustive media census.  It continued to rely on the combined official accounts and conduct as proof by inference~\cite[event 111]{record}.
+
+The defense admitted the authenticity of the official documents, the reported December observations, and in-window timing.  Its response to the ninth request stated:
+\begin{quote}
+Files 0003 and 0005 establish physical ground-holding at least at selected points on Syrian territory outside the Golan Heights deemed Israeli by file-0001.
+\end{quote}
+It qualified geography beyond the identified locations, admitted that checkpoints and fortifications can control access and use, and acknowledged the December 17 conditional-duration statement and reported fortification instruction.  It denied the final compound request, preserving the distinction between the admitted conduct and its contested offensive character and purpose~\cite[event 118]{record}.  The admissions therefore narrowed the dispute while leaving its decisive classification and intent questions contested.
+
+The plaintiff declined the Rule 37 opportunity to seek an order compelling discovery.  It stated that the defense had answered each request, produced identified controlled sources, and given specific possession-and-control limitations.  Its reason for passing concluded:
+\begin{quote}
+Merits disagreement should be resolved under Rule 56 or at trial, not through a motion to compel.
+\end{quote}
+The court recorded the pass at 09:02.  The defense also passed at 09:04, finding no identified responsive record withheld and describing the remaining disputes as questions of weight and inference~\cite[events 124 and 130]{record}.
 
 \section{Verification and Limitations}
 
@@ -172,6 +194,7 @@ The adjudication and its final verification remain in progress.
 \bibitem{arcp} AgentCourt.  \emph{Agent Rules for Civil Procedure}.  \code{adc/docs/ARCP.md}, adj, revision \code{dbde6f0}.
 \bibitem{logic} AgentCourt.  \emph{Procedure Execution}.  \code{adc/docs/logic.md}, adj, revision \code{dbde6f0}.
 \bibitem{adccore} AgentCourt.  \emph{ADC Lean Engine}.  \path{adc/engine/ADC/Core.lean}, adj, revision \code{dbde6f0}.
+\bibitem{roleapi} AgentCourt.  \emph{ADC Role API}.  \path{adc/runtime/runner/roleapi.go}, adj, revision \code{dbde6f0}.
 \bibitem{poolpaper} Jamie Stephens.  \emph{Generating Tool-Capable, Behavior-Stratified Model Pools for Adjudication}.  marXiv:2608.00051, 2026.
 \bibitem{poolmanual} AgentCourt.  \emph{Model-Pool Tools}.  \code{model-pool/README.md}, adj, revision \code{dbde6f0}.
 \bibitem{runbook} AgentCourt.  \emph{Sampling Runbook}.  \path{model-pool/docs/sampling-runbook.md}, adj, revision \code{dbde6f0}.
