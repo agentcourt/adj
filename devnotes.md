@@ -1153,7 +1153,11 @@ The report distinguishes lawyer-supplied exhibit admission flags from judicial a
 
 The lawyer token-price estimate is $381.25, including four completed compactions.  The subscription-authenticated sessions do not establish an additional billed charge.  Court and juror accounting remains incomplete.  PDF compilation completed without unresolved references or overfull text boxes.  The title page, candidate table, exhibit table, and instruction/vote pages were visually checked.
 
-The marXiv requirements and style manual were read from http://127.0.0.1:8405/standards.md and http://127.0.0.1:8405/style.md.  Submission 5426fd156fae is under review at http://127.0.0.1:8405/status/5426fd156fae.  It names the related ARB and model-pool reports.  Public export was left disabled.
+The marXiv requirements and style manual were read from http://127.0.0.1:8405/standards.md and http://127.0.0.1:8405/style.md.  Submission 5426fd156fae was accepted as [marXiv:2609.00015](http://127.0.0.1:8405/abs/2609.00015).  It names the related ARB and model-pool reports.  Public export was left disabled.
+
+The editor requested a definition of Pi, removal of repeated descriptions and analytically unused activity counts, and identification of the four jurors relying on the absence of changed purpose.  The revision addresses each remark, retaining the case narrative, quotations, and vote explanations.  The official [Pi documentation](https://github.com/earendil-works/pi) supplies the software description.  The revised PDF remains 37 pages, with references resolved and the changed layout checked.  Replacement submission [de8d9962ce9d](http://127.0.0.1:8405/status/de8d9962ce9d) was accepted as version 2.  The complete reviews and responses are retained in the [review record](reports/marxiv/israel-syria-adc/review.md).
+
+The second review identified five remaining repetitive or introductory sentences.  Those were removed or replaced with the specific result of voir dire.  Submission [4336b127fab5](http://127.0.0.1:8405/status/4336b127fab5) is under review as a replacement for the same paper.  The PDF remains 37 pages.  The case facts and quotations are unchanged.
 
 - [x] Complete and review the narrative and record excerpts.
 - [x] Check quotations, counts, timestamps, verdict, and PDF layout.

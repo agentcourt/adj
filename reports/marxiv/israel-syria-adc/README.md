@@ -15,4 +15,4 @@ Build from this directory with the installed pdfLaTeX packages.  A further pass 
     pdflatex -interaction=nonstopmode -halt-on-error paper.tex
     pdflatex -interaction=nonstopmode -halt-on-error paper.tex
 
-Submission [5426fd156fae](http://127.0.0.1:8405/status/5426fd156fae) is under editorial review.  The submitted PDF has 37 pages.
+The report was accepted as [marXiv:2609.00015](http://127.0.0.1:8405/abs/2609.00015).  Version 2 was also accepted.  A second revision addressing the remaining editorial remarks is under review as submission [4336b127fab5](http://127.0.0.1:8405/status/4336b127fab5).  The revised PDF has 37 pages.

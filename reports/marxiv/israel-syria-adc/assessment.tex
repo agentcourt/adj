@@ -28,7 +28,7 @@ The market period extended through December 31.  A control-seeking operation com
 
 The jury charge used “offensive in method” and “actual authority or dominion” to express the operative criteria.  Those terms gave both sides a way to separate motive, conduct, and control.  They also required interpretation.  The record contains no measured operational threshold for when purposeful military presence becomes an offensive method or when control incidental to a protective deployment becomes an objective to establish territorial authority.  The majority inferred the threshold from the combined conduct.  The dissent found the purpose evidence insufficient at commencement.
 
-The most developed majority explanations gave affirmative reasons for their conclusions.  They named intentional cross-line position-taking, continued occupation, fortification, and conditional withdrawal.  Several also relied on the absence of evidence of changed purpose.  That absence can be considered alongside a supported continuity inference, but it cannot alone transfer the burden to the defendant.  J1's dissent and the defense's closing identify the precise risk.  The explanations permit examination of it, while leaving the report without a controlled test of whether a different instruction would change a vote.
+The most developed majority explanations gave affirmative reasons for their conclusions.  They named intentional cross-line position-taking, continued occupation, fortification, and conditional withdrawal.  Four jurors, J2, J6, J12, and J15, also relied on the absence of evidence of changed purpose.  That absence can be considered alongside a supported continuity inference, but it cannot alone transfer the burden to the defendant.  J1's dissent and the defense's closing identify the precise risk.  The explanations permit examination of it, while leaving the report without a controlled test of whether a different instruction would change a vote.
 
 \subsection{Vote explanation and access to earlier ballots}
 
@@ -46,7 +46,7 @@ The judge performed identifiable work: selecting trial mode, entering the pretri
 
 The proceeding used a documentary trial.  Counsel named public declarants and institutions as sources, but the record contains no live testimony, witness examination, or subpoena-produced internal records.  The two technical reports were prepared by the same model lawyers who advocated the competing outcomes.  Their systematic structure made assumptions and source limits inspectable, but supplied no separate expert witness or independently tested expert method.
 
-Lean's role concerns the encoded procedure.  It enforced opportunity authority, limits, the zero-damages requirement, and the recorded transition sequence.  Its acceptance of an exhibit offer followed an API that lets counsel specify admission status.  Its acceptance of a vote required valid fields and a permitted juror, while the explanation's factual and inferential quality remained a subject for review.  Verification must be read at those boundaries.
+Lean's role concerns the encoded procedure.  It enforced opportunity authority, limits, the zero-damages requirement, and the recorded transition sequence.  Its acceptance of an exhibit offer followed an API that lets counsel specify admission status.  Its acceptance of a vote required valid fields and a permitted juror, while the explanation's factual and inferential quality remained a subject for review.
 
 \section{Execution, Cost Records, and Verification}
 
@@ -58,35 +58,17 @@ At 15:00:53, the plaintiff's submitted note explained the changed responsiveness
 \begin{quote}
 Responsiveness reassessed under RFP 8's broad 'materials considered or relied on' wording: although file-0001 is already shared and was used only for the governing test, it was considered in preparing TR-P1.
 \end{quote}
-That decision has an evidentiary explanation, but the repeated return of already-passed opportunities has a runtime explanation.  Both appear in the record.  The repeated passes increased interaction without adding new historical sources.
+That decision has an evidentiary explanation, but the repeated return of already-passed opportunities has a runtime explanation.  The repeated passes increased interaction without adding new historical sources.
 
-The lawyers' logs contain 898 completed assistant-response events and four completed context compactions.  Pi reported approximately 923,000--928,000 tokens before those compactions and approximately 15,500--15,700 estimated tokens afterward.  These are Pi's reported context quantities.  Compaction replaced earlier session content with model-produced summaries and allowed the lawyers to continue.  A further compaction-start event appears at the end of the combined logs without a completed result.
+The lawyer sessions completed four context compactions.  Pi reported approximately 923,000--928,000 tokens before those compactions and approximately 15,500--15,700 estimated tokens afterward.  These are Pi's reported context quantities.  Compaction replaced earlier session content with model-produced summaries and allowed the lawyers to continue.  A further compaction-start event appears at the end of the combined logs without a completed result.
 
 Work-note acknowledgments contributed to the volume of repeated state.  The role API's \code{send\_work\_notes} handling calls \code{opportunityPayloadLocked}, which attaches the role-visible view even when it omits a freshly rendered prompt~\cite{roleapi}.  Thus a short note could receive a growing case record.  Counsel also continued making wait-related model requests while jurors occupied the court turn.  These mechanisms account for observed repeated material and activity.  The record does not assign an exact fraction of total token use to either mechanism.
 
-The work-note file contains 46 plaintiff notes, 100 defense notes, and one juror note.  Selected notes capture source findings, planned concessions, proposed questions, and decisions to pass on unsupported motions.  Other notes announce the next permitted act or repeat a completed assessment.  The notes support reconstruction of strategy, with uneven informational value across entries.  Their counts measure submissions, not distinct discoveries.
+Submitted notes capture source findings, planned concessions, proposed questions, and decisions to pass on unsupported motions.  Other notes announce the next permitted act or repeat a completed assessment.  The notes support reconstruction of strategy, with uneven informational value across entries.
 
 \subsection{Errors by point of failure}
 
-The event database and Pi logs describe different error classes.  Table~\ref{tab:errors} separates them because only some errors reached ADC's decision validation.  The difference determined whether a counted attempt, correction, replacement, or deadline ended the problem.
-
-\begin{longtable}{@{}L{0.23\linewidth}L{0.37\linewidth}L{0.32\linewidth}@{}}
-\caption{Recorded failures and their consequences.}\label{tab:errors}\\
-\toprule Stage & Failure & Consequence\\ \midrule
-\endfirsthead
-\toprule Stage & Failure & Consequence\\ \midrule
-\endhead
-Defense source reading & Text-file tool rejected a PDF. & Lawyer requested or downloaded bytes and used local PDF extraction.\\
-Candidate checks & Upstream rate-limit responses for selected configurations. & Configured retries occurred during panel preparation.\\
-J3 questionnaire & Process ended without submitting. & Candidate replaced by J14.\\
-J9 questionnaire & Four malformed argument strings. & Corrected questionnaire accepted.\\
-J13 questionnaire & Empty tool name, then HTTP 400 on request history. & Candidate replaced by J15.\\
-J14 questionnaire & 251 malformed argument strings before the 25-minute deadline. & Candidate replaced by J16.\\
-Two trial theories & Payloads exceeded 4,000-character limit. & Shorter versions accepted.\\
-J5 deliberation & Process ended with advice instead of a vote. & Juror removed from eligible body.\\
-J15 deliberation & One-dollar award in a declaratory case. & Corrected zero-damages vote accepted.\\
-\bottomrule
-\end{longtable}
+The location of a failure determined which limit and recovery procedure applied.  Pi rejected malformed argument strings before dispatch, so those calls bypassed ADC's decision-attempt counter.  ADC received the overlength theories and nonzero-damages vote, returned a procedural error, and accepted corrected submissions.  A process that ended without its required act used the participant-failure procedure.  That procedure replaced failed candidates during selection and removed a failed sworn juror during deliberation.
 
 The long J14 episode motivated a separate, configurable Pi court-submission error counter.  The later implementation defaults to ten errors per participant opportunity and counts malformed or otherwise rejected court submissions inside Pi.  Court reads and unrelated research tools use their existing handling.  Live tests of that later implementation belong to a separate development record.  They did not alter this case, which retained its original executable and 25-minute deadline.  The report's observations about this run therefore include the full malformed-call interval.
 
