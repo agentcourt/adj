@@ -18,7 +18,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-Incomplete working draft.  The ADC proceeding begun on September 19, 2026 stopped during jury selection after model-gateway errors.  It produced no verdict.  The approved configuration uses two research-capable Pi lawyers, nine jurors, six required votes, and the preponderance standard.
+Incomplete working draft.  The ADC proceeding begun at 04:28 UTC on September 19, 2026 remains in progress.  It uses two research-capable Pi lawyers, nine jurors, six required votes, and the preponderance standard.
 \end{abstract}
 
 \section{Agent District Court and the adj Procedures}
@@ -53,7 +53,7 @@ A pool record describes a model configuration: model identifier, service endpoin
 
 The generation procedure inventories provider endpoints and checks required tool support.  It screens each candidate through a direct Quick-style \code{submit\_council\_vote} request and a Pi/MCP test following the ARB council sequence.  Accepted configurations answer scored questions.  The deliberation score uses twelve questions from Core20, the project's twenty-question evaluation set.  Those twelve span general knowledge, science and quantitative reasoning, and reasoning.  The score calculates a fraction of correct completed answers per trial, excluding rows with response-metadata errors, and averages over trials containing a counted answer.  Separate measurements cover instruction following and evidence-tool use.  The score describes that question set, without providing an adjudicative-accuracy estimate for this market dispute.
 
-The build underlying the installed pool evaluated 419 configurations.  Its strict deliberation-score threshold above 0.70, together with zero counted provider errors, retained 283.  The next stage collected five responses to each of fourteen behavior prompts, called ``genes'' in the implementation.  These prompts concern subjects such as values, justice, social issues, leadership, and training provenance.  The run used a common generic persona.  Requiring every selected response and embedding request to succeed left 265 configurations~\cite{poolpaper}.
+The run that generated the installed pool evaluated 419 configurations.  Its strict deliberation-score threshold above 0.70, together with zero counted provider errors, retained 283.  The next stage collected five responses to each of fourteen behavior prompts, called ``genes'' in the implementation.  These prompts concern subjects such as values, justice, social issues, leadership, and training provenance.  The run used a common generic persona.  Requiring every selected response and embedding request to succeed left 265 configurations~\cite{poolpaper}.
 
 For each behavior prompt, the procedure embedded the responses, retained eight principal components, and selected a K-means cluster count from 2 through 20 by silhouette score.  Each configuration received a representative label for each prompt.  A unique modal label prevailed, while a tie used the sample nearest its assigned cluster center among the tied labels.  The resulting fourteen-label tuple recorded the configuration's observed grouping across the prompts.
 
@@ -85,118 +85,38 @@ The ADC run uses fresh participant sessions and receives none of the earlier ARB
 
 \section{The ADC Proceeding}
 
-The case began at 00:34 UTC on September 19, 2026.  All times reported for the proceeding are UTC.  The defendant declined a preliminary dismissal motion and filed an answer that accepted the governing market criteria while disputing whether the supplied material proved them.  The answer separated the fact that Polymarket had supplied a rationale from the truth of that rationale~\cite[event 3]{record}:
+The case began at 04:28 UTC on September 19, 2026.  All times for the proceeding are UTC.  The defendant read the initial attachment and declined a preliminary dismissal motion.  Its work note distinguished a dispute about the evidence from a defect in the pleading:
 \begin{quote}
-The attachment's statement of Polymarket's rationale is not admitted as proof that its factual assertions or ultimate inference are true.
+Whether those acts amount to an offensive intended to establish control is a factual merits dispute.
 \end{quote}
-The defense required proof of an offensive, intent to establish control, qualifying geography, and conduct and intent within the specified period.  It preserved objections to foundation, authentication, hearsay, completeness, and evidentiary weight.  The judge selected jury trial and advanced the case to pretrial proceedings.
+The defendant then filed an answer accepting the Tribunal's jurisdiction, the existence of the dispute, declaratory-only relief, and the operative market rules.  It admitted that the attachment recited Polymarket's rationale but denied that the recited assertions established the proposition.  The defense required proof of offensive character, contemporaneous intent, qualifying territory, and conduct within the specified dates~\cite[events 1--3 and work note at 04:29]{record}.
 
-The plaintiff's initial-disclosure notes identified the current documentary limit: both sides had the market-rules attachment, registered as \code{file-0001}.  The plaintiff identified official-source custodians, reporters, and geographic materials as possible sources for further investigation.  Its note before filing stated:
+Both parties served initial disclosures after the judge selected jury trial and advanced the case to pretrial proceedings.  Each identified Netanyahu as a named person with relevant public-source knowledge and government, military, and UN custodians as possible sources.  They distinguished those research leads from collected evidence.  The plaintiff disclosed:
 \begin{quote}
-No unsupported individual witness identities or documents will be claimed.
+At present, file-0001 is the only such material in plaintiff's possession, custody, or control; additional identified sources will be produced and these disclosures supplemented.
 \end{quote}
-The defendant likewise recorded that it had no named fact witness or separately obtained case document.  These disclosures established what counsel possessed before research and distinguished anticipated sources from material already obtained~\cite[work notes, 00:35--00:36 UTC]{record}.
+The defendant likewise stated that it possessed no additional collected responsive material.  Both claimed zero monetary damages.  The disclosures established the starting documentary record and the parties' stated plans for developing it~\cite[events 7--8]{record}.
 
-Before filing its disclosure, the defense searched for official accounts of the deployment.  Its resulting disclosure named Netanyahu, Foreign Minister Gideon Sa'ar, then-IDF Chief of Staff Herzi Halevi, government custodians, UNDOF and UN spokesperson personnel, and U.S. State Department briefing personnel as public-source knowledge holders.  It identified dated documents and briefings for collection, including Israel's December 9 letter to the United Nations and subsequent Israeli, UN, and U.S. statements.  The disclosure expressly reserved production of collected copies and supplementation of contact information.  Naming these speakers established research leads, without adding testimony or their documents to the trial evidence~\cite[event 8]{record}.
-
-\subsection{Source retrieval}
-
-The plaintiff's first technical-report investigation combined searches for official statements with contemporaneous reporting.  It retrieved the UN's December 17 briefing and sought the Israeli government's account of Netanyahu's visit to Mount Hermon.  The government page returned HTTP 403.  Further searches sought Reuters and Associated Press reporting, syndicated copies, and official Syrian and U.S. accounts~\cite[plaintiff tool log]{record}.
-
-Local retrieval also encountered missing software.  A Python command failed because the executable was unavailable under that name, and a subsequent Python 3 attempt failed because the \code{requests} package was absent.  The lawyer then used \code{curl} and the search extension's retrieval tools.  The extension fetched PDF documents, extracted their text into local Markdown, and allowed the lawyer to read that text.  One result was Syria's letter dated December 9, issued as UN document S/2024/888 on December 11, alleging incursions into Jabal al-Shaykh and Qunaytirah alongside shelling.  These calls supplied material for the advocate's assessment before any corresponding filing or exhibit ruling.
-
-The defense used the extension's \code{source\_check} tool to investigate official descriptions of a limited, temporary, defensive deployment and the denial of territorial aspirations.  It restricted the query to Israeli, U.S., and UN domains.  The tool returned ``unclear'' and listed candidate documents, explaining that the passages contained the claim's terms without clear support or contradiction markers.  That result supplied leads but left the source assessment unresolved.  The defense's eventual report quoted and compared the documents and disclosed its reliance on mirrors where official pages restricted retrieval~\cite[defendant tool log and file-0003]{record}.
-
-\subsection{The plaintiff's technical report}
-
-The plaintiff imported its source assessment as \code{file-0002} at 00:51 and then filed technical report TR-P1, linked to that document.  The assessment separated timing, territory, conduct, intent, and the market's permitted sources.  It described the evidentiary status of its classifications:
-\begin{quote}
-I treated direct quotations and observed deployments as facts attributed to their source. Characterizations such as ``offensive,'' ``occupation,'' and ``control'' are conclusions or source characterizations, not instrument measurements.
-\end{quote}
-The report relied on Israel's acknowledgment of deployment east of Line A, UNDOF observations of positions and construction, Syria's letter, statements attributed to Netanyahu, and AP, Reuters, and BBC reporting.  It retained the Israeli and Syrian UN-letter PDFs in the workspace.  The imported document recorded its sources, retrieval context, contrary evidence, and limits~\cite[events 9--10, file-0002]{record}.
-
-The geographic argument used several descriptions of the newly occupied positions.  Israel's letter acknowledged deployment east of Line A.  The December 17 UN briefing identified Mount Hermon, at least nine other positions in the area of separation, and Tank Hill east of the Bravo line.  The plaintiff combined those accounts with press descriptions of the Syrian summit and its separation from the Israel-held Golan.  The report expressly disclaimed original geospatial measurement.  Its conclusion about the market's Golan exclusion therefore depended on the cited descriptions and line terminology.
-
-For offensive character, the plaintiff connected the ground advance, seizure of positions, construction, and the wider air and naval campaign.  It described the market term as undefined and its application as an inference.  It acknowledged that the initial summit post was reportedly abandoned and made no claim of a firefight there.  It also excluded disputed reports of an advance toward Damascus from its reasoning.  The plaintiff's case thus required the court to interpret the combined operation's character, even if it accepted the reported deployments.
-
-The intent argument distinguished the reason for control from the intention to exercise it.  The plaintiff quoted the December 8 order to take over positions and the December 17 statement that deployment would continue until a satisfactory security arrangement.  It argued that temporary or conditional possession could satisfy a rule requiring control of any portion of Syria.  Its source assessment stated:
-\begin{quote}
-Security motivation explains why Israel sought control; it does not negate that intent.
-\end{quote}
-The filing assigned high confidence to deployment and intent to hold, with moderate-to-high confidence in the classification as a military offensive.  These were the advocate's assessments.  The court had yet to rule on the evidence or the merits.
-
-The work-note record gave limited visibility into the middle of this investigation.  The plaintiff submitted an orientation note at 00:38:04 and its next material-findings note at 00:51:45, a gap of thirteen minutes and forty-one seconds while the tool log recorded continuing research.  It then sent three further notes around import and filing.  The retained tool log supports later examination of that interval, but the submitted notes did not describe its intermediate findings as they occurred.
-
-\subsection{The defense's technical report}
-
-The defense imported its assessment at 00:58 as \code{file-0003} and filed TR-D1.  Its report accepted that Israeli forces entered qualifying Syrian territory, occupied positions, and exercised temporary tactical control.  It also accepted construction, flags, conditional retention, and the violation of the disengagement arrangement as adverse evidence.  Its explanation distinguished observed control from the purpose and character of the operation~\cite[events 12--13, file-0003]{record}:
-\begin{quote}
-The first two high-confidence findings give the Proponent a substantial case. They do not, without resolving the final two semantic and operational-linkage questions in the Proponent's favor, mechanically establish the full conjunctive proposition.
-\end{quote}
-Those first two findings concerned entry and holding in Syria and the intention to retain positions pending a security arrangement.  The disputed questions concerned the meaning of a military offensive and the relationship between the ground deployment and the strike campaign.
-
-The report emphasized Israel's December 9 letter, Netanyahu's description of temporary forward defense, Halevi's statement about preventing hostile groups from establishing near the border, and Sa'ar's denial of territorial aspirations.  It acknowledged the speakers' interests and the stronger evidentiary value of an order to take and hold positions.  It nevertheless argued that temporary occupation as a security measure could differ from an offensive aimed at establishing territorial control.
-
-The defense also examined the plaintiff's combination of air, naval, and ground activity.  The strike reporting described weapons destruction and denial.  The ground reporting described taking and retaining border positions.  The defense found no cited operational order linking the strikes to territorial acquisition and argued that concurrent operations with common leadership did not establish that link.  This objection affected the plaintiff's presentation during discovery.
-
-\subsection{Discovery and the narrowing of the dispute}
-
-Each lawyer served five interrogatories.  The plaintiff asked the defense to specify disputed locations, conduct, the basis for its forward-defense theory, the claimed separation of the operations, and its definitions of the market terms.  The defense asked the plaintiff for geographic support, objective evidence of an offensive, evidence of intent, the connection between strikes and ground deployment, and the qualifying sources for each element.  The questions required both sides to identify adverse evidence and distinguish source statements from inference~\cite[events 15--16]{record}.
-
-Before answering, the plaintiff imported the Syrian and Israeli UN-letter PDFs as \code{file-0004} and \code{file-0005}.  Its answers acknowledged that it had no precise coordinates for each position and no evidence of resistance, exchanged ground fire, casualties, surrender, or civilian displacement at the abandoned summit post.  It also acknowledged the absence of a published common operational plan.  It then stated a narrower basis for its case~\cite[event 19, answer 4]{record}:
-\begin{quote}
-Thus Plaintiff relies primarily on the ground campaign's own advance, takeover, holding, construction and conditional-retention purpose, not on an unproved intent nexus for every strike.
-\end{quote}
-The strike campaign remained context, while the ground deployment had to carry the claim independently.  The plaintiff described any facilitation of the ground operation by the strikes as an inference from timing, actors, and effects.
-
-The defense's answers accepted the Syrian summit as territory outside the market-defined Golan and admitted temporary tactical control.  They acknowledged that a small qualifying location could suffice, that combat was not invariably required, and that permanence, annexation, and civil administration were not categorical requirements.  The defense retained its argument that the relevant operation must have territorial control as an intended objective.  It also conceded that undisclosed coordination could exist.  Its assertion concerned the limits of the public record~\cite[event 20]{record}.
-
-Document requests led both parties to identify and produce the five registered case files.  Their responses exposed the limits of the documentary collection: the reports contained URLs and retrieval descriptions, but the parties possessed no original maps or satellite analysis, internal military orders, or examined-witness files.  The defense expressly stated that it had no document placing the relevant summit inside the Golan exclusion, a contention it did not advance.  The exchange provided a more specific account of common ground, remaining disagreement, and missing evidence than the initial pleadings~\cite[events 21--34]{record}.
-
-The plaintiff next served 36 requests for admission, and the defense served 28.  By 01:18, each party had admitted or qualified every request.  The defense admitted temporary tactical control, the intention to hold some positions pending an acceptable security arrangement, and the absence of categorical requirements for permanence or annexation.  It preserved the disputed application of the offensive-and-intent language.  The plaintiff admitted the contrary official descriptions and its evidentiary gaps while preserving its inference from the ground operation.  These admissions narrowed the issues without producing agreement on the ultimate proposition~\cite[events 35--38]{record}.
-
-\subsection{Summary-judgment briefing}
-
-Both lawyers passed their opportunities to seek discovery enforcement under Rule 37.  Each found the opposing responses complete and distinguished disagreement on the merits from a failure to disclose.  The plaintiff then imported a Rule 56 memorandum listing 26 assertedly undisputed facts and moved for judgment on the whole declaratory claim at 01:25.  It treated the ground operation as independently sufficient and the statewide strikes as unnecessary to the requested ruling~\cite[events 39--46, file-0006]{record}.
-
-The plaintiff's memorandum connected the defense's admissions to its proposed ordinary meaning of an offensive.  Israeli forces had advanced to take positions, exercised temporary tactical control, and intended to retain positions until an acceptable arrangement.  The plaintiff argued that a defensive strategic motive could accompany offensive tactical means and that the market imposed no permanence requirement.  It concluded that the remaining disagreement concerned application of the language to established facts.
-
-The defense's opposition memorandum accepted the historical concessions while challenging the plaintiff's treatment of their qualifications.  Its central objection concerned the difference between a possible classification and a compelled one~\cite[file-0007]{record}:
-\begin{quote}
-Defendant admitted an offensive \textbf{can include} an organized advance by armed forces to gain an objective. That is a possibility, not a rule that every organized armed advance is offensive. Context remains material.
-\end{quote}
-The emphasis appears in the filed memorandum.  The defense likewise distinguished admitted control in fact from the disputed intended object of the operation.  It argued that the conditional endpoint supported two inferences: an intention to retain the positions and a temporary security contingency that would end the deployment.  Rule 56, it contended, required the court to allow the defense-favorable inference if a reasonable factfinder could accept it.
-
-Importing each memorandum added procedural work before its associated motion act.  The agenda offered supplemental-production opportunities to both parties and renewed their Rule 37 opportunities.  Both parties produced the memoranda, including copies authored by the opposing party and already available in the shared record.  Both declined renewed discovery-enforcement motions after the first memorandum, and the plaintiff did so again after the second.  These repeated turns increased the number of model responses without adding a discovery dispute~\cite[events 41--45 and 48--52]{record}.
-
-The plaintiff's first reply exceeded the local 4,000-character limit and was rejected.  Its shorter reply was accepted at 01:33.  It argued that the market required intent to establish control, without requiring control to be the sole or ultimate geopolitical purpose.  Deliberately chosen possession, it argued, remained intended even when security supplied the reason for it~\cite[events 55--56]{record}.
-
-The judge denied summary judgment at 01:33:46.  Its ruling recognized the admitted crossing, occupation, temporary control, construction, flags, and intention to hold positions.  It nevertheless found that the contemporaneous defensive descriptions and circumstances permitted a contrary inference about the operation's character and purpose.  The decisive explanation addressed the scope of the admissions~\cite[event 57]{record}:
-\begin{quote}
-Rule 56 does not permit the court to convert admissions that an operation can be offensive in ordinary usage, or that temporary tactical control is control in fact, into a mandatory conclusion that this operation was a military offensive intended to establish territorial control.
-\end{quote}
-The defense then declined a cross-motion.  Its note acknowledged that its own position depended on competing reasonable inferences and therefore did not justify judgment as a matter of law for the defense.  The court entered a pretrial order and advanced the case to trial.
-
-The run stopped during jury selection at 01:44:30 after two gateway compatibility errors caused candidate replacements.  Seven candidates had answered the questionnaire.  The report remains incomplete pending a completed adjudication.
+The proceeding remains in progress.  Research, discovery, motion practice, trial, and judgment will be described from the completed record.
 
 \section{Verification and Limitations}
 
-This interrupted run produced no completed replay certificate.  Verification and the final evidentiary assessment remain pending.
+Verification and final assessment await the completed case.
 
 \begin{thebibliography}{99}
-\bibitem{adj} AgentCourt.  \emph{Adjudication Core}.  Repository documentation at source revision \code{543624c}, September 2026.  \url{https://github.com/agentcourt/adj}.
+\bibitem{adj} AgentCourt.  \emph{Adjudication Core}.  Repository documentation at source revision \code{cfdd312}, September 2026.  \url{https://github.com/agentcourt/adj}.
 \bibitem{procedures} Jamie Stephens.  \emph{Five Adjudication Procedures by Procedural Complexity}.  \code{reports/marxiv/procedure-complexity/paper.pdf}, in the adj repository.
 \bibitem{arbpaper} Jamie Stephens.  \emph{Adjudicating a Prediction-Market Resolution: An ARB Case Study of Israel's December 2024 Entry into Syria}.  marXiv:2609.00009, 2026.
-\bibitem{adcmanual} AgentCourt.  \emph{Agent District Court Manual}.  \code{adc/manual.md}, adj, revision \code{543624c}.
-\bibitem{practice} AgentCourt.  \emph{Agent District Court Practice Guide}.  \code{adc/docs/practice.md}, adj, revision \code{543624c}.
-\bibitem{arcp} AgentCourt.  \emph{Agent Rules for Civil Procedure}.  \code{adc/docs/ARCP.md}, adj, revision \code{543624c}.
-\bibitem{logic} AgentCourt.  \emph{Procedure Execution}.  \code{adc/docs/logic.md}, adj, revision \code{543624c}.
+\bibitem{adcmanual} AgentCourt.  \emph{Agent District Court Manual}.  \code{adc/manual.md}, adj, revision \code{cfdd312}.
+\bibitem{practice} AgentCourt.  \emph{Agent District Court Practice Guide}.  \code{adc/docs/practice.md}, adj, revision \code{cfdd312}.
+\bibitem{arcp} AgentCourt.  \emph{Agent Rules for Civil Procedure}.  \code{adc/docs/ARCP.md}, adj, revision \code{cfdd312}.
+\bibitem{logic} AgentCourt.  \emph{Procedure Execution}.  \code{adc/docs/logic.md}, adj, revision \code{cfdd312}.
 \bibitem{poolpaper} Jamie Stephens.  \emph{Generating Tool-Capable, Behavior-Stratified Model Pools for Adjudication}.  marXiv:2608.00051, 2026.
-\bibitem{poolmanual} AgentCourt.  \emph{Model-Pool Tools}.  \code{model-pool/README.md}, adj, revision \code{543624c}.
-\bibitem{runbook} AgentCourt.  \emph{Sampling Runbook}.  \code{model-pool/docs/sampling-runbook.md}, adj, revision \code{543624c}.
-\bibitem{juries} AgentCourt.  \emph{Juries}.  \code{adc/docs/juries.md}, adj, revision \code{543624c}.
-\bibitem{proofs} AgentCourt.  \emph{ADC Proofs}.  \code{adc/docs/proofs.md}, adj, revision \code{543624c}.
-\bibitem{example} AgentCourt.  \emph{Israel--Syria prediction-market example}.  \code{examples/ex04/complaint.md} and \code{market-rules.md}, adj, revision \code{543624c}.
-\bibitem{record} AgentCourt.  \emph{Israel--Syria ADC case record}, run \code{ex04-adc-20260919-01}.  Retained under \path{adc/out/ex04-20260919-01/} in the execution checkout.  The \code{case/core/} directory contains the event database, work notes, and court files.  The \code{case/logs/} and \code{case/work/} directories retain participant tool activity and research.  Generated case records are outside the versioned report.
+\bibitem{poolmanual} AgentCourt.  \emph{Model-Pool Tools}.  \code{model-pool/README.md}, adj, revision \code{cfdd312}.
+\bibitem{runbook} AgentCourt.  \emph{Sampling Runbook}.  \code{model-pool/docs/sampling-runbook.md}, adj, revision \code{cfdd312}.
+\bibitem{juries} AgentCourt.  \emph{Juries}.  \code{adc/docs/juries.md}, adj, revision \code{cfdd312}.
+\bibitem{proofs} AgentCourt.  \emph{ADC Proofs}.  \code{adc/docs/proofs.md}, adj, revision \code{cfdd312}.
+\bibitem{example} AgentCourt.  \emph{Israel--Syria prediction-market example}.  \code{examples/ex04/complaint.md} and \code{market-rules.md}, adj, revision \code{cfdd312}.
+\bibitem{record} AgentCourt.  \emph{Israel--Syria ADC case record}, run \code{ex04-20260919-02}.  Retained under \path{adc/out/ex04-20260919-02/} in the execution checkout.  The \code{case/core/} directory contains the event database, work notes, and court files.  The \code{case/logs/} and \code{case/work/} directories retain participant tool activity and research.  Generated case records are outside the versioned report.
 \end{thebibliography}
 \end{document}
