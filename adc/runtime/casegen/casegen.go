@@ -451,7 +451,7 @@ func BuildScenario(plan Plan, complaint ComplaintInput, opts ScenarioOptions) (s
 		LoopPolicy: &spec.LoopPolicySpec{
 			Type:             "autopilot_trial",
 			MaxStepsPerTurn:  5,
-			MaxTurns:         180,
+			MaxTurns:         500,
 			StopOnCaseStatus: "judgment_entered",
 			StopCaseIndex:    0,
 		},

@@ -116,6 +116,28 @@ func TestChatServerPreservesProviderConversation(t *testing.T) {
 	}
 }
 
+func TestMessagePrefixAcceptsPiNormalization(t *testing.T) {
+	for _, test := range []struct {
+		name, text, originalArguments, parsedArguments string
+	}{
+		{"whitespace text", "\n\n", `{"path":"/work/source.txt"}`, `{"path":"/work/source.txt"}`},
+		{"parsed arguments", "", `{"tool": "adc_wait_for_opportunity", "args": {}"}`, `{"tool":"adc_wait_for_opportunity","args":{}}`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			original := chatAssistantMessage(modelapi.Response{
+				Text:      test.text,
+				ToolCalls: []modelapi.ToolCall{{CallID: "call-1", Name: "mcp", RawArguments: test.originalArguments}},
+			})
+			parsed := chatAssistantMessage(modelapi.Response{
+				ToolCalls: []modelapi.ToolCall{{CallID: "call-1", Name: "mcp", RawArguments: test.parsedArguments}},
+			})
+			if err := checkMessagePrefix([]map[string]any{parsed}, []map[string]any{original}); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
 func TestChatServerRejectsChangedHistory(t *testing.T) {
 	executor := &fakeExecutor{responses: []modelapi.Response{{ResponseID: "response-1"}}}
 	server, err := NewServer(executor)

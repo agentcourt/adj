@@ -118,6 +118,9 @@ func TestBuildPropositionScenarioPreservesDocumentManifest(t *testing.T) {
 	if scenario.Name != "go_case_proposition_adjudication" || scenario.CourtName != courts.PropositionTribunalName {
 		t.Fatalf("scenario identity = %q, %q", scenario.Name, scenario.CourtName)
 	}
+	if scenario.LoopPolicy == nil || scenario.LoopPolicy.MaxTurns != 500 {
+		t.Fatalf("loop policy = %+v", scenario.LoopPolicy)
+	}
 	if scenario.CaseInit == nil || len(scenario.CaseInit.Attachments) != 1 {
 		t.Fatalf("case init = %+v", scenario.CaseInit)
 	}

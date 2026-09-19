@@ -336,11 +336,11 @@ func checkMessagePrefix(messages, expected []map[string]any) error {
 		return fmt.Errorf("chat request removed prior messages")
 	}
 	for index := range expected {
-		messageJSON, err := historyMessageJSON(messages[index])
+		messageJSON, err := historyMessageJSON(messages[index], nil)
 		if err != nil {
 			return fmt.Errorf("encode chat message %d: %w", index, err)
 		}
-		expectedJSON, err := historyMessageJSON(expected[index])
+		expectedJSON, err := historyMessageJSON(expected[index], messages[index])
 		if err != nil {
 			return fmt.Errorf("encode prior chat message %d: %w", index, err)
 		}
@@ -351,7 +351,7 @@ func checkMessagePrefix(messages, expected []map[string]any) error {
 	return nil
 }
 
-func historyMessageJSON(message map[string]any) ([]byte, error) {
+func historyMessageJSON(message, parsedFallback map[string]any) ([]byte, error) {
 	role, _ := message["role"].(string)
 	if _, hasToolCalls := message["tool_calls"]; role != "assistant" || !hasToolCalls {
 		return json.Marshal(message)
@@ -360,14 +360,15 @@ func historyMessageJSON(message map[string]any) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if content := normalized["content"]; content == nil || content == "" {
+	content, isText := normalized["content"].(string)
+	if normalized["content"] == nil || isText && strings.TrimSpace(content) == "" {
 		normalized["content"] = nil
 	}
 	calls, err := contentItems(normalized["tool_calls"])
 	if err != nil {
 		return nil, err
 	}
-	for _, call := range calls {
+	for index, call := range calls {
 		function, ok := call["function"].(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("tool call function must be an object")
@@ -375,6 +376,23 @@ func historyMessageJSON(message map[string]any) ([]byte, error) {
 		arguments, ok := function["arguments"].(string)
 		if !ok {
 			return nil, fmt.Errorf("tool call arguments must be a JSON string")
+		}
+		if !json.Valid([]byte(arguments)) && parsedFallback != nil {
+			parsedCalls, err := contentItems(parsedFallback["tool_calls"])
+			if err != nil {
+				return nil, err
+			}
+			if index >= len(parsedCalls) {
+				return nil, fmt.Errorf("parsed history is missing tool call %d", index)
+			}
+			parsedFunction, ok := parsedCalls[index]["function"].(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("parsed tool call function must be an object")
+			}
+			arguments, ok = parsedFunction["arguments"].(string)
+			if !ok {
+				return nil, fmt.Errorf("parsed tool call arguments must be a JSON string")
+			}
 		}
 		var value any
 		if err := json.Unmarshal([]byte(arguments), &value); err != nil {

@@ -118,3 +118,5 @@ The Go [runtime limits](../runtime/runner/runtime_limits.go) apply to model and 
 | `juror_max_output_tokens` | 4096 | Juror request configuration. |
 
 An invalid participant decision consumes an invalid attempt.  The runtime records procedural failure when the allowance is exhausted.  The current opportunity reports its permitted actions, deadline, attempt allowance, and support budget.  Lawyers plan investigation and filing within those values.
+
+Generated scenarios set `loop_policy.max_turns` to 500 and `max_steps_per_turn` to 5.  Reaching the turn limit before the configured stopping condition ends the run with an error.  A supplied scenario can set its own loop limits.  These counts are separate from the per-turn timeouts.
