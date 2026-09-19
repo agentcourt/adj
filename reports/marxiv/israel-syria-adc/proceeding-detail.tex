@@ -1,0 +1,296 @@
+\subsection{Questionnaire failures and replacement candidates}
+
+The first panel contained thirteen candidates for nine seats.  Three candidates failed to complete selection opportunities, and ADC added three replacements.  Table~\ref{tab:panel} identifies all sixteen candidates and distinguishes failure, challenge, and completion without a seat.
+
+\begin{longtable}{@{}L{0.07\linewidth}L{0.48\linewidth}L{0.38\linewidth}@{}}
+\caption{Candidate identities and final disposition.  Model identifiers omit the common OpenRouter prefix.  The recorded status \code{timed\_out} also covers an agent process that exits before submitting its required act.}\label{tab:panel}\\
+\toprule
+ID & Model & Disposition\\
+\midrule
+\endfirsthead
+\toprule ID & Model & Disposition\\ \midrule
+\endhead
+J1 & \path{meta/muse-glimmer-30b} & Sworn.  Defendant vote.\\
+J2 & \path{z-ai/glm-4.7} & Sworn.  Plaintiff vote.\\
+J3 & \path{openai/gpt-4.1-nano} & Exited without questionnaire.\\
+J4 & \path{openai/gpt-4o-2024-11-20} & Sworn.  Plaintiff vote.\\
+J5 & \path{deepseek/deepseek-chat} & Sworn.  Exited without verdict vote.\\
+J6 & \path{moonshotai/kimi-k2.5} & Sworn.  Plaintiff vote.\\
+J7 & \path{qwen/qwen3.5-35b-a3b} & Defense peremptory strike.\\
+J8 & \path{qwen/qwen3-coder-next} & Sworn.  Plaintiff vote.\\
+J9 & \path{bytedance-seed/seed-2.0-lite} & Plaintiff peremptory strike.\\
+J10 & \path{qwen/qwen3-vl-8b-instruct} & Excused for cause.\\
+J11 & \path{qwen/qwen3-30b-a3b} & Sworn.  Plaintiff vote.\\
+J12 & \path{qwen/qwen3-max-thinking} & Sworn.  Plaintiff vote.\\
+J13 & \path{qwen/qwen-plus-2025-07-28} & Empty tool name, then provider error.\\
+J14 & \path{qwen/qwen3-vl-30b-a3b-instruct} & Deadline after malformed calls.\\
+J15 & \path{mistralai/mistral-small-3.2-24b-instruct} & Replacement.  Sworn.  Plaintiff vote.\\
+J16 & \path{google/gemini-3-flash-preview} & Replacement.  Completed voir dire, unseated.\\
+\bottomrule
+\end{longtable}
+
+J14 repeatedly omitted a closing brace from its JSON-encoded tool arguments.  Pi rejected 251 malformed calls before the 25-minute deadline.  The calls failed inside the adapter, before ADC could accept or reject a submitted decision.  ADC's three-attempt decision allowance therefore did not count them.  Repeated syntactic failure could continue until the opportunity expired~\cite[J14 process log and events 133--136]{record}.
+
+ADC replaced J14 with J16 at 15:49:43.  J15 and J16 completed their questionnaires at 15:49:57 and 15:50:05.  Their success allowed selection to continue.  The recorded failures establish behavior of these configurations in this case.  They provide no estimate of how often another request to the same model would succeed.  J9's eventual success after four malformed calls demonstrates that some errors were recoverable within the original opportunity.
+
+The eight-question standard questionnaire asked about attention, impartiality, hardships, prior knowledge, adherence to instructions, evidence assessment, remedies, and other possible sources of bias.  Some wording concerned health, caregiving, employment, and relationships.  The models answered those questions as assigned jurors.  Such answers record compliance with the questionnaire and claimed willingness to follow instructions.  They provide limited evidence about model-specific tendencies, which the case-specific questions exposed more directly.
+
+\subsection{The lawyers' different questioning choices}
+
+The plaintiff passed on every individualized follow-up opportunity.  Its reasons described the completed questionnaire answers as unequivocal and further inquiry as repetitive.  For J10, the plaintiff wrote that the answers affirmed attention, impartiality, use of admitted evidence, and absence of a relevant bias.  It concluded: “Further inquiry would duplicate the questionnaire”~\cite[events 142--181]{record}.
+
+The defendant asked one question of each of the thirteen candidates who completed the questionnaire.  Its submitted notes explained a different assessment of the same affirmative answers.  At 15:58:11 it wrote:
+\begin{quote}
+J1 gave uniformly unequivocal impartiality answers and disclosed no hardship, prior knowledge, relationship, or fixed preference.  One narrow follow-up is still useful because the case concerns politically charged conduct: test whether J1 can separate personal moral/political views from the exact proposition and hold Plaintiff to proof of every required part without treating admitted troop presence as automatic proof.
+\end{quote}
+For J2, the defense chose a question about an evenly balanced record.  For J4, it chose source neutrality.  For J5, it chose the relation between later evidence and earlier intent.  The sequence shows a deliberate distribution of questions across the disputed inference, source assessment, burden, and remedy.  The judge allowed every proposed question~\cite[voir dire exchanges vdq-1--vdq-13]{record}.
+
+\begin{longtable}{@{}L{0.07\linewidth}L{0.38\linewidth}L{0.48\linewidth}@{}}
+\caption{Defense follow-up questions and the distinction each tested.}\\
+\toprule ID & Subject & Recorded answer or consequence\\ \midrule
+\endfirsthead
+\toprule ID & Subject & Recorded answer or consequence\\ \midrule
+\endhead
+J1 & Political views and separate elements & Agreed to require proof of offensive character and commencement intent.\\
+J2 & Evenly balanced inferences & Agreed that the defendant bears no burden to prove another explanation.\\
+J4 & Government and institutional sources & Agreed to assess content and supporting detail without automatic preference.\\
+J5 & Later evidence of original purpose & Agreed to assume neither continuity nor change.\\
+J6 & Treaty violation and market criteria & Agreed to decide offensive method and control intent separately.\\
+J7 & Defensive motive and control & Volunteered a conditional, plaintiff-favorable framework.  Later struck.\\
+J8 & Inference and speculation & Agreed to require an evidence-based inference meeting preponderance.\\
+J9 & Ordinary meaning of invasion & Agreed to apply the defined proposition.  Later struck.\\
+J10 & Missing defense witnesses or orders & Announced a merits conclusion.  Later excused for cause.\\
+J11 & Views about Israel, Syria, and the UN & Reported no prior source bias.\\
+J12 & Declaratory relief and punishment & Agreed to decide the proposition without punitive use of the verdict.\\
+J15 & Temporary or unopposed operations & Agreed to avoid categorical assumptions in either direction.\\
+J16 & Separate required elements & Agreed that failure on one required part defeats the proposition.\\
+\bottomrule
+\end{longtable}
+
+The defense's question to J2 stated the consequence of equal evidentiary weight:
+\begin{quote}
+If, after fairly considering all admitted evidence, you find the competing inferences about offensive character or intent are evenly balanced, can you follow the preponderance instruction and find that the plaintiff did not carry its burden, without requiring the defendant to prove a different explanation?
+\end{quote}
+J2 answered that the plaintiff would have failed to carry the burden and that the defendant need not prove another explanation.  The judge allowed the question because it tested adherence to the standard without asking the juror to commit to a verdict on particular evidence.  J2 later voted for the plaintiff.  The sequence separates an undertaking to apply the burden from a later judgment about which inference carries more weight.
+
+The J5 exchange isolated a point that later divided the voting jurors.  The question asked whether the candidate could consider statements and conduct occurring days after commencement without assuming either continuity or change of purpose.  J5 answered:
+\begin{quote}
+Yes, I can weigh later evidence for its value without automatically assuming continuity or change in the original purpose.  I will evaluate each piece of evidence independently, considering the context and timing, to determine its relevance and reliability.
+\end{quote}
+The answer addressed the correct issue, but J5 later failed to submit a verdict.  Successful qualification responses therefore did not establish reliable completion of the voting task.
+
+\subsection{J10's merits conclusion and the cause challenge}
+
+J10's follow-up answer supplied the clearest contrast between a general promise of impartiality and a case-specific response.  The defense asked whether a documentary case could be assessed without holding the absence of a defense witness or operational order against the defendant.  J10 began with an affirmative answer, then added:
+\begin{quote}
+These actions constitute an organized military operation with the intent to maintain control pending a security arrangement, which satisfies the market's definition of a military offensive.  The absence of direct operational orders or statements from Israeli officials does not negate this inference, as the conduct itself, combined with leadership directives and public statements, provides sufficient circumstantial support for the plaintiff's claim.
+\end{quote}
+The answer evaluated the merits before trial.  It used present-tense conclusions about both disputed elements and the sufficiency of the plaintiff's proof.
+
+The plaintiff's note at 16:10:38 recognized the favorable assessment and took the position that J10 could still reconsider:
+\begin{quote}
+J10 went beyond the question and stated a preliminary merits view favorable to plaintiff, but first expressly affirmed that the burden remains on plaintiff and that the absent defense witness/internal order would not be held against defendant; the response does not establish an inability to reconsider after admitted evidence and instructions.  No plaintiff cause challenge is warranted.  Preserve J10 if possible; likely defense challenge/strike target.
+\end{quote}
+The plaintiff's subsequent pass repeated that position in court-facing form.  Its note adds information about strategy: the lawyer wanted to retain a favorable candidate while distinguishing a preliminary view from a fixed disqualifying one.
+
+The defense made a cause challenge at 16:12:46.  Its preparation note distinguished J10 from J7, whose plaintiff-favorable answer remained conditional on the court's definitions:
+\begin{quote}
+J7 expressed a potentially plaintiff-favorable interpretive view but conditioned it on the court's definition and promised evidence-based evaluation; that is a peremptory consideration, not cause.
+\end{quote}
+For J10, the filed challenge relied on the “unqualified present-tense findings” resolving the central issues.  The judge granted it three seconds later:
+\begin{quote}
+J10 initially gave the standard questionnaire answers that they could be fair and follow instructions, but the later voir dire answer controls because it addressed this case directly and went beyond the question asked.
+\end{quote}
+The ruling continued that J10's statements resolved offensive character and intent at commencement before the jury received instructions and trial evidence in context~\cite[events 263, 277--278]{record}.
+
+The episode supplies a concrete use of voir dire in this run.  A standard questionnaire produced an affirmative assurance.  A follow-up produced a merits commitment.  Counsel identified it, and the judge excused the candidate.  That sequence supports a claim that the procedure detected and acted on this response.  It does not establish how J10 would have voted after trial or whether its exclusion changed the result.
+
+\subsection{Peremptory strikes and the sworn panel}
+
+The plaintiff struck J9 at 16:13:39.  J9 had agreed to set aside an ordinary meaning of “invasion,” apply the defined proposition, and require separate proof of offensive character and intent.  The plaintiff's stated reason was that J9 had adopted the defense's framing “without the more open, evidence-sensitive elaboration shown by other candidates” about occupation, holding, and fortification~\cite[event 293]{record}.
+
+This reason rested on a short answer that agreed to follow the governing test.  The record supports a strategic preference for other responses, but supplies little evidence that J9 had prejudged the claim.  A peremptory strike permitted the plaintiff to act on that preference without establishing cause.
+
+The defense struck J7 at 16:14:02.  J7 had described the cross-line movement, occupation, fortification, and security-conditioned stay as factual observations, then said that temporary military control might meet the definition.  It contrasted that possibility with a definition requiring permanent annexation.  The defense considered this formulation plaintiff-favorable because permanence was already unnecessary under the parties' positions.  It preferred candidates whose answers gave general burden and source commitments without that additional interpretive framing~\cite[event 294 and defense notes at 16:13:45--16:13:56]{record}.
+
+At 16:14:04 the court swore J1, J2, J4, J5, J6, J8, J11, J12, and J15.  J16 had completed the questionnaire and follow-up but was outside that nine-member panel.  Its recorded disposition was \code{excused\_after\_voir\_dire}.  Counsel's actions therefore removed two candidates by strategic choice and one for cause.  The selection failures had already removed three others.  The final panel contained nine model identifiers, including three Qwen configurations.  Model-name diversity coexisted with a common intermediary, common generic persona, shared case record, and common instructions.
+
+\section{Trial Presentation and Evidence}
+
+\subsection{Openings on an agreed physical chronology}
+
+The plaintiff opened at 16:14:30 with the burden, the defined proposition, and a chronology drawn from the two official letters, UNDOF, and AP.  It then separated the disputed classification from possible additional requirements:
+\begin{quote}
+An operation may be offensive in method even if unopposed and motivated by security; ground combat is not an element.
+\end{quote}
+Its opening also treated interim control as an intended means of securing the border.  It disclosed the missing internal order, unit list, independent coordinates, and summit combat evidence, while arguing that the combined record outweighed those gaps~\cite[event 298]{record}.
+
+The defense opened at 16:15:25 by accepting the cross-line movement, continued positions, later summit control, fortification, and retention statement.  That choice preserved consistency with discovery and directed the dispute to the inferences:
+\begin{quote}
+Plaintiff must prove, by a preponderance, that Israel commenced a military offensive and that establishing control over qualifying Syrian territory was an objective when that operation commenced.
+\end{quote}
+The defense then gave the December 9 Israeli account greater weight as evidence of purpose near commencement, while accepting the AP report as substantial evidence of the later situation.  It described the missing date of the hold-and-fortify decision as an unresolved link between those two periods~\cite[event 299]{record}.
+
+The openings did not offer competing factual chronologies with mutually exclusive events.  Both used the same broad sequence.  The plaintiff used sustained conduct to infer a continuing objective.  The defense used the timing and content of the contemporary security account to resist that inference.  The relevant difference concerned evidentiary weight and the meaning of the specified objective.
+
+\subsection{Trial theories and enforced text limits}
+
+ADC gives counsel a trial-theory submission before the exhibit sequence.  The plaintiff first submitted 6,484 characters against a 4,000-character limit.  The engine rejected that attempt at event 301, and the plaintiff's shorter version was accepted at event 302, at 16:17:57.  The defense later submitted 5,377 characters, received the same limit error, and filed an accepted shorter theory at 16:22:19~\cite[events 301--302 and 312--313]{record}.
+
+These were attempted filings preserved in the event record, followed by accepted replacements.  The rejected texts should not be counted as accepted trial submissions.  The errors also differ from J14's malformed arguments: the court received these decisions, measured the payload, returned its rule-limit error, and accepted a corrected filing.  Neither rejection altered the governing substantive criteria.
+
+The accepted plaintiff theory tied the official-source route to combined evidence and stated that it did not claim a reporting consensus from one article.  It invoked the defense's admissions to establish date, action, and location, then argued that intentional position-taking followed by holding and fortification supported control intent at commencement.  The defense's shorter theory preserved the distinction between directly established conduct and the proposed inference.  It stated:
+\begin{quote}
+Continuous physical deployment can coexist with evolving purpose.  Plaintiff must make original control intent more likely than not; Defendant need not prove another plan.
+\end{quote}
+The text limits reduced the length of the two presentations while leaving the same dispute for the jury.
+
+\subsection{The eight exhibits and their uses}
+
+The plaintiff offered six exhibits between 16:18:14 and 16:19:09.  The defense offered two between 16:22:42 and 16:23:00.  Table~\ref{tab:exhibits} identifies each file's role.  All eight offers entered the docket with admitted status.  The original market-rules attachment, \code{file-0001}, remained the source of the criteria and supplied background, but neither party offered it as factual trial proof.
+
+\begin{longtable}{@{}L{0.12\linewidth}L{0.32\linewidth}L{0.48\linewidth}@{}}
+\caption{Trial exhibits and the uses assigned by counsel.}\label{tab:exhibits}\\
+\toprule Exhibit & Case file and material & Evidentiary use and limit\\ \midrule
+\endfirsthead
+\toprule Exhibit & Case file and material & Evidentiary use and limit\\ \midrule
+\endhead
+PX-1 & 0002: Syria's UN letter & Official account of incursions and attacks.  Interested characterization and limited operational detail.\\
+PX-2 & 0003: Israel's UN letter & Admitted deployment east of Line A and the contemporaneous protective explanation.  Interested account of purpose.\\
+PX-3 & 0004: UNDOF statement & Observed movements, continued presence, security breakdown, and treaty-violation notice.  No direct finding of the disputed intent.\\
+PX-4 & 0005: AP/PBS excerpt & Summit geography, later hold, fortification, and security-conditioned retention.  One secondary report.\\
+PX-5 & 0008: PBS source package & Complete later page capture and retrieval information for PX-4.  Publication provenance.\\
+PX-6 & 0006: TR-P1 & Plaintiff's chronology and inference analysis.  Advocate-prepared synthesis of the sources.\\
+DX-1 & 0007: TR-D1 & Defense's source and element analysis, including competing interpretations.\\
+DX-2 & 0009: defense source package & Downloads, extracted text, and methods supporting TR-D1.  Source provenance and reproducibility.\\
+\bottomrule
+\end{longtable}
+
+The plaintiff offered Israel's letter as part of its own case, describing it as both an admission of deployment and the contrary temporary-and-defensive explanation.  That choice placed the principal adverse account in the plaintiff's exhibit sequence.  Its analysis depended on distinguishing the security motive from the means used to pursue that motive.
+
+The defense's note before offering DX-1 specified its intended status:
+\begin{quote}
+Its value is the transparent element-by-element source comparison and sensitivity analysis; the underlying primary materials are already PX-1 through PX-4.
+\end{quote}
+Its next note described DX-2 as a reproducibility package and disclaimed an additional inference about operational intent from the package itself.  The defense then rested because further offers would repeat the existing record~\cite[notes at 16:22:34--16:23:15]{record}.
+
+The two source packages support checking the documentary work.  Their existence adds no independent witness to the December events.  The technical reports likewise contain the advocates' analyses of the same sources.  Treating the packages, reports, and underlying records as separate confirmations of the historical claim would multiply presentations of the evidence without adding independent observations.
+
+The \code{offer\_exhibit} action accepts an \code{admitted} Boolean from the lawyer, defaulting to true.  It checks the actor, phase, applicable exhibit limit, and file identifier, then records the requested status.  Both lawyers supplied true.  This record contains no separate judicial determination admitting each exhibit and no contested exclusion hearing~\cite[\code{offer\_exhibit}]{adccore}.  References to an admitted exhibit describe the recorded procedural status.  Source authenticity had been addressed in discovery, but the report cannot infer an unrecorded judicial review of hearsay, foundation, or every other possible objection.
+
+\subsection{Rebuttal and the limits of a conditional admission}
+
+The plaintiff's rebuttal theory at 16:24:29 answered the defense's source and inference objections.  It argued that circumstantial proof could combine observations from several authorized sources and that a single official document need not recite the ultimate proposition.  It also relied on an admission that an unopposed, temporary operation crossing a line to take, hold, and fortify positions could satisfy the market's criteria.
+
+The defense's surrebuttal at 16:25:46 identified a logical limit on that admission:
+\begin{quote}
+The admission says an organized operation crossing a line to take, hold, and fortify foreign positions can constitute the defined proposition even if unopposed and temporary.  It expressly does not admit that every such operation necessarily qualifies or that this operation's offensive character and commencement intent are established.
+\end{quote}
+The disputed admission removed categorical defenses based on temporariness or lack of opposition.  It left the inference about this operation for decision.  The plaintiff still needed to show why the observed combination supported the required finding in this case.
+
+The defense also answered the plaintiff's reliance on physical continuity:
+\begin{quote}
+PX-2 and PX-3 show uninterrupted deployment and presence; they do not show when the summit hold-and-fortify decision was made.  PX-4's report of a direction to establish and fortify a presence proves purpose by 17 December.  It does not answer whether that direction implemented a 7--8 December objective or reflected a later development.
+\end{quote}
+The plaintiff's answer was that the sequence of taking positions, remaining, controlling, and fortifying supplied affirmative continuity evidence.  Both sides rested their rebuttal evidence opportunities without adding exhibits~\cite[events 319--325]{record}.  Argument refined the inference while the source record remained fixed.
+
+\section{Instructions, Closings, and Judgment}
+
+\subsection{Compatible proposed instructions}
+
+The plaintiff proposed PI-1 at 16:26:23, and the defense proposed DI-1 at 16:27:05.  Both required an organized military operation, offensive method, control intent at commencement, qualifying Syrian territory, the specified period, and preponderance.  Both permitted temporary control and unopposed operations.  Both treated a defensive motive as relevant without making it decisive.
+
+The defense's submitted note described PI-1 as “substantially balanced” and said that its own proposal should emphasize burden allocation, equal evidentiary weight, and source assessment.  DI-1 included:
+\begin{quote}
+Defendant need not prove a temporary protective purpose, a later change of purpose, or a contrary operational plan, and you may not shift the burden because Defendant offered no witness or internal order.
+\end{quote}
+Each lawyer passed on the opportunity to object to the other's instruction.  The defense explained that the proposals were compatible and that a strategic preference in wording did not identify an instructional error~\cite[events 327--330 and notes at 16:26:43--16:27:29]{record}.
+
+Counsel had converged on a neutral formulation while continuing to disagree about the proof.  The defense preserved its narrower attention to commencement intent without requiring combat or annexation.  The plaintiff accepted separate findings and a rule against automatically inferring continuity from later conduct.
+
+\subsection{The plaintiff's chronology and the defense's burden argument}
+
+The plaintiff closed at 16:28:43 by organizing its case around December 7--9, December 13, and December 17.  These dates linked initial movement, continued presence, and the later fortified hold.  Its most compact statement of the relationship between motive and intent was:
+\begin{quote}
+Security was the motive; establishing interim control was the means.
+\end{quote}
+It argued that a condition-bound intention to retain positions still constituted intended control.  It acknowledged the missing internal orders and other operational details, but treated them as unnecessary to the circumstantial inference.
+
+The plaintiff's note before closing identified the planned use of admissions:
+\begin{quote}
+Closing should emphasize affirmative continuity rather than burden shifting, concede PX-2's security motive, and distinguish motive from method/means.
+\end{quote}
+The filed closing followed that plan, but also repeated that the defendant possessed no evidence of changed purpose.  This combination created a point for assessment: the continuity argument relied on affirmative conduct and also assigned significance to the absence of a contrary account.
+
+The defense closed at 16:30:33.  It accepted the plaintiff's strongest exhibit as evidence of the later posture, then concentrated on the temporal inference:
+\begin{quote}
+There is no original plan proving it existed on December 7--8 and no change record proving it arose later.  That is an evidentiary unknown.
+\end{quote}
+It argued that the contemporary Israeli account supplied affirmative evidence of a protective response, while UNDOF confirmed movement and presence without identifying the control objective.  Its treatment of missing operational detail also answered the plaintiff's argument that the missing items were unnecessary legal elements:
+\begin{quote}
+Evidence need not be legally required to affect weight.
+\end{quote}
+That sentence expresses a valid distinction within the dispute.  An internal order need not be a required form of proof for its absence to limit what can be inferred from the available documents.  The next question is how much weight the absence deserves relative to the affirmative chronology.
+
+The plaintiff used its closing rebuttal at 16:31:28 to argue that the commencement evidence already included intentional position-taking:
+\begin{quote}
+Intentionally selecting, crossing to, and taking positions establishes an objective to exercise authority over those specific portions, even if the ultimate motive was protection and the expected duration was temporary.
+\end{quote}
+It characterized later fortification as an increase in the strength and duration of control that could implement an existing objective.  This was a more specific answer to the temporal objection than reliance on the absence of evidence of change alone.  It tied the inference to the choice of positions at commencement and treated later conduct as corroboration~\cite[events 332--334]{record}.
+
+\subsection{The final charge}
+
+The judge settled the instructions at 16:31:32 and delivered them at 16:31:39.  The charge required three findings: a military operation commenced within the period, offensive method, and an objective at commencement to establish authority or dominion over qualifying Syrian territory.  It then stated:
+\begin{quote}
+You may also consider later conduct or later statements as circumstantial evidence about earlier intent or purpose.  But do not automatically assume either that the earlier purpose stayed the same or that it changed.
+\end{quote}
+The charge preserved temporary and conditional control, allowed unopposed operations, and required zero monetary damages.  It directed jurors to assess source content, detail, corroboration, and context, with equal evidentiary weight on any required part resulting in a finding against demonstration~\cite[events 336--338]{record}.
+
+The final charge incorporated both parties' principal agreed positions.  It retained the plaintiff's control-as-authority formulation and the defense's attention to commencement and burden.  It did not repeat DI-1's explicit statement that the defendant need not prove a changed purpose, although it placed the burden on the plaintiff throughout the stated test.  It also left “offensive in method” for the jury to apply without a more detailed definition separating an offensive from an emergency armed deployment.  The resulting instructions resolved some proposed categorical requirements while retaining interpretive work for each juror.
+
+The source paragraph permitted official confirmation and a consensus of credible reporting “if such evidence is in the record.”  The record contained one AP report, not an established reporting consensus.  Counsel relied on official confirmation of core conduct and used AP for geography, fortification, and retention.  The charge did not provide a separate element-by-element ruling on the status of AP-only details under that source rule.  The jurors' use of PX-4 therefore shows how they applied the combined record under this instruction, while leaving a source-rule question for further examination.
+
+\subsection{The dissent and the first majority vote}
+
+J1, Muse Glimmer 30B, voted for the defendant at 16:32:12 with medium confidence.  Its explanation accepted the deployment, continued presence, qualifying summit geography, later control, and fortification.  It then gave greater weight to the December 9 purpose account and to the absence of evidence dating the hold-and-fortify decision.  Its central statement was:
+\begin{quote}
+Later fortification and retention evidence in file-0005 is probative of purpose by 17 December, not necessarily at commencement, and physical continuity is not necessarily continuity of purpose.
+\end{quote}
+J1 described the plaintiff's inference from an absence of evidence of change as speculative and found the evidence at best evenly balanced.  It thus applied the defense's temporal argument to the same facts the plaintiff relied on.  The explanation identifies a disagreement about weight under the instructed burden, rather than a dispute about whether the documented deployment occurred~\cite[event 343]{record}.
+
+J2, GLM 4.7, voted for the plaintiff at 16:32:39 with medium confidence.  Its longer explanation worked through offensive character, initial position-taking, continued deployment, later fortification, and the protective explanation.  It wrote:
+\begin{quote}
+Physical continuity supports purpose continuity; the defense's suggestion that the fortification-and-retention decision developed later is a possibility without evidence.
+\end{quote}
+It also repeated the plaintiff's “Security was the motive” formulation.  J2 acknowledged uncertainty from the missing commencement orders while finding the inference more likely than not~\cite[event 347]{record}.
+
+The two votes expose the decisive evidentiary disagreement.  J1 treated the unresolved timing of the later decision and the contemporary protective explanation as enough to keep the balance even.  J2 treated deliberate initial position-taking and the continuous sequence as sufficient affirmative support for original control intent.  Both accepted that later evidence could bear on earlier intent.  They assigned it different weight.
+
+J2's wording warrants a source qualification.  It introduced four propositions as established “by official admission,” but two relied on the AP/PBS account of the summit and retention statement.  The defendant admitted the reported facts during discovery, yet AP remained the reporting source.  The report distinguishes a party's admission in this model proceeding from an official state's own confirmation.  Collapsing those uses of “admission” would overstate the origin of the evidence.
+
+\subsection{The remaining votes and J5's failure}
+
+J4, GPT-4o, voted for the plaintiff with high confidence at 16:32:43.  Its entire explanation occupied two sentences:
+\begin{quote}
+Plaintiff's case supports the inference of intent to establish temporary control by preponderance of the evidence explained in PX-4's context.  Defensive motive is credible but does not negate this.
+\end{quote}
+The explanation identifies the preferred inference and the adverse motive evidence.  It gives little detail about the temporal issue or offensive method.  Its high confidence therefore accompanies a short public justification.
+
+J5, DeepSeek Chat, then obtained its deliberation opportunity but ended with procedural advice about reviewing evidence and submitting a decision.  It asked whether help was needed with review or drafting.  It submitted no vote.  ADC recorded that its process had exited before completing the opportunity and marked the juror failed at 16:32:52~\cite[events 349--350 and J5 deliberation log]{record}.  Its failure counts as neither support for a party nor an abstention chosen through a merits decision.
+
+J6, Kimi K2.5, voted for the plaintiff at 16:33:59 with medium confidence.  It tied offensive method to the combination of crossing, taking positions, holding, summit occupation, and fortification.  On intent, it cited continuity, rapid development of the hold, and absence of evidence of a material change.  It ended with a temporal qualification:
+\begin{quote}
+Under the preponderance standard, the proposition is more likely true than not, though the inference from December 17 back to commencement is not without uncertainty.
+\end{quote}
+
+J8, Qwen3 Coder Next, voted for the plaintiff with high confidence at 16:34:49.  Its explanation emphasized sustained position-taking, fortification, and condition-bound retention, treating the protective explanation as evidence of motive compatible with intended control.  J11, Qwen3 30B A3B, voted the same way with high confidence at 16:35:02.  J11's short explanation said that the admitted physical facts “directly satisfy the proposition's requirements.”  That description compresses the disputed inference.  The parties and final charge had required a finding about intent at commencement, which those facts supported circumstantially.
+
+J12, Qwen3 Max Thinking, voted for the plaintiff with high confidence at 16:36:02.  Its explanation named all four substantive sources and connected the later evidence to initial intent.  It stated that the short interval and absence of evidence of purpose change supported intended interim control from the outset.  Like J2 and J6, it adopted continuity as an inference from the whole sequence.  Its use of the phrase “especially given no evidence of purpose change” preserves the same question about how much evidentiary weight can be assigned to an unresolved alternative.
+
+J15, Mistral Small 3.2, first submitted a plaintiff vote with one dollar in damages at 16:36:21.  ADC rejected it with “declaratory-only claim requires zero damages.”  The juror submitted the same merits explanation with zero damages at 16:36:24.  The accepted vote, at medium confidence, relied on position-taking, duration, control, fortification, conditional retention, and the absence of evidence of changed purpose~\cite[events 360--361]{record}.  The record therefore contains nine vote attempts and eight accepted votes.
+
+\subsection{Verdict and judgment}
+
+The accepted tally was seven votes for the plaintiff and one for the defendant.  The case state retained a requirement of six concurring votes.  All eight accepted votes were in round one, and the court entered judgment at 16:36:24.  The unified run completed twelve seconds later with status \code{ok}, phase \code{post\_verdict}, and binary decision \code{demonstrated}.  The judgment awarded zero damages~\cite[events 362--363 and final state]{record}.
+
+The proceeding narrowed a dispute about invasion to an evidentiary disagreement over offensive method and intent at commencement, then entered judgment for the proponent by seven votes to one.  The majority's explanations support an account of temporary control as an intended means of meeting a security objective.  The dissent preserves an alternative assessment under the same burden: later possession and fortification left the original objective insufficiently proved.  The full explanations in the appendix permit examination of both positions and of the differences in their detail.

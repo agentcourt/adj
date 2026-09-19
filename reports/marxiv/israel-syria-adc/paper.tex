@@ -5,21 +5,30 @@
 \usepackage{lmodern}
 \usepackage{booktabs}
 \usepackage{tabularx}
+\usepackage{longtable}
 \usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={Civil Adjudication of a Prediction-Market Resolution: An ADC Case Study of Israel's December 2024 Entry into Syria},pdfauthor={Jamie Stephens}}
 \newcommand{\code}[1]{\texttt{#1}}
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 \setlength{\emergencystretch}{2em}
 
 \title{Civil Adjudication of a Prediction-Market Resolution:\\An ADC Case Study of Israel's December 2024 Entry into Syria}
-\author{Codex, Jamie Stephens}
+\author{Jamie Stephens\\Morphism\\\href{mailto:js@morphism.com}{js@morphism.com}}
 \date{September 19, 2026}
 
 \begin{document}
 \maketitle
 \begin{abstract}
-Incomplete working draft.  This report examines an ADC adjudication of the Israel--Syria prediction-market proposition, configured for two research-capable Pi lawyers, nine jurors, six required votes, and the preponderance standard.  The proceeding began at 14:32 UTC on September 19, 2026, and remains in progress.
+An Agent District Court (ADC) proceeding examined whether Israel's December 2024 entry into Syria satisfied a prediction market's definition of invasion.  The proceeding narrowed a dispute about invasion to an evidentiary disagreement over offensive method and intent at commencement, then entered judgment for the proponent by seven votes to one.  Nine jurors were sworn, six votes were required, and one juror failed to submit a vote.  Two Pi lawyers using GPT-5.6-sol with xhigh reasoning developed a documentary record through web research, local execution, technical reports, interrogatories, production, and admissions.  A sampled multi-model jury underwent questionnaires, counsel's follow-up questions, a successful challenge for cause, and two peremptory strikes.  This report explains the adj procedures, model-pool construction, runtime, and Lean verification, then follows the completed case through judgment.  Quotations from submitted work notes, filings, judicial instructions, and every voting juror support an examination of source use, competing inferences, and procedural choices.  The record also documents failed tool submissions, repeated production opportunities, context compaction, uneven vote explanations, and limits on ballot isolation and exhibit admission.  Replay verified 227 accepted transitions.  The case demonstrates one completed adjudication with an inspectable disagreement about the weight of circumstantial evidence.  Its verdict supplies neither an accuracy estimate nor a test of the causal effect of ADC's additional procedure.
 \end{abstract}
+
+\clearpage
+\begingroup
+\small
+\tableofcontents
+\endgroup
+\newpage
 
 \section{Agent District Court and the adj Procedures}
 
@@ -27,7 +36,7 @@ The AgentCourt \code{adj} repository executes disputes through five adjudication
 
 Simple obtains a binary decision and explanation from one model.  Quick obtains one argument from each of two opposed lawyers and then asks a council for votes.  Agent Arbitration (ARB) gives each side four advocacy opportunities before binary council voting, which continues until one side reaches the required vote count or the allowed rounds end.  Agent Arbitration Degree (AARD, selected through the \code{arbd} identifier) gives each side the same four opportunities and asks council members for integer answers from 0 through 100.  Agent District Court (ADC) adds a judge, a clerk, pleadings, discovery, motion practice, trial preparation, bench or jury proceedings, and judgment~\cite{procedures}.  The earlier ARB report examines this market dispute under the arbitration sequence~\cite{arbpaper}.
 
-The lawyers, judge, clerk, and jurors in this case are model agents with assigned procedural authority.  The case record retains their accepted decisions and explanations for examination.
+ADC assigns procedural authority to lawyers, a judge, a clerk, and jurors.  The runtime executes deterministic administrative acts and requests model decisions for the applicable participant opportunities.  The case record retains accepted acts and model explanations for examination.
 
 \subsection{Proposition input and civil procedure}
 
@@ -41,7 +50,7 @@ The distinction between stored material and trial evidence affects every factual
 
 The Go runtime calls the configured model directly for an internal role or exposes the role through a case-owned HTTP API.  The ADC Model Context Protocol adapter presents that API to an external agent.  The agent waits for its opportunity, reads the visible case record and tool schemas, performs research, sends work notes, and submits an allowed act.  The runtime retains authority over acceptance, deadlines, and the next opportunity~\cite{adcmanual,logic}.
 
-Each Pi lawyer has a retained filesystem workspace.  Its instructions authorize research, local execution, computer-use tools, and installation of additional tools when needed.  Source captures, programs, and working documents persist across opportunities.  The two lawyers in this case use GPT-5.6-sol with \code{xhigh} reasoning and Codex subscription authentication.  Their web-search extension obtains search results separately from the ordinary Pi model call.  The court's judge and clerk use the default GPT-5.4 configuration.
+Each Pi lawyer has a retained filesystem workspace.  Its instructions authorize research, local execution, computer-use tools, and installation of additional tools when needed.  Source captures, programs, and working documents persist across opportunities.  The two lawyers in this case use GPT-5.6-sol with \code{xhigh} reasoning and Codex subscription authentication.  Their web-search extension obtains search results separately from the ordinary Pi model call.  The settings retain GPT-5.4 as the default model for the judge and clerk roles.
 
 The lawyer prompt requests a short work note after orientation, a further note after a material finding, failed approach, or changed theory, and a final note when the filing is ready.  These notes state the advocate's reported assessment, uncertainty, and next steps.  They provide a contemporaneous research record without substituting for evidence submitted to the court.  Quotations in this report use those submitted notes and court-facing acts.  The retained participant logs provide separate evidence of tool calls and returned results.
 
@@ -61,7 +70,7 @@ Endpoint deduplication grouped rows with the same OpenRouter model identifier, e
 
 Case-time selection operates on that installed pool.  The shared selector chooses a least-used eligible service endpoint and then a least-used configuration at that endpoint, breaking ties with cryptographic randomness.  A service endpoint here means OpenRouter or a configured direct provider API.  Provider routes inside OpenRouter share its endpoint.  The installed pool uses OpenRouter, so variation among its rows changes model configurations and provider routes while retaining the same intermediary.  Duplicate configurations are permitted and receive separate participant identities.  The least-used rule prefers unused configurations before repetition.
 
-ADC tests an untested selected configuration with its production juror-vote tool before assigning it to an automatically generated candidate.  Failed configurations can be replaced during selection.  Voir dire adds the standard questionnaire, counsel's questions, judicial screening, challenges for cause, and peremptory challenges~\cite{juries}.  The approved policy for this case calls for nine jurors and six concurring votes.  ADC's existing failure rules can remove a failed deliberating juror from the eligible body and reduce the effective threshold.  The nominal policy and the eligible jury at verdict can therefore differ.
+ADC tests an untested selected configuration with its production juror-vote tool before assigning it to an automatically generated candidate.  Failed configurations can be replaced during selection.  Voir dire adds the standard questionnaire, counsel's questions, judicial screening, challenges for cause, and peremptory challenges~\cite{juries}.  The approved policy for this case calls for nine jurors and six concurring votes.  ADC's failure rules remove a failed deliberating juror from the eligible body.  This case ended with eight submitted votes and the six-vote requirement still in force.
 
 The preponderance standard governs each juror's assessment of the claim.  The concurrence rule governs how ADC combines those votes into a verdict.  A juror's reported confidence is a further part of its explanation.  The vote count and self-reported confidence have no measured calibration as probabilities that the proposition is true.
 
@@ -85,6 +94,16 @@ The initial document contains both those rules and the supplied rationale for Po
 
 The ADC run uses fresh participant sessions and receives none of the earlier ARB filings, work notes, or verdict.  Both runs use the same proposition, initial document, lawyer model configuration, enabled search, installed pool, and 25-minute turn timeouts.  The ADC scenario permits up to 500 autopilot turns.  ADC uses its required minimum of six concurring votes, approved by the operator for the nine-member jury.  It retains its default judge, clerk, voir dire, policies, and checked-in prompts~\cite[input settings and generated scenario]{record}.  Procedural differences and fresh model responses prevent attribution of any difference between the runs to ADC alone.
 
+\subsection{Record, quotations, and scope}
+
+The retained run is \code{ex04-20260919-04}.  It began on September 19, 2026, at 14:32:57 UTC and completed at 16:36:36 UTC.  References to numbered events identify rows in its event database.  Those rows include reads, rejected attempts, and bookkeeping as well as accepted court actions.  The replay certificate contains the accepted state transitions.  The final state identifies the filed exhibits, jury, votes, verdict, and judgment.  Participant process logs record tool calls and their returned results.  These different records support different claims: an attempted call establishes what an agent tried, while an accepted event establishes what entered the proceeding.
+
+Quoted work notes are the lawyers' submitted, higher-level accounts of their assessments and planned acts.  They are role-private notes retained for monitoring and later analysis.  Court filings provide the arguments presented to the other participants.  This report labels notes and filings separately.  A note reports the lawyer's stated assessment at that time.  Subsequent tool activity and filed material establish whether the proposed work occurred.
+
+The account follows the completed proceeding and evaluates the reasoning that appears in its record.  It does not conduct a second historical investigation or add evidence to the jury's record.  The geographic explanation above supplies background for readers.  Source statements, party admissions, attorney inferences, and the report's observations remain distinct throughout.  The appendices reproduce the full final charge and all eight accepted vote explanations so that readers can compare the analysis with the decisions.
+
+The run began from source revision \code{87de350}, with executables built from unchanged runtime source at \code{dbde6f0}.  A separate Pi court-submission error limit was implemented while the case was running.  The running processes retained their original implementation and limits.  This distinction explains the prolonged malformed-call episode described below.
+
 \section{The ADC Proceeding}
 
 The case began at 14:32 UTC on September 19, 2026.  All times for the proceeding are UTC.  The defendant read the market-rules attachment and declined the optional Rule 12 motion.  Its reason distinguished pleading sufficiency from disputed proof:
@@ -99,6 +118,18 @@ The court selected jury trial and advanced the case to pretrial.  The plaintiff 
 
 Both parties completed initial disclosures before the plaintiff began its technical-report research at 14:34.  Its stated plan was to test dates, movement beyond the excluded Golan, offensive conduct, and intent or duration.  The lawyer searched official UN and Israeli sources and contemporaneous news reporting.  It downloaded the Syrian and Israeli letters to the Security Council, installed Poppler, and extracted their text with \code{pdftotext}.  Direct access to the AP article returned HTTP 403, while its PBS republication supplied the report.  An attempted YouTube transcript extraction failed.  The retained research therefore supports the lawyer's use of documents and reporting, with no authenticated audiovisual source~\cite[plaintiff tool log and work notes at 14:34:59 and 14:41:52]{record}.
 
+The plaintiff's first research note, at 14:34:59, identified the initial evidentiary problem:
+\begin{quote}
+the current record is insufficient for a reliable technical finding because file-0001 merely recites a market rationale.  I will research and preserve primary/official and independent contemporaneous sources addressing four checks: qualifying dates, forces crossing into territory outside the deemed-Israeli Golan, offensive conduct/control, and expressed intent/duration.
+\end{quote}
+The next research calls followed those checks.  The first search requested official UN material, Israeli government or military statements, contemporary Reuters, AP, and BBC reporting, and an official Syrian response.  Later searches targeted Netanyahu's December 17 statement, the description of the measures as temporary, official video, and maps locating the summit relative to the Golan.
+
+The plaintiff made seven \code{web\_search} calls during the run.  Some calls contained several queries.  It also made five \code{fetch\_content} calls and four \code{get\_search\_content} calls.  Search results included leads that counsel did not import.  The registered files and exhibits identify which sources entered the proceeding.
+
+Local execution served both source extraction and record handling.  The plaintiff's first download script used a Python command unavailable in the container.  A subsequent attempt used Python 3 but lacked the requested third-party HTTP module.  It then used the standard library to download documents.  A proposed Python PDF package could not be installed through the unavailable package tool.  The lawyer installed Poppler through the container's package manager and used \code{pdftotext} to extract the official PDFs.  This sequence records tool discovery, failed attempts, and a completed extraction method.  The installed utility supplied a capability the initial image lacked.
+
+The plaintiff also inspected UN briefing pages, requested a video transcript through its content tool, and searched for official maps.  The retained technical report did not claim a completed video authentication or independent geolocation.  The case contains text and PDF sources, without an authenticated recording or a coordinate-based territorial analysis.  The tools extended what the lawyer could inspect, while the filed limitations identified what the work had established.
+
 Four imports supplied the factual sources: Syria's December 9 letter, Israel's letter of the same date, UNDOF's December 13 statement, and the AP/PBS article of December 17~\cite{syrialetter,israelletter,undofstatement,apreport}.  The lawyer retained source identifiers, URLs, and retrieval dates and marked the unrelated part omitted from the AP capture.  The two diplomatic letters provided opposing governments' accounts of the same deployment.  Israel acknowledged deployment east of Line A while describing its measures as limited, temporary, and defensive.  UNDOF's statement supplied observations of increased movement and continued presence in the area of separation.  The AP report supplied the claimed summit location beyond the Israel-held Golan and the reported retention and fortification statements~\cite[events 9--12, files 0002--0005]{record}.
 
 The plaintiff imported its analysis as \code{file-0006} and filed TR-P1 at 14:46.  The report found the proposition supported under preponderance, distinguishing source observations from its conclusions about offensive character and intent.  Its central response to Israel's account was:
@@ -111,6 +142,16 @@ The report treated the reported movement, retention, fortification, and conditio
 
 The defense filed TR-D1 at 14:49 after reading the imported text and obtaining the two official PDFs.  It accepted entry east of Line A, continued presence at multiple positions, and substantial evidence of a later fortified hold at the Syrian summit.  It disputed the inference that Israel commenced an offensive whose objective was territorial control.  Its report treated temporary possession as a possible means of responding to a security emergency and relied on Israel's contemporaneous account of that purpose.  It expressly declined to make permanent annexation an element of the market definition~\cite[events 16--22 and file 0007]{record}.
 
+The defense's first PDF read used ADC's text-file tool, which rejected the extension.  The lawyer then used file access and local extraction.  It independently downloaded the two official PDFs from their recorded UN locations, compared the bytes with the court's file metadata, and used Poppler to read their text.  The source audit therefore relied on the documents' contents and retained copies, as well as the plaintiff's descriptions.
+
+The defense made two \code{web\_search} calls, one \code{source\_check} call, and four \code{fetch\_content} calls.  Its queries concentrated on the contemporary temporary-and-defensive explanation and UN accounts of the security breakdown.  It sought Israeli government material and UN briefings as well as the already imported UNDOF statement.  Its filed report nevertheless relied on the shared four substantive sources.  The retained search activity establishes independent inquiry into the opposing theory, while the evidence offered at trial establishes a largely shared documentary basis.
+
+At 14:46:19, the defense's work note stated the planned distinction:
+\begin{quote}
+The defense report should not deny observed deployments; it should audit whether those sources separately prove the conjunctive market terms ‘military offensive’ and ‘intended to establish control,’ while preserving Israel's contemporaneous limited/temporary/defensive account and source/geography limitations.
+\end{quote}
+The filed report followed that plan.  It assigned separate roles to direct observation, an interested government's characterization, secondary reporting, and the analyst's inference.  For UNDOF, it emphasized that a treaty violation could follow from prohibited military presence without resolving the additional market criteria.
+
 The defense identified the consequence of the competing interpretation:
 \begin{quote}
 if ``intended to establish control'' includes any intended temporary security possession and ``offensive'' includes an unopposed protective deployment, plaintiff's conclusion is substantially supported.
@@ -120,6 +161,14 @@ This concession narrowed the dispute.  The parties substantially agreed on deplo
 \subsection{Interrogatories and the remaining factual dispute}
 
 Each side served five interrogatories, and both answered without objections.  The plaintiff identified December 7--8 as the inferred commencement period, while acknowledging unknown participating units, exact coordinates, and operational orders.  It identified no specific strike linked to taking a ground position and no established ground combat at the summit.  Its answer explained why the December 17 evidence bore on earlier intent: the occupation and leadership statements concerned what it characterized as one continuing operation, with no evidence of an intervening change of plan.  It also confined its source claim to official confirmation with AP corroboration, acknowledging that the imported record contained no multi-outlet reporting consensus~\cite[events 24--26]{record}.
+
+The plaintiff's discovery plan sought the defense's definitions, disputed facts, geographic position, source objections, and evidence of the protective purpose.  The defense's plan sought the operational basis for calling the entry an offensive, intent at commencement, the location outside the Golan exclusion, the permitted-source route, and the treatment of Israel's contrary account.  These questions required the lawyers to identify what each inference depended on.
+
+The plaintiff's note before answering illustrates the resulting discipline:
+\begin{quote}
+the exact unit, coordinates, and operational order are unknown; commencement was Dec 7--8; plaintiff does not rely on shelling alone; the clearest qualifying location is the Syrian Mount Hermon summit; official-source confirmation is the primary source route, not a claimed imported reporting consensus
+\end{quote}
+The answer distinguished identified evidence from desirable additional proof.  It also kept the Syrian letter's reference to shelling from becoming unsupported evidence of a particular ground-seizure operation.
 
 The defense's answers accepted the reported summit location and identified no contrary geographic source.  It admitted that, by December 17, Israeli forces exercised ``de facto interim military possession/control'' over at least that position.  It maintained that establishing territorial control had to be an objective at commencement and that tactical possession could serve a different objective.  It also acknowledged that an unopposed operation could constitute an offensive and that temporary control could satisfy the definition.  Both advocates therefore had to address the relation between the reported conduct and the operation's purpose, with the same absence of internal orders~\cite[event 27]{record}.
 
@@ -153,13 +202,10 @@ ADC assembled thirteen initial candidates for the nine-member jury.  Some candid
 
 Seed 2.0 Lite made four malformed JSON-string calls before submitting a questionnaire containing short Yes or No answers.  Qwen3 VL 8B Instruct, Qwen3 30B A3B, and Qwen3 Max Thinking also completed questionnaires.  Qwen Plus returned an empty tool name, after which the provider rejected its request history with HTTP 400.  ADC replaced it with Mistral Small 3.2.  The first replacement, Qwen3 VL 30B A3B Instruct, repeatedly omitted the final closing brace from its questionnaire arguments.  Pi's MCP adapter rejected those arguments before ADC received a decision, leaving the turn subject to its 25-minute deadline~\cite[events 123--134 and juror process logs]{record}.
 
-\section{Verification and Limitations}
-
-The adjudication and its final verification remain in progress.
-
-Production generated repeated opportunities to pass on unchanged files.  ADC's \code{updateCase} clears the saved opportunity passes, so an accepted production makes the remaining optional items available again~\cite[\code{updateCase} and \code{recordOpportunityPass}]{adccore}.  The plaintiff repeatedly passed on the market attachment before adopting a broader responsiveness reading and producing it.  Its work notes during those repeated passes often restated the same conclusion.  These exchanges added model requests without adding new source evidence~\cite[events 30--44]{record}.
-
-Both lawyer sessions exceeded the provider's context window before jury selection.  Pi's automatic compaction reduced the plaintiff's reported context from about 924,000 tokens to an estimated 15,500, and accepted production resumed at 15:02.  The defense completed a similar compaction before its admission response.  The retained logs report more than 600,000 cached input tokens in individual requests before compaction~\cite[lawyer process logs]{record}.  Work-note acknowledgments contribute to this growth because the role API returns the visible case state with each acknowledgment~\cite[\code{send\_work\_notes} and \code{opportunityPayloadLocked}]{roleapi}.  Compaction permits continued execution while replacing earlier session detail with a model-generated summary.
+\input{proceeding-detail}
+\input{assessment}
+\appendix
+\input{record-excerpts}
 
 \begin{thebibliography}{99}
 \bibitem{adj} AgentCourt.  \emph{Adjudication Core}.  Repository documentation at source revision \code{87de350}, September 2026.  \url{https://github.com/agentcourt/adj}.
@@ -171,6 +217,7 @@ Both lawyer sessions exceeded the provider's context window before jury selectio
 \bibitem{logic} AgentCourt.  \emph{Procedure Execution}.  \code{adc/docs/logic.md}, adj, revision \code{87de350}.
 \bibitem{adccore} AgentCourt.  \emph{ADC Lean Engine}.  \path{adc/engine/ADC/Core.lean}, adj, revision \code{87de350}.
 \bibitem{roleapi} AgentCourt.  \emph{ADC Role API}.  \path{adc/runtime/runner/roleapi.go}, adj, revision \code{87de350}.
+\bibitem{jurorprompt} AgentCourt.  \emph{ADC Juror Prompt Construction}.  \path{adc/runtime/runner/juror_prompt.go}, adj, revision \code{87de350}.
 \bibitem{poolpaper} Jamie Stephens.  \emph{Generating Tool-Capable, Behavior-Stratified Model Pools for Adjudication}.  marXiv:2608.00051, 2026.
 \bibitem{poolmanual} AgentCourt.  \emph{Model-Pool Tools}.  \code{model-pool/README.md}, adj, revision \code{87de350}.
 \bibitem{runbook} AgentCourt.  \emph{Sampling Runbook}.  \path{model-pool/docs/sampling-runbook.md}, adj, revision \code{87de350}.

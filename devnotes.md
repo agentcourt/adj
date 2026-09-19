@@ -1124,7 +1124,7 @@ Free filesystem space fell from 4.7 GiB at launch to 2.3 GiB at 15:30.  The run 
 
 A read-only birth-time and allocated-block check at 15:35 identified 2,878 Go build-cache files created since ADC launch, occupying 1,498 MiB.  These account for most of the free-space decline.  No Go compiler process was active at that check, and free space had remained at 2.3 GiB for several checks.  No cache was deleted.  The report bibliography now cites the four sources imported in this run, and its disengagement-agreement description was checked against the UN text at https://www.un.org/unispal/document/auto-insert-179522/.
 
-J14 reached its 25-minute deadline after 251 malformed JSON calls.  ADC replaced it with J16, Gemini 3 Flash Preview, which completed its questionnaire.  The court empaneled the jury at 16:14:04 UTC.  Both opening statements were accepted, followed by the plaintiff's trial theory at 16:16:01.  The case continues with its original executable and settings.  At 16:17, lawyer logs contained 770 response events, four compactions, and a $294.98 token-price estimate, excluding court, juror, and separate search requests.
+J14 reached its 25-minute deadline after 251 malformed JSON calls.  ADC replaced it with J16, Gemini 3 Flash Preview, which completed its questionnaire.  The court empaneled the jury at 16:14:04 UTC.  Both opening statements were accepted.  The plaintiff's first trial theory at 16:16:01 exceeded the character limit, and its shorter replacement was accepted at 16:17:57.  At that point the case continued with its original executable and settings.  At 16:17, lawyer logs contained 770 response events, four compactions, and a $294.98 token-price estimate, excluding court, juror, and separate search requests.
 
 ## Pi Court-Submission Error Limit: 2026-09-19
 
@@ -1142,3 +1142,20 @@ The implementation follows the installed Pi MCP Adapter 2.27.0 source in `index.
 The first lawyer-test command used unsupported `adc-run` participant flags and stopped during argument parsing.  The next attempt, through unified settings, stopped because the test prompt omitted required workspace and search tokens.  Its record is `adc/out/court-submission-live-20260919-02/`.  After correcting the test setup, run 03 used Pi with GPT-5.6-sol, xhigh reasoning, Codex subscription authentication, and a JSON limit of three.  The launcher excluded one malformed court read and ended the run after three malformed submissions.  Run 04 first made two malformed submissions and completed a valid pass, then ended after three malformed submissions on the next opportunity.  Its additional malformed court read was excluded.  Both lawyer runs returned the expected participant-failure error.  Their unified records and logs retain the count.  The existing core failure path omits final state and replay files on these lawyer failures.
 
 All live tests ran through local leanrunner with 4 GiB memory high, 6 GiB maximum, 1 GiB swap, 100% CPU, a 900-second timeout, and one job.  The test inputs remain in `tmp/adc-court-submission-live/`, alongside the reused juror scenario and pool in `tmp/adc-invalid-decision-live/`.  Runs 03 and 04 occupy 384 KiB and 632 KiB.  Their lawyer logs contain fourteen response events and a combined $0.23 subscription token-price estimate.  The launcher removed the test containers and staged credentials.  Production prompts and Lean sources remain unchanged.
+
+## Completed Israel–Syria ADC Report: 2026-09-19
+
+Run ex04-20260919-04 completed at 16:36:36 UTC.  Seven jurors voted for the plaintiff, one for the defendant, and DeepSeek exited without voting.  The six-vote requirement remained in force.  Mistral corrected a rejected one-dollar damages request to zero.  Local resource-limited replay verified 227 transitions.  The run occupies 444 MiB, with its containers removed.
+
+The user requested a detailed narrative marXiv report covering the completed proceeding.  The manuscript now has 37 pages, with source research, tool use, discovery, admissions, all sixteen candidate identities, voir dire, challenges, trial, instructions, every accepted vote, and execution analysis.  It quotes submitted work notes and court-facing text.  A comparison against the case record matched all 55 block quotations after typography and whitespace normalization.  The appendices reproduce the full charge and all eight accepted vote explanations.
+
+The report distinguishes lawyer-supplied exhibit admission flags from judicial admissibility rulings.  It also records that J2's full case response included J1's vote choice through the public docket, while avoiding a claim that J2 read or relied on that entry.  Neither runtime behavior was changed for this writing task.  The report identifies source-rule and commencement-date questions that the proceeding left unresolved.
+
+The lawyer token-price estimate is $381.25, including four completed compactions.  The subscription-authenticated sessions do not establish an additional billed charge.  Court and juror accounting remains incomplete.  PDF compilation completed without unresolved references or overfull text boxes.  The title page, candidate table, exhibit table, and instruction/vote pages were visually checked.
+
+The marXiv requirements and style manual were read from http://127.0.0.1:8405/standards.md and http://127.0.0.1:8405/style.md.  Submission 5426fd156fae is under review at http://127.0.0.1:8405/status/5426fd156fae.  It names the related ARB and model-pool reports.  Public export was left disabled.
+
+- [x] Complete and review the narrative and record excerpts.
+- [x] Check quotations, counts, timestamps, verdict, and PDF layout.
+- [x] Submit the report.
+- [ ] Read the editorial decision and revise as required.
