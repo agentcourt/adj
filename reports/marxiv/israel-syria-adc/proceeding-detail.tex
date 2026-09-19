@@ -31,7 +31,7 @@ J16 & \path{google/gemini-3-flash-preview} & Replacement.  Completed voir dire, 
 
 J14 repeatedly omitted a closing brace from its JSON-encoded tool arguments.  Pi rejected 251 malformed calls before the 25-minute deadline.  The calls failed inside the adapter, before ADC could accept or reject a submitted decision.  ADC's three-attempt decision allowance therefore did not count them.  Repeated syntactic failure could continue until the opportunity expired~\cite[J14 process log and events 133--136]{record}.
 
-ADC replaced J14 with J16 at 15:49:43.  J15 and J16 completed their questionnaires at 15:49:57 and 15:50:05.  Their success allowed selection to continue.  The recorded failures establish behavior of these configurations in this case.  They provide no estimate of how often another request to the same model would succeed.  J9's eventual success after four malformed calls demonstrates that some errors were recoverable within the original opportunity.
+ADC replaced J14 with J16 at 15:49:43.  J15 and J16 completed their questionnaires at 15:49:57 and 15:50:05.  The recorded failures establish behavior of these configurations in this case.  They provide no estimate of how often another request to the same model would succeed.
 
 The eight-question standard questionnaire asked about attention, impartiality, hardships, prior knowledge, adherence to instructions, evidence assessment, remedies, and other possible sources of bias.  Some wording concerned health, caregiving, employment, and relationships.  The models answered those questions as assigned jurors.  Such answers record compliance with the questionnaire and claimed willingness to follow instructions.  They provide limited evidence about model-specific tendencies, which the case-specific questions exposed more directly.
 
@@ -137,14 +137,10 @@ Both openings used the same physical chronology.  The plaintiff used sustained c
 
 ADC gives counsel a trial-theory submission before the exhibit sequence.  The plaintiff first submitted 6,484 characters against a 4,000-character limit.  The engine rejected that attempt at event 301, and the plaintiff's shorter version was accepted at event 302, at 16:17:57.  The defense later submitted 5,377 characters, received the same limit error, and filed an accepted shorter theory at 16:22:19~\cite[events 301--302 and 312--313]{record}.
 
-These were attempted filings preserved in the event record, followed by accepted replacements.  The rejected texts should not be counted as accepted trial submissions.  The errors also differ from J14's malformed arguments: the court received these decisions, measured the payload, returned its rule-limit error, and accepted a corrected filing.  Neither rejection altered the governing substantive criteria.
-
 The accepted plaintiff theory tied the official-source route to combined evidence and stated that it did not claim a reporting consensus from one article.  It invoked the defense's admissions to establish date, action, and location, then argued that intentional position-taking followed by holding and fortification supported control intent at commencement.  The defense's shorter theory preserved the distinction between directly established conduct and the proposed inference.  It stated:
 \begin{quote}
 Continuous physical deployment can coexist with evolving purpose.  Plaintiff must make original control intent more likely than not; Defendant need not prove another plan.
 \end{quote}
-The text limits reduced the length of the two presentations while leaving the same dispute for the jury.
-
 \subsection{The eight exhibits and their uses}
 
 The plaintiff offered six exhibits between 16:18:14 and 16:19:09.  The defense offered two between 16:22:42 and 16:23:00.  All eight offers entered the docket with admitted status.  The original market-rules attachment, \code{file-0001}, remained the source of the criteria and supplied background, but neither party offered it as factual trial proof.
@@ -190,7 +186,7 @@ The defense also answered the plaintiff's reliance on physical continuity:
 \begin{quote}
 PX-2 and PX-3 show uninterrupted deployment and presence; they do not show when the summit hold-and-fortify decision was made.  PX-4's report of a direction to establish and fortify a presence proves purpose by 17 December.  It does not answer whether that direction implemented a 7--8 December objective or reflected a later development.
 \end{quote}
-The plaintiff's answer was that the sequence of taking positions, remaining, controlling, and fortifying supplied affirmative continuity evidence.  Both sides rested their rebuttal evidence opportunities without adding exhibits~\cite[events 319--325]{record}.  Argument refined the inference while the source record remained fixed.
+The plaintiff's answer was that the sequence of taking positions, remaining, controlling, and fortifying supplied affirmative continuity evidence.  Both sides rested their rebuttal evidence opportunities without adding exhibits~\cite[events 319--325]{record}.
 
 \section{Instructions, Closings, and Judgment}
 
@@ -218,7 +214,7 @@ The plaintiff's note before closing identified the planned use of admissions:
 \begin{quote}
 Closing should emphasize affirmative continuity rather than burden shifting, concede PX-2's security motive, and distinguish motive from method/means.
 \end{quote}
-The filed closing followed that plan, but also repeated that the defendant possessed no evidence of changed purpose.  This combination created a point for assessment: the continuity argument relied on affirmative conduct and also assigned significance to the absence of a contrary account.
+The filed closing followed that plan, but also repeated that the defendant possessed no evidence of changed purpose.  The continuity argument relied on affirmative conduct and also assigned significance to the absence of a contrary account.
 
 The defense closed at 16:30:33.  It accepted the plaintiff's strongest exhibit as evidence of the later posture, then concentrated on the temporal inference:
 \begin{quote}
@@ -264,7 +260,7 @@ It also repeated the plaintiff's “Security was the motive” formulation.  J2 
 
 The two votes expose the decisive evidentiary disagreement.  J1 treated the unresolved timing of the later decision and the contemporary protective explanation as enough to keep the balance even.  J2 treated deliberate initial position-taking and the continuous sequence as sufficient affirmative support for original control intent.  Both accepted that later evidence could bear on earlier intent.  They assigned it different weight.
 
-J2's wording warrants a source qualification.  It introduced four propositions as established “by official admission,” but two relied on the AP/PBS account of the summit and retention statement.  The defendant admitted the reported facts during discovery, yet AP remained the reporting source.  The report distinguishes a party's admission in this model proceeding from an official state's own confirmation.  Collapsing those uses of “admission” would overstate the origin of the evidence.
+J2 introduced four propositions as established “by official admission,” but two relied on the AP/PBS account of the summit and retention statement.  The defendant admitted the reported facts during discovery, yet AP remained the reporting source.  The report distinguishes a party's admission in this model proceeding from an official state's own confirmation.  Collapsing those uses of “admission” would overstate the origin of the evidence.
 
 \subsection{The remaining votes and J5's failure}
 
@@ -291,4 +287,4 @@ J15, Mistral Small 3.2, first submitted a plaintiff vote with one dollar in dama
 
 The accepted tally was seven votes for the plaintiff and one for the defendant.  The case state retained a requirement of six concurring votes.  All eight accepted votes were in round one, and the court entered judgment at 16:36:24.  The unified run completed twelve seconds later with status \code{ok}, phase \code{post\_verdict}, and binary decision \code{demonstrated}.  The judgment awarded zero damages~\cite[events 362--363 and final state]{record}.
 
-The proceeding narrowed a dispute about invasion to an evidentiary disagreement over offensive method and intent at commencement, then entered judgment for the proponent by seven votes to one.  The majority's explanations support an account of temporary control as an intended means of meeting a security objective.  The dissent preserves an alternative assessment under the same burden: later possession and fortification left the original objective insufficiently proved.  The full explanations in the appendix permit examination of both positions and of the differences in their detail.
+The majority's explanations support an account of temporary control as an intended means of meeting a security objective.  The dissent preserves an alternative assessment under the same burden: later possession and fortification left the original objective insufficiently proved.  The full explanations in the appendix permit examination of both positions and of the differences in their detail.

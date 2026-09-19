@@ -86,4 +86,68 @@ Accept.
 
 The second revision removes the repeated Poppler explanation, the appraisal before the discussion of missing orders, the general instruction about verification, and the repeated statement that both production explanations appear in the record.  The voir dire observation now begins with the defense follow-up's result: J10's merits commitment led to excusal despite the earlier assurance of impartiality.  The case facts and quotations are unchanged.
 
-The PDF remains 37 pages.  Three compilation passes resolved references, and the title and abstract match the preceding submission.  Replacement submission [4336b127fab5](http://127.0.0.1:8405/status/4336b127fab5) is under review.
+The PDF remained 37 pages.  Three compilation passes resolved references, and the title and abstract matched the preceding submission.
+
+### Third editorial review
+
+Submission [4336b127fab5](http://127.0.0.1:8405/status/4336b127fab5) was accepted as version 3.  The review text follows verbatim.
+
+```text
+Decision: accept
+
+Accepted.
+
+## Remarks
+
+1. Requirement 12, Redundancy, §3.1: “installed Poppler, and extracted their text with pdftotext” repeats in “installed Poppler through the container’s package manager and used pdftotext to extract the official PDFs.”  Consolidate the extraction account.
+
+2. Requirement 12, Throat-clearing and announcements, §5.2: “This combination created a point for assessment” announces the analysis that follows the colon.  Begin with “The continuity argument relied on affirmative conduct”.
+
+3. Requirement 12, Throat-clearing and announcements, §5.4: “J2’s wording warrants a source qualification.”  The next sentence states the source problem and can open the paragraph.
+
+4. Requirement 12, Redundancy, §5.6: “The accepted tally was seven votes for the plaintiff and one for the defendant” repeats in the next paragraph’s “entered judgment for the proponent by seven votes to one.”  Combine the tally and the account of the narrowed dispute.
+
+5. Requirement 12, Filler words, §6.2: “was itself part of the evidence presented.”  Delete “itself”.
+```
+
+### Third revision
+
+The revision consolidates the extraction account and verdict tally, removes the two introductory appraisals, and deletes the identified filler word.  A further prose pass removes nearby repetitions of the research plan, tool capabilities, failed-submission classification, and limits of the accounting.  The research account retains the download and installation failures, HTTP 403, and unsuccessful YouTube transcript request.  The later sections retain the differences between Pi-side errors and court validation, source limitations, and incomplete costs.
+
+The resulting PDF has 36 pages.  All 55 block quotations remain unchanged.  Three compilation passes resolved references, and visual checks covered the revised candidate and exhibit table pages.  The title and abstract match the preceding submission.
+
+### Fourth editorial review
+
+Submission [eb321fea1758](http://127.0.0.1:8405/status/eb321fea1758) was accepted as version 4.  The review text follows verbatim.
+
+```text
+Decision: accept
+
+Accepted.
+
+## Remarks
+
+- Requirement 9, §1.3: “excluding rows with response-metadata errors” leaves the excluded error types unspecified.  “Representative selection ranked provider errors, deliberation score, capacity, uptime, latency, price, and stable endpoint identifiers” leaves “capacity” ambiguous.  Define the excluded failures and the capacity measure used in selection.
+- Requirement 12, Headings: §3’s “The ADC Proceeding” also describes the material in §§4–5.  “Pleadings, Discovery, and Jury Selection” would identify this section’s scope.
+- Requirement 12, Relevance and Redundancy: §1.4’s “Their scope follows their statements and the encoded procedure” repeats a general fact about theorem scope.  The adjacent sentences already identify hypotheses, concrete examples, and limits.  Omit this sentence or state a specific additional restriction.
+```
+
+### Fourth revision
+
+The pool description now defines the response-failure categories excluded from the score denominator.  It distinguishes the filter's combined provider-error count from separately counted timeout and context-limit failures.  It defines the ordered token-capacity comparisons: the larger of the recorded endpoint and model context limits, then prompt and completion limits.  It also explains that standard sampling inputs omit the separate schema, timeout, and context-error counts.  These definitions were checked against `run_eval.py`, `score_eval.py`, and `sample-tuple-pool.py` and the model-pool manual.  Those implementation files have not changed since the cited source revision.
+
+Section 3 is now titled “Pleadings, Discovery, and Jury Selection.”  The generic sentence about theorem scope was removed.  The compiled PDF has 36 pages and no unresolved references or overfull text boxes.
+
+### Final editorial decision
+
+Submission [513c4a934831](http://127.0.0.1:8405/status/513c4a934831) was accepted as version 5 of [marXiv:2609.00015](http://127.0.0.1:8405/abs/2609.00015).  The review text follows verbatim.
+
+```text
+Decision: accept
+
+Accepted.
+
+## Remarks
+
+No remarks.
+```

@@ -1147,7 +1147,7 @@ All live tests ran through local leanrunner with 4 GiB memory high, 6 GiB maximu
 
 Run ex04-20260919-04 completed at 16:36:36 UTC.  Seven jurors voted for the plaintiff, one for the defendant, and DeepSeek exited without voting.  The six-vote requirement remained in force.  Mistral corrected a rejected one-dollar damages request to zero.  Local resource-limited replay verified 227 transitions.  The run occupies 444 MiB, with its containers removed.
 
-The user requested a detailed narrative marXiv report covering the completed proceeding.  The manuscript now has 37 pages, with source research, tool use, discovery, admissions, all sixteen candidate identities, voir dire, challenges, trial, instructions, every accepted vote, and execution analysis.  It quotes submitted work notes and court-facing text.  A comparison against the case record matched all 55 block quotations after typography and whitespace normalization.  The appendices reproduce the full charge and all eight accepted vote explanations.
+The user requested a detailed narrative marXiv report covering the completed proceeding.  The initial complete manuscript had 37 pages, with source research, tool use, discovery, admissions, all sixteen candidate identities, voir dire, challenges, trial, instructions, every accepted vote, and execution analysis.  It quotes submitted work notes and court-facing text.  A comparison against the case record matched all 55 block quotations after typography and whitespace normalization.  The appendices reproduce the full charge and all eight accepted vote explanations.
 
 The report distinguishes lawyer-supplied exhibit admission flags from judicial admissibility rulings.  It also records that J2's full case response included J1's vote choice through the public docket, while avoiding a claim that J2 read or relied on that entry.  Neither runtime behavior was changed for this writing task.  The report identifies source-rule and commencement-date questions that the proceeding left unresolved.
 
@@ -1157,9 +1157,13 @@ The marXiv requirements and style manual were read from http://127.0.0.1:8405/st
 
 The editor requested a definition of Pi, removal of repeated descriptions and analytically unused activity counts, and identification of the four jurors relying on the absence of changed purpose.  The revision addresses each remark, retaining the case narrative, quotations, and vote explanations.  The official [Pi documentation](https://github.com/earendil-works/pi) supplies the software description.  The revised PDF remains 37 pages, with references resolved and the changed layout checked.  Replacement submission [de8d9962ce9d](http://127.0.0.1:8405/status/de8d9962ce9d) was accepted as version 2.  The complete reviews and responses are retained in the [review record](reports/marxiv/israel-syria-adc/review.md).
 
-The second review identified five remaining repetitive or introductory sentences.  Those were removed or replaced with the specific result of voir dire.  Submission [4336b127fab5](http://127.0.0.1:8405/status/4336b127fab5) is under review as a replacement for the same paper.  The PDF remains 37 pages.  The case facts and quotations are unchanged.
+The second review identified five remaining repetitive or introductory sentences.  Those were removed or replaced with the specific result of voir dire.  Submission [4336b127fab5](http://127.0.0.1:8405/status/4336b127fab5) was accepted as version 3.  The PDF remained 37 pages, with the case facts and quotations unchanged.
+
+The third review requested consolidation of the extraction account and verdict tally and removal of two introductory appraisals and a filler word.  A further prose pass addressed those remarks and related repetitions.  The revised report has 36 pages, with all 55 block quotations unchanged, references resolved, and candidate and exhibit table pages visually checked.  Submission [eb321fea1758](http://127.0.0.1:8405/status/eb321fea1758) was accepted as version 4.
+
+The fourth review requested definitions of excluded response errors and token capacity, a section heading identifying pleadings, discovery, and jury selection, and removal of a generic statement about theorem scope.  The revision defines the score exclusions, distinguishes timeout and context-limit counters from the provider-error filter, and gives the capacity comparison order.  The definitions were checked against the model-pool manual and the evaluation, scoring, and sampling implementations.  Submission [513c4a934831](http://127.0.0.1:8405/status/513c4a934831) was accepted as version 5 with “No remarks.”  The final PDF has 36 pages.
 
 - [x] Complete and review the narrative and record excerpts.
 - [x] Check quotations, counts, timestamps, verdict, and PDF layout.
 - [x] Submit the report.
-- [ ] Read the editorial decision and revise as required.
+- [x] Read the editorial decision and revise as required.
